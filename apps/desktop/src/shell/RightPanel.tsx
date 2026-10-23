@@ -3,6 +3,7 @@ import { copy } from '../copy';
 import { useUiStore, type RightPanelTab } from '../state/uiStore';
 import { PreviewPanel } from '../preview/PreviewPanel';
 import { DiffPanel } from '../review/DiffPanel';
+import { TerminalPanel } from '../terminal/TerminalPanel';
 import { EmptyState } from '../ui/EmptyState';
 import { ResizeHandle } from './ResizeHandle';
 
@@ -44,6 +45,8 @@ export function RightPanel() {
                 <DiffPanel />
               ) : id === 'preview' ? (
                 <PreviewPanel />
+              ) : id === 'terminal' ? (
+                <TerminalPanel />
               ) : (
                 <EmptyState message={copy.shell.panelEmpty} />
               )}

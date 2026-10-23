@@ -23,6 +23,7 @@ import { createPushService } from './modules/push/service.js';
 import { createScheduleParser } from './modules/schedules/parser.js';
 import { createScheduleService } from './modules/schedules/service.js';
 import { createProjectsService } from './modules/projects/service.js';
+import { createCompareService } from './modules/compare/service.js';
 import { createTaskBreakdown } from './modules/tasks/breakdown.js';
 import { createTasksService } from './modules/tasks/service.js';
 import { createWorkerRelay } from './modules/worker/relay.js';
@@ -161,6 +162,7 @@ async function main(): Promise<void> {
     schedules,
     projects,
     tasks,
+    compare: createCompareService({ client }),
     worker: { hub: workerHub, relay: workerRelay },
     ws: {
       hub,

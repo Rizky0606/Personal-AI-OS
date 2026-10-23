@@ -92,6 +92,27 @@ export const PreviewInfoSchema = z
   .meta({ id: 'PreviewInfo' });
 export type PreviewInfo = z.infer<typeof PreviewInfoSchema>;
 
+const TerminalSize = {
+  cols: z.number().int().min(2).max(500),
+  rows: z.number().int().min(1).max(200),
+};
+
+/** Terminal yang terbuka. Satu per project (atau per worktree run); membuka lagi mengembalikan yang sama beserta riwayat keluarannya. */
+export const TerminalInfoSchema = z
+  .object({
+    id: z.string().min(1),
+    cwd: z.string(),
+    shell: z.string(),
+    /** Keluaran terakhir (maks. 64 KB) supaya tab yang dibuka ulang tidak kosong. */
+    replay: z.string(),
+    /** Kode keluar bila shell sudah berhenti; null selama masih berjalan. */
+    exitCode: z.number().int().nullable(),
+  })
+  .meta({ id: 'TerminalInfo' });
+export type TerminalInfo = z.infer<typeof TerminalInfoSchema>;
+
+export const MAX_TERMINAL_WRITE = 64 * 1024;
+
 export const PreviewShotSchema = z.object({
   /** PNG, base64. */
   png: z.string().min(1),
@@ -162,6 +183,26 @@ export const LocalRequestSchema = z.discriminatedUnion('method', [
   }),
   z.object({
     id: z.string().min(1),
+    method: z.literal('terminal.open'),
+    params: PreviewTargetSchema.extend(TerminalSize),
+  }),
+  z.object({
+    id: z.string().min(1),
+    method: z.literal('terminal.write'),
+    params: z.object({ terminalId: z.string().min(1), data: z.string().max(MAX_TERMINAL_WRITE) }),
+  }),
+  z.object({
+    id: z.string().min(1),
+    method: z.literal('terminal.resize'),
+    params: z.object({ terminalId: z.string().min(1), ...TerminalSize }),
+  }),
+  z.object({
+    id: z.string().min(1),
+    method: z.literal('terminal.close'),
+    params: z.object({ terminalId: z.string().min(1) }),
+  }),
+  z.object({
+    id: z.string().min(1),
     method: z.literal('preview.shot'),
     params: PreviewTargetSchema.extend({
       /** Elemen yang ditangkap; kosong = seluruh viewport. */
@@ -186,6 +227,7 @@ export const LocalErrorCodeSchema = z.enum([
   'git_failed',
   'run_active',
   'preview_unavailable',
+  'terminal_unavailable',
   'internal',
 ]);
 export type LocalErrorCode = z.infer<typeof LocalErrorCodeSchema>;
@@ -256,5 +298,11 @@ export const LocalPushSchema = z.discriminatedUnion('push', [
   z.object({ push: z.literal('session.invalid') }),
   /** Preview berubah keadaan (mulai, siap, gagal, berhenti). */
   z.object({ push: z.literal('preview.state'), preview: PreviewInfoSchema }),
+  z.object({ push: z.literal('terminal.data'), terminalId: z.string(), data: z.string() }),
+  z.object({
+    push: z.literal('terminal.exit'),
+    terminalId: z.string(),
+    exitCode: z.number().int().nullable(),
+  }),
 ]);
 export type LocalPush = z.infer<typeof LocalPushSchema>;

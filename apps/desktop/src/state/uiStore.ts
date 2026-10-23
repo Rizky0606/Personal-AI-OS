@@ -40,6 +40,12 @@ interface UiState {
   activeRunBranch: string | null;
   /** Run coding yang hasilnya sedang menunggu tinjauan (tab Diff); tidak disimpan. */
   reviewRunId: string | null;
+  /** Model pilihan untuk pesan berikutnya; null = otomatis (router/combo). Diingat antar sesi. */
+  model: string | null;
+  setModel: (model: string | null) => void;
+  /** Role yang sedang dipakai chat (pilihan manual atau keputusan router) untuk status bar; tidak disimpan. */
+  activeRole: string | null;
+  setActiveRole: (role: string | null) => void;
   /** Lampiran konteks untuk pesan berikutnya; tidak disimpan. */
   attachments: ContextAttachment[];
   addAttachment: (attachment: ContextAttachment) => void;
@@ -52,6 +58,8 @@ interface UiState {
   setActiveRunBranch: (branch: string | null) => void;
   toggleSidebar: () => void;
   toggleRightPanel: () => void;
+  /** Membuka panel kanan di tab tertentu. */
+  openPanel: (tab: RightPanelTab) => void;
   setRightPanelWidth: (width: number) => void;
   setRightPanelTab: (tab: RightPanelTab) => void;
   setTheme: (theme: ThemeMode) => void;
@@ -73,6 +81,10 @@ export const useUiStore = create<UiState>()(
       activeProjectId: null,
       activeRunBranch: null,
       reviewRunId: null,
+      model: null,
+      setModel: (model) => set({ model }),
+      activeRole: null,
+      setActiveRole: (activeRole) => set({ activeRole }),
       attachments: [],
       addAttachment: (attachment) =>
         set((s) => ({
@@ -88,6 +100,7 @@ export const useUiStore = create<UiState>()(
       setActiveRunBranch: (activeRunBranch) => set({ activeRunBranch }),
       toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
       toggleRightPanel: () => set((s) => ({ rightPanelOpen: !s.rightPanelOpen })),
+      openPanel: (rightPanelTab) => set({ rightPanelOpen: true, rightPanelTab }),
       setRightPanelWidth: (width) => set({ rightPanelWidth: clampPanelWidth(width) }),
       setRightPanelTab: (rightPanelTab) => set({ rightPanelTab }),
       setTheme: (theme) => set({ theme }),
@@ -103,6 +116,7 @@ export const useUiStore = create<UiState>()(
         rightPanelWidth: s.rightPanelWidth,
         rightPanelTab: s.rightPanelTab,
         activeProjectId: s.activeProjectId,
+        model: s.model,
         theme: s.theme,
       }),
       // Nilai tersimpan yang rusak atau di luar batas dikembalikan ke aman.

@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router';
 import { useState } from 'react';
 import { useAuthState } from '../app/hooks';
 import { auth } from '../app/services';
@@ -42,6 +43,20 @@ export function SettingsScreen() {
       </section>
 
       <AllowedFolders />
+
+      <section aria-labelledby="settings-tools" className="flex flex-col gap-2">
+        <h2 id="settings-tools" className="text-section font-semibold text-text">
+          {copy.settings.tools}
+        </h2>
+        <div className="flex gap-2">
+          <Link to="/quota" className="text-ui text-text underline underline-offset-2">
+            {copy.quota.title}
+          </Link>
+          <Link to="/compare" className="text-ui text-text underline underline-offset-2">
+            {copy.compare.title}
+          </Link>
+        </div>
+      </section>
 
       <section aria-labelledby="settings-theme" className="flex flex-col gap-2">
         <h2 id="settings-theme" className="text-section font-semibold text-text">

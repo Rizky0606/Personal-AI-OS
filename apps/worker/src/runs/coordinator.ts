@@ -9,6 +9,7 @@ import { BROWSER_INSTRUCTION } from '../preview/instruction.js';
 import type { McpRegistration } from '../preview/mcp.js';
 import { BROWSER_TOOL_PREFIX, MCP_SERVER_NAME } from '../preview/mcp.js';
 import type { PreviewService } from '../preview/service.js';
+import type { TerminalService } from '../terminal/service.js';
 import { COMMIT_INSTRUCTION } from './commit-message.js';
 import { OmpNotFoundError } from './omp-path.js';
 import { ReviewError, type ReviewService } from './review.js';
@@ -28,6 +29,8 @@ export interface CoordinatorDeps {
   adapter: AgentAdapter;
   /** Preview website dan tool browser agent; tanpa ini run berjalan tanpa tool browser. */
   preview?: PreviewService;
+  /** Terminal di worktree run ditutup sebelum worktree dihapus. */
+  terminal?: TerminalService;
   /** Mengirim event ke gateway; false bila tidak tersambung (event disimpan dan dikirim saat tersambung). */
   send: (runId: string, event: AgentEvent) => boolean;
   dataDir: string;
@@ -186,6 +189,7 @@ export class RunCoordinator {
 
     // Worktree akan dihapus: dev server yang berjalan di dalamnya dihentikan lebih dulu.
     await this.deps.preview?.stopByRun(cmd.runId).catch(() => undefined);
+    this.deps.terminal?.closeByRun(cmd.runId);
     let frame: WorkerReviewResultFrame;
     try {
       const outcome =
@@ -246,6 +250,7 @@ export class RunCoordinator {
       let worktree: Worktree;
       if (cmd.continueFromRunId) {
         await this.deps.preview?.stopByRun(cmd.continueFromRunId).catch(() => undefined);
+        this.deps.terminal?.closeByRun(cmd.continueFromRunId);
         worktree = this.deps.worktrees.adopt(cmd.continueFromRunId, runId);
         this.deps.review.inherit(cmd.continueFromRunId, runId);
       } else {

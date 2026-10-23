@@ -39,7 +39,9 @@ export function useChatController(conversationId: string | undefined) {
 
   const [draft, setDraft] = useState('');
   const [role, setRole] = useState<string | null>(null);
-  const [model, setModel] = useState<string | null>(null);
+  const model = useUiStore((s) => s.model);
+  const setModel = useUiStore((s) => s.setModel);
+  const setActiveRole = useUiStore((s) => s.setActiveRole);
   const [pending, setPending] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
@@ -70,6 +72,13 @@ export function useChatController(conversationId: string | undefined) {
     if (useUiStore.getState().activeRunBranch === null) setRunBranch(workerBranchFor(liveRunId));
     return () => setRunBranch(null);
   }, [codingLive, liveRunId, setRunBranch]);
+
+  // Status bar menampilkan role yang dipakai: keputusan router untuk jawaban ini, atau pilihan manual.
+  const shownRole = live?.role ?? role;
+  useEffect(() => {
+    setActiveRole(shownRole);
+    return () => setActiveRole(null);
+  }, [shownRole, setActiveRole]);
 
   const [resolving, setResolving] = useState<ReadonlySet<string>>(new Set());
 

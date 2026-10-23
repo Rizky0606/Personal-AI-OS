@@ -55,6 +55,8 @@ export const api: FakeApi = {
   resolveApproval: fn<'resolveApproval'>(),
   reviewRun: fn<'reviewRun'>(),
   cancelRun: fn<'cancelRun'>(),
+  getQuota: fn<'getQuota'>(),
+  compareModels: fn<'compareModels'>(),
   listTasks: fn<'listTasks'>(),
   createTask: fn<'createTask'>(),
   updateTask: fn<'updateTask'>(),
@@ -117,6 +119,10 @@ export const workerApi: FakeWorkerApi = {
   previewGet: vi.fn(),
   previewStop: vi.fn(),
   previewShot: vi.fn(),
+  terminalOpen: vi.fn(),
+  terminalWrite: vi.fn(),
+  terminalResize: vi.fn(),
+  terminalClose: vi.fn(),
 };
 export const workerService = { start: vi.fn(), stop: vi.fn() };
 

@@ -27,6 +27,7 @@ import type { PageRenderer } from '../modules/research/render.js';
 import { createSearxngClient } from '../modules/research/search.js';
 import { createResearchService, type ResearchService } from '../modules/research/service.js';
 import { createProjectsService } from '../modules/projects/service.js';
+import { createCompareService } from '../modules/compare/service.js';
 import { createTaskBreakdown } from '../modules/tasks/breakdown.js';
 import { createTasksService, type TasksService } from '../modules/tasks/service.js';
 import { createWorkerRelay, type WorkerRelay } from '../modules/worker/relay.js';
@@ -276,6 +277,7 @@ export async function createAuthEnv(
     schedules,
     projects,
     tasks,
+    compare: createCompareService({ client }),
     worker: { hub: workerHub, relay: workerRelay },
     ws: {
       hub,

@@ -1,4 +1,6 @@
 import {
+  CompareRequestSchema,
+  CompareResponseSchema,
   ModelListSchema,
   QuotaSchema,
   RoleListSchema,
@@ -27,6 +29,17 @@ export const catalogEndpoints: readonly Endpoint[] = [
     auth: true,
     responses: [json(200, 'Pemakaian', QuotaSchema)],
     errors: [401],
+  },
+  {
+    operationId: 'compareModels',
+    method: 'post',
+    path: '/compare',
+    tag: 'Model',
+    summary: 'Satu prompt ke 2-3 model sekaligus, dengan waktu dan usage per model',
+    auth: true,
+    body: CompareRequestSchema,
+    responses: [json(200, 'Jawaban per model', CompareResponseSchema)],
+    errors: [400, 401],
   },
   {
     operationId: 'listRoles',

@@ -19,6 +19,9 @@ const PATHS = [
   '/schedules/$scheduleId',
   '/research',
   '/research/$researchId',
+  '/kanban',
+  '/quota',
+  '/compare',
 ];
 
 /**

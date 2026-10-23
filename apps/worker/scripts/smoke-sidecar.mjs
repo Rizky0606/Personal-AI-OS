@@ -45,6 +45,43 @@ const status = inbox.find((m) => m.id === '1');
 if (!status?.ok || status.result.gateway !== 'offline')
   fail(`status.get: ${JSON.stringify(status)}`);
 
+// Terminal PTY sungguhan di .exe: buka shell di folder project, ketik perintah, keluarannya kembali sebagai push.
+const projectDir = mkdtempSync(join(tmpdir(), 'aios-smoke-proj-'));
+const PROJECT = '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f';
+const call = async (id, method, params) => {
+  ws.send(JSON.stringify({ id, method, params }));
+  for (let i = 0; i < 100; i++) {
+    const found = inbox.find((m) => m.id === id);
+    if (found) return found;
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  return fail(`tidak ada jawaban untuk ${method}`);
+};
+const added = await call('f', 'folders.add', { path: projectDir });
+if (!added.ok) fail(`folders.add: ${JSON.stringify(added)}`);
+const bound = await call('b', 'project.bind', { projectId: PROJECT, path: projectDir });
+if (!bound.ok) fail(`project.bind: ${JSON.stringify(bound)}`);
+const opened = await call('t', 'terminal.open', { projectId: PROJECT, cols: 100, rows: 30 });
+if (!opened.ok) fail(`terminal.open: ${JSON.stringify(opened)}`);
+const terminalId = opened.result.id;
+await call('w', 'terminal.write', {
+  terminalId,
+  data: `echo halo-dari-pty${String.fromCharCode(13)}`,
+});
+let output = '';
+// Muncul dua kali: gema ketikan dan hasil perintah.
+for (let i = 0; i < 100 && output.split('halo-dari-pty').length < 3; i++) {
+  await new Promise((r) => setTimeout(r, 100));
+  output = inbox
+    .filter((m) => m.push === 'terminal.data' && m.terminalId === terminalId)
+    .map((m) => m.data)
+    .join('');
+}
+if (!output.includes('halo-dari-pty'))
+  fail(`keluaran PTY tidak muncul: ${JSON.stringify(output.slice(-200))}`);
+if (/AIOS_WORKER_TOKEN/.test(output)) fail('token worker bocor ke shell');
+await call('x', 'terminal.close', { terminalId });
+
 child.stdin.end();
 const code = await Promise.race([
   exited,
@@ -55,5 +92,12 @@ if (code === 'masih-hidup') {
   fail('proses tidak berhenti setelah stdin ditutup');
 }
 clearTimeout(timeout);
-rmSync(dataDir, { recursive: true, force: true });
+// Folder project dibersihkan setelah sidecar (dan shell-nya) berhenti; gagal menghapus bukan kegagalan uji.
+for (const dir of [dataDir, projectDir]) {
+  try {
+    rmSync(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 200 });
+  } catch {
+    console.error(`peringatan: ${dir} belum bisa dihapus`);
+  }
+}
 console.log(`OK: port ${listening.port}, berhenti dengan kode ${code} setelah stdin ditutup`);

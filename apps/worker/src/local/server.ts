@@ -15,6 +15,7 @@ import { WebSocketServer, type WebSocket } from 'ws';
 import { PathError } from '../paths/normalize.js';
 import { PreviewError } from '../preview/service.js';
 import { ReviewError } from '../runs/review.js';
+import { TerminalError } from '../terminal/service.js';
 
 export interface LocalServerDeps {
   /** Token sekali pakai untuk koneksi pertama (dari Tauri). */
@@ -149,7 +150,8 @@ export class LocalServer {
       if (
         error instanceof PathError ||
         error instanceof ReviewError ||
-        error instanceof PreviewError
+        error instanceof PreviewError ||
+        error instanceof TerminalError
       ) {
         this.send(socket, failure(request.data.id, error.code, error.message));
       } else {

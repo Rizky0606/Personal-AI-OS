@@ -6,6 +6,8 @@ import { createHandler, workerStatus } from './local/handlers.js';
 import { LocalServer } from './local/server.js';
 import { LlmProxy } from './llm/proxy.js';
 import { PreviewService } from './preview/service.js';
+import { resolveWorkDir } from './preview/target.js';
+import { TerminalService } from './terminal/service.js';
 import { AllowList } from './paths/allowlist.js';
 import { canonicalize } from './paths/normalize.js';
 import { ProcessManager } from './process/manager.js';
@@ -40,6 +42,7 @@ export interface RunningWorker {
   worktrees: WorktreeManager;
   review: ReviewService;
   preview: PreviewService;
+  terminal: TerminalService;
   rules: ApprovalRules;
   coordinator: RunCoordinator;
   stop(): Promise<void>;
@@ -129,6 +132,14 @@ export async function startWorker(options: WorkerOptions): Promise<RunningWorker
     log,
   });
 
+  // Terminal PTY per project atau worktree run; keluarannya didorong ke desktop.
+  const terminal: TerminalService = new TerminalService({
+    resolveCwd: async (target) => (await resolveWorkDir({ bindings, worktrees }, target)).cwd,
+    onData: (terminalId, data) => server.push({ push: 'terminal.data', terminalId, data }),
+    onExit: (terminalId, exitCode) => server.push({ push: 'terminal.exit', terminalId, exitCode }),
+    log,
+  });
+
   const coordinator: RunCoordinator = new RunCoordinator({
     bindings,
     worktrees,
@@ -137,6 +148,7 @@ export async function startWorker(options: WorkerOptions): Promise<RunningWorker
     rules,
     adapter,
     preview,
+    terminal,
     send: (runId, event) => link.sendEvent(runId, event),
     dataDir: options.dataDir,
     log,
@@ -178,6 +190,7 @@ export async function startWorker(options: WorkerOptions): Promise<RunningWorker
     link,
     review,
     preview,
+    terminal,
     worktrees,
     version: WORKER_VERSION,
   };
@@ -221,10 +234,12 @@ export async function startWorker(options: WorkerOptions): Promise<RunningWorker
     worktrees,
     review,
     preview,
+    terminal,
     rules,
     coordinator,
     async stop() {
       link.stop();
+      terminal.closeAll();
       await preview.stopAll().catch(() => undefined);
       await processes.killAll();
       await proxy.close();

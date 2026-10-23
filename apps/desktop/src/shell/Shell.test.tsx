@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import {
   RouterProvider,
   createMemoryHistory,
@@ -114,17 +114,32 @@ describe('Shell', () => {
     expect(handle).toHaveAttribute('aria-valuenow', String(RIGHT_PANEL_DEFAULT + 32));
   });
 
-  it('Ctrl+K membuka palet perintah yang kosong; Ctrl+N menaikkan sinyal chat baru', async () => {
+  it('Ctrl+K membuka palet perintah; Ctrl+N menaikkan sinyal chat baru', async () => {
     await renderShell();
 
     ctrl('k');
-    expect(await screen.findByRole('dialog', { name: copy.shell.palette })).toHaveTextContent(
-      copy.shell.paletteHint,
+    expect(await screen.findByRole('dialog', { name: copy.palette.title })).toHaveTextContent(
+      copy.palette.newChat,
     );
 
     const before = useUiStore.getState().newChatSignal;
     ctrl('n');
     expect(useUiStore.getState().newChatSignal).toBe(before + 1);
+  });
+
+  it('Ctrl+1..6 berpindah layar sesuai urutan rail, tanpa mouse', async () => {
+    const { router } = await renderShell();
+
+    for (const [digit, path] of [
+      ['3', '/kanban'],
+      ['4', '/schedules'],
+      ['6', '/settings'],
+      ['2', '/projects'],
+      ['1', '/'],
+    ] as const) {
+      ctrl(digit);
+      await waitFor(() => expect(router.state.location.pathname).toBe(path));
+    }
   });
 
   it('judul bagian dan sidebar mengikuti rute', async () => {

@@ -1,4 +1,7 @@
+import { Link } from '@tanstack/react-router';
 import { useConnection, useOnline } from '../app/hooks';
+import { useModels, useQuota, useRoles } from '../api/queries';
+import { formatCost, formatTokens } from '../lib/format';
 import { useUiStore } from '../state/uiStore';
 import { useProjects, useWorker } from '../worker/hooks';
 import { workerIndicator } from '../worker/status';
@@ -41,6 +44,23 @@ export function StatusBar() {
   const activeProjectId = useUiStore((s) => s.activeProjectId);
   const runBranch = useUiStore((s) => s.activeRunBranch);
   const project = useProjects().data?.find((p) => p.id === activeProjectId);
+  const activeRole = useUiStore((s) => s.activeRole);
+  const modelId = useUiStore((s) => s.model);
+  const roles = useRoles().data;
+  const models = useModels().data;
+  const quota = useQuota().data;
+  const roleLabel = activeRole
+    ? (roles?.find((r) => r.id === activeRole)?.name ?? activeRole)
+    : copy.status.role;
+  const modelLabel = modelId
+    ? (models?.find((m) => m.id === modelId)?.label ?? modelId)
+    : copy.status.model;
+  const quotaLabel = quota
+    ? copy.status.quotaSummary(
+        formatTokens(quota.totals.inputTokens + quota.totals.outputTokens),
+        formatCost(quota.totals.costUsd),
+      )
+    : copy.status.quota;
   // Selama run coding berjalan: branch kerja agent; selain itu branch bawaan project.
   const projectLabel = project
     ? `${project.name} · ${runBranch ?? project.defaultBranch}`
@@ -49,8 +69,8 @@ export function StatusBar() {
     <footer className="flex h-(--aios-statusbar-height) shrink-0 items-center justify-between border-t border-border bg-surface px-3 font-mono text-caption text-text-2">
       <div className="flex items-center gap-4">
         <span>{projectLabel}</span>
-        <span>{copy.status.role}</span>
-        <span>{copy.status.model}</span>
+        <span>{roleLabel}</span>
+        <span className="max-w-48 truncate">{modelLabel}</span>
       </div>
       <div className="flex items-center gap-4">
         <span
@@ -71,7 +91,13 @@ export function StatusBar() {
           />
           {copy.workerStatus[worker]}
         </span>
-        <span>{copy.status.quota}</span>
+        <Link
+          to="/quota"
+          aria-label={copy.status.quotaLabel}
+          className="underline-offset-2 hover:text-text hover:underline"
+        >
+          {quotaLabel}
+        </Link>
         <span role="status" className="flex items-center gap-2">
           <span aria-hidden="true" className={cn('size-2 rounded-full', dotTone[view.tone])} />
           {view.label}

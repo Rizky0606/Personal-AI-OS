@@ -8,6 +8,8 @@ import { authenticateHook } from './modules/auth/guard.js';
 import { authRoutes, sessionRoutes } from './modules/auth/routes.js';
 import type { AuthService } from './modules/auth/service.js';
 import { chatRoutes } from './modules/chat/routes.js';
+import { compareRoutes } from './modules/compare/routes.js';
+import type { CompareService } from './modules/compare/service.js';
 import type { ChatService } from './modules/chat/service.js';
 import { deviceRoutes } from './modules/devices/routes.js';
 import type { DevicesService } from './modules/devices/service.js';
@@ -69,6 +71,7 @@ export interface AppDeps {
   schedules: ScheduleService;
   projects: ProjectsService;
   tasks: TasksService;
+  compare: CompareService;
   /** Hub koneksi worker dan relay-nya; dibuat di luar karena runner juga memakai relay. */
   worker: { hub: ReturnType<typeof createWorkerHub>; relay: WorkerRelay };
   /** WebSocket /v1/ws; `auth` diisi dari dependensi di atas. */
@@ -92,6 +95,7 @@ export function buildApp({
   schedules,
   projects,
   tasks,
+  compare,
   worker,
   ws,
   rateLimits,
@@ -169,6 +173,7 @@ export function buildApp({
         await protectedScope.register(scheduleRoutes, { schedules });
         await protectedScope.register(projectRoutes, { projects });
         await protectedScope.register(taskRoutes, { tasks });
+        await protectedScope.register(compareRoutes, { compare });
         await protectedScope.register(wsRoutes, { ...ws, auth });
         await protectedScope.register(workerRoutes, {
           auth,

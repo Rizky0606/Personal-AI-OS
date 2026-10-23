@@ -6,6 +6,8 @@ import {
   useParams,
 } from '@tanstack/react-router';
 import { ChatScreen } from '../chat/ChatScreen';
+import { CompareScreen } from '../compare/CompareScreen';
+import { QuotaScreen } from '../quota/QuotaScreen';
 import { KanbanScreen } from '../kanban/KanbanScreen';
 import { ResearchDetailScreen } from '../research/ResearchDetailScreen';
 import { ResearchFormScreen } from '../research/ResearchFormScreen';
@@ -59,6 +61,8 @@ const routes = [
     component: ResearchRoute,
   }),
   createRoute({ getParentRoute: () => rootRoute, path: '/settings', component: SettingsScreen }),
+  createRoute({ getParentRoute: () => rootRoute, path: '/quota', component: QuotaScreen }),
+  createRoute({ getParentRoute: () => rootRoute, path: '/compare', component: CompareScreen }),
   // Katalog komponen hanya ada di mode dev.
   ...(import.meta.env.DEV
     ? [

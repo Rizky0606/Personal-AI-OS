@@ -6,12 +6,14 @@ import {
   PreviewShotSchema,
   ProjectsResultSchema,
   ReviewStateSchema,
+  TerminalInfoSchema,
   type PreviewInfo,
   type PreviewShot,
   type PreviewTarget,
   type ProjectBinding,
   type ProjectInspection,
   type ReviewState,
+  type TerminalInfo,
 } from '@aios/contracts';
 
 export type WorkerCall = (method: string, params?: object) => Promise<unknown>;
@@ -37,6 +39,19 @@ export function createWorkerApi(call: WorkerCall) {
     /** `base` = sebelum langkah pertama agent; selain itu id checkpoint. */
     reviewUndo: async (runId: string, checkpointId: string): Promise<ReviewState> =>
       ReviewStateSchema.parse(await call('review.undo', { runId, checkpointId })),
+    /** Membuka (atau melanjutkan) terminal project atau worktree run; mengembalikan riwayat keluarannya. */
+    terminalOpen: async (
+      target: PreviewTarget & { cols: number; rows: number },
+    ): Promise<TerminalInfo> => TerminalInfoSchema.parse(await call('terminal.open', target)),
+    terminalWrite: async (terminalId: string, data: string): Promise<void> => {
+      await call('terminal.write', { terminalId, data });
+    },
+    terminalResize: async (terminalId: string, cols: number, rows: number): Promise<void> => {
+      await call('terminal.resize', { terminalId, cols, rows });
+    },
+    terminalClose: async (terminalId: string): Promise<void> => {
+      await call('terminal.close', { terminalId });
+    },
     /** Menjalankan dev server (menunggu siap atau gagal; bisa puluhan detik). */
     previewStart: async (target: PreviewTarget): Promise<PreviewInfo> =>
       PreviewInfoSchema.parse(await call('preview.start', target)),

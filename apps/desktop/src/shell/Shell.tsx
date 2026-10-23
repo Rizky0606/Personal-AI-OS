@@ -25,6 +25,9 @@ interface Section {
   action?: { label: string; to: '/' | '/research' };
 }
 
+/** Tujuan Ctrl+1..6, sama dengan urutan rail. */
+const NAV_ROUTES = ['/', '/projects', '/kanban', '/schedules', '/research', '/settings'] as const;
+
 /** Judul bagian dan isi sidebar menurut rute aktif. */
 function sectionFor(pathname: string): Section {
   if (pathname.startsWith('/projects')) return { title: copy.nav.projects, list: <ProjectList /> };
@@ -46,6 +49,10 @@ function sectionFor(pathname: string): Section {
       list: <ResearchList />,
       action: { label: copy.research.newResearch, to: '/research' },
     };
+  if (pathname.startsWith('/quota'))
+    return { title: copy.quota.title, list: <EmptyState message={copy.quota.empty} /> };
+  if (pathname.startsWith('/compare'))
+    return { title: copy.compare.title, list: <EmptyState message={copy.compare.intro} /> };
   if (pathname.startsWith('/settings'))
     return { title: copy.nav.settings, list: <EmptyState message={copy.settings.shortcuts} /> };
   if (pathname.startsWith('/dev'))
@@ -90,8 +97,12 @@ export function Shell() {
       newChat: requestNewChat,
       toggleSidebar,
       toggleRightPanel,
+      navigate: (slot: number) => {
+        const target = NAV_ROUTES[slot - 1];
+        if (target) void navigate({ to: target });
+      },
     }),
-    [setPaletteOpen, requestNewChat, toggleSidebar, toggleRightPanel],
+    [setPaletteOpen, requestNewChat, toggleSidebar, toggleRightPanel, navigate],
   );
   useShortcuts(actions);
   const section = sectionFor(pathname);

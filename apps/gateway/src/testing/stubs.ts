@@ -25,6 +25,8 @@ export const unusedProjects: AppDeps['projects'] = {
   workerOf: unused('projects.workerOf'),
 };
 
+export const unusedCompare: AppDeps['compare'] = { run: unused('compare.run') };
+
 export const unusedTasks: AppDeps['tasks'] = {
   list: unused('tasks.list'),
   create: unused('tasks.create'),

@@ -22,6 +22,7 @@ import {
   RoleIdSchema,
   SurfaceSchema,
   TimestampSchema,
+  UsageSchema,
 } from './common.js';
 import { RunEventSchema } from './events.js';
 import { MergeSkippedSchema, ReviewCommentSchema } from './worker.js';
@@ -103,6 +104,35 @@ export const QuotaSchema = z
     byDay: z.array(z.object({ date: z.iso.date(), ...UsageTotalsShape })),
   })
   .meta({ id: 'Quota' });
+
+export const MAX_COMPARE_MODELS = 3;
+
+export const CompareRequestSchema = z
+  .object({
+    prompt: z.string().min(1).max(8000),
+    /** 2 sampai 3 model berbeda (id dari GET /models). */
+    models: z
+      .array(z.string().min(1))
+      .min(2)
+      .max(MAX_COMPARE_MODELS)
+      .refine((m) => new Set(m).size === m.length, 'model tidak boleh sama'),
+  })
+  .meta({ id: 'CompareRequest' });
+
+export const CompareResultSchema = z.object({
+  model: z.string(),
+  ok: z.boolean(),
+  text: z.string(),
+  /** Waktu sampai jawaban lengkap, ms. */
+  latencyMs: z.number().int().nonnegative(),
+  usage: UsageSchema.nullable(),
+  /** Pesan galat per model; model lain tetap menjawab. */
+  error: z.string().nullable(),
+});
+
+export const CompareResponseSchema = z
+  .object({ results: z.array(CompareResultSchema) })
+  .meta({ id: 'CompareResponse' });
 
 export const RoleInfoSchema = z
   .object({

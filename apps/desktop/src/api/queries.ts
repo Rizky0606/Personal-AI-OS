@@ -40,6 +40,10 @@ export const useTasks = (projectId: string | null) =>
     enabled: projectId !== null,
   });
 
+/** Pemakaian dan kuota; dipakai status bar (ringkas) dan halaman Kuota. */
+export const useQuota = () =>
+  useQuery({ queryKey: ['quota'], queryFn: api.getQuota, staleTime: MINUTES });
+
 export const useSchedules = () => useQuery({ queryKey: ['schedules'], queryFn: api.listSchedules });
 
 export const useScheduleRuns = (scheduleId: string) =>

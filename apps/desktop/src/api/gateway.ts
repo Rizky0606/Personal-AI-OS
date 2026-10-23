@@ -9,6 +9,8 @@ import {
   ProjectSchema,
   ResearchJobDetailSchema,
   ResearchJobSchema,
+  CompareResponseSchema,
+  QuotaSchema,
   RerouteResponseSchema,
   ReviewResponseSchema,
   RoleListSchema,
@@ -65,6 +67,8 @@ export type ResearchJobDetail = z.infer<typeof ResearchJobDetailSchema>;
 export type ScheduleParse = z.infer<typeof ScheduleParseResponseSchema>;
 export type CreateScheduleInput = z.input<typeof CreateScheduleRequestSchema>;
 export type CreateProjectInput = z.input<typeof CreateProjectRequestSchema>;
+export type Quota = z.infer<typeof QuotaSchema>;
+export type CompareResult = z.infer<typeof CompareResponseSchema>['results'][number];
 export type CreateTaskInput = z.input<typeof CreateTaskRequestSchema>;
 export type UpdateTaskInput = z.input<typeof UpdateTaskRequestSchema>;
 export type TaskProposal = z.infer<typeof TaskBreakdownResponseSchema>['items'][number];
@@ -162,6 +166,11 @@ export function createGatewayApi(call: Call) {
         commitMessage?: string;
       },
     ) => get(`/runs/${runId}/review`, ReviewResponseSchema, { method: 'POST', body: input }),
+    getQuota: () => get('/quota', QuotaSchema),
+    /** Satu prompt ke 2-3 model sekaligus; galat per model ada di hasilnya. */
+    compareModels: async (prompt: string, models: string[]) =>
+      (await get('/compare', CompareResponseSchema, { method: 'POST', body: { prompt, models } }))
+        .results,
     listTasks: async (projectId: string) =>
       (await get(`/projects/${projectId}/tasks`, TaskListSchema)).items,
     createTask: (input: CreateTaskInput) =>
