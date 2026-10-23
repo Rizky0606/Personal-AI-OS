@@ -75,6 +75,8 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
         onEditLast={chat.editLast}
         focusNonce={chat.focusNonce}
         suggestions={view === 'empty' ? copy.chat.suggestions : undefined}
+        attachments={chat.attachments}
+        onRemoveAttachment={chat.removeAttachment}
       />
     </div>
   );

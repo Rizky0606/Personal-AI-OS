@@ -114,6 +114,43 @@ describe('chat per project', () => {
   });
 });
 
+describe('lampiran konteks dari preview', () => {
+  it('elemen terpilih dikirim bersama pesan lalu lampiran dikosongkan; chip tampil di composer', async () => {
+    useUiStore.getState().setActiveProject(PROJECT);
+    useUiStore.getState().addAttachment({
+      id: 'a1',
+      label: 'button.simpan',
+      text: '[Elemen dipilih dari preview]\nSelector: button.simpan',
+    });
+    api.createConversation.mockResolvedValue({
+      id: CONV,
+      title: '',
+      surface: 'windows',
+      projectId: PROJECT,
+      pinned: false,
+      archivedAt: null,
+      createdAt: TS,
+      updatedAt: TS,
+    });
+    api.sendMessage.mockResolvedValue({
+      message: message({ author: 'user', text: 'x', runId: RUN_X }),
+      run: run({ id: RUN_X }),
+    });
+    const user = userEvent.setup();
+    await renderScreen(<ChatScreen />);
+    expect(await screen.findByText('button.simpan')).toBeInTheDocument();
+
+    await user.type(field(), 'perbaiki tombol ini{Enter}');
+
+    await waitFor(() => expect(api.sendMessage).toHaveBeenCalled());
+    const sent = api.sendMessage.mock.calls[0]?.[1];
+    expect(sent?.text).toBe(
+      'perbaiki tombol ini\n\n[Elemen dipilih dari preview]\nSelector: button.simpan',
+    );
+    await waitFor(() => expect(useUiStore.getState().attachments).toEqual([]));
+  });
+});
+
 describe('panel izin inline', () => {
   async function runWithApproval(extra: () => void = () => undefined) {
     useUiStore.getState().setActiveProject(PROJECT);

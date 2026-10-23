@@ -237,6 +237,16 @@ Direkam ulang dengan omp sungguhan dan server OpenAI-compatible tiruan; transkri
 - `tool_execution_update.partialResult.content` berisi teks **kumulatif** (bukan potongan baru); adapter mengirim hanya tambahannya sebagai `tool.output`.
 - **Peluncuran**: `omp.exe` ada di `~/.bun/bin`; pembungkus `.cmd` tidak bisa dijalankan tanpa shell. Worker mencari `omp.exe` di PATH (atau `AIOS_OMP_PATH`). Flag yang terbukti jalan bersama: `--mode rpc --approval-mode always-ask --cwd <dir> --no-session --no-skills --no-extensions --no-lsp --no-title --append-system-prompt <berkas> --model aios/<id>` dengan `PI_CODING_AGENT_DIR` terisolasi berisi `models.yml`. Tidak ada berkas `.omp` yang muncul di repo kerja maupun worktree.
 
+### Tool kustom lewat MCP (Fase 21, omp 18.12.6, Windows)
+
+Diuji dengan omp sungguhan dan server MCP HTTP buatan worker:
+
+- **Konfigurasi**: `<PI_CODING_AGENT_DIR>/mcp.json` dengan `{"mcpServers":{"<nama>":{"type":"http","url":"…","headers":{"Authorization":"Bearer …"}}}}` dibaca omp; tidak ada berkas di repo kerja. Transport yang dipakai omp: `POST initialize` (protokol `2025-11-25`, `Accept: application/json, text/event-stream`), `POST notifications/initialized` (cukup dijawab 202), `GET` dengan `Accept: text/event-stream` (dijawab 405 tidak masalah), lalu `POST tools/list`. Jawaban JSON biasa (tanpa SSE) diterima.
+- **Nama tool di model**: `mcp__<server>_<tool>`, mis. `mcp__aios_browser_browser_screenshot`.
+- **Dua pengaturan wajib** supaya tool terlihat oleh model: (1) `tools.xdev: false` lewat `--config overlay.yml`; bawaannya `true` menyembunyikan tool MCP di balik perangkat `xd://` sehingga tidak ada di daftar tool permintaan LLM; (2) env `OMP_MCP_STARTUP_TIMEOUT_MS=0`, karena jendela bawaan 250 ms bisa terlewat dan tool baru terdaftar di latar belakang.
+- **Approval**: tool MCP juga meminta izin pada `always-ask`. Judulnya `Allow tool: mcp__…` dengan detail `Arguments:\n{json}`; tidak ada baris `Command:`. Adapter menaruh nama tool di baris pertama detail supaya worker bisa mengenalinya.
+- **Gambar**: hasil tool bisa berisi blok `image` (base64), tetapi `models.yml` yang kita tulis mendeklarasikan `input: [text]`, jadi model hanya menerima teks. Karena itu tool screenshot juga mengembalikan laporan tata letak berbentuk teks (elemen di luar viewport, gulir mendatar, isi terpotong). Mengaktifkan input gambar bergantung pada kemampuan model di 9Router dan belum dilakukan.
+
 ### Yang TIDAK didukung / tidak ada
 
 - Tidak ada command RPC `set_system_prompt`.

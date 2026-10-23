@@ -1,6 +1,7 @@
 import * as Tabs from '@radix-ui/react-tabs';
 import { copy } from '../copy';
 import { useUiStore, type RightPanelTab } from '../state/uiStore';
+import { PreviewPanel } from '../preview/PreviewPanel';
 import { DiffPanel } from '../review/DiffPanel';
 import { EmptyState } from '../ui/EmptyState';
 import { ResizeHandle } from './ResizeHandle';
@@ -39,7 +40,13 @@ export function RightPanel() {
           </Tabs.List>
           {tabs.map((id) => (
             <Tabs.Content key={id} value={id} className="min-h-0 flex-1 overflow-auto">
-              {id === 'diff' ? <DiffPanel /> : <EmptyState message={copy.shell.panelEmpty} />}
+              {id === 'diff' ? (
+                <DiffPanel />
+              ) : id === 'preview' ? (
+                <PreviewPanel />
+              ) : (
+                <EmptyState message={copy.shell.panelEmpty} />
+              )}
             </Tabs.Content>
           ))}
         </Tabs.Root>

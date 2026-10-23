@@ -1,7 +1,8 @@
 import type { ModelInfo, RoleInfo } from '../api/gateway';
-import { ArrowUp, ChevronDown, Pencil, Square } from 'lucide-react';
+import { ArrowUp, ChevronDown, Pencil, Square, X } from 'lucide-react';
 import { useEffect, useId, useRef, type KeyboardEvent } from 'react';
 import { copy } from '../copy';
+import type { ContextAttachment } from '../state/uiStore';
 import { Button } from '../ui/Button';
 import { Chip } from '../ui/Chip';
 import { IconButton } from '../ui/IconButton';
@@ -30,6 +31,9 @@ export interface ComposerProps {
   /** Naik tiap fokus perlu dipindah ke kolom pesan (chat baru, ubah pesan terakhir). */
   focusNonce: number;
   suggestions?: readonly string[];
+  /** Konteks dari preview yang ikut terkirim bersama pesan ini. */
+  attachments?: readonly ContextAttachment[];
+  onRemoveAttachment?: (id: string) => void;
 }
 
 const MAX_HEIGHT_PX = 192;
@@ -52,6 +56,8 @@ export function Composer({
   onEditLast,
   focusNonce,
   suggestions,
+  attachments = [],
+  onRemoveAttachment,
 }: ComposerProps) {
   const field = useRef<HTMLTextAreaElement>(null);
   const labelId = useId();
@@ -96,6 +102,31 @@ export function Composer({
           </div>
         ) : null}
         <div className="flex flex-col gap-2 rounded-panel border border-border bg-surface p-2 focus-within:border-border-strong">
+          {attachments.length > 0 ? (
+            <ul aria-label={copy.preview.attachment.group} className="flex flex-wrap gap-2">
+              {attachments.map((a) => (
+                <li
+                  key={a.id}
+                  className="inline-flex h-8 max-w-full items-center gap-2 rounded-control border border-border bg-surface-2 pr-1 pl-2 text-meta text-text"
+                >
+                  {a.thumbnail ? (
+                    <img
+                      src={a.thumbnail}
+                      alt=""
+                      className="size-5 shrink-0 rounded-badge object-cover"
+                    />
+                  ) : null}
+                  <span className="max-w-56 truncate font-mono">{a.label}</span>
+                  <IconButton
+                    label={copy.preview.attachment.remove(a.label)}
+                    onClick={() => onRemoveAttachment?.(a.id)}
+                  >
+                    <X size={14} strokeWidth={1.5} aria-hidden="true" />
+                  </IconButton>
+                </li>
+              ))}
+            </ul>
+          ) : null}
           <label id={labelId} htmlFor={`${labelId}-field`} className="sr-only">
             {copy.chat.composerLabel}
           </label>

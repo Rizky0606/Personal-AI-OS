@@ -45,6 +45,10 @@ Protokol lokal: `packages/contracts/src/worker-local.ts`. Protokol ke gateway: `
 - omp dicari sebagai `omp.exe` di PATH, atau lokasi di `AIOS_OMP_PATH`.
 - `pnpm --filter @aios/worker test` menjalankan juga uji end-to-end dengan omp sungguhan bila terpasang (dilewati bila tidak).
 
+## Preview dan tool browser (Fase 21)
+
+`PreviewService` menjalankan dev server project (skrip `dev`/`start`/`serve`/`preview` di `package.json`) di worktree run atau folder project, menyajikannya lewat proxy lokal yang menyisipkan jembatan console/inspeksi, dan memberi agent tool browser (`browser_screenshot`, `browser_click`, `browser_fill`, `browser_console`) lewat server MCP HTTP lokal per run. Browser: Edge/Chrome yang sudah terpasang (`AIOS_BROWSER_PATH` untuk menimpa); tidak ada unduhan.
+
 ## Belum ada
 
 - Pembersihan worktree sisa setelah crash (hasilnya tidak bisa ditinjau setelah worker dimulai ulang) dan SQLite.

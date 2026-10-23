@@ -1,3 +1,4 @@
+import { withAttachments } from '../preview/attachment';
 import { workerBranchFor } from '@aios/contracts';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
@@ -28,6 +29,9 @@ export function useChatController(conversationId: string | undefined) {
   const newChatSignal = useUiStore((s) => s.newChatSignal);
   const activeProjectId = useUiStore((s) => s.activeProjectId);
   const setRunBranch = useUiStore((s) => s.setActiveRunBranch);
+  const attachments = useUiStore((s) => s.attachments);
+  const removeAttachment = useUiStore((s) => s.removeAttachment);
+  const clearAttachments = useUiStore((s) => s.clearAttachments);
 
   const messagesQuery = useMessages(conversationId);
   const modelsQuery = useModels();
@@ -105,19 +109,23 @@ export function useChatController(conversationId: string | undefined) {
       push(copy.chat.offlineSend, 'danger');
       return;
     }
+    // Konteks dari preview (elemen terpilih) dikirim bersama pesan ini.
+    const sentAttachments = attachments;
+    const body = withAttachments(text, sentAttachments);
     setSending(true);
-    setPending(text);
+    setPending(body);
     setDraft('');
     try {
       const id =
         conversationId ??
         (await api.createConversation('windows', activeProjectId ?? undefined)).id;
       const response = await api.sendMessage(id, {
-        text,
+        text: body,
         role: role ?? undefined,
         model: model ?? undefined,
       });
       addMessageToCache(queryClient, id, response.message);
+      clearAttachments();
       runs.track(response.run.id);
       setActiveRunId(response.run.id);
       setRole(null);
@@ -221,6 +229,8 @@ export function useChatController(conversationId: string | undefined) {
     roles,
     approvals: live?.approvals ?? [],
     reviewRunId,
+    attachments,
+    removeAttachment,
     resolvingApprovals: resolving,
     resolveApproval: (approvalId: string, decision: 'allow' | 'deny', remember: boolean) =>
       void resolveApproval(approvalId, decision, remember),

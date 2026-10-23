@@ -1,4 +1,4 @@
-import type { EventEnvelope, ServerEvent } from '@aios/contracts';
+import type { EventEnvelope, LocalPush, ServerEvent } from '@aios/contracts';
 import { vi, type Mock } from 'vitest';
 import type { GatewayApi } from '../api/gateway';
 import type { WorkerSnapshot } from '../worker/localClient';
@@ -86,8 +86,17 @@ export const localWorker = {
   start: vi.fn(),
   stop: vi.fn(),
   call: vi.fn(),
-  onPush: () => () => undefined,
+  onPush: (listener: (push: LocalPush) => void) => {
+    pushListeners.add(listener);
+    return () => pushListeners.delete(listener);
+  },
 };
+
+const pushListeners = new Set<(push: LocalPush) => void>();
+/** Mengirim dorongan worker (mis. preview.state) ke pendengar, seolah dari WebSocket lokal. */
+export function emitPush(push: LocalPush): void {
+  pushListeners.forEach((listener) => listener(push));
+}
 export function setWorker(next: WorkerSnapshot): void {
   workerSnapshot = next;
   workerListeners.forEach((listener) => listener());
@@ -104,6 +113,10 @@ export const workerApi: FakeWorkerApi = {
   reviewGet: vi.fn(),
   reviewUndo: vi.fn(),
   reviewRevertFile: vi.fn(),
+  previewStart: vi.fn(),
+  previewGet: vi.fn(),
+  previewStop: vi.fn(),
+  previewShot: vi.fn(),
 };
 export const workerService = { start: vi.fn(), stop: vi.fn() };
 
@@ -143,5 +156,6 @@ export function resetApi(): void {
   for (const mock of Object.values(workerApi)) mock.mockReset();
   workerApi.folders.mockResolvedValue([]);
   workerApi.bindings.mockResolvedValue([]);
+  pushListeners.clear();
   setWorker({ local: 'off', status: null });
 }

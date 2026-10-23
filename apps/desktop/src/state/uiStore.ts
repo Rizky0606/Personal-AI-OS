@@ -14,6 +14,17 @@ export const clampPanelWidth = (width: number): number =>
     Math.max(RIGHT_PANEL_MIN, Math.round(Number.isFinite(width) ? width : RIGHT_PANEL_DEFAULT)),
   );
 
+/** Konteks dari preview (mis. elemen terpilih) yang ikut terkirim bersama pesan berikutnya. */
+export interface ContextAttachment {
+  id: string;
+  /** Label singkat di composer, mis. selector elemen. */
+  label: string;
+  /** Teks yang ditambahkan ke pesan. */
+  text: string;
+  /** Data URL PNG untuk pratinjau kecil; tidak dikirim. */
+  thumbnail?: string | undefined;
+}
+
 interface UiState {
   sidebarOpen: boolean;
   rightPanelOpen: boolean;
@@ -29,6 +40,11 @@ interface UiState {
   activeRunBranch: string | null;
   /** Run coding yang hasilnya sedang menunggu tinjauan (tab Diff); tidak disimpan. */
   reviewRunId: string | null;
+  /** Lampiran konteks untuk pesan berikutnya; tidak disimpan. */
+  attachments: ContextAttachment[];
+  addAttachment: (attachment: ContextAttachment) => void;
+  removeAttachment: (id: string) => void;
+  clearAttachments: () => void;
   /** Membuka panel kanan di tab Diff untuk run ini. */
   openReview: (runId: string) => void;
   setReviewRunId: (runId: string | null) => void;
@@ -57,6 +73,14 @@ export const useUiStore = create<UiState>()(
       activeProjectId: null,
       activeRunBranch: null,
       reviewRunId: null,
+      attachments: [],
+      addAttachment: (attachment) =>
+        set((s) => ({
+          attachments: [...s.attachments.filter((a) => a.id !== attachment.id), attachment],
+        })),
+      removeAttachment: (id) =>
+        set((s) => ({ attachments: s.attachments.filter((a) => a.id !== id) })),
+      clearAttachments: () => set({ attachments: [] }),
       openReview: (reviewRunId) =>
         set({ reviewRunId, rightPanelOpen: true, rightPanelTab: 'diff' }),
       setReviewRunId: (reviewRunId) => set({ reviewRunId }),
