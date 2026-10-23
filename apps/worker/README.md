@@ -38,10 +38,14 @@ Protokol lokal: `packages/contracts/src/worker-local.ts`. Protokol ke gateway: `
 
 `run.start` dari gateway dijalankan oleh `RunCoordinator`: `git worktree add` ke `aios/<id>` (di luar repo kerja), omp lewat adapter di `packages/adapters` (`--approval-mode always-ask`, role lewat berkas di luar worktree), LLM lewat proxy lokal, dan event dikirim ke gateway (ditahan selama koneksi putus). Izin yang diminta omp ditanyakan ke pengguna kecuali ada aturan "selalu" untuk perintah persis itu di project tersebut. Hasil ditinjau lewat `review.apply`: diterima = commit di branch `aios/...`, ditolak = worktree dan branch dihapus; run tanpa perubahan dibuang sendiri.
 
+### Tinjauan (Fase 19)
+
+`ReviewService` menghitung diff worktree terhadap base lewat index git pribadi (tidak mengganggu git milik agent), membuat checkpoint setelah tiap langkah yang mengubah file (ref `refs/aios/cp/<id>`), dan melayani desktop lewat protokol lokal: `review.get` (file, patch, checkpoint, usulan pesan commit), `review.undo`, `review.revertFile`. `review.apply` dari gateway: terima = satu commit (pesan Conventional Commits buatan agent atau dari pengguna), opsional fast-forward ke branch kerja; tolak = buang. Komentar review memulai run lanjutan (`continueFromRunId`) di worktree yang sama.
+
 - omp dicari sebagai `omp.exe` di PATH, atau lokasi di `AIOS_OMP_PATH`.
 - `pnpm --filter @aios/worker test` menjalankan juga uji end-to-end dengan omp sungguhan bila terpasang (dilewati bila tidak).
 
 ## Belum ada
 
-- Diff dan checkpoint (Fase 19), pembersihan worktree sisa setelah crash, dan SQLite.
+- Pembersihan worktree sisa setelah crash (hasilnya tidak bisa ditinjau setelah worker dimulai ulang) dan SQLite.
 - Penyimpanan SQLite (ARCHITECTURE.md menyebut SQLite milik worker); saat ini cukup dua berkas JSON.

@@ -1496,6 +1496,10 @@
               "model": {
                 "type": "string",
                 "minLength": 1
+              },
+              "continueFromRunId": {
+                "type": "string",
+                "format": "uuid"
               }
             },
             "required": [
@@ -1630,6 +1634,15 @@
                     "body"
                   ]
                 }
+              },
+              "merge": {
+                "type": "boolean",
+                "default": false
+              },
+              "commitMessage": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
               }
             },
             "required": [
@@ -3003,6 +3016,54 @@
           "decision"
         ]
       },
+      "ReviewResponse": {
+        "type": "object",
+        "properties": {
+          "run": {
+            "$ref": "#/components/schemas/Run"
+          },
+          "branch": {
+            "type": "string"
+          },
+          "commit": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "merged": {
+            "type": "boolean"
+          },
+          "mergeSkipped": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "dirty",
+              "detached",
+              "not_fast_forward",
+              "nothing_to_merge",
+              null
+            ]
+          },
+          "revisionRunId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "run",
+          "branch",
+          "commit",
+          "merged",
+          "mergeSkipped",
+          "revisionRunId"
+        ]
+      },
       "ReviewRequest": {
         "type": "object",
         "properties": {
@@ -3038,6 +3099,15 @@
               ]
             },
             "default": []
+          },
+          "merge": {
+            "type": "boolean",
+            "default": false
+          },
+          "commitMessage": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
           }
         },
         "required": [
@@ -5966,11 +6036,11 @@
         },
         "responses": {
           "200": {
-            "description": "Run setelah review",
+            "description": "Hasil tinjauan",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Run"
+                  "$ref": "#/components/schemas/ReviewResponse"
                 }
               }
             }

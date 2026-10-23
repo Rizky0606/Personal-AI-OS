@@ -1,6 +1,6 @@
 import { promises as fs } from 'node:fs';
 import nodePath from 'node:path';
-import { workerBranchFor } from '@aios/contracts';
+import { WORKER_BRANCH_PREFIX, workerBranchFor } from '@aios/contracts';
 import type { AllowList } from '../paths/allowlist.js';
 import { isInside } from '../paths/normalize.js';
 import type { ProcessManager } from '../process/manager.js';
@@ -14,6 +14,10 @@ export class WorktreeError extends Error {
     this.name = 'WorktreeError';
   }
 }
+
+/** Ref tersembunyi berisi rantai checkpoint satu worktree; stabil walau worktree berpindah ke run lanjutan. */
+export const checkpointRef = (wt: Pick<Worktree, 'branch'>): string =>
+  `refs/aios/cp/${wt.branch.slice(WORKER_BRANCH_PREFIX.length)}`;
 
 export interface Worktree {
   runId: string;
@@ -117,19 +121,32 @@ export class WorktreeManager {
     }
   }
 
+  /**
+   * Run lanjutan (revisi setelah komentar review) memakai worktree run sebelumnya: entri dipindahkan ke id
+   * run baru. Branch dan base tetap, jadi diff selalu terhadap titik awal pekerjaan.
+   */
+  adopt(fromRunId: string, toRunId: string): Worktree {
+    const wt = this.active.get(fromRunId);
+    if (!wt || this.removing.has(fromRunId)) {
+      throw new WorktreeError(
+        'worktree_failed',
+        'Worktree run sebelumnya sudah tidak ada (worker dimulai ulang atau hasilnya sudah dibuang).',
+      );
+    }
+    const next: Worktree = { ...wt, runId: toRunId };
+    this.active.delete(fromRunId);
+    this.active.set(toRunId, next);
+    return next;
+  }
+
   /** Menyimpan perubahan agent sebagai satu commit di branch kerja (branch tetap ada untuk pengguna). */
-  async commitAll(runId: string, summary: string): Promise<boolean> {
+  async commitAll(runId: string, commitMessage: string): Promise<boolean> {
     const wt = this.active.get(runId);
     if (!wt) return false;
     await this.git(wt.root, ['add', '-A']);
     const status = await this.git(wt.root, ['status', '--porcelain']);
     if (status === '') return false;
-    await this.git(wt.root, [
-      'commit',
-      '-q',
-      '-m',
-      `aios: ${summary.slice(0, 120) || 'perubahan agent'}`,
-    ]);
+    await this.git(wt.root, ['commit', '-q', '-m', commitMessage]);
     return true;
   }
 
@@ -142,6 +159,7 @@ export class WorktreeManager {
       await this.git(wt.repo, ['worktree', 'remove', '--force', wt.root]).catch(() => undefined);
       await fs.rm(wt.root, { recursive: true, force: true }).catch(() => undefined);
       await this.git(wt.repo, ['worktree', 'prune']).catch(() => undefined);
+      await this.git(wt.repo, ['update-ref', '-d', checkpointRef(wt)]).catch(() => undefined);
       if (deleteBranch) await this.git(wt.repo, ['branch', '-D', wt.branch]).catch(() => undefined);
     } finally {
       // Dilepas setelah selesai: yang melihat worktree hilang boleh yakin pembersihannya tuntas.
@@ -160,19 +178,24 @@ export class WorktreeManager {
     return allowedSibling ? sibling : nodePath.join(this.deps.dataDir, 'worktrees', name);
   }
 
-  private async git(cwd: string, args: string[]): Promise<string> {
+  /** Menjalankan git di `cwd`. `raw` mempertahankan keluaran apa adanya (untuk -z dan patch). */
+  async git(
+    cwd: string,
+    args: string[],
+    options: { maxOutputBytes?: number; raw?: boolean; env?: Record<string, string> } = {},
+  ): Promise<string> {
     const result = await this.deps.processes.run('git', args, {
       cwd,
       timeoutMs: GIT_TIMEOUT_MS,
-      maxOutputBytes: 256 * 1024,
-      env: { ...process.env, ...COMMIT_ENV },
+      maxOutputBytes: options.maxOutputBytes ?? 256 * 1024,
+      env: { ...process.env, ...COMMIT_ENV, ...options.env },
     });
     if (result.spawnError) throw new Error('git tidak ditemukan di PC ini.');
     if (result.code !== 0) {
       const first = result.stderr.trim().split('\n')[0];
       throw new Error(first === undefined || first === '' ? `git ${args[0] ?? ''} gagal` : first);
     }
-    return result.stdout.trim();
+    return options.raw ? result.stdout : result.stdout.trim();
   }
 }
 

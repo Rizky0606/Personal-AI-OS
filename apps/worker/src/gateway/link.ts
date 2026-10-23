@@ -7,6 +7,7 @@ import {
   type AgentEvent,
   type GatewayState,
   type WorkerCommand,
+  type WorkerReviewResultFrame,
 } from '@aios/contracts';
 import { WebSocket } from 'ws';
 
@@ -145,6 +146,13 @@ export class GatewayLink {
   /** Menyambung ulang segera (mis. setelah PC bangun dari tidur). */
   reconnectNow(): void {
     if (this.session) this.restart();
+  }
+
+  /** Mengirim hasil `review.apply`; false bila tidak tersambung (gateway mengulang perintahnya). */
+  sendReviewResult(frame: WorkerReviewResultFrame): boolean {
+    if (this.socket?.readyState !== WebSocket.OPEN) return false;
+    this.socket.send(JSON.stringify(frame));
+    return true;
   }
 
   /** Mengirim event run ke gateway; false bila tidak tersambung. */

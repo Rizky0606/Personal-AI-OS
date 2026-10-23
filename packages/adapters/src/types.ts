@@ -25,6 +25,8 @@ export interface StartRunInput {
   projectId?: string | undefined;
   /** Role yang dipilih router; worker memakainya untuk memberi nama run. */
   role?: string | undefined;
+  /** Run lanjutan: memakai worktree run ini (revisi setelah komentar review). Hanya omp via worker. */
+  continueFromRunId?: string | undefined;
   /** Folder kerja agent (worktree). Hanya omp; wajib di sana. */
   cwd?: string | undefined;
   /** Folder berkas pendukung run di luar worktree (konfigurasi provider, system prompt). Hanya omp. */

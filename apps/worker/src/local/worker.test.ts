@@ -368,6 +368,70 @@ describe('sesi gateway lewat worker', () => {
     client.close();
   });
 
+  it('review.* lokal: hasil yang tidak ada dijawab review_not_found; parameter salah invalid_request', async () => {
+    const client = await Client.login(worker.port, TOKEN);
+
+    expect(await client.call('review.get', { runId: RUN })).toMatchObject({
+      ok: false,
+      error: { code: 'review_not_found' },
+    });
+    expect(await client.call('review.undo', { runId: RUN, checkpointId: 'base' })).toMatchObject({
+      ok: false,
+      error: { code: 'review_not_found' },
+    });
+    expect(await client.call('review.revertFile', { runId: RUN, path: 'a.txt' })).toMatchObject({
+      ok: false,
+      error: { code: 'review_not_found' },
+    });
+    expect(await client.call('review.get', { runId: 'bukan-id' })).toMatchObject({
+      ok: false,
+      error: { code: 'invalid_request' },
+    });
+    client.close();
+  });
+
+  it('review.apply dari gateway dijawab frame review.result; menolak hasil yang sudah tidak ada tetap berhasil', async () => {
+    const client = await Client.login(worker.port, TOKEN);
+    await client.call('session.set', sessionParams());
+    await until(() => worker.link.state === 'connected', 'connected');
+
+    gateway.last.socket.send(
+      JSON.stringify({
+        type: 'review.apply',
+        runId: RUN,
+        decision: 'reject',
+        comments: [],
+        merge: false,
+      }),
+    );
+    await until(() => gateway.received.length >= 1, 'review.result reject');
+    gateway.last.socket.send(
+      JSON.stringify({
+        type: 'review.apply',
+        runId: RUN,
+        decision: 'accept',
+        comments: [],
+        merge: false,
+      }),
+    );
+    await until(() => gateway.received.length >= 2, 'review.result accept');
+
+    expect(gateway.received[0]).toMatchObject({
+      type: 'review.result',
+      runId: RUN,
+      decision: 'reject',
+      ok: true,
+    });
+    expect(gateway.received[1]).toMatchObject({
+      type: 'review.result',
+      runId: RUN,
+      decision: 'accept',
+      ok: false,
+      error: expect.stringContaining('sudah tidak ada') as unknown,
+    });
+    client.close();
+  });
+
   it('token dirotasi: desktop menerima session.updated dengan refresh token baru', async () => {
     const newAccess = fresh();
     vi.stubGlobal(

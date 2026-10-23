@@ -13,6 +13,7 @@ import {
 } from '@aios/contracts';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { PathError } from '../paths/normalize.js';
+import { ReviewError } from '../runs/review.js';
 
 export interface LocalServerDeps {
   /** Token sekali pakai untuk koneksi pertama (dari Tauri). */
@@ -144,7 +145,7 @@ export class LocalServer {
       const result = await this.deps.handle(request.data);
       this.send(socket, { id: request.data.id, ok: true, result } satisfies LocalResponse);
     } catch (error) {
-      if (error instanceof PathError) {
+      if (error instanceof PathError || error instanceof ReviewError) {
         this.send(socket, failure(request.data.id, error.code, error.message));
       } else {
         this.deps.log?.(`galat internal pada ${request.data.method}: ${String(error)}`);

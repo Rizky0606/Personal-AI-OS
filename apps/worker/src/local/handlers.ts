@@ -6,12 +6,14 @@ import type { ProcessManager } from '../process/manager.js';
 import type { ProjectBindings } from '../projects/bindings.js';
 import { detectStack } from '../projects/detect.js';
 import { detectGit } from '../projects/git.js';
+import type { ReviewService } from '../runs/review.js';
 
 export interface HandlerDeps {
   allowed: AllowList;
   bindings: ProjectBindings;
   processes: ProcessManager;
   link: GatewayLink;
+  review: ReviewService;
   version: string;
 }
 
@@ -26,7 +28,7 @@ export function workerStatus({ link, processes, version }: HandlerDeps): WorkerS
 
 /** Menjalankan satu permintaan dari desktop. Galat path dilempar sebagai PathError (dipetakan oleh server). */
 export function createHandler(deps: HandlerDeps): (request: LocalRequest) => Promise<unknown> {
-  const { allowed, bindings, processes, link } = deps;
+  const { allowed, bindings, processes, link, review } = deps;
 
   return async (request) => {
     switch (request.method) {
@@ -72,6 +74,15 @@ export function createHandler(deps: HandlerDeps): (request: LocalRequest) => Pro
 
       case 'projects.list':
         return { projects: await bindings.list() };
+
+      case 'review.get':
+        return review.get(request.params.runId);
+
+      case 'review.undo':
+        return review.undo(request.params.runId, request.params.checkpointId);
+
+      case 'review.revertFile':
+        return review.revertFile(request.params.runId, request.params.path);
     }
   };
 }

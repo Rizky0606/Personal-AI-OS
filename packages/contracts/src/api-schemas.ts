@@ -24,7 +24,7 @@ import {
   TimestampSchema,
 } from './common.js';
 import { RunEventSchema } from './events.js';
-import { ReviewCommentSchema } from './worker.js';
+import { MergeSkippedSchema, ReviewCommentSchema } from './worker.js';
 
 /*
  * Request dan response setiap endpoint REST (API_CONTRACT.md, "Endpoint REST").
@@ -222,12 +222,36 @@ export const ApprovalDecisionRequestSchema = z
   })
   .meta({ id: 'ApprovalDecisionRequest' });
 
+/**
+ * Tinjauan hasil run coding. `accept`: perubahan di-commit pada branch kerja agent; `merge` juga menggabungkannya
+ * ke branch kerja pengguna. `reject` tanpa komentar membuang worktree; `reject` dengan komentar mengembalikan
+ * hasil ke agent (run baru di worktree yang sama, komentar dibundel jadi satu pesan).
+ */
 export const ReviewRequestSchema = z
   .object({
     decision: z.enum(['accept', 'reject']),
     comments: z.array(ReviewCommentSchema).default([]),
+    /** Hanya untuk `accept`: gabungkan ke branch kerja pengguna (bila bersih); default hanya membiarkan branch. */
+    merge: z.boolean().default(false),
+    /** Pesan commit Conventional Commits; kosong = pesan buatan agent. */
+    commitMessage: z.string().trim().min(1).max(200).optional(),
   })
   .meta({ id: 'ReviewRequest' });
+
+export const ReviewResponseSchema = z
+  .object({
+    /** Run yang ditinjau setelah keputusan (accepted atau rejected). */
+    run: RunSchema,
+    branch: z.string(),
+    /** SHA commit hasil terima; null bila ditolak atau tidak ada perubahan. */
+    commit: z.string().nullable(),
+    merged: z.boolean(),
+    /** Alasan penggabungan dilewati; branch tetap ada. */
+    mergeSkipped: MergeSkippedSchema.nullable(),
+    /** Id run baru bila hasil dikembalikan ke agent dengan komentar. */
+    revisionRunId: IdSchema.nullable(),
+  })
+  .meta({ id: 'ReviewResponse' });
 
 /* Project dan kanban */
 

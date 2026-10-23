@@ -23,6 +23,8 @@ export const RunStartCommandSchema = z.object({
   /** Bundel role dan skill yang sudah dirakit gateway menjadi satu system prompt. */
   bundle: z.object({ role: RoleIdSchema, systemPrompt: z.string() }),
   model: z.string().min(1),
+  /** Lanjutan dari run sebelumnya (revisi setelah komentar review): memakai worktree run itu. */
+  continueFromRunId: IdSchema.optional(),
 });
 
 export const RunSteerCommandSchema = z.object({
@@ -49,6 +51,8 @@ export const ReviewApplyCommandSchema = z.object({
   runId: IdSchema,
   decision: z.enum(['accept', 'reject']),
   comments: z.array(ReviewCommentSchema),
+  merge: z.boolean().default(false),
+  commitMessage: z.string().min(1).max(200).optional(),
 });
 
 /** Perintah gateway ke worker. */
@@ -78,9 +82,36 @@ export const WORKER_WS_PATH = '/worker/ws';
 
 export const WorkerPingFrameSchema = z.object({ type: z.literal('ping') });
 
+/** Alasan merge ke branch kerja dilewati; branch agent tetap ada. */
+export const MergeSkippedSchema = z.enum([
+  'dirty',
+  'detached',
+  'not_fast_forward',
+  'nothing_to_merge',
+]);
+export type MergeSkipped = z.infer<typeof MergeSkippedSchema>;
+
+/** Hasil `review.apply` dari worker (satu per perintah). */
+export const WorkerReviewResultFrameSchema = z.object({
+  type: z.literal('review.result'),
+  runId: IdSchema,
+  decision: z.enum(['accept', 'reject']),
+  ok: z.boolean(),
+  branch: z.string(),
+  commit: z.string().nullable(),
+  merged: z.boolean(),
+  mergeSkipped: MergeSkippedSchema.nullable(),
+  error: z.string().optional(),
+});
+export type WorkerReviewResultFrame = z.infer<typeof WorkerReviewResultFrameSchema>;
+
 /** Worker ke gateway. */
 export const WorkerToGatewayFrameSchema = z
-  .discriminatedUnion('type', [WorkerEventFrameSchema, WorkerPingFrameSchema])
+  .discriminatedUnion('type', [
+    WorkerEventFrameSchema,
+    WorkerPingFrameSchema,
+    WorkerReviewResultFrameSchema,
+  ])
   .meta({ id: 'WorkerToGatewayFrame' });
 export type WorkerToGatewayFrame = z.infer<typeof WorkerToGatewayFrameSchema>;
 

@@ -97,6 +97,22 @@ export const LocalRequestSchema = z.discriminatedUnion('method', [
     params: z.object({ projectId: IdSchema }),
   }),
   z.object({ id: z.string().min(1), method: z.literal('projects.list') }),
+  z.object({
+    id: z.string().min(1),
+    method: z.literal('review.get'),
+    params: z.object({ runId: IdSchema }),
+  }),
+  z.object({
+    id: z.string().min(1),
+    method: z.literal('review.undo'),
+    /** `base` = sebelum langkah pertama agent; selain itu id checkpoint. */
+    params: z.object({ runId: IdSchema, checkpointId: z.string().min(1) }),
+  }),
+  z.object({
+    id: z.string().min(1),
+    method: z.literal('review.revertFile'),
+    params: z.object({ runId: IdSchema, path: z.string().min(1) }),
+  }),
 ]);
 export type LocalRequest = z.infer<typeof LocalRequestSchema>;
 export type LocalMethod = LocalRequest['method'];
@@ -109,6 +125,9 @@ export const LocalErrorCodeSchema = z.enum([
   'not_a_directory',
   'path_too_broad',
   'not_bound',
+  'review_not_found',
+  'git_failed',
+  'run_active',
   'internal',
 ]);
 export type LocalErrorCode = z.infer<typeof LocalErrorCodeSchema>;
@@ -122,6 +141,45 @@ export const LocalResponseSchema = z.union([
   }),
 ]);
 export type LocalResponse = z.infer<typeof LocalResponseSchema>;
+
+export const ReviewFileSchema = z.object({
+  path: z.string().min(1),
+  status: z.enum(['added', 'modified', 'deleted', 'renamed']),
+  oldPath: z.string().optional(),
+  additions: z.number().int().nonnegative(),
+  deletions: z.number().int().nonnegative(),
+  binary: z.boolean(),
+  /** Unified diff terhadap base ('' untuk biner). */
+  patch: z.string(),
+  /** Patch dipotong karena terlalu besar. */
+  truncated: z.boolean(),
+});
+export type ReviewFile = z.infer<typeof ReviewFileSchema>;
+
+export const CheckpointSchema = z.object({
+  /** SHA commit checkpoint. */
+  id: z.string().min(1),
+  label: z.string(),
+  ts: z.iso.datetime(),
+});
+export type Checkpoint = z.infer<typeof CheckpointSchema>;
+
+export const ReviewStateSchema = z
+  .object({
+    runId: IdSchema,
+    /** Branch kerja agent (aios/<id>). */
+    branch: z.string(),
+    base: z.string(),
+    /** Branch kerja pengguna di repo asli saat ini; null bila detached. */
+    targetBranch: z.string().nullable(),
+    /** Pesan Conventional Commits buatan agent (atau bawaan bila agent tidak menulisnya). */
+    commitMessage: z.string(),
+    files: z.array(ReviewFileSchema),
+    /** Dari yang paling lama; base tidak termasuk. */
+    checkpoints: z.array(CheckpointSchema),
+  })
+  .meta({ id: 'ReviewState' });
+export type ReviewState = z.infer<typeof ReviewStateSchema>;
 
 /** Hasil per metode, untuk validasi di sisi desktop. */
 export const FoldersResultSchema = z.object({ folders: z.array(z.string()) });

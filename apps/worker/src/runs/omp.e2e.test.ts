@@ -5,7 +5,7 @@ import path from 'node:path';
 import type { AgentEvent, WorkerCommand } from '@aios/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { DEVICE, FakeGateway, fresh, until } from '../testing/fake-gateway.js';
-import { mockLlm, type MockStep } from '../testing/mock-llm.js';
+import { mockLlm, type ChatRequest, type MockStep } from '../testing/mock-llm.js';
 import { startWorker, type RunningWorker } from '../worker.js';
 import { resolveOmp } from './omp-path.js';
 
@@ -38,7 +38,7 @@ describe.skipIf(ompPath === null)('run coding dengan omp sungguhan', () => {
   let worker: RunningWorker;
   let gateway: FakeGateway;
   let llm: ReturnType<typeof mockLlm>;
-  let steps: (toolResults: number) => MockStep;
+  let steps: (toolResults: number, request: ChatRequest) => MockStep;
   let accessToken: string;
 
   const git = (cwd: string, ...args: string[]) =>
@@ -122,7 +122,7 @@ describe.skipIf(ompPath === null)('run coding dengan omp sungguhan', () => {
       if (toolResults === 1) return { tool: { name: 'bash', args: { command: 'node --test' } } };
       return { text: 'Tes untuk add sudah ditambahkan dan lulus.' };
     };
-    llm = mockLlm((toolResults) => steps(toolResults));
+    llm = mockLlm((toolResults, request) => steps(toolResults, request));
     gateway = new FakeGateway();
     gateway.httpHandler = (req, res) => {
       if (req.url?.startsWith('/llm/v1/')) {
@@ -254,6 +254,7 @@ describe.skipIf(ompPath === null)('run coding dengan omp sungguhan', () => {
       runId: RUN_1,
       decision: 'reject',
       comments: [],
+      merge: false,
     });
 
     const second = autoAnswer(RUN_2, () => ({ decision: 'allow', remember: false }));
@@ -279,6 +280,7 @@ describe.skipIf(ompPath === null)('run coding dengan omp sungguhan', () => {
       runId: RUN_1,
       decision: 'accept',
       comments: [],
+      merge: false,
     });
 
     await expect(fs.stat(wt.root)).rejects.toThrow();
@@ -324,6 +326,96 @@ describe.skipIf(ompPath === null)('run coding dengan omp sungguhan', () => {
     // set_auto_retry maupun retry.* (docs/BACKLOG.md, Temuan Fase 18); yang dijamin: akhirnya error yang jelas.
     expect(llm.requests.length).toBeGreaterThanOrEqual(1);
   }, 120_000);
+
+  it('tinjau: komentar di satu baris membuat agent memperbaiki bagian itu; diff diterima dan commit tercipta', async () => {
+    const BUGGY = [
+      'exports.add = (a, b) => a + b;',
+      'exports.sub = (a, b) => a - b;',
+      'exports.mul = (a, b) => a + b;',
+      '',
+    ].join('\n');
+    const FIXED = BUGGY.replace('mul = (a, b) => a + b', 'mul = (a, b) => a * b');
+    const comment = { path: 'math.js', line: 3, body: 'mul harus mengalikan, bukan menjumlahkan' };
+    const bundled = [
+      'Saya meninjau perubahan Anda dan ada komentar pada baris tertentu.',
+      'Perbaiki hanya bagian yang dikomentari dan jangan ubah bagian lain.',
+      'Nomor baris merujuk ke versi berkas saat ini (setelah perubahan Anda).',
+      '',
+      `- ${comment.path}:${comment.line} — ${comment.body}`,
+    ].join('\n');
+    // Skrip model: run pertama menulis math.js dengan bug di baris 3; run revisi (dikenali dari pesan
+    // komentar) menulis ulang dengan perbaikan.
+    const isRevision = (request: ChatRequest) =>
+      JSON.stringify(request.body.messages).includes(`${comment.path}:${comment.line}`);
+    steps = (toolResults, request) => {
+      if (isRevision(request)) {
+        return toolResults === 0
+          ? { tool: { name: 'write', args: { path: 'math.js', content: FIXED } } }
+          : { text: 'Baris 3 diperbaiki.\nCommit: fix: perbaiki mul' };
+      }
+      return toolResults === 0
+        ? { tool: { name: 'write', args: { path: 'math.js', content: BUGGY } } }
+        : { text: 'Menambahkan sub dan mul.\nCommit: feat: tambah sub dan mul' };
+    };
+    const mainBefore = git(repo, 'rev-parse', 'main');
+
+    // Run pertama: agent menulis math.js; diff dan checkpoint tersedia untuk ditinjau.
+    const first = autoAnswer(RUN_1, () => ({ decision: 'allow', remember: false }));
+    sendCommand(startCommand(RUN_1, { prompt: 'tambahkan sub dan mul di math.js' }));
+    await until(() => finished(RUN_1), 'run pertama selesai', 90_000);
+    first.stop();
+    const firstEvents = eventsOf(RUN_1);
+    expect(firstEvents.map((e) => e.type)).toEqual(
+      expect.arrayContaining(['checkpoint.created', 'diff.updated']),
+    );
+    expect(firstEvents.findLast((e) => e.type === 'diff.updated')).toMatchObject({
+      files: [{ path: 'math.js', additions: 2, deletions: 0 }],
+    });
+    const reviewed = await worker.review.get(RUN_1);
+    expect(reviewed.files.map((f) => f.path)).toEqual(['math.js']);
+    expect(reviewed.files[0]?.patch).toContain('+exports.mul = (a, b) => a + b;');
+    expect(reviewed.checkpoints).toHaveLength(1);
+    expect(reviewed.commitMessage).toBe('feat: tambah sub dan mul');
+    const afterFirst = reviewed.checkpoints[0]!.id;
+
+    // Komentar dibundel jadi satu pesan; agent melanjutkan di worktree yang sama.
+    const second = autoAnswer(RUN_2, () => ({ decision: 'allow', remember: false }));
+    sendCommand(startCommand(RUN_2, { prompt: bundled, continueFromRunId: RUN_1 }));
+    await until(() => finished(RUN_2), 'run revisi selesai', 90_000);
+    second.stop();
+    expect(eventsOf(RUN_2).some((e) => e.type === 'error')).toBe(false);
+    expect(llm.requests.some(isRevision)).toBe(true);
+
+    // Hanya baris yang dikomentari yang berubah di antara dua checkpoint; sisanya tetap.
+    const state = await worker.review.get(RUN_2);
+    expect(state.checkpoints).toHaveLength(2);
+    const wt = worker.worktrees.get(RUN_2)!;
+    expect(wt.branch).toBe(reviewed.branch);
+    const delta = git(wt.root, 'diff', '--unified=0', afterFirst, state.checkpoints[1]!.id);
+    expect(delta).toContain('-exports.mul = (a, b) => a + b;');
+    expect(delta).toContain('+exports.mul = (a, b) => a * b;');
+    expect(delta.split('\n').filter((l) => /^[-+](?![-+])/.test(l))).toHaveLength(2);
+    expect(state.files[0]?.patch).toContain('+exports.mul = (a, b) => a * b;');
+    // Repo kerja belum tersentuh sebelum diterima.
+    expect(git(repo, 'rev-parse', 'main')).toBe(mainBefore);
+    expect(git(repo, 'status', '--porcelain')).toBe('');
+
+    // Terima + gabungkan: satu commit Conventional Commits dari agent, fast-forward ke main.
+    const result = await worker.coordinator.reviewApply({
+      type: 'review.apply',
+      runId: RUN_2,
+      decision: 'accept',
+      comments: [],
+      merge: true,
+    });
+
+    expect(result).toMatchObject({ ok: true, merged: true, mergeSkipped: null });
+    expect(git(repo, 'log', '-1', '--format=%s', 'main')).toBe('feat: tambah sub dan mul');
+    expect(git(repo, 'rev-list', '--count', `${mainBefore}..main`)).toBe('1');
+    expect((await fs.readFile(path.join(repo, 'math.js'), 'utf8')).replace(/\r/g, '')).toBe(FIXED);
+    expect(git(repo, 'branch', '--list', 'aios/*')).toBe('');
+    await expect(fs.stat(wt.root)).rejects.toThrow();
+  }, 240_000);
 
   it('project belum terikat: error jelas tanpa menjalankan omp', async () => {
     sendCommand(startCommand(RUN_1, { projectId: '0192f0c4-7a1b-7c2d-a009-4a5b6c7d8e99' }));

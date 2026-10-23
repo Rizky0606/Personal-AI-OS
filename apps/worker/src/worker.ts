@@ -10,6 +10,7 @@ import { canonicalize } from './paths/normalize.js';
 import { ProcessManager } from './process/manager.js';
 import { ProjectBindings } from './projects/bindings.js';
 import { RunCoordinator } from './runs/coordinator.js';
+import { ReviewService } from './runs/review.js';
 import { resolveOmp } from './runs/omp-path.js';
 import { ApprovalRules } from './runs/rules.js';
 import { WorktreeManager } from './runs/worktree.js';
@@ -36,6 +37,7 @@ export interface RunningWorker {
   bindings: ProjectBindings;
   processes: ProcessManager;
   worktrees: WorktreeManager;
+  review: ReviewService;
   rules: ApprovalRules;
   coordinator: RunCoordinator;
   stop(): Promise<void>;
@@ -101,9 +103,15 @@ export async function startWorker(options: WorkerOptions): Promise<RunningWorker
     },
   });
 
-  const coordinator = new RunCoordinator({
+  const review: ReviewService = new ReviewService({
+    worktrees,
+    isWorking: (runId) => coordinator.isWorking(runId),
+  });
+
+  const coordinator: RunCoordinator = new RunCoordinator({
     bindings,
     worktrees,
+    review,
     processes,
     rules,
     adapter,
@@ -128,14 +136,20 @@ export async function startWorker(options: WorkerOptions): Promise<RunningWorker
         void coordinator.resolveApproval(command);
         break;
       case 'review.apply':
-        void coordinator.reviewApply(command).catch((error: unknown) => {
-          log(`review.apply ${command.runId} gagal: ${String(error)}`);
-        });
+        void coordinator
+          .reviewApply(command)
+          .then((frame) => {
+            // Bila terputus, gateway menunggu sampai batas waktu lalu mengulang; jawaban tersimpan di koordinator.
+            link.sendReviewResult(frame);
+          })
+          .catch((error: unknown) => {
+            log(`review.apply ${command.runId} gagal: ${String(error)}`);
+          });
         break;
     }
   }
 
-  const deps = { allowed, bindings, processes, link, version: WORKER_VERSION };
+  const deps = { allowed, bindings, processes, link, review, version: WORKER_VERSION };
   const server = new LocalServer({
     token: options.token,
     handle: createHandler(deps),
@@ -174,6 +188,7 @@ export async function startWorker(options: WorkerOptions): Promise<RunningWorker
     bindings,
     processes,
     worktrees,
+    review,
     rules,
     coordinator,
     async stop() {

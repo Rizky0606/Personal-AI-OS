@@ -111,9 +111,9 @@ describe('WorktreeManager', () => {
     const wt = await manager.create(RUN_A, repo);
     await fs.writeFile(path.join(wt.cwd, 'math.test.js'), 'tes');
 
-    expect(await manager.commitAll(RUN_A, 'tambah tes')).toBe(true);
+    expect(await manager.commitAll(RUN_A, 'test: tambah tes')).toBe(true);
 
-    expect(git(wt.root, 'log', '-1', '--format=%s')).toBe('aios: tambah tes');
+    expect(git(wt.root, 'log', '-1', '--format=%s')).toBe('test: tambah tes');
     expect(git(repo, 'log', '-1', '--format=%s')).toBe('awal');
     expect(git(repo, 'ls-tree', '-r', '--name-only', wt.branch)).toContain('math.test.js');
     expect(await manager.commitAll(RUN_A, 'lagi')).toBe(false);
