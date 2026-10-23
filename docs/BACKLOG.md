@@ -393,6 +393,17 @@ Isi ditulis sendiri sebagai ringkasan prinsip, bukan salinan; dibaca dari halama
 - **Batas yang disengaja**: komentar hanya pada baris tambah (baris hapus tidak punya nomor baru, dan baris konteks membuat ratusan tab-stop); patch dibatasi 200 file × 200 KB (sisanya ditandai terpotong); "Terima per file" belum ada (hanya batalkan per file); diff langsung selama run belum ditampilkan (hanya event `diff.updated`, dipakai Kanban Fase 20); worktree sisa setelah worker dimulai ulang tidak bisa ditinjau (`review_not_found`) dan belum dibersihkan otomatis.
 - **Belum terbukti**: tampilan panel belum dilihat langsung di aplikasi Tauri atau peramban (hanya tes komponen jsdom); uji "komentar → perbaikan" memakai model tiruan yang diskripkan, jadi membuktikan mekanisme (pesan komentar sampai ke model, worktree/branch/checkpoint berlanjut, hanya satu baris yang berubah, commit Conventional dan fast-forward) tetapi bukan kemampuan model nyata memahami komentar.
 
+## Temuan Fase 20 (Kanban AI)
+
+- **Kontrak berubah satu hal**: `POST /tasks/:id/run` kini mengembalikan **kartu**, bukan run. Dengan batas run paralel, kartu bisa mengantre dan belum punya run; kartu antre = status `running` dengan `runId` null (tanpa kolom DB baru). Klien membaca `runId` untuk tahu sudah dimulai atau belum.
+- **Kartu mengikuti run lewat `RunObserver`** (runner dan layanan tinjauan memberi tahu "run X berubah"; layanan kartu menyamakan status, branch, role, dan diff stat). Run revisi dari komentar review mewarisi `taskId`, jadi kartu tetap Running. Saat gateway dimulai ulang, kartu yang tertinggal disamakan dengan run-nya (`tasks.start()`) dan antrean dilanjutkan.
+- **Batas paralel**: `TASK_MAX_PARALLEL` (default 2) per project, nilainya satu untuk seluruh gateway (belum bisa diubah per project dari UI). Antrean dilayani menurut urutan di kolom Running. Pilihan model per run hanya berlaku bila kartu langsung dimulai; kartu yang antre memakai model bawaan role.
+- **Role kartu**: bila kosong, router menebak saat kartu dikerjakan dan hasilnya hanya dipakai bila role coding (selain itu `backend`); role yang dipilih manual harus role coding (400 `role_not_coding`). Kartu yang gagal, dibatalkan, atau ditolak kembali ke Todo dan bisa dikerjakan lagi (percakapan kartu dipakai ulang).
+- **Pecah dengan AI** memakai model kecil lewat 9Router (`TASK_MODEL`, default `router-fast`), maksimal 8 kartu, role dibatasi role coding; tidak ada yang disimpan sebelum pengguna memilih.
+- **Seret-lepas** memakai HTML5 drag and drop tanpa dependensi baru. Di Windows, Tauri secara bawaan mencegat drag ke jendela, jadi `dragDropEnabled: false` ditambahkan di `tauri.conf.json` (aplikasi belum memakai drop berkas). Alternatif tanpa mouse: Alt + panah pada judul kartu dan menu aksi kartu.
+- **Belum ada atau terbatas**: hapus kartu (tidak ada endpoint di kontrak); urutan kolom lain dirapikan server tanpa event per kartu (klien memuat ulang daftar); kartu hanya mengingat run terakhir, tanpa riwayat run; channel `user` hanya live, jadi setelah koneksi putus papan baru segar setelah refetch (fokus jendela atau aksi berikutnya); Android belum punya layar Kanban.
+- **Belum terbukti**: tampilan papan belum dilihat di aplikasi Tauri atau peramban (hanya tes jsdom); seret-lepas nyata di WebView2 belum dicoba; dua run paralel diuji di gateway (worker tiruan) dan di git (dua worktree dari repo yang sama dibuat dan di-commit bersamaan), tetapi belum dengan dua proses omp sungguhan sekaligus.
+
 ## Ide di luar scope
 
 (kosong)

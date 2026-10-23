@@ -29,7 +29,15 @@ interface Section {
 function sectionFor(pathname: string): Section {
   if (pathname.startsWith('/projects')) return { title: copy.nav.projects, list: <ProjectList /> };
   if (pathname.startsWith('/kanban'))
-    return { title: copy.nav.kanban, list: <EmptyState message={copy.screens.kanbanEmpty} /> };
+    return {
+      title: copy.nav.kanban,
+      list: (
+        <>
+          <ProjectSwitcher to="/kanban" allowGeneral={false} />
+          <EmptyState message={copy.kanban.sidebarHint} />
+        </>
+      ),
+    };
   if (pathname.startsWith('/schedules'))
     return { title: copy.nav.schedules, list: <ScheduleList /> };
   if (pathname.startsWith('/research'))

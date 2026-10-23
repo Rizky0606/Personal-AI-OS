@@ -32,6 +32,14 @@ export const useMessages = (conversationId: string | undefined) =>
     enabled: conversationId !== undefined,
   });
 
+/** Kartu satu project; disegarkan oleh event task.updated (lihat RealtimeLifecycle). */
+export const useTasks = (projectId: string | null) =>
+  useQuery({
+    queryKey: ['tasks', projectId],
+    queryFn: () => api.listTasks(projectId!),
+    enabled: projectId !== null,
+  });
+
 export const useSchedules = () => useQuery({ queryKey: ['schedules'], queryFn: api.listSchedules });
 
 export const useScheduleRuns = (scheduleId: string) =>

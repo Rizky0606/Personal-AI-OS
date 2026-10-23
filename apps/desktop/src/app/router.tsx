@@ -6,25 +6,17 @@ import {
   useParams,
 } from '@tanstack/react-router';
 import { ChatScreen } from '../chat/ChatScreen';
-import { copy } from '../copy';
+import { KanbanScreen } from '../kanban/KanbanScreen';
 import { ResearchDetailScreen } from '../research/ResearchDetailScreen';
 import { ResearchFormScreen } from '../research/ResearchFormScreen';
 import { CatalogScreen } from '../screens/CatalogScreen';
 import { ProjectsScreen } from '../projects/ProjectsScreen';
-import { PlaceholderScreen } from '../screens/PlaceholderScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { ScheduleDetailScreen } from '../schedules/ScheduleDetailScreen';
 import { SchedulesScreen } from '../schedules/SchedulesScreen';
 import { Shell } from '../shell/Shell';
 
 const rootRoute = createRootRoute({ component: Shell });
-
-const placeholder = <P extends string>(path: P, emptyMessage: string) =>
-  createRoute({
-    getParentRoute: () => rootRoute,
-    path,
-    component: () => <PlaceholderScreen emptyMessage={emptyMessage} />,
-  });
 
 function ChatRoute() {
   const { conversationId } = useParams({ from: '/chat/$conversationId' });
@@ -49,7 +41,7 @@ const routes = [
     component: ChatRoute,
   }),
   createRoute({ getParentRoute: () => rootRoute, path: '/projects', component: ProjectsScreen }),
-  placeholder('/kanban', copy.screens.kanbanEmpty),
+  createRoute({ getParentRoute: () => rootRoute, path: '/kanban', component: KanbanScreen }),
   createRoute({ getParentRoute: () => rootRoute, path: '/schedules', component: SchedulesScreen }),
   createRoute({
     getParentRoute: () => rootRoute,

@@ -7,11 +7,18 @@ import { useProjects } from '../worker/hooks';
 
 const GENERAL = '__umum__';
 
+export interface ProjectSwitcherProps {
+  /** Layar yang dibuka setelah berganti project. */
+  to?: '/' | '/kanban';
+  /** Tawarkan 'Chat umum' (tanpa project). Kanban selalu butuh project. */
+  allowGeneral?: boolean;
+}
+
 /**
  * Memilih konteks chat di sidebar: chat umum, atau satu project (percakapan terikat project dan dikerjakan
  * agent coding di PC ini). Berganti konteks membuka chat baru di konteks itu.
  */
-export function ProjectSwitcher() {
+export function ProjectSwitcher({ to = '/', allowGeneral = true }: ProjectSwitcherProps) {
   const projects = useProjects();
   const activeId = useUiStore((s) => s.activeProjectId);
   const setActive = useUiStore((s) => s.setActiveProject);
@@ -29,10 +36,10 @@ export function ProjectSwitcher() {
         value={value}
         onValueChange={(next) => {
           setActive(next === GENERAL ? null : next);
-          void navigate({ to: '/' });
+          void navigate({ to });
         }}
         options={[
-          { value: GENERAL, label: copy.projectSwitcher.general },
+          ...(allowGeneral ? [{ value: GENERAL, label: copy.projectSwitcher.general }] : []),
           ...list.map((p) => ({ value: p.id, label: p.name })),
         ]}
         trigger={

@@ -27,8 +27,8 @@ Semua klien memakai satu REST API `/v1` dan satu WebSocket `/v1/ws`. Skema didef
 | Run | `POST /runs/:id/approvals/:approvalId` | `{ decision: allow \| deny, remember }` |
 | Run | `POST /runs/:id/review` | `{ decision: accept \| reject, comments[], merge?, commitMessage? }`; hasil `{ run, branch, commit, merged, mergeSkipped, revisionRunId }`. `accept` = satu commit di branch `aios/…` (opsional fast-forward ke branch kerja); `reject` = buang; `reject` dengan `comments` = run baru di worktree yang sama (`revisionRunId`) |
 | Project | `GET/POST /projects`, `PATCH /projects/:id` | Project terdaftar per worker (path tetap lokal) |
-| Kanban | `GET /projects/:id/tasks`, `POST /tasks`, `PATCH /tasks/:id` | Kartu, status, urutan, role |
-| Kanban | `POST /tasks/:id/run`, `POST /tasks/breakdown` | Kerjakan kartu; AI memecah ide jadi usulan kartu |
+| Kanban | `GET /projects/:id/tasks`, `POST /tasks`, `PATCH /tasks/:id` | Kartu, status, urutan, role. `PATCH` dengan `status`/`position` memindahkan kartu; urutan kedua kolom dirapikan server. Hanya Backlog, Todo, dan Done yang bisa dituju; Running dan Review diisi sistem |
+| Kanban | `POST /tasks/:id/run`, `POST /tasks/breakdown` | Kerjakan kartu (run coding; mengembalikan kartu: `runId` terisi bila dimulai, `null` bila mengantre karena slot project penuh); AI memecah ide jadi usulan kartu (belum disimpan) |
 | Jadwal | `GET/POST /schedules`, `PATCH/DELETE /schedules/:id` | Kelola jadwal |
 | Jadwal | `POST /schedules/parse`, `POST /schedules/:id/run-now`, `GET /schedules/:id/runs` | Bahasa alami ke cron, jalankan sekarang, riwayat |
 | Riset | `POST /research`, `GET /research`, `GET /research/:id` | Buat dan pantau job riset |
@@ -69,6 +69,10 @@ Setiap event dari server dibungkus envelope yang sama:
 | `run.completed` | Ringkasan, usage | Penutup run |
 
 Channel `user` membawa: `task.updated`, `schedule.result`, `research.completed`, `notification`.
+
+## Kartu kanban
+
+Kartu mengikuti run terbarunya: run berjalan = **Running**, `needs_review` = **Review**, `accepted` = **Done**, `failed`/`cancelled`/`rejected` = kembali ke **Todo** (kegagalan juga memicu `notification` level error). Tolak dengan komentar membuat run revisi, jadi kartu tetap Running. Kartu antre = status `running` dengan `runId` null; dimulai sendiri saat slot kosong (batas `TASK_MAX_PARALLEL`, default 2 per project). Kartu dengan run aktif tidak bisa dipindah (409 `task_running`); kartu antre boleh dikeluarkan. Setiap run kartu berjalan di worktree dan branch sendiri (`aios/<id>`), jadi run paralel tidak saling mengganggu.
 
 ## Protokol worker
 

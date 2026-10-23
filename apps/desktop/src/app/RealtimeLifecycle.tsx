@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { queryClient } from './queryClient';
 import { watchWake } from '../realtime/wake';
 import { useAuthState } from './hooks';
+import { handleUserEvent } from './userEvents';
 import { auth, realtime } from './services';
 
 /**
@@ -24,16 +25,7 @@ export function RealtimeLifecycle() {
     }
     realtime.start();
     // Channel `user`: hasil jadwal dan riset yang selesai menyegarkan layar yang terbuka.
-    const stopUser = realtime.subscribe('user', ({ event }) => {
-      if (event.type === 'schedule.result') {
-        void queryClient.invalidateQueries({ queryKey: ['schedules'] });
-        void queryClient.invalidateQueries({ queryKey: ['scheduleRuns', event.scheduleId] });
-        void queryClient.invalidateQueries({ queryKey: ['messages'] });
-      } else if (event.type === 'research.completed') {
-        void queryClient.invalidateQueries({ queryKey: ['research'] });
-        void queryClient.invalidateQueries({ queryKey: ['researchJob', event.researchId] });
-      }
-    });
+    const stopUser = realtime.subscribe('user', ({ event }) => handleUserEvent(event, queryClient));
     const stopWatching = watchWake(() => {
       void auth.refreshIfNeeded().finally(() => {
         realtime.reconnectNow();

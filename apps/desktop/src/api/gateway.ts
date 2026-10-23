@@ -17,8 +17,12 @@ import {
   ScheduleRunSchema,
   ScheduleSchema,
   SendMessageResponseSchema,
+  TaskBreakdownResponseSchema,
+  TaskSchema,
   type CreateProjectRequestSchema,
   type CreateScheduleRequestSchema,
+  type CreateTaskRequestSchema,
+  type UpdateTaskRequestSchema,
   type ReviewComment,
   type ResearchDepth,
   type Surface,
@@ -48,6 +52,7 @@ const ScheduleRunPageSchema = page(ScheduleRunSchema);
 const ResearchPageSchema = page(ResearchJobSchema);
 const ScheduleListSchema = items(ScheduleSchema);
 const ProjectListSchema = items(ProjectSchema);
+const TaskListSchema = items(TaskSchema);
 
 export type RoleInfo = z.infer<typeof RoleInfoSchema>;
 export type Approval = z.infer<typeof ApprovalSchema>;
@@ -60,6 +65,9 @@ export type ResearchJobDetail = z.infer<typeof ResearchJobDetailSchema>;
 export type ScheduleParse = z.infer<typeof ScheduleParseResponseSchema>;
 export type CreateScheduleInput = z.input<typeof CreateScheduleRequestSchema>;
 export type CreateProjectInput = z.input<typeof CreateProjectRequestSchema>;
+export type CreateTaskInput = z.input<typeof CreateTaskRequestSchema>;
+export type UpdateTaskInput = z.input<typeof UpdateTaskRequestSchema>;
+export type TaskProposal = z.infer<typeof TaskBreakdownResponseSchema>['items'][number];
 export type WorkerRegistration = z.infer<typeof LoginResponseSchema>;
 
 export const PAGE_SIZE = 50;
@@ -154,6 +162,22 @@ export function createGatewayApi(call: Call) {
         commitMessage?: string;
       },
     ) => get(`/runs/${runId}/review`, ReviewResponseSchema, { method: 'POST', body: input }),
+    listTasks: async (projectId: string) =>
+      (await get(`/projects/${projectId}/tasks`, TaskListSchema)).items,
+    createTask: (input: CreateTaskInput) =>
+      get('/tasks', TaskSchema, { method: 'POST', body: input }),
+    updateTask: (id: string, patch: UpdateTaskInput) =>
+      get(`/tasks/${id}`, TaskSchema, { method: 'PATCH', body: patch }),
+    /** Mengerjakan kartu dengan AI; kartu yang dikembalikan bisa antre (runId null) bila slot project penuh. */
+    runTask: (id: string) => get(`/tasks/${id}/run`, TaskSchema, { method: 'POST', body: {} }),
+    /** Usulan kartu dari ide; belum disimpan. */
+    breakdownTasks: async (projectId: string, idea: string) =>
+      (
+        await get('/tasks/breakdown', TaskBreakdownResponseSchema, {
+          method: 'POST',
+          body: { projectId, idea },
+        })
+      ).items,
     cancelRun: (id: string) => get(`/runs/${id}/cancel`, RunSchema, { method: 'POST' }),
 
     listSchedules: async () => (await get('/schedules', ScheduleListSchema)).items,
