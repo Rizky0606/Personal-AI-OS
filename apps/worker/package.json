@@ -12,6 +12,7 @@
   "dependencies": {
     "@aios/adapters": "workspace:*",
     "@aios/contracts": "workspace:*",
+    "playwright-core": "catalog:",
     "ws": "catalog:",
     "zod": "catalog:"
   },

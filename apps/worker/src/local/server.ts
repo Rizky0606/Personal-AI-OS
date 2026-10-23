@@ -13,6 +13,7 @@ import {
 } from '@aios/contracts';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { PathError } from '../paths/normalize.js';
+import { PreviewError } from '../preview/service.js';
 import { ReviewError } from '../runs/review.js';
 
 export interface LocalServerDeps {
@@ -145,7 +146,11 @@ export class LocalServer {
       const result = await this.deps.handle(request.data);
       this.send(socket, { id: request.data.id, ok: true, result } satisfies LocalResponse);
     } catch (error) {
-      if (error instanceof PathError || error instanceof ReviewError) {
+      if (
+        error instanceof PathError ||
+        error instanceof ReviewError ||
+        error instanceof PreviewError
+      ) {
         this.send(socket, failure(request.data.id, error.code, error.message));
       } else {
         this.deps.log?.(`galat internal pada ${request.data.method}: ${String(error)}`);

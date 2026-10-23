@@ -390,6 +390,29 @@ describe('sesi gateway lewat worker', () => {
     client.close();
   });
 
+  it('preview.* lokal: belum ada preview dijawab null; project belum terikat dan worktree hilang preview_unavailable', async () => {
+    const client = await Client.login(worker.port, TOKEN);
+
+    expect(await client.call('preview.get', { projectId: PROJECT })).toMatchObject({
+      ok: true,
+      result: null,
+    });
+    expect(await client.call('preview.start', { projectId: PROJECT })).toMatchObject({
+      ok: false,
+      error: { code: 'preview_unavailable' },
+    });
+    expect(await client.call('preview.shot', { projectId: PROJECT })).toMatchObject({
+      ok: false,
+      error: { code: 'preview_unavailable' },
+    });
+    expect(await client.call('preview.stop', { projectId: PROJECT })).toMatchObject({ ok: true });
+    expect(await client.call('preview.start', { projectId: 'bukan-id' })).toMatchObject({
+      ok: false,
+      error: { code: 'invalid_request' },
+    });
+    client.close();
+  });
+
   it('review.apply dari gateway dijawab frame review.result; menolak hasil yang sudah tidak ada tetap berhasil', async () => {
     const client = await Client.login(worker.port, TOKEN);
     await client.call('session.set', sessionParams());

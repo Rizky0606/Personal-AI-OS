@@ -417,6 +417,102 @@ describe.skipIf(ompPath === null)('run coding dengan omp sungguhan', () => {
     await expect(fs.stat(wt.root)).rejects.toThrow();
   }, 240_000);
 
+  it('perbaiki tombol terpotong di ponsel: agent memotret sendiri, memperbaiki, lalu memverifikasi dengan screenshot kedua', async () => {
+    // Project web kecil: tombol 600 px terpotong di layar ponsel 390 px.
+    await fs.writeFile(
+      path.join(repo, 'package.json'),
+      JSON.stringify({ name: 'situs', scripts: { dev: 'node server.js' } }),
+    );
+    await fs.writeFile(
+      path.join(repo, 'server.js'),
+      `const http = require('node:http');
+const fs = require('node:fs');
+const port = Number(process.env.PORT);
+http.createServer((req, res) => {
+  const file = req.url === '/style.css' ? 'style.css' : 'index.html';
+  res.writeHead(200, { 'content-type': file.endsWith('css') ? 'text/css' : 'text/html' });
+  res.end(fs.readFileSync(file));
+}).listen(port, '127.0.0.1', () => console.log('Local: http://localhost:' + port + '/'));
+`,
+    );
+    await fs.writeFile(
+      path.join(repo, 'index.html'),
+      '<!doctype html><head><link rel="stylesheet" href="/style.css"></head><body><button class="simpan">Simpan perubahan</button></body>',
+    );
+    await fs.writeFile(path.join(repo, 'style.css'), '.simpan { width: 600px; }\n');
+    git(repo, 'add', '-A');
+    git(repo, 'commit', '-q', '-m', 'situs');
+
+    const toolName = (request: ChatRequest, part: string) => {
+      const tools = (request.body.tools ?? []) as { function?: { name?: string } }[];
+      const found = tools.map((t) => t.function?.name ?? '').find((n) => n.includes(part));
+      if (!found)
+        throw new Error(`tool ${part} tidak ada: ${tools.map((t) => t.function?.name).join(', ')}`);
+      return found;
+    };
+    steps = (toolResults, request) => {
+      if (toolResults === 0) {
+        return {
+          tool: {
+            name: toolName(request, 'browser_screenshot'),
+            args: { width: 390, height: 700 },
+          },
+        };
+      }
+      if (toolResults === 1) {
+        return {
+          tool: {
+            name: 'write',
+            args: { path: 'style.css', content: '.simpan { width: 100%; max-width: 100%; }\n' },
+          },
+        };
+      }
+      if (toolResults === 2) {
+        return { tool: { name: toolName(request, 'browser_screenshot'), args: { reload: true } } };
+      }
+      return {
+        text: 'Tombol sekarang selebar layar ponsel.\nCommit: fix(ui): tombol simpan tidak terpotong',
+      };
+    };
+    const answers = autoAnswer(RUN_1, () => ({ decision: 'allow', remember: false }));
+
+    sendCommand(startCommand(RUN_1, { prompt: 'perbaiki tombol yang terpotong di layar ponsel' }));
+    await until(() => finished(RUN_1), 'run selesai', 120_000);
+    answers.stop();
+
+    const events = eventsOf(RUN_1);
+    expect(events.at(-1)).toMatchObject({ type: 'run.completed' });
+    expect(events.some((e) => e.type === 'error')).toBe(false);
+    // Hanya penulisan file yang ditanyakan ke pengguna; tool browser (preview localhost) dijawab otomatis.
+    expect(answers.asked.map((a) => a.kind)).toEqual(['file_write']);
+    expect(
+      events.filter((e) => e.type === 'tool.started').map((e) => (e as { name: string }).name),
+    ).toEqual([
+      'mcp__aios_browser_browser_screenshot',
+      'write',
+      'mcp__aios_browser_browser_screenshot',
+    ]);
+
+    // Dua screenshot sampai ke model sebagai hasil tool (gambar), dan keduanya berbeda.
+    const images = llm.requests
+      .at(-1)!
+      .body.messages.filter((m) => m.role === 'tool')
+      .map((m) => JSON.stringify(m.content));
+    expect(images).toHaveLength(3);
+    // Screenshot pertama: tombol 600 px melewati viewport 390 px. Setelah perbaikan: tata letak bersih.
+    expect(images[0]).toContain('viewport 390x700');
+    expect(images[0]).toContain('Tata letak bermasalah');
+    expect(images[0]).toContain('button.simpan');
+    expect(images[2]).toContain('tidak ada elemen yang melewati batas viewport');
+
+    // Perbaikan ada di worktree, bukan di repo kerja; dev server dihentikan saat run selesai.
+    const wt = worker.worktrees.get(RUN_1)!;
+    expect(await fs.readFile(path.join(wt.cwd, 'style.css'), 'utf8')).toContain('width: 100%');
+    expect(await fs.readFile(path.join(repo, 'style.css'), 'utf8')).toContain('600px');
+    expect(events.some((e) => e.type === 'preview.ready')).toBe(true);
+    expect(worker.preview.get({ projectId: PROJECT, runId: RUN_1 })).toBeUndefined();
+  }, 180_000);
+
   it('project belum terikat: error jelas tanpa menjalankan omp', async () => {
     sendCommand(startCommand(RUN_1, { projectId: '0192f0c4-7a1b-7c2d-a009-4a5b6c7d8e99' }));
     await until(() => finished(RUN_1), 'error', 15_000);

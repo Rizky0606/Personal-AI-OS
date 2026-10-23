@@ -111,6 +111,7 @@ export const copy = {
       'Hasil run ini sudah tidak ada di PC ini (sudah diterima, ditolak, atau worker dimulai ulang).',
     git_failed: 'Git gagal di folder kerja. Periksa repo project, lalu coba lagi.',
     run_active: 'Run masih berjalan. Tunggu selesai atau hentikan dulu.',
+    preview_unavailable: 'Preview belum bisa dijalankan. Periksa project dan skrip dev-nya.',
     internal: 'Worker mengalami kesalahan. Coba lagi; bila berulang, mulai ulang aplikasi.',
   },
   projects: {

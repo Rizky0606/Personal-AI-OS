@@ -31,6 +31,8 @@ export interface StartRunInput {
   cwd?: string | undefined;
   /** Folder berkas pendukung run di luar worktree (konfigurasi provider, system prompt). Hanya omp. */
   runDir?: string | undefined;
+  /** Server MCP (HTTP) yang disediakan worker untuk run ini, mis. tool browser. Hanya omp. */
+  mcpServers?: Record<string, { url: string; headers?: Record<string, string> }> | undefined;
 }
 
 export interface RunHandle {

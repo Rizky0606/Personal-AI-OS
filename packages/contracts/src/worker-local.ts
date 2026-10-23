@@ -68,6 +68,38 @@ export type ProjectBinding = z.infer<typeof ProjectBindingSchema>;
 
 const PathParams = z.object({ path: z.string().min(1) });
 
+/** Yang di-preview: folder project, atau worktree sebuah run bila runId diisi. */
+export const PreviewTargetSchema = z.object({ projectId: IdSchema, runId: IdSchema.optional() });
+export type PreviewTarget = z.infer<typeof PreviewTargetSchema>;
+
+export const PreviewStatusSchema = z.enum(['starting', 'ready', 'failed', 'stopped']);
+
+/** Keadaan satu preview. `url` adalah alamat untuk iframe (proxy lokal); `devUrl` alamat dev server aslinya. */
+export const PreviewInfoSchema = z
+  .object({
+    key: z.string().min(1),
+    projectId: IdSchema,
+    runId: IdSchema.nullable(),
+    status: PreviewStatusSchema,
+    url: z.string().nullable(),
+    devUrl: z.string().nullable(),
+    /** Perintah yang dijalankan, mis. 'pnpm run dev'. */
+    command: z.string().nullable(),
+    error: z.string().nullable(),
+    /** Ekor keluaran dev server. */
+    log: z.string(),
+  })
+  .meta({ id: 'PreviewInfo' });
+export type PreviewInfo = z.infer<typeof PreviewInfoSchema>;
+
+export const PreviewShotSchema = z.object({
+  /** PNG, base64. */
+  png: z.string().min(1),
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+});
+export type PreviewShot = z.infer<typeof PreviewShotSchema>;
+
 /** Permintaan dari desktop. `id` dikembalikan apa adanya di balasan. */
 export const LocalRequestSchema = z.discriminatedUnion('method', [
   z.object({ id: z.string().min(1), method: z.literal('status.get') }),
@@ -113,6 +145,31 @@ export const LocalRequestSchema = z.discriminatedUnion('method', [
     method: z.literal('review.revertFile'),
     params: z.object({ runId: IdSchema, path: z.string().min(1) }),
   }),
+  z.object({
+    id: z.string().min(1),
+    method: z.literal('preview.start'),
+    params: PreviewTargetSchema,
+  }),
+  z.object({
+    id: z.string().min(1),
+    method: z.literal('preview.get'),
+    params: PreviewTargetSchema,
+  }),
+  z.object({
+    id: z.string().min(1),
+    method: z.literal('preview.stop'),
+    params: PreviewTargetSchema,
+  }),
+  z.object({
+    id: z.string().min(1),
+    method: z.literal('preview.shot'),
+    params: PreviewTargetSchema.extend({
+      /** Elemen yang ditangkap; kosong = seluruh viewport. */
+      selector: z.string().min(1).max(1000).optional(),
+      width: z.number().int().min(200).max(2560).optional(),
+      height: z.number().int().min(200).max(1600).optional(),
+    }),
+  }),
 ]);
 export type LocalRequest = z.infer<typeof LocalRequestSchema>;
 export type LocalMethod = LocalRequest['method'];
@@ -128,6 +185,7 @@ export const LocalErrorCodeSchema = z.enum([
   'review_not_found',
   'git_failed',
   'run_active',
+  'preview_unavailable',
   'internal',
 ]);
 export type LocalErrorCode = z.infer<typeof LocalErrorCodeSchema>;
@@ -196,5 +254,7 @@ export const LocalPushSchema = z.discriminatedUnion('push', [
   }),
   /** Refresh ditolak (perangkat dicabut atau token terpakai ulang): desktop mendaftarkan worker ulang. */
   z.object({ push: z.literal('session.invalid') }),
+  /** Preview berubah keadaan (mulai, siap, gagal, berhenti). */
+  z.object({ push: z.literal('preview.state'), preview: PreviewInfoSchema }),
 ]);
 export type LocalPush = z.infer<typeof LocalPushSchema>;

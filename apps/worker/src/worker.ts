@@ -5,6 +5,7 @@ import { GatewayLink } from './gateway/link.js';
 import { createHandler, workerStatus } from './local/handlers.js';
 import { LocalServer } from './local/server.js';
 import { LlmProxy } from './llm/proxy.js';
+import { PreviewService } from './preview/service.js';
 import { AllowList } from './paths/allowlist.js';
 import { canonicalize } from './paths/normalize.js';
 import { ProcessManager } from './process/manager.js';
@@ -38,6 +39,7 @@ export interface RunningWorker {
   processes: ProcessManager;
   worktrees: WorktreeManager;
   review: ReviewService;
+  preview: PreviewService;
   rules: ApprovalRules;
   coordinator: RunCoordinator;
   stop(): Promise<void>;
@@ -108,6 +110,25 @@ export async function startWorker(options: WorkerOptions): Promise<RunningWorker
     isWorking: (runId) => coordinator.isWorking(runId),
   });
 
+  // Preview website dan tool browser agent. Keadaan preview diteruskan ke desktop; saat run aktif, juga ke gateway.
+  const preview: PreviewService = new PreviewService({
+    processes,
+    resolve: async (target) => {
+      const projectPath = await bindings.pathFor(target.projectId);
+      if (projectPath === undefined) throw new Error('Project belum terikat ke folder.');
+      const worktree = target.runId ? worktrees.get(target.runId) : undefined;
+      if (target.runId && !worktree) throw new Error('Worktree run sudah tidak ada.');
+      return { cwd: worktree?.cwd ?? projectPath, projectPath };
+    },
+    onChange: (info) => {
+      server.push({ push: 'preview.state', preview: info });
+      if (info.status === 'ready' && info.runId && info.url) {
+        coordinator.previewReady(info.runId, info.url);
+      }
+    },
+    log,
+  });
+
   const coordinator: RunCoordinator = new RunCoordinator({
     bindings,
     worktrees,
@@ -115,6 +136,7 @@ export async function startWorker(options: WorkerOptions): Promise<RunningWorker
     processes,
     rules,
     adapter,
+    preview,
     send: (runId, event) => link.sendEvent(runId, event),
     dataDir: options.dataDir,
     log,
@@ -149,7 +171,16 @@ export async function startWorker(options: WorkerOptions): Promise<RunningWorker
     }
   }
 
-  const deps = { allowed, bindings, processes, link, review, version: WORKER_VERSION };
+  const deps = {
+    allowed,
+    bindings,
+    processes,
+    link,
+    review,
+    preview,
+    worktrees,
+    version: WORKER_VERSION,
+  };
   const server = new LocalServer({
     token: options.token,
     handle: createHandler(deps),
@@ -189,10 +220,12 @@ export async function startWorker(options: WorkerOptions): Promise<RunningWorker
     processes,
     worktrees,
     review,
+    preview,
     rules,
     coordinator,
     async stop() {
       link.stop();
+      await preview.stopAll().catch(() => undefined);
       await processes.killAll();
       await proxy.close();
       await server.close();

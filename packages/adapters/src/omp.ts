@@ -81,6 +81,8 @@ function approvalKind(tool: string): ApprovalKind {
 /** `Command: x` menjadi `x` (perintah persis); detail lain dipertahankan apa adanya. */
 function approvalDetail(tool: string, rest: string): string {
   const command = /^Command: ([\s\S]*)$/.exec(rest);
+  // Tool MCP: nama tool ikut di baris pertama, karena argumennya saja tidak menjelaskan apa yang dipanggil.
+  if (tool.startsWith('mcp__')) return clip(rest ? `${tool}\n${rest}` : tool, 4000);
   return clip(command ? (command[1] ?? '') : rest || tool, 4000);
 }
 
@@ -140,9 +142,22 @@ export function createOmpAdapter(options: OmpAdapterOptions): AgentAdapter {
       const model = input.model ?? 'default';
       const agentDir = join(runDir, 'agent');
       const systemFile = join(runDir, 'system.md');
+      const overlayFile = join(runDir, 'overlay.yml');
       await mkdir(agentDir, { recursive: true });
       await writeFile(join(agentDir, 'models.yml'), modelsYaml(options.llm, model));
       await writeFile(systemFile, input.systemPrompt ?? '');
+      // Server MCP per run (tool browser worker) di direktori agent terisolasi, bukan di repo kerja.
+      if (input.mcpServers && Object.keys(input.mcpServers).length > 0) {
+        const servers = Object.fromEntries(
+          Object.entries(input.mcpServers).map(([name, s]) => [
+            name,
+            { type: 'http', url: s.url, ...(s.headers ? { headers: s.headers } : {}) },
+          ]),
+        );
+        await writeFile(join(agentDir, 'mcp.json'), JSON.stringify({ mcpServers: servers }));
+        // Tanpa ini omp menyembunyikan tool MCP di balik perangkat xd:// dan model tidak melihatnya langsung.
+        await writeFile(overlayFile, 'tools:\n  xdev: false\n');
+      }
 
       const transport = await options.launch({
         runId: input.runId,
@@ -161,11 +176,16 @@ export function createOmpAdapter(options: OmpAdapterOptions): AgentAdapter {
           '--no-title',
           '--append-system-prompt',
           systemFile,
+          ...(input.mcpServers ? ['--config', overlayFile] : []),
           '--model',
           `${OMP_PROVIDER}/${model}`,
         ],
         cwd,
-        env: { PI_CODING_AGENT_DIR: agentDir },
+        env: {
+          PI_CODING_AGENT_DIR: agentDir,
+          // Server MCP lokal cepat; tunggu koneksinya selesai agar toolnya sudah ada di giliran pertama.
+          ...(input.mcpServers ? { OMP_MCP_STARTUP_TIMEOUT_MS: '0' } : {}),
+        },
       });
 
       return new OmpRun(input, transport, { now, newId, options }).start();

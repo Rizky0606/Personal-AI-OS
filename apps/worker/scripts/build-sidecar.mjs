@@ -20,6 +20,11 @@ const result = spawnSync(
     '--compile',
     '--minify',
     '--target=bun-windows-x64',
+    // Dimuat malas oleh playwright-core hanya untuk Firefox/WebDriver BiDi; kita hanya memakai Chromium (CDP).
+    '--external',
+    'chromium-bidi/*',
+    '--external',
+    'electron',
     '--outfile',
     outfile,
   ],

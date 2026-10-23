@@ -1,3 +1,4 @@
+import { unlinkNodeModules } from '../preview/nodemodules.js';
 import { promises as fs } from 'node:fs';
 import nodePath from 'node:path';
 import { WORKER_BRANCH_PREFIX, workerBranchFor } from '@aios/contracts';
@@ -156,6 +157,9 @@ export class WorktreeManager {
     if (!wt || this.removing.has(runId)) return;
     this.removing.add(runId);
     try {
+      // Tautan node_modules dari preview dilepas dulu agar penghapusan tidak menembus ke folder asli.
+      await unlinkNodeModules(wt.root).catch(() => undefined);
+      await unlinkNodeModules(wt.cwd).catch(() => undefined);
       await this.git(wt.repo, ['worktree', 'remove', '--force', wt.root]).catch(() => undefined);
       await fs.rm(wt.root, { recursive: true, force: true }).catch(() => undefined);
       await this.git(wt.repo, ['worktree', 'prune']).catch(() => undefined);

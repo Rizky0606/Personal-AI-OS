@@ -5,6 +5,10 @@ import type { AgentEvent, WorkerCommand, WorkerReviewResultFrame } from '@aios/c
 import { PathError } from '../paths/normalize.js';
 import type { ProcessManager } from '../process/manager.js';
 import type { ProjectBindings } from '../projects/bindings.js';
+import { BROWSER_INSTRUCTION } from '../preview/instruction.js';
+import type { McpRegistration } from '../preview/mcp.js';
+import { BROWSER_TOOL_PREFIX, MCP_SERVER_NAME } from '../preview/mcp.js';
+import type { PreviewService } from '../preview/service.js';
 import { COMMIT_INSTRUCTION } from './commit-message.js';
 import { OmpNotFoundError } from './omp-path.js';
 import { ReviewError, type ReviewService } from './review.js';
@@ -22,6 +26,8 @@ export interface CoordinatorDeps {
   processes: ProcessManager;
   rules: ApprovalRules;
   adapter: AgentAdapter;
+  /** Preview website dan tool browser agent; tanpa ini run berjalan tanpa tool browser. */
+  preview?: PreviewService;
   /** Mengirim event ke gateway; false bila tidak tersambung (event disimpan dan dikirim saat tersambung). */
   send: (runId: string, event: AgentEvent) => boolean;
   dataDir: string;
@@ -49,6 +55,8 @@ interface RunState {
   /** Label langkah per toolCallId, untuk nama checkpoint. */
   steps: Map<string, string>;
   timer: ReturnType<typeof setTimeout> | undefined;
+  /** Pendaftaran tool browser di server MCP lokal. */
+  mcp: McpRegistration | undefined;
 }
 
 /** Satu frame WebSocket gateway maksimal 16 KB; event dipecah bila serialisasinya mendekati itu. */
@@ -119,12 +127,20 @@ export class RunCoordinator {
       diffKey: '[]',
       steps: new Map(),
       timer: undefined,
+      mcp: undefined,
     };
     this.runs.set(cmd.runId, run);
     void this.execute(cmd.runId, run).catch((error: unknown) => {
       this.deps.log?.(`run ${cmd.runId} gagal tak terduga: ${String(error)}`);
       this.fail(cmd.runId, run, 'worker_internal', 'Worker mengalami kesalahan tak terduga.');
     });
+  }
+
+  /** Dev server run ini siap: gateway diberi tahu agar klien lain tahu (hanya selama run berjalan). */
+  previewReady(runId: string, url: string): void {
+    const run = this.runs.get(runId);
+    if (run && !run.finished && !run.terminal)
+      this.forward(runId, run, { type: 'preview.ready', url });
   }
 
   steer(runId: string, text: string): void {
@@ -168,6 +184,8 @@ export class RunCoordinator {
     const cached = this.results.get(cmd.runId);
     if (cached?.decision === cmd.decision) return cached;
 
+    // Worktree akan dihapus: dev server yang berjalan di dalamnya dihentikan lebih dulu.
+    await this.deps.preview?.stopByRun(cmd.runId).catch(() => undefined);
     let frame: WorkerReviewResultFrame;
     try {
       const outcome =
@@ -227,6 +245,7 @@ export class RunCoordinator {
 
       let worktree: Worktree;
       if (cmd.continueFromRunId) {
+        await this.deps.preview?.stopByRun(cmd.continueFromRunId).catch(() => undefined);
         worktree = this.deps.worktrees.adopt(cmd.continueFromRunId, runId);
         this.deps.review.inherit(cmd.continueFromRunId, runId);
       } else {
@@ -236,11 +255,22 @@ export class RunCoordinator {
       await fs.mkdir(runDir, { recursive: true });
       if (run.cancelRequested) return this.cancelled(runId, run);
 
+      run.mcp = await this.deps.preview
+        ?.registerRun({ projectId: cmd.projectId, runId })
+        .catch((error: unknown) => {
+          this.deps.log?.(`tool browser tidak tersedia untuk run ${runId}: ${String(error)}`);
+          return undefined;
+        });
+
       run.handle = await this.deps.adapter.startRun({
         runId,
         messageId: uuidv7(),
         prompt: cmd.prompt,
-        systemPrompt: cmd.bundle.systemPrompt + COMMIT_INSTRUCTION,
+        systemPrompt:
+          cmd.bundle.systemPrompt + COMMIT_INSTRUCTION + (run.mcp ? BROWSER_INSTRUCTION : ''),
+        ...(run.mcp
+          ? { mcpServers: { [MCP_SERVER_NAME]: { url: run.mcp.url, headers: run.mcp.headers } } }
+          : {}),
         model: cmd.model,
         projectId: cmd.projectId,
         role: cmd.bundle.role,
@@ -279,6 +309,12 @@ export class RunCoordinator {
 
   private async onEvent(runId: string, run: RunState, event: AgentEvent): Promise<void> {
     if (event.type === 'approval.requested') {
+      // Tool browser worker hanya menyentuh preview localhost run ini: tidak perlu mengganggu pengguna tiap screenshot.
+      if (run.mcp && event.detail.startsWith(BROWSER_TOOL_PREFIX)) {
+        run.silent.add(event.approvalId);
+        void run.handle?.resolveApproval(event.approvalId, 'allow').catch(() => undefined);
+        return;
+      }
       if (this.deps.rules.matches(run.cmd.projectId, event.kind, event.detail)) {
         run.silent.add(event.approvalId);
         void run.handle?.resolveApproval(event.approvalId, 'allow').catch(() => undefined);
@@ -369,6 +405,9 @@ export class RunCoordinator {
 
   private async cleanup(runId: string, run: RunState): Promise<void> {
     clearTimeout(run.timer);
+    // Dev server dan browser milik run dihentikan begitu agent selesai (SECURITY_OPS: proses anak mati bersama run).
+    run.mcp?.unregister();
+    await this.deps.preview?.stopRun(run.cmd.projectId, runId).catch(() => undefined);
     await this.deps.processes.killRun(runId).catch(() => undefined);
     run.finished = true;
     this.deps.review.setMeta(runId, run.text);

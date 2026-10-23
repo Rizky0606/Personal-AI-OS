@@ -104,6 +104,42 @@ describe('peluncuran omp', () => {
     expect(launched.env.PI_CODING_AGENT_DIR).toBe(join(runDir, 'agent'));
   });
 
+  it('server MCP run: mcp.json dan overlay ditulis di folder run (bukan worktree), tool tampil langsung, tunggu koneksi', async () => {
+    const { handle, launched } = await launchReplay('text-only', {
+      mcpServers: {
+        aios_browser: {
+          url: 'http://127.0.0.1:5555/mcp/run1',
+          headers: { Authorization: 'Bearer t' },
+        },
+      },
+    });
+    await collect(handle);
+
+    const mcp = JSON.parse(await readFile(join(runDir, 'agent', 'mcp.json'), 'utf8')) as unknown;
+    expect(mcp).toEqual({
+      mcpServers: {
+        aios_browser: {
+          type: 'http',
+          url: 'http://127.0.0.1:5555/mcp/run1',
+          headers: { Authorization: 'Bearer t' },
+        },
+      },
+    });
+    const overlay = launched.args[launched.args.indexOf('--config') + 1] ?? '';
+    expect(overlay.startsWith(runDir)).toBe(true);
+    expect(await readFile(overlay, 'utf8')).toBe('tools:\n  xdev: false\n');
+    expect(launched.env.OMP_MCP_STARTUP_TIMEOUT_MS).toBe('0');
+  });
+
+  it('tanpa server MCP: tidak ada mcp.json, overlay, atau perubahan lingkungan', async () => {
+    const { handle, launched } = await launchReplay('text-only');
+    await collect(handle);
+
+    await expect(readFile(join(runDir, 'agent', 'mcp.json'), 'utf8')).rejects.toThrow();
+    expect(launched.args).not.toContain('--config');
+    expect(launched.env.OMP_MCP_STARTUP_TIMEOUT_MS).toBeUndefined();
+  });
+
   it('models.yml mengarahkan provider ke proxy lokal dengan kunci lokal, bukan token perangkat', async () => {
     const { handle } = await launchReplay('text-only', { model: 'combo/code' });
     await collect(handle);
