@@ -3,8 +3,10 @@ import {
   ProjectBindingSchema,
   ProjectInspectionSchema,
   ProjectsResultSchema,
+  ReviewStateSchema,
   type ProjectBinding,
   type ProjectInspection,
+  type ReviewState,
 } from '@aios/contracts';
 
 export type WorkerCall = (method: string, params?: object) => Promise<unknown>;
@@ -24,6 +26,14 @@ export function createWorkerApi(call: WorkerCall) {
       ProjectBindingSchema.parse(await call('project.bind', { projectId, path })),
     bindings: async (): Promise<ProjectBinding[]> =>
       ProjectsResultSchema.parse(await call('projects.list')).projects,
+    /** Diff worktree terhadap base, checkpoint, dan pesan commit usulan agent. */
+    reviewGet: async (runId: string): Promise<ReviewState> =>
+      ReviewStateSchema.parse(await call('review.get', { runId })),
+    /** `base` = sebelum langkah pertama agent; selain itu id checkpoint. */
+    reviewUndo: async (runId: string, checkpointId: string): Promise<ReviewState> =>
+      ReviewStateSchema.parse(await call('review.undo', { runId, checkpointId })),
+    reviewRevertFile: async (runId: string, path: string): Promise<ReviewState> =>
+      ReviewStateSchema.parse(await call('review.revertFile', { runId, path })),
   };
 }
 

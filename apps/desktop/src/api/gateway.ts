@@ -10,6 +10,7 @@ import {
   ResearchJobDetailSchema,
   ResearchJobSchema,
   RerouteResponseSchema,
+  ReviewResponseSchema,
   RoleListSchema,
   RunSchema,
   ScheduleParseResponseSchema,
@@ -18,6 +19,7 @@ import {
   SendMessageResponseSchema,
   type CreateProjectRequestSchema,
   type CreateScheduleRequestSchema,
+  type ReviewComment,
   type ResearchDepth,
   type Surface,
 } from '@aios/contracts';
@@ -142,6 +144,16 @@ export function createGatewayApi(call: Call) {
         method: 'POST',
         body: input,
       }),
+    /** Keputusan atas hasil run coding: terima (opsional merge), tolak, atau tolak dengan komentar. */
+    reviewRun: (
+      runId: string,
+      input: {
+        decision: 'accept' | 'reject';
+        comments?: ReviewComment[];
+        merge?: boolean;
+        commitMessage?: string;
+      },
+    ) => get(`/runs/${runId}/review`, ReviewResponseSchema, { method: 'POST', body: input }),
     cancelRun: (id: string) => get(`/runs/${id}/cancel`, RunSchema, { method: 'POST' }),
 
     listSchedules: async () => (await get('/schedules', ScheduleListSchema)).items,

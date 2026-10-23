@@ -53,6 +53,7 @@ export const api: FakeApi = {
   rerouteMessage: fn<'rerouteMessage'>(),
   getRun: fn<'getRun'>(),
   resolveApproval: fn<'resolveApproval'>(),
+  reviewRun: fn<'reviewRun'>(),
   cancelRun: fn<'cancelRun'>(),
   listSchedules: fn<'listSchedules'>(),
   createSchedule: fn<'createSchedule'>(),
@@ -95,6 +96,9 @@ export const workerApi: FakeWorkerApi = {
   inspect: vi.fn(),
   bind: vi.fn(),
   bindings: vi.fn(),
+  reviewGet: vi.fn(),
+  reviewUndo: vi.fn(),
+  reviewRevertFile: vi.fn(),
 };
 export const workerService = { start: vi.fn(), stop: vi.fn() };
 

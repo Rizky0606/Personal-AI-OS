@@ -5,7 +5,7 @@ export type ThemeMode = 'system' | 'light' | 'dark';
 export type RightPanelTab = 'preview' | 'diff' | 'terminal' | 'files';
 
 export const RIGHT_PANEL_MIN = 280;
-export const RIGHT_PANEL_MAX = 720;
+export const RIGHT_PANEL_MAX = 960;
 export const RIGHT_PANEL_DEFAULT = 420;
 
 export const clampPanelWidth = (width: number): number =>
@@ -27,6 +27,11 @@ interface UiState {
   activeProjectId: string | null;
   /** Branch kerja agent dari run coding yang sedang berjalan, untuk status bar; tidak disimpan. */
   activeRunBranch: string | null;
+  /** Run coding yang hasilnya sedang menunggu tinjauan (tab Diff); tidak disimpan. */
+  reviewRunId: string | null;
+  /** Membuka panel kanan di tab Diff untuk run ini. */
+  openReview: (runId: string) => void;
+  setReviewRunId: (runId: string | null) => void;
   setActiveProject: (id: string | null) => void;
   setActiveRunBranch: (branch: string | null) => void;
   toggleSidebar: () => void;
@@ -51,6 +56,10 @@ export const useUiStore = create<UiState>()(
       newChatSignal: 0,
       activeProjectId: null,
       activeRunBranch: null,
+      reviewRunId: null,
+      openReview: (reviewRunId) =>
+        set({ reviewRunId, rightPanelOpen: true, rightPanelTab: 'diff' }),
+      setReviewRunId: (reviewRunId) => set({ reviewRunId }),
       setActiveProject: (activeProjectId) => set({ activeProjectId, activeRunBranch: null }),
       setActiveRunBranch: (activeRunBranch) => set({ activeRunBranch }),
       toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),

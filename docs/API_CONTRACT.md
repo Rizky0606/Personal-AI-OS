@@ -25,7 +25,7 @@ Semua klien memakai satu REST API `/v1` dan satu WebSocket `/v1/ws`. Skema didef
 | Run | `GET /runs/:id`, `GET /runs/:id/events?afterSeq=` | Status dan putar ulang event |
 | Run | `POST /runs/:id/steer`, `POST /runs/:id/cancel` | Arahkan atau hentikan agent |
 | Run | `POST /runs/:id/approvals/:approvalId` | `{ decision: allow \| deny, remember }` |
-| Run | `POST /runs/:id/review` | `{ decision: accept \| reject, comments[] }` |
+| Run | `POST /runs/:id/review` | `{ decision: accept \| reject, comments[], merge?, commitMessage? }`; hasil `{ run, branch, commit, merged, mergeSkipped, revisionRunId }`. `accept` = satu commit di branch `aios/…` (opsional fast-forward ke branch kerja); `reject` = buang; `reject` dengan `comments` = run baru di worktree yang sama (`revisionRunId`) |
 | Project | `GET/POST /projects`, `PATCH /projects/:id` | Project terdaftar per worker (path tetap lokal) |
 | Kanban | `GET /projects/:id/tasks`, `POST /tasks`, `PATCH /tasks/:id` | Kartu, status, urutan, role |
 | Kanban | `POST /tasks/:id/run`, `POST /tasks/breakdown` | Kerjakan kartu; AI memecah ide jadi usulan kartu |
@@ -73,7 +73,8 @@ Channel `user` membawa: `task.updated`, `schedule.result`, `research.completed`,
 ## Protokol worker
 
 - Worker membuka WebSocket ke gateway di `/v1/worker/ws` dengan token ber-scope `worker` (header `Authorization` saat handshake). Satu koneksi aktif per perangkat; koneksi baru menggantikan yang lama. Gateway hanya menerima `run.event` untuk run milik project yang terdaftar atas perangkat itu.
-- Perintah dari gateway: `run.start` (runId, projectId, prompt, bundel role dan skill, model), `run.steer`, `run.cancel`, `approval.resolve`, `review.apply`.
+- Perintah dari gateway: `run.start` (runId, projectId, prompt, bundel role dan skill, model, `continueFromRunId` untuk revisi), `run.steer`, `run.cancel`, `approval.resolve`, `review.apply` (dijawab worker dengan frame `review.result`; gateway menunggu maksimal 30 detik, dan worker menjawab perintah yang diulang dengan hasil yang sama).
+- Isi diff tidak lewat gateway: aplikasi desktop membacanya dari worker lokal (`review.get`, `review.undo`, `review.revertFile`); ke gateway hanya event `diff.updated` (daftar file, tambah, hapus) dan `checkpoint.created`.
 - Worker mengirim AgentEvent ke channel `run:<id>`. Gateway menyimpan lalu menyiarkan.
 - Aplikasi desktop dan worker bicara lewat WebSocket lokal di `127.0.0.1` dengan port acak dan token yang diberikan Tauri saat sidecar dijalankan. Token dipakai sekali: balasan `ready` membawa token untuk koneksi berikutnya. Koneksi yang membawa header `Origin` (halaman web) ditolak. Skema pesan lokal ada di `packages/contracts/src/worker-local.ts`.
 

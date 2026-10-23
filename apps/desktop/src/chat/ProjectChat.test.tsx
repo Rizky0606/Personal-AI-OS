@@ -328,3 +328,76 @@ describe('status bar: project dan branch', () => {
     expect(await screen.findByText(copy.status.project)).toBeInTheDocument();
   });
 });
+
+describe('hasil run coding menunggu tinjauan', () => {
+  const reviewRun = (status: 'needs_review' | 'completed') =>
+    run({ id: RUN_X, status, kind: 'coding', engine: 'omp' });
+
+  it('membuka percakapan lama: pengingat dengan tombol ke tab Diff; panel tidak dibuka paksa', async () => {
+    useUiStore.getState().setActiveProject(PROJECT);
+    api.listMessages.mockResolvedValue(
+      page(message({ author: 'user', text: 'tes', runId: RUN_X })),
+    );
+    api.getRun.mockResolvedValue(reviewRun('needs_review'));
+    const user = userEvent.setup();
+    await renderScreen(<ChatScreen conversationId={CONV} />);
+
+    const open = await screen.findByRole('button', { name: copy.review.open });
+    expect(screen.getByText(copy.review.ready)).toBeInTheDocument();
+    expect(useUiStore.getState().reviewRunId).toBe(RUN_X);
+    expect(useUiStore.getState().rightPanelOpen).toBe(false);
+
+    await user.click(open);
+
+    expect(useUiStore.getState()).toMatchObject({
+      rightPanelOpen: true,
+      rightPanelTab: 'diff',
+      reviewRunId: RUN_X,
+    });
+  });
+
+  it('run selesai di depan mata: panel Diff terbuka sendiri', async () => {
+    useUiStore.getState().setActiveProject(PROJECT);
+    api.listMessages.mockResolvedValue(
+      page(message({ author: 'user', text: 'tes', runId: RUN_X })),
+    );
+    api.getRun.mockResolvedValue(run({ id: RUN_X, status: 'running' }));
+    await renderScreen(<ChatScreen conversationId={CONV} />);
+    await waitFor(() => expect(runs.get(RUN_X)).toBeDefined());
+    expect(useUiStore.getState().rightPanelOpen).toBe(false);
+
+    act(() => {
+      emit(`run:${RUN_X}`, { type: 'run.status', status: 'running' });
+      emit(`run:${RUN_X}`, { type: 'run.status', status: 'needs_review' });
+    });
+
+    await waitFor(() =>
+      expect(useUiStore.getState()).toMatchObject({
+        rightPanelOpen: true,
+        rightPanelTab: 'diff',
+        reviewRunId: RUN_X,
+      }),
+    );
+    expect(await screen.findByRole('button', { name: copy.review.open })).toBeInTheDocument();
+  });
+
+  it('run biasa (completed) tidak menampilkan pengingat; meninggalkan percakapan membersihkan tab Diff', async () => {
+    api.listMessages.mockResolvedValue(
+      page(message({ author: 'user', text: 'tes', runId: RUN_X })),
+    );
+    api.getRun.mockResolvedValue(reviewRun('completed'));
+    const view = await renderScreen(<ChatScreen conversationId={CONV} />);
+    await waitFor(() => expect(api.getRun).toHaveBeenCalled());
+    expect(screen.queryByRole('button', { name: copy.review.open })).toBeNull();
+    expect(useUiStore.getState().reviewRunId).toBeNull();
+    view.unmount();
+
+    api.getRun.mockResolvedValue(reviewRun('needs_review'));
+    const again = await renderScreen(<ChatScreen conversationId={CONV} />);
+    await screen.findByRole('button', { name: copy.review.open });
+    expect(useUiStore.getState().reviewRunId).toBe(RUN_X);
+    again.unmount();
+
+    expect(useUiStore.getState().reviewRunId).toBeNull();
+  });
+});

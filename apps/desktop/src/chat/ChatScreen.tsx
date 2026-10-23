@@ -4,6 +4,7 @@ import { ErrorBanner } from '../ui/ErrorBanner';
 import { StateView, type ViewState } from '../ui/StateView';
 import { Composer } from './Composer';
 import { MessageList } from './MessageList';
+import { ReviewBanner } from './ReviewBanner';
 import { useChatController } from './useChatController';
 
 function ChatView({ conversationId }: { conversationId: string | undefined }) {
@@ -56,6 +57,7 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
           />
         </StateView>
       </div>
+      {chat.reviewRunId ? <ReviewBanner runId={chat.reviewRunId} /> : null}
       <Composer
         draft={chat.draft}
         onDraft={chat.setDraft}

@@ -10,6 +10,7 @@ import { copy } from '../copy';
 import { isSettled } from '../realtime/liveRun';
 import { useUiStore } from '../state/uiStore';
 import { useToastStore } from '../ui/Toaster';
+import { useReviewTarget } from './useReviewTarget';
 import { addMessageToCache, chronological, latestRunId, messageText } from './messageData';
 
 /** Run yang statusnya sudah diperiksa saat membuka percakapan; mencegah getRun berulang per render. */
@@ -45,6 +46,7 @@ export function useChatController(conversationId: string | undefined) {
   const live = useLiveRun(runId);
   const failure = useRunFailure(runId);
   const streaming = live !== undefined && !isSettled(live.status);
+  const reviewRunId = useReviewTarget(runId ?? undefined, live);
 
   // Chat umum hanya menawarkan role Umum; role coding (omp) butuh project, jadi hanya muncul di dalam project.
   const roles = useMemo(
@@ -60,7 +62,8 @@ export function useChatController(conversationId: string | undefined) {
     roles.find((r) => r.id === live?.role)?.group === 'coding';
   useEffect(() => {
     if (!codingLive || !liveRunId) return;
-    setRunBranch(workerBranchFor(liveRunId));
+    // Run revisi memakai branch run sebelumnya; panel review sudah mengisinya, jangan ditimpa.
+    if (useUiStore.getState().activeRunBranch === null) setRunBranch(workerBranchFor(liveRunId));
     return () => setRunBranch(null);
   }, [codingLive, liveRunId, setRunBranch]);
 
@@ -217,6 +220,7 @@ export function useChatController(conversationId: string | undefined) {
     models: modelsQuery.data ?? [],
     roles,
     approvals: live?.approvals ?? [],
+    reviewRunId,
     resolvingApprovals: resolving,
     resolveApproval: (approvalId: string, decision: 'allow' | 'deny', remember: boolean) =>
       void resolveApproval(approvalId, decision, remember),

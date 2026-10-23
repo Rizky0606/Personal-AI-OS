@@ -18,7 +18,14 @@ export interface FinishDeps {
  * dan daftar pesan diambil ulang.
  */
 export async function finishRun(run: LiveRun, { queryClient, release }: FinishDeps): Promise<void> {
-  const keys = [['messages'], ['conversations'], ['research'], ['researchJob'], ['schedules']];
+  const keys = [
+    ['messages'],
+    ['conversations'],
+    ['run'],
+    ['research'],
+    ['researchJob'],
+    ['schedules'],
+  ];
   for (let attempt = 1; attempt <= RETRIES; attempt++) {
     await Promise.all(keys.map((queryKey) => queryClient.invalidateQueries({ queryKey })));
     const failed = queryClient
