@@ -8,6 +8,7 @@ import { TooltipProvider } from '../ui/Tooltip';
 import { useAuthState } from './hooks';
 import { queryClient } from './queryClient';
 import { RealtimeLifecycle } from './RealtimeLifecycle';
+import { WorkerLifecycle } from './WorkerLifecycle';
 import { router } from './router';
 import { auth } from './services';
 
@@ -45,6 +46,7 @@ export function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider delayDuration={400}>
         <RealtimeLifecycle />
+        <WorkerLifecycle />
         {state.status === 'loading' ? (
           <div className="h-full bg-bg" />
         ) : state.status === 'signedOut' ? (

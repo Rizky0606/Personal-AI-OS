@@ -3,13 +3,21 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.json --noEmit false --outDir dist",
+    "build": "tsc -p tsconfig.build.json",
+    "build:sidecar": "node scripts/build-sidecar.mjs",
     "typecheck": "tsc -p tsconfig.json",
+    "smoke:sidecar": "node scripts/smoke-sidecar.mjs",
     "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@aios/contracts": "workspace:*",
+    "ws": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@aios/config": "workspace:*",
     "@types/node": "catalog:",
+    "@types/ws": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

@@ -6,6 +6,7 @@ import { useUiStore, type ThemeMode } from '../state/uiStore';
 import { Button } from '../ui/Button';
 import { Chip } from '../ui/Chip';
 import { ListItem } from '../ui/ListItem';
+import { AllowedFolders } from '../worker/AllowedFolders';
 
 const themes: { value: ThemeMode; label: string }[] = [
   { value: 'system', label: copy.settings.themeSystem },
@@ -39,6 +40,8 @@ export function SettingsScreen() {
         <ListItem title={copy.settings.server} trailing={session?.serverUrl ?? ''} />
         <ListItem title={copy.settings.device} trailing={session?.deviceName ?? ''} />
       </section>
+
+      <AllowedFolders />
 
       <section aria-labelledby="settings-theme" className="flex flex-col gap-2">
         <h2 id="settings-theme" className="text-section font-semibold text-text">

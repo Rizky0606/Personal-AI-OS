@@ -10,6 +10,7 @@ import { copy } from '../copy';
 import { ResearchDetailScreen } from '../research/ResearchDetailScreen';
 import { ResearchFormScreen } from '../research/ResearchFormScreen';
 import { CatalogScreen } from '../screens/CatalogScreen';
+import { ProjectsScreen } from '../projects/ProjectsScreen';
 import { PlaceholderScreen } from '../screens/PlaceholderScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { ScheduleDetailScreen } from '../schedules/ScheduleDetailScreen';
@@ -47,7 +48,7 @@ const routes = [
     path: '/chat/$conversationId',
     component: ChatRoute,
   }),
-  placeholder('/projects', copy.screens.projectsEmpty),
+  createRoute({ getParentRoute: () => rootRoute, path: '/projects', component: ProjectsScreen }),
   placeholder('/kanban', copy.screens.kanbanEmpty),
   createRoute({ getParentRoute: () => rootRoute, path: '/schedules', component: SchedulesScreen }),
   createRoute({

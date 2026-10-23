@@ -21,6 +21,7 @@
     "@tanstack/react-query": "catalog:",
     "@tanstack/react-router": "catalog:",
     "@tauri-apps/api": "catalog:",
+    "@tauri-apps/plugin-dialog": "catalog:",
     "@tauri-apps/plugin-http": "catalog:",
     "@tauri-apps/plugin-opener": "catalog:",
     "@tauri-apps/plugin-websocket": "catalog:",

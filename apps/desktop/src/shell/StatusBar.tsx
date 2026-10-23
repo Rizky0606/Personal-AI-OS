@@ -1,4 +1,6 @@
 import { useConnection, useOnline } from '../app/hooks';
+import { workerIndicator } from '../worker/status';
+import { useWorker } from '../worker/hooks';
 import { copy } from '../copy';
 import { cn } from '../lib/cn';
 import type { ConnectionState } from '../realtime/client';
@@ -34,6 +36,7 @@ export function StatusBar() {
   const connection = useConnection();
   const online = useOnline();
   const view = connectionView(connection, online);
+  const worker = workerIndicator(useWorker());
   return (
     <footer className="flex h-(--aios-statusbar-height) shrink-0 items-center justify-between border-t border-border bg-surface px-3 font-mono text-caption text-text-2">
       <div className="flex items-center gap-4">
@@ -42,7 +45,24 @@ export function StatusBar() {
         <span>{copy.status.model}</span>
       </div>
       <div className="flex items-center gap-4">
-        <span>{copy.status.worker}</span>
+        <span
+          role="status"
+          aria-label={copy.workerStatus[worker]}
+          className="flex items-center gap-2"
+        >
+          <span
+            aria-hidden="true"
+            className={cn(
+              'size-2 rounded-full',
+              worker === 'connected'
+                ? 'bg-success'
+                : worker === 'reconnecting'
+                  ? 'bg-warning'
+                  : 'bg-text-3',
+            )}
+          />
+          {copy.workerStatus[worker]}
+        </span>
         <span>{copy.status.quota}</span>
         <span role="status" className="flex items-center gap-2">
           <span aria-hidden="true" className={cn('size-2 rounded-full', dotTone[view.tone])} />

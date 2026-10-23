@@ -2,8 +2,10 @@ import type { ModelInfoSchema, RoleInfoSchema } from '@aios/contracts';
 import {
   ConversationSchema,
   IdSchema,
+  LoginResponseSchema,
   MessageSchema,
   ModelListSchema,
+  ProjectSchema,
   ResearchJobDetailSchema,
   ResearchJobSchema,
   RerouteResponseSchema,
@@ -13,6 +15,7 @@ import {
   ScheduleRunSchema,
   ScheduleSchema,
   SendMessageResponseSchema,
+  type CreateProjectRequestSchema,
   type CreateScheduleRequestSchema,
   type ResearchDepth,
   type Surface,
@@ -41,6 +44,7 @@ const MessagePageSchema = page(MessageSchema);
 const ScheduleRunPageSchema = page(ScheduleRunSchema);
 const ResearchPageSchema = page(ResearchJobSchema);
 const ScheduleListSchema = items(ScheduleSchema);
+const ProjectListSchema = items(ProjectSchema);
 
 export type RoleInfo = z.infer<typeof RoleInfoSchema>;
 export type ModelInfo = z.infer<typeof ModelInfoSchema>;
@@ -51,6 +55,8 @@ export type ResearchPage = z.infer<typeof ResearchPageSchema>;
 export type ResearchJobDetail = z.infer<typeof ResearchJobDetailSchema>;
 export type ScheduleParse = z.infer<typeof ScheduleParseResponseSchema>;
 export type CreateScheduleInput = z.input<typeof CreateScheduleRequestSchema>;
+export type CreateProjectInput = z.input<typeof CreateProjectRequestSchema>;
+export type WorkerRegistration = z.infer<typeof LoginResponseSchema>;
 
 export const PAGE_SIZE = 50;
 
@@ -75,6 +81,12 @@ export function createGatewayApi(call: Call) {
   }
 
   return {
+    registerWorker: (name: string) =>
+      get('/devices/worker', LoginResponseSchema, { method: 'POST', body: { name } }),
+    listProjects: async () => (await get('/projects', ProjectListSchema)).items,
+    createProject: (input: CreateProjectInput) =>
+      get('/projects', ProjectSchema, { method: 'POST', body: input }),
+
     listModels: async () => (await get('/models', ModelListSchema)).items,
     listRoles: async () => (await get('/roles', RoleListSchema)).items,
 

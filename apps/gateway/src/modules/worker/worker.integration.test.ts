@@ -18,7 +18,7 @@ let desktop: string;
 let url: string;
 
 beforeAll(async () => {
-  env = await createAuthEnv(inject('testDatabaseUrl'), { heartbeatMs: 60 });
+  env = await createAuthEnv(inject('testDatabaseUrl'), { heartbeatMs: 200 });
   desktop = (await env.loginOk({ kind: 'desktop' })).accessToken;
   await env.app.listen({ port: 0, host: '127.0.0.1' });
   const port = (env.app.server.address() as AddressInfo).port;

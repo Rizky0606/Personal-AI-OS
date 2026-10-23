@@ -3,6 +3,7 @@ import { PanelLeftOpen, PanelRight, Plus } from 'lucide-react';
 import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { ConversationList } from '../chat/ConversationList';
 import { copy } from '../copy';
+import { ProjectList } from '../projects/ProjectList';
 import { ResearchList } from '../research/ResearchList';
 import { ScheduleList } from '../schedules/ScheduleList';
 import { useUiStore } from '../state/uiStore';
@@ -25,8 +26,7 @@ interface Section {
 
 /** Judul bagian dan isi sidebar menurut rute aktif. */
 function sectionFor(pathname: string): Section {
-  if (pathname.startsWith('/projects'))
-    return { title: copy.nav.projects, list: <EmptyState message={copy.screens.projectsEmpty} /> };
+  if (pathname.startsWith('/projects')) return { title: copy.nav.projects, list: <ProjectList /> };
   if (pathname.startsWith('/kanban'))
     return { title: copy.nav.kanban, list: <EmptyState message={copy.screens.kanbanEmpty} /> };
   if (pathname.startsWith('/schedules'))

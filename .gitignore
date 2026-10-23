@@ -13,6 +13,8 @@ secrets/
 # Tauri / Rust
 **/src-tauri/target/
 **/src-tauri/gen/
+# Hasil kompilasi worker (pnpm --filter @aios/worker build:sidecar); ~86 MB
+**/src-tauri/binaries/
 
 # Android
 apps/android/.gradle/

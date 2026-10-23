@@ -1,6 +1,8 @@
 import type { EventEnvelope, ServerEvent } from '@aios/contracts';
 import { vi, type Mock } from 'vitest';
 import type { GatewayApi } from '../api/gateway';
+import type { WorkerSnapshot } from '../worker/localClient';
+import type { WorkerApi } from '../worker/api';
 import { RunTracker } from '../realtime/runTracker';
 
 /**
@@ -37,6 +39,9 @@ export const fakeRealtime = {
 const fn = <K extends keyof GatewayApi>() => vi.fn() as unknown as FakeApi[K];
 
 export const api: FakeApi = {
+  registerWorker: fn<'registerWorker'>(),
+  listProjects: fn<'listProjects'>(),
+  createProject: fn<'createProject'>(),
   listModels: fn<'listModels'>(),
   listRoles: fn<'listRoles'>(),
   listConversations: fn<'listConversations'>(),
@@ -62,6 +67,36 @@ export const api: FakeApi = {
   exportResearch: fn<'exportResearch'>(),
 };
 
+/** Worker lokal palsu: snapshot bisa diatur tes lewat [setWorker]. */
+let workerSnapshot: WorkerSnapshot = { local: 'off', status: null };
+const workerListeners = new Set<() => void>();
+export const localWorker = {
+  subscribe: (listener: () => void) => {
+    workerListeners.add(listener);
+    return () => workerListeners.delete(listener);
+  },
+  getSnapshot: () => workerSnapshot,
+  start: vi.fn(),
+  stop: vi.fn(),
+  call: vi.fn(),
+  onPush: () => () => undefined,
+};
+export function setWorker(next: WorkerSnapshot): void {
+  workerSnapshot = next;
+  workerListeners.forEach((listener) => listener());
+}
+
+type FakeWorkerApi = { [K in keyof WorkerApi]: Mock<WorkerApi[K]> };
+export const workerApi: FakeWorkerApi = {
+  folders: vi.fn(),
+  addFolder: vi.fn(),
+  removeFolder: vi.fn(),
+  inspect: vi.fn(),
+  bind: vi.fn(),
+  bindings: vi.fn(),
+};
+export const workerService = { start: vi.fn(), stop: vi.fn() };
+
 export const runs = new RunTracker({
   realtime: fakeRealtime,
   fetchRun: (id) => api.getRun(id),
@@ -73,6 +108,9 @@ export const fakeServices = {
   realtime: fakeRealtime,
   api,
   runs,
+  localWorker,
+  workerApi,
+  workerService,
 };
 
 /** Mengirim event ke semua pelanggan channel, seolah dari WebSocket. */
@@ -91,4 +129,9 @@ export function resetApi(): void {
   api.listConversations.mockResolvedValue({ items: [], nextBefore: null });
   api.listResearch.mockResolvedValue({ items: [], nextBefore: null });
   api.listSchedules.mockResolvedValue([]);
+  api.listProjects.mockResolvedValue([]);
+  for (const mock of Object.values(workerApi)) mock.mockReset();
+  workerApi.folders.mockResolvedValue([]);
+  workerApi.bindings.mockResolvedValue([]);
+  setWorker({ local: 'off', status: null });
 }

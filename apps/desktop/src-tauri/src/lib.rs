@@ -3,6 +3,8 @@
 //! HTTP dan WebSocket ke gateway lewat plugin resmi (klien Rust, bukan fetch webview) supaya CORS tetap tertutup
 //! dan header Authorization bisa dipasang saat handshake WebSocket.
 
+mod worker;
+
 use keyring::Entry;
 
 /// Nama layanan di Credential Manager; entri tampil sebagai `app.aios.desktop/<kunci>`.
@@ -58,7 +60,9 @@ fn device_name() -> String {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
+        .manage(worker::WorkerState::default())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_websocket::init())
@@ -66,10 +70,19 @@ pub fn run() {
             secret_get,
             secret_set,
             secret_remove,
-            device_name
+            device_name,
+            worker::worker_connect_info
         ])
-        .run(tauri::generate_context!())
-        .expect("aplikasi gagal dijalankan");
+        .build(tauri::generate_context!())
+        .expect("aplikasi gagal dibangun");
+
+    app.run(|handle, event| {
+        // Worker ikut berhenti bersama aplikasi (proses anaknya dimatikan oleh worker sendiri).
+        if let tauri::RunEvent::Exit = event {
+            use tauri::Manager;
+            handle.state::<worker::WorkerState>().shutdown();
+        }
+    });
 }
 
 #[cfg(test)]
