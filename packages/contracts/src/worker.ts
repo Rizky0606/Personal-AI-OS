@@ -88,7 +88,7 @@ export const WorkerReadyFrameSchema = z.object({ type: z.literal('ready'), devic
 export const WorkerPongFrameSchema = z.object({ type: z.literal('pong') });
 export const WorkerErrorFrameSchema = z.object({
   type: z.literal('error'),
-  code: z.enum(['invalid_message', 'run_not_owned', 'replaced']),
+  code: z.enum(['invalid_message', 'run_not_owned', 'run_not_active', 'replaced']),
   message: z.string(),
   runId: IdSchema.optional(),
 });
@@ -103,3 +103,14 @@ export const GatewayToWorkerFrameSchema = z
   ])
   .meta({ id: 'GatewayToWorkerFrame' });
 export type GatewayToWorkerFrame = z.infer<typeof GatewayToWorkerFrameSchema>;
+
+/** Awalan nama branch kerja agent di worktree (ARCHITECTURE.md, "Alur utama: run coding"). */
+export const WORKER_BRANCH_PREFIX = 'aios/';
+
+/**
+ * Nama branch kerja satu run: `aios/<8 hex terakhir ID run>`. Bagian akhir UUIDv7 acak (bagian awalnya
+ * cap waktu), jadi pendek tetapi tetap unik. Gateway dan worker menghitungnya dengan fungsi yang sama.
+ */
+export function workerBranchFor(runId: string): string {
+  return `${WORKER_BRANCH_PREFIX}${runId.replaceAll('-', '').slice(-8)}`;
+}

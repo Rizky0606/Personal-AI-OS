@@ -1,4 +1,4 @@
-import { createServer, type Server } from 'node:http';
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { WebSocketServer, type WebSocket } from 'ws';
 
@@ -26,8 +26,14 @@ export class FakeGateway {
   private readonly wss = new WebSocketServer({ noServer: true });
   url = '';
 
+  /** Penangan HTTP biasa (mis. /llm/v1/* untuk uji proxy LLM); tanpa ini dijawab 404. */
+  httpHandler: ((req: IncomingMessage, res: ServerResponse) => void) | undefined;
+
   constructor() {
-    this.http = createServer();
+    this.http = createServer((req, res) => {
+      if (this.httpHandler) this.httpHandler(req, res);
+      else res.writeHead(404).end();
+    });
     this.http.on('upgrade', (req, socket, head) => {
       const auth = req.headers.authorization;
       if (this.handshake !== 'ok') {

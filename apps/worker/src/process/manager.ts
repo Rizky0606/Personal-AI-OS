@@ -1,4 +1,4 @@
-import { spawn, type ChildProcess } from 'node:child_process';
+import { spawn, type ChildProcess, type ChildProcessWithoutNullStreams } from 'node:child_process';
 
 export interface RunOptions {
   cwd: string;
@@ -32,6 +32,12 @@ export interface ProcessManagerOptions {
    * Melempar untuk menolak.
    */
   checkCwd?: (cwd: string) => Promise<string>;
+}
+
+export interface TrackedProcess {
+  child: ChildProcessWithoutNullStreams;
+  /** Mematikan proses beserta turunannya. */
+  kill(): void;
 }
 
 interface Tracked {
@@ -106,6 +112,52 @@ export class ProcessManager {
     } finally {
       this.release();
     }
+  }
+
+  /**
+   * Menjalankan proses yang berumur panjang dan interaktif (stdin/stdout piped), mis. omp. Tunduk pada
+   * pemeriksaan cwd dan batas jumlah proses seperti [run]; slot dilepas saat proses selesai. Dimatikan oleh
+   * [killRun] / [killAll]. Gagal start (program tidak ada) menolak dengan galat.
+   */
+  async spawnTracked(
+    command: string,
+    args: string[],
+    options: { cwd: string; env?: NodeJS.ProcessEnv; runId?: string },
+  ): Promise<TrackedProcess> {
+    if (!command || /[\0\r\n]/.test(command)) throw new Error('Perintah tidak valid.');
+    const cwd = this.options.checkCwd ? await this.options.checkCwd(options.cwd) : options.cwd;
+    await this.acquire();
+    if (this.shuttingDown) {
+      this.release();
+      throw new Error('Worker sedang berhenti.');
+    }
+    return new Promise<TrackedProcess>((resolve, reject) => {
+      const child = spawn(command, args, {
+        cwd,
+        env: options.env ?? process.env,
+        shell: false,
+        windowsHide: true,
+        detached: process.platform !== 'win32',
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+      const tracked: Tracked = { child, runId: options.runId };
+      let released = false;
+      const free = () => {
+        if (released) return;
+        released = true;
+        this.active.delete(tracked);
+        this.release();
+      };
+      child.once('error', (error) => {
+        free();
+        reject(new Error(error.message));
+      });
+      child.once('close', free);
+      child.once('spawn', () => {
+        this.active.add(tracked);
+        resolve({ child, kill: () => killTree(child.pid) });
+      });
+    });
   }
 
   /** Mematikan semua proses milik satu run. */

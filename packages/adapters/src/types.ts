@@ -21,6 +21,14 @@ export interface StartRunInput {
   sessionId?: string | undefined;
   /** Pembatalan dari luar (selain `RunHandle.cancel`). */
   signal?: AbortSignal | undefined;
+  /** Project yang dikerjakan (run coding lewat worker). */
+  projectId?: string | undefined;
+  /** Role yang dipilih router; worker memakainya untuk memberi nama run. */
+  role?: string | undefined;
+  /** Folder kerja agent (worktree). Hanya omp; wajib di sana. */
+  cwd?: string | undefined;
+  /** Folder berkas pendukung run di luar worktree (konfigurasi provider, system prompt). Hanya omp. */
+  runDir?: string | undefined;
 }
 
 export interface RunHandle {

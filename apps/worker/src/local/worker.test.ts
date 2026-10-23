@@ -341,7 +341,7 @@ describe('sesi gateway lewat worker', () => {
     client.close();
   });
 
-  it('run.start sebelum adapter ada dijawab error worker_not_ready lalu run.status failed', async () => {
+  it('run.start untuk project yang belum terikat dijawab error project_not_bound ke gateway', async () => {
     const client = await Client.login(worker.port, TOKEN);
     await client.call('session.set', sessionParams());
     await until(() => worker.link.state === 'connected', 'connected');
@@ -357,14 +357,13 @@ describe('sesi gateway lewat worker', () => {
       }),
     );
 
-    await until(() => gateway.received.length >= 2, 'dua event');
+    await until(() => gateway.received.length >= 1, 'event error');
     expect(gateway.received).toEqual([
-      expect.objectContaining({
+      {
         type: 'run.event',
         runId: RUN,
-        event: expect.objectContaining({ type: 'error', code: 'worker_not_ready' }) as unknown,
-      }),
-      { type: 'run.event', runId: RUN, event: { type: 'run.status', status: 'failed' } },
+        event: expect.objectContaining({ type: 'error', code: 'project_not_bound' }) as unknown,
+      },
     ]);
     client.close();
   });

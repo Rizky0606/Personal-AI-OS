@@ -412,6 +412,9 @@ importers:
 
   apps/worker:
     dependencies:
+      '@aios/adapters':
+        specifier: workspace:*
+        version: link:../../packages/adapters
       '@aios/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts

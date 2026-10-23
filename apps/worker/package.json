@@ -10,6 +10,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@aios/adapters": "workspace:*",
     "@aios/contracts": "workspace:*",
     "ws": "catalog:",
     "zod": "catalog:"

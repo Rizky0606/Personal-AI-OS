@@ -89,6 +89,28 @@ export class GatewayLink {
     return this.session?.deviceId ?? null;
   }
 
+  get serverUrl(): string | null {
+    return this.session?.serverUrl ?? null;
+  }
+
+  /**
+   * Access token yang pasti masih berlaku (diperbarui bila hampir habis, atau paksa setelah gateway menolak
+   * token ini). Dipakai proxy LLM lokal agar run panjang tidak mati saat token 15 menit habis. Null bila
+   * tidak ada sesi atau refresh ditolak.
+   */
+  async freshAccessToken(options: { force?: boolean } = {}): Promise<string | null> {
+    const session = this.session;
+    if (!session) return null;
+    const expiry = tokenExpiryMs(session.accessToken);
+    const now = (this.deps.now ?? Date.now)();
+    const near = expiry !== undefined && expiry - now < (this.deps.refreshSkewMs ?? 30_000);
+    if (options.force === true || near) {
+      const outcome = await this.refresh();
+      if (outcome === 'invalid') this.afterRefreshFailure('invalid', this.generation);
+    }
+    return this.session?.accessToken ?? null;
+  }
+
   onState(listener: (state: GatewayState) => void): () => void {
     this.stateListeners.add(listener);
     return () => this.stateListeners.delete(listener);
