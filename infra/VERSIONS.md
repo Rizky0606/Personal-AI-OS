@@ -73,5 +73,8 @@ Upgrade satu komponen per waktu: baca changelog, jalankan tes adapter, baru naik
 | Zustand / lucide-react                                     | ^5.0.16 / ^1.61.0                    |
 | @tauri-apps/api, plugin-http, plugin-websocket, cli        | ^2.12.4 / ^2.8.3 / ^2.5.0 / ^2.12.4  |
 | Tauri (crate) / tauri-plugin-http / tauri-plugin-websocket | 2 / 2 / 2 (belum dikunci Cargo.lock) |
+| @tauri-apps/plugin-dialog / tauri-plugin-dialog (crate)    | ^2.8.3 / 2                           |
+| serde / serde_json / getrandom (crate)                     | 1 / 1 / 0.2                          |
+| Worker: ws / Bun (alat build sidecar)                      | ^8.22.0 / 1.4.2                      |
 | keyring (crate, backend windows-native)                    | 3                                    |
 | @testing-library/react / user-event / jest-dom, jsdom      | ^16.3.3 / ^14.6.8 / ^7.0.1, ^30.1.3  |
