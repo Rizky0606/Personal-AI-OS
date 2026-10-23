@@ -24,6 +24,7 @@
     "@tauri-apps/plugin-dialog": "catalog:",
     "@tauri-apps/plugin-http": "catalog:",
     "@tauri-apps/plugin-opener": "catalog:",
+    "@tauri-apps/plugin-updater": "catalog:",
     "@tauri-apps/plugin-websocket": "catalog:",
     "@xterm/addon-fit": "catalog:",
     "@xterm/xterm": "catalog:",

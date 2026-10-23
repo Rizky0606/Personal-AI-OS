@@ -69,6 +69,9 @@ catalogs:
     '@tauri-apps/plugin-opener':
       specifier: ^2.7.2
       version: 2.7.2
+    '@tauri-apps/plugin-updater':
+      specifier: ^2.9.0
+      version: 2.14.0
     '@tauri-apps/plugin-websocket':
       specifier: ^2.5.0
       version: 2.5.0
@@ -269,6 +272,9 @@ importers:
       '@tauri-apps/plugin-opener':
         specifier: 'catalog:'
         version: 2.7.2
+      '@tauri-apps/plugin-updater':
+        specifier: 'catalog:'
+        version: 2.14.0
       '@tauri-apps/plugin-websocket':
         specifier: 'catalog:'
         version: 2.5.0
@@ -495,6 +501,9 @@ importers:
       embedded-postgres:
         specifier: 'catalog:'
         version: 16.14.0-beta.17
+      tsx:
+        specifier: 'catalog:'
+        version: 4.23.15
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
@@ -2082,6 +2091,9 @@ packages:
 
   '@tauri-apps/plugin-opener@2.7.2':
     resolution: {integrity: sha512-LyybP1VSzTMQiaFYcsbAse47KpivlyXdLZMQzGLEnkgQacGESnpjAfFoQ6h5sqWgAdZDH9szYjPzHMpv0Sz+TQ==}
+
+  '@tauri-apps/plugin-updater@2.14.0':
+    resolution: {integrity: sha512-gdylJ9tger4hkyOn24QZd6MNOKVo2Eh53iw5th2Qj1vKTR/+u4PIwJWuiis5hohYvobn6iOvlnALfrqIPSzh7Q==}
 
   '@tauri-apps/plugin-websocket@2.5.0':
     resolution: {integrity: sha512-uy6skY9NgCNwRoFd2kueTR3Ygw+2sW0V5gfY3IHxwpTVbtRpH+0A1B94VBWBQ97Y3E4eo6C1zVVfXj1NAuR1Qg==}
@@ -4858,6 +4870,10 @@ snapshots:
       '@tauri-apps/api': 2.12.4
 
   '@tauri-apps/plugin-opener@2.7.2':
+    dependencies:
+      '@tauri-apps/api': 2.12.4
+
+  '@tauri-apps/plugin-updater@2.14.0':
     dependencies:
       '@tauri-apps/api': 2.12.4
 

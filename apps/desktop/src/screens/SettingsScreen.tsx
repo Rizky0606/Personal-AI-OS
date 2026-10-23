@@ -7,6 +7,7 @@ import { useUiStore, type ThemeMode } from '../state/uiStore';
 import { Button } from '../ui/Button';
 import { Chip } from '../ui/Chip';
 import { ListItem } from '../ui/ListItem';
+import { UpdateSection } from '../updater/UpdateSection';
 import { AllowedFolders } from '../worker/AllowedFolders';
 
 const themes: { value: ThemeMode; label: string }[] = [
@@ -85,6 +86,8 @@ export function SettingsScreen() {
           <li>{copy.shortcuts.rightPanel}</li>
         </ul>
       </section>
+
+      <UpdateSection />
 
       <div>
         <Button variant="danger" disabled={loggingOut} onClick={() => void logout()}>

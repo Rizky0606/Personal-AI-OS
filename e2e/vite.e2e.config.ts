@@ -19,6 +19,7 @@ export default defineConfig({
       { find: /^@tauri-apps\/plugin-websocket$/, replacement: here('shims/websocket.ts') },
       { find: /^@tauri-apps\/plugin-dialog$/, replacement: here('shims/dialog.ts') },
       { find: /^@tauri-apps\/plugin-opener$/, replacement: here('shims/opener.ts') },
+      { find: /^@tauri-apps\/plugin-updater$/, replacement: here('shims/updater.ts') },
     ],
   },
   build: {

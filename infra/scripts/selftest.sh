@@ -24,6 +24,17 @@ EOS
 cat > "$STUBS/curl" <<'EOS'
 #!/usr/bin/env bash
 echo "curl $*" >> "$STUB_LOG"
+[[ "$*" == *http_code* ]] && printf '%s' "${STUB_READY:-200}"
+exit 0
+EOS
+cat > "$STUBS/git" <<'EOS'
+#!/usr/bin/env bash
+echo "git $*" >> "$STUB_LOG"
+case "$1" in
+  describe) echo v1.0.0 ;;
+  status) [[ "${STUB_DIRTY:-0}" == 1 ]] && echo ' M arsip.ts' ;;
+esac
+exit 0
 EOS
 cat > "$STUBS/restic" <<'EOS'
 #!/usr/bin/env bash
@@ -42,6 +53,8 @@ cat > "$STUBS/docker" <<'EOS'
 echo "docker $*" >> "$STUB_LOG"
 args="$*"
 case "$args" in
+  *"image inspect"*) [[ "${STUB_NO_IMAGE:-0}" == 1 ]] && exit 1 ;;
+  *"compose build"*) [[ "${STUB_BUILD_FAIL:-0}" == 1 ]] && exit 1 ;;
   *"postgres --version"*) echo "postgres (PostgreSQL) 16.4" ;;
   *"images searxng"*) echo "2026.10.1-abc" ;;
   *pg_dump*) [[ "${STUB_EMPTY_DUMP:-0}" == 1 ]] || echo "PGDMP-isi" ;;
@@ -175,7 +188,54 @@ grep -qE '^omp +18.12.6 +18.13.0 +BERBEDA' "$ROOT/out.txt" && pass "selisih terd
 STUB_OMP=18.13.0 run_check --lenient; code=$?
 [[ $code -eq 0 ]] && pass "--lenient: kode 0" || fail "lenient kode $code"
 
+echo "deploy.sh"
+mkdir -p "$ROOT/repo"
+run_deploy() {
+  : > "$LOG"
+  PATH="$STUBS:$PATH" STUB_LOG="$LOG" AIOS_BACKUP_ENV="$ROOT/backup.env" AIOS_BACKUP_LOCK="$ROOT/lock" TMPDIR="$ROOT" \
+    AIOS_REPO="$ROOT/repo" COMPOSE_DIR="$ROOT/compose" READY_TIMEOUT=3 READY_INTERVAL=1 \
+    bash "$HERE/deploy.sh" "$@" > "$ROOT/out.txt" 2>&1
+}
+run_deploy; code=$?
+[[ $code -eq 0 ]] && pass "berhasil (kode 0)" || { fail "kode keluar $code"; cat "$ROOT/out.txt"; }
+expect_log 'restic backup --tag aios' "backup dijalankan sebelum deploy"
+expect_log 'docker tag aios-gateway:latest aios-gateway:previous' "image berjalan ditandai :previous"
+expect_log 'docker compose build gateway' "build image"
+expect_log 'docker compose up -d gateway' "gateway dijalankan (migrasi di kontainer)"
+expect_log 'curl .*v1/readyz' "menunggu /readyz"
+expect_no_log 'docker tag aios-gateway:previous aios-gateway:latest' "tanpa rollback saat berhasil"
+grep -q "gateway v1.0.0 berjalan" "$ROOT/out.txt" && pass "melaporkan versi" || fail "versi tidak dilaporkan"
+
+echo "deploy.sh: /readyz gagal -> rollback"
+STUB_READY=503 run_deploy --no-backup; code=$?
+[[ $code -eq 1 ]] && pass "gagal (kode 1)" || fail "kode keluar $code"
+expect_log 'docker tag aios-gateway:previous aios-gateway:latest' "image sebelumnya dikembalikan"
+expect_log 'docker compose up -d --no-build gateway' "image sebelumnya dijalankan ulang"
+grep -q "ROLLBACK" "$ROOT/out.txt" && pass "rollback dicatat" || fail "rollback tidak dicatat"
+
+echo "deploy.sh: build gagal -> image baru tidak dijalankan"
+STUB_BUILD_FAIL=1 run_deploy --no-backup; code=$?
+[[ $code -eq 1 ]] && pass "gagal (kode 1)" || fail "kode keluar $code"
+expect_no_log 'docker compose up -d gateway$' "image baru tidak dijalankan"
+expect_log 'docker tag aios-gateway:previous aios-gateway:latest' "rollback setelah build gagal"
+
+echo "deploy.sh: backup gagal, tanpa image lama, --ref, dry-run"
+STUB_EMPTY_DUMP=1 run_deploy; code=$?
+[[ $code -eq 1 ]] && pass "backup gagal: deploy dibatalkan" || fail "kode keluar $code"
+expect_no_log 'docker compose build' "tidak build bila backup gagal"
+STUB_NO_IMAGE=1 STUB_READY=503 run_deploy --no-backup; code=$?
+[[ $code -eq 1 ]] && grep -q "tidak ada image sebelumnya" "$ROOT/out.txt" && pass "tanpa image lama: gagal jujur, tanpa rollback palsu" || fail "perilaku tanpa image lama"
+run_deploy --no-backup --ref v1.0.0; code=$?
+[[ $code -eq 0 ]] && pass "--ref berhasil" || fail "--ref kode $code"
+expect_log 'git checkout --quiet v1.0.0' "checkout ke ref"
+STUB_DIRTY=1 run_deploy --no-backup --ref v1.0.0; code=$?
+[[ $code -eq 1 ]] && grep -q "perubahan lokal" "$ROOT/out.txt" && pass "menolak pindah ref bila ada perubahan lokal" || fail "tidak menolak ref saat dirty"
+run_deploy --dry-run --no-backup; code=$?
+[[ $code -eq 0 ]] && pass "dry-run berhasil" || fail "dry-run kode $code"
+expect_no_log '^docker compose (build|up)' "dry-run tidak menjalankan docker compose"
+
 echo "loadtest.mjs"
+if node --test "$HERE/make-latest-json.test.mjs" > "$ROOT/out.txt" 2>&1; then pass "latest.json updater"; else fail "uji make-latest-json"; cat "$ROOT/out.txt"; fi
 if node --test "$HERE/loadtest.test.mjs" > "$ROOT/out.txt" 2>&1; then pass "fungsi ringkasan CPU/memori"; else fail "uji fungsi loadtest"; cat "$ROOT/out.txt"; fi
 if node "$HERE/loadtest.mjs" --mock --interval-ms 200 --out "$ROOT/load.json" > "$ROOT/out.txt" 2>&1; then
   grep -q '"completed"' "$ROOT/load.json" && pass "alur 5 run + riset terhadap server palsu" || fail "hasil tidak berisi status completed"

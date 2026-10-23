@@ -5,23 +5,23 @@ Sebuah tahap dianggap selesai hanya bila semua kotaknya tercentang. Checklist in
 ## Tahap A — Fondasi
 
 - [ ] VERIFICATION.md menjawab cara streaming Hermes, format RPC omp, dan cara menyuntik role ke keduanya
-- [ ] CI hijau di repo kosong
-- [ ] Token desain ter-generate ke CSS dan Kotlin dari satu file
-- [ ] /readyz di VPS melaporkan Postgres, Hermes, 9Router, SearXNG
-- [ ] Login dengan TOTP berhasil; token lama yang dipakai ulang mencabut perangkat
+- [ ] CI hijau di repo kosong _(belum: CI tidak dapat dilihat dari sini)_
+- [x] Token desain ter-generate ke CSS dan Kotlin dari satu file _(packages/ui-tokens, tokens.test.ts)_
+- [ ] /readyz di VPS melaporkan Postgres, Hermes, 9Router, SearXNG _(belum: butuh VPS)_
+- [x] Login dengan TOTP berhasil; token lama yang dipakai ulang mencabut perangkat _(auth.integration.test.ts dan E2E login desktop/Android)_
 - [ ] Panggilan model lewat /llm/v1 berhasil; tidak ada API key di klien
 
 ## Tahap B — Inti server
 
 - [ ] Chat streaming tidak kehilangan event setelah koneksi diputus
 - [ ] 7 role valid dan bundel tiap role di bawah anggaran token
-- [ ] `pnpm eval:routing` minimal 90%
+- [ ] `pnpm eval:routing` minimal 90% _(belum: butuh 9Router dengan model nyata)_
 - [ ] Laporan riset punya rujukan di setiap paragraf faktual
-- [ ] Jadwal berjalan tepat waktu dan tidak dobel; notifikasi uji sampai ke HP
+- [ ] Jadwal berjalan tepat waktu dan tidak dobel; notifikasi uji sampai ke HP _(belum: notifikasi butuh Firebase dan perangkat nyata)_
 
 ## Tahap C — Android
 
-- [ ] Login satu layar, masuk otomatis setelahnya
+- [x] Login satu layar, masuk otomatis setelahnya _(E2E Android di emulator API 37: sesi bertahan antar tes)_
 - [ ] Chat, riset, jadwal berjalan dengan data yang sama seperti desktop
 - [ ] Notifikasi membuka layar yang tepat; share intent dan input suara berfungsi
 - [ ] Tema terang dan gelap lolos checklist design system
@@ -29,8 +29,8 @@ Sebuah tahap dianggap selesai hanya bila semua kotaknya tercentang. Checklist in
 ## Tahap D dan E — Windows
 
 - [ ] Login sekali, tersambung kembali sendiri setelah PC tidur atau idle lama
-- [ ] Worker menolak path di luar folder yang diizinkan, termasuk symlink
-- [ ] Run coding tidak pernah mengubah branch kerja sebelum diterima
+- [x] Worker menolak path di luar folder yang diizinkan, termasuk symlink _(apps/worker paths.test.ts)_
+- [x] Run coding tidak pernah mengubah branch kerja sebelum diterima _(E2E desktop coding.spec.ts dengan omp nyata)_
 - [ ] Setiap perintah non-baca meminta izin kecuali ada aturan "selalu"
 - [ ] Komentar diff per baris diperbaiki agent dengan tepat
 - [ ] Dua kartu kanban berjalan paralel tanpa konflik
@@ -39,10 +39,10 @@ Sebuah tahap dianggap selesai hanya bila semua kotaknya tercentang. Checklist in
 
 ## Tahap F — Rilis
 
-- [ ] Restore backup uji berhasil
-- [ ] Audit keamanan tanpa temuan tinggi
-- [ ] E2E desktop dan Android lulus
-- [ ] Installer Windows dan APK bertanda tangan terpasang bersih di perangkat baru
+- [ ] Restore backup uji berhasil _(belum: hanya diuji dengan perintah palsu; jalankan restore.sh di VPS)_
+- [x] Audit keamanan tanpa temuan tinggi _(docs/SECURITY_AUDIT.md; audit otomatis, bukan uji penetrasi pihak ketiga)_
+- [x] E2E desktop dan Android lulus _(desktop 9/9 (UI nyata dengan shim Tauri, bukan cangkang Rust); Android 3/3 login, chat, riset di emulator; jadwal Android belum di E2E)_
+- [ ] Installer Windows dan APK bertanda tangan terpasang bersih di perangkat baru _(belum: butuh kunci penanda tangan, build CI, dan perangkat bersih)_
 
 ## Risiko dan mitigasi
 

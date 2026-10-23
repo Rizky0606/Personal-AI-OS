@@ -438,6 +438,17 @@ Isi ditulis sendiri sebagai ringkasan prinsip, bukan salinan; dibaca dari halama
 - **Nginx**: contoh konfigurasi ditambahkan (`infra/nginx/aios.conf.example`), belum dijalankan.
 - **Tes yang bergantung beban**: dua tes jadwal desktop dan satu tes koordinator worker sesekali melewati batas waktu saat seluruh suite berjalan paralel di Windows; lulus bila dijalankan sendiri atau diulang.
 
+## Temuan Fase 24 (E2E, review desain, pengemasan, deploy)
+
+- **E2E desktop (Playwright) memakai UI asli tetapi bukan cangkang Tauri**: build `vite` khusus (`e2e/vite.e2e.config.ts`) mengganti modul `@tauri-apps/*` dengan shim (`e2e/shims`) yang meneruskan HTTP, WebSocket, dan IPC ke server kendali Node. Yang diuji sungguhan: UI, gateway, worker, dan omp (stack di `e2e/harness/stack.ts`); Hermes, 9Router, dan SearXNG palsu. **Tidak teruji**: kode Rust (Credential Manager, sidecar spawn, updater), CSP Tauri, dan jendela asli. Spec coding dilewati bila omp tidak terpasang. Jalankan: `pnpm --filter @aios/e2e e2e` (CI: job `e2e-desktop`, Chrome).
+- **Review desain**: axe-core (WCAG 2.0/2.1 A/AA) di tiap layar, terang dan gelap, plus lint desain statis (`apps/desktop/src/designLint.test.ts`). Temuan diperbaiki: kontras `text-3` dan `accent` terang, `aria-pressed` pada radio, label tautan kuota, animasi skeleton dan reduced-motion. Review manual dengan skill UI (rams/better-interface) **tidak dijalankan**; yang dipakai adalah pemeriksaan otomatis di atas. Android belum diaudit kontrasnya selain lewat token yang sama (`tokens.test.ts`).
+- **Celah Kanban**: kartu yang dijalankan dan butuh izin tidak punya UI izin di papan; izin hanya muncul di percakapan kartu, dan tidak ada tautan dari kartu ke percakapan itu. Perlu tautan atau panel izin di kartu.
+- **Updater**: plugin `tauri-plugin-updater` ditambahkan (dependensi baru, diwajibkan prompt) dengan bagian Pembaruan di Pengaturan. **Rust belum pernah dikompilasi di PC ini** (MSVC tidak terpasang), jadi plugin, `Cargo.lock` (perlu diperbarui oleh build pertama), dan konfigurasinya belum terbukti. Updater tidak bisa mengunduh dari rilis GitHub **privat** tanpa kredensial; keputusan hosting artefak (repo publik terpisah atau server sendiri) ada di `docs/RELEASE.md` dan belum dipilih.
+- **omp tidak dibundel** di installer (permintaan prompt: "worker dan omp sidecar"). Worker menemukan omp lewat PATH atau `AIOS_OMP_PATH`. Membundel omp butuh keputusan lisensi, ukuran, dan versi terkunci.
+- **Android E2E**: Compose UI test di `apps/android/app/src/androidTest`, dijalankan oleh `pnpm --filter @aios/e2e android` (stack nyata + emulator). Hasil terakhir dicatat di bagian ringkasan fase; belum ada di CI (butuh emulator).
+- **Deploy**: `infra/scripts/deploy.sh` diuji dengan perintah palsu di `selftest.sh` (urutan, rollback, dry-run); **belum pernah dijalankan** dengan Docker dan VPS nyata. Rollback hanya mengembalikan image, bukan migrasi.
+- **Belum dibuat**: tag `v1.0.0` (menunggu verifikasi di VPS dan perangkat nyata; tag memicu build rilis).
+
 ## Ide di luar scope
 
 (kosong)

@@ -128,6 +128,18 @@ export const copy = {
     logout: 'Keluar dari perangkat ini',
     loggingOut: 'Keluar…',
     shortcuts: 'Shortcut',
+    update: {
+      title: 'Pembaruan aplikasi',
+      check: 'Periksa pembaruan',
+      install: 'Pasang dan mulai ulang',
+      checking: 'Memeriksa rilis baru…',
+      current: 'Aplikasi sudah versi terbaru.',
+      available: (version: string) => `Versi ${version} tersedia.`,
+      installing: (version: string) => `Memasang versi ${version}. Aplikasi akan tertutup sendiri.`,
+      error: 'Pembaruan belum bisa diperiksa. Periksa koneksi lalu coba lagi.',
+      offline: 'Sedang offline. Sambungkan internet untuk memeriksa pembaruan.',
+      unavailable: 'Pembaruan hanya tersedia di aplikasi Windows yang terpasang.',
+    },
     folders: {
       title: 'Folder yang diizinkan',
       hint: 'Worker hanya boleh membaca dan menulis di dalam folder ini. Project hanya bisa didaftarkan dari folder di sini.',

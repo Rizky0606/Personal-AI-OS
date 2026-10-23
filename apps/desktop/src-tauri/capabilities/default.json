@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Izin jendela utama: inti Tauri, HTTP ke gateway, WebSocket, membuka tautan http/https di peramban sistem, dan dialog pilih folder.",
+  "description": "Izin jendela utama: inti Tauri, HTTP ke gateway, WebSocket, membuka tautan http/https di peramban sistem, dialog pilih folder, dan pemeriksaan pembaruan.",
   "windows": ["main"],
   "permissions": [
     "core:default",
@@ -15,6 +15,7 @@
     },
     "websocket:default",
     "opener:default",
-    "dialog:allow-open"
+    "dialog:allow-open",
+    "updater:default"
   ]
 }
