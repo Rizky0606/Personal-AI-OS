@@ -68,6 +68,8 @@ Upgrade satu komponen per waktu: baca changelog, jalankan tes adapter, baru naik
 | Tailwind CSS (+ @tailwindcss/vite)                         | ^4.3.3                               |
 | TanStack Router / Query                                    | ^1.170.46 / ^5.104.5                 |
 | Radix UI (dialog, tabs, toast, tooltip)                    | ^1.3.1 / ^1.2.1 / ^1.3.1 / ^1.4.1    |
+| Radix UI dropdown-menu                                     | ^2.2.1                               |
+| @tauri-apps/plugin-opener / tauri-plugin-opener (crate)    | ^2.7.2 / 2                           |
 | Zustand / lucide-react                                     | ^5.0.16 / ^1.61.0                    |
 | @tauri-apps/api, plugin-http, plugin-websocket, cli        | ^2.12.4 / ^2.8.3 / ^2.5.0 / ^2.12.4  |
 | Tauri (crate) / tauri-plugin-http / tauri-plugin-websocket | 2 / 2 / 2 (belum dikunci Cargo.lock) |

@@ -28,6 +28,11 @@ Di mode `dev` biasa (tanpa Tauri) penyimpanan token memakai localStorage dan Web
 | `src/realtime`  | `RealtimeClient` (backoff, replay `lastSeq`, heartbeat), deteksi bangun dari tidur       |
 | `src/shell`     | Rail 56px, sidebar 260px, panel kanan bertab (lebar bisa diubah), status bar 24px, palet |
 | `src/ui`        | Komponen dasar (satu per berkas) dan `StateView` (memuat, kosong, error, offline, isi)   |
+| `src/api`       | Klien REST bertipe (respons divalidasi skema `@aios/contracts`), query TanStack, pesan error  |
+| `src/chat`      | Chat umum: daftar percakapan, pesan, langkah tool, composer, chip role, model, hentikan, ulang |
+| `src/research`  | Riset: form, progres live, laporan dengan rujukan yang bisa diklik, ekspor                    |
+| `src/schedules` | Jadwal: tabel, buat dengan bahasa alami + konfirmasi, riwayat run                             |
+| `src/markdown`  | Parser dan renderer Markdown ringan (tanpa HTML mentah)                                       |
 | `src/screens`   | Login, Pengaturan, katalog, layar placeholder                                            |
 | `src-tauri`     | Rust tipis: `secret_get/set/remove` (Windows Credential Manager), `device_name`, plugin  |
 
