@@ -13,6 +13,7 @@ import { and, count, eq, inArray, notInArray } from 'drizzle-orm';
 import type { Database } from '../../db/client.js';
 import { approvals, messages, runs } from '../../db/schema/index.js';
 import type { EventHub } from './hub.js';
+import type { RunObserver } from './observer.js';
 import type { EventStore } from './store.js';
 
 export type RunRow = typeof runs.$inferSelect;
@@ -66,6 +67,8 @@ export interface RunnerDeps {
   adapter: AgentAdapter;
   /** Run coding (engine omp) dijalankan di worker Windows lewat relay; tanpa ini role omp tidak tersedia. */
   workerAdapter?: AgentAdapter;
+  /** Diberi tahu tiap status atau diff run berubah (kartu kanban mengikuti run). */
+  observer?: RunObserver;
   /** Bundel role (aturan perilaku + role + skill) yang disuntik sebagai pesan sistem. */
   roles: {
     bundle(roleId: string): { systemPrompt: string };
@@ -131,6 +134,7 @@ export function createRunner(deps: RunnerDeps): Runner {
       status = next;
       const stored = await emit({ type: 'run.status', status: next });
       hub.publishLive(`conversation:${input.conversationId}`, stored.event);
+      deps.observer?.notify(run.id);
     };
 
     const saveText = () =>
@@ -303,6 +307,7 @@ export function createRunner(deps: RunnerDeps): Runner {
             status = 'running';
           }
           await emit(event);
+          if (event.type === 'diff.updated') deps.observer?.notify(run.id);
           if (event.type === 'approval.requested' || event.type === 'approval.resolved') {
             await onApproval(event);
           }
@@ -315,6 +320,7 @@ export function createRunner(deps: RunnerDeps): Runner {
         const stored = await emit({ type: 'run.status', status: finalStatus });
         status = finalStatus;
         hub.publishLive(`conversation:${input.conversationId}`, stored.event);
+        deps.observer?.notify(run.id);
       } else if (ctl.cancelled) {
         await saveText();
         await advance('cancelled', { usage });
@@ -416,6 +422,7 @@ export function createRunner(deps: RunnerDeps): Runner {
         await db.update(runs).set({ status: 'failed', error }).where(eq(runs.id, run.id));
         await store.append(run.id, { type: 'error', ...error });
         await store.append(run.id, { type: 'run.status', status: 'failed' });
+        deps.observer?.notify(run.id);
       }
       return orphans.length;
     },

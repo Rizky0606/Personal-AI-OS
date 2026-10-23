@@ -67,6 +67,36 @@ describe('WorktreeManager', () => {
     expect(wt.base).toBe(headBefore);
   });
 
+  it('dua run paralel di repo yang sama: worktree dan branch terpisah, commit tidak saling mengganggu', async () => {
+    const headBefore = git(repo, 'rev-parse', 'HEAD');
+
+    const [a, b] = await Promise.all([manager.create(RUN_A, repo), manager.create(RUN_B, repo)]);
+
+    expect(a.branch).not.toBe(b.branch);
+    expect(a.root).not.toBe(b.root);
+    // Keduanya mengubah berkas yang sama secara berbeda; masing-masing hanya melihat ubahannya sendiri.
+    await Promise.all([
+      fs.writeFile(path.join(a.root, 'README.md'), 'dari A\n'),
+      fs.writeFile(path.join(b.root, 'README.md'), 'dari B\n'),
+      fs.writeFile(path.join(b.root, 'b.txt'), 'hanya B\n'),
+    ]);
+    const [committedA, committedB] = await Promise.all([
+      manager.commitAll(RUN_A, 'feat: ubah dari A'),
+      manager.commitAll(RUN_B, 'feat: ubah dari B'),
+    ]);
+
+    expect([committedA, committedB]).toEqual([true, true]);
+    expect(git(repo, 'show', `${a.branch}:README.md`)).toBe('dari A');
+    expect(git(repo, 'show', `${b.branch}:README.md`)).toBe('dari B');
+    expect(git(repo, 'ls-tree', '--name-only', a.branch)).not.toContain('b.txt');
+    expect(git(repo, 'rev-list', '--count', `${headBefore}..${a.branch}`)).toBe('1');
+    expect(git(repo, 'rev-list', '--count', `${headBefore}..${b.branch}`)).toBe('1');
+    // Repo asli tidak tersentuh.
+    expect(git(repo, 'rev-parse', 'HEAD')).toBe(headBefore);
+    expect(git(repo, 'status', '--porcelain')).toBe('');
+    expect((await fs.readFile(path.join(repo, 'README.md'), 'utf8')).trim()).toBe('halo');
+  });
+
   it('project di subfolder repo: cwd agent = subfolder yang sama di dalam worktree', async () => {
     await fs.mkdir(path.join(repo, 'packages', 'web'), { recursive: true });
     await fs.writeFile(path.join(repo, 'packages', 'web', 'a.txt'), 'x');

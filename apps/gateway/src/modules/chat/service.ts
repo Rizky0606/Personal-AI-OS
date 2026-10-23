@@ -45,7 +45,7 @@ export interface ChatService {
   sendMessage(
     conversationId: string,
     input: z.infer<typeof SendMessageRequestSchema>,
-    options?: { continueFromRunId?: string },
+    options?: { continueFromRunId?: string; taskId?: string },
   ): Promise<{ message: Message; run: Run }>;
   /** Mengganti role pesan terakhir, mencatat koreksi, dan menjalankan ulang dengan role baru. */
   reroute(
@@ -288,7 +288,13 @@ export function createChatService(deps: {
         // Role belum diketahui: router memutuskannya pada status `routing` di dalam run.
         const [runRow] = await tx
           .insert(runs)
-          .values({ kind: 'chat', engine: 'hermes', model, conversationId })
+          .values({
+            kind: 'chat',
+            engine: 'hermes',
+            model,
+            conversationId,
+            ...(options?.taskId ? { taskId: options.taskId } : {}),
+          })
           .returning();
         const [userRow] = await tx
           .insert(messages)

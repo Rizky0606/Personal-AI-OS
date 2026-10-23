@@ -23,12 +23,15 @@ import { createPushService } from './modules/push/service.js';
 import { createScheduleParser } from './modules/schedules/parser.js';
 import { createScheduleService } from './modules/schedules/service.js';
 import { createProjectsService } from './modules/projects/service.js';
+import { createTaskBreakdown } from './modules/tasks/breakdown.js';
+import { createTasksService } from './modules/tasks/service.js';
 import { createWorkerRelay } from './modules/worker/relay.js';
 import { createWorkerHub } from './modules/worker/routes.js';
 import { createRolesService } from './modules/roles/service.js';
 import { createRouterComplete } from './modules/router/complete.js';
 import { createRoutingService } from './modules/router/service.js';
 import { createEventHub } from './modules/runs/hub.js';
+import { createRunObserver } from './modules/runs/observer.js';
 import { createRunner } from './modules/runs/runner.js';
 import { createRunsService } from './modules/runs/service.js';
 import { createEventStore } from './modules/runs/store.js';
@@ -61,10 +64,12 @@ async function main(): Promise<void> {
   const workerHub = createWorkerHub();
   const workerRelay = createWorkerRelay({ hub: workerHub, projects });
   workerHub.onPresence((deviceId, online) => workerRelay.presence(deviceId, online));
+  const observer = createRunObserver(log);
   const runner = createRunner({
     db,
     store,
     hub,
+    observer,
     adapter: createHermesAdapter({ baseUrl: config.HERMES_URL, apiKey: config.HERMES_API_KEY }),
     workerAdapter: createWorkerRelayAdapter({ relay: workerRelay }),
     roles,
@@ -83,7 +88,21 @@ async function main(): Promise<void> {
     routing,
     roles,
   });
-  const runs = createRunsService({ db, store, runner, hub, relay: workerRelay, chat });
+  const runs = createRunsService({ db, store, runner, hub, relay: workerRelay, chat, observer });
+  const tasks = createTasksService({
+    db,
+    hub,
+    chat,
+    routing,
+    roles,
+    breakdown: createTaskBreakdown({
+      complete: createRouterComplete(client, config.TASK_MODEL),
+      roles,
+    }),
+    maxParallel: config.TASK_MAX_PARALLEL,
+    log,
+  });
+  observer.bind((runId) => tasks.runChanged(runId));
   const usage = createUsageRecorder(db);
   const research = createResearchService({
     db,
@@ -141,6 +160,7 @@ async function main(): Promise<void> {
     research,
     schedules,
     projects,
+    tasks,
     worker: { hub: workerHub, relay: workerRelay },
     ws: {
       hub,
@@ -174,6 +194,7 @@ async function main(): Promise<void> {
   push.start();
   const recovered = await runner.recoverOrphans();
   if (recovered > 0) app.log.warn({ recovered }, 'run tertinggal ditandai gagal setelah restart');
+  await tasks.start();
 
   await app.listen({ host: config.HOST, port: config.PORT });
 }

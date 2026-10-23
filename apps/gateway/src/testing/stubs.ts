@@ -25,6 +25,17 @@ export const unusedProjects: AppDeps['projects'] = {
   workerOf: unused('projects.workerOf'),
 };
 
+export const unusedTasks: AppDeps['tasks'] = {
+  list: unused('tasks.list'),
+  create: unused('tasks.create'),
+  update: unused('tasks.update'),
+  run: unused('tasks.run'),
+  breakdown: unused('tasks.breakdown'),
+  runChanged: unused('tasks.runChanged'),
+  start: unused('tasks.start'),
+  idle: unused('tasks.idle'),
+};
+
 const stubHub = createWorkerHub();
 export const unusedWorker: AppDeps['worker'] = {
   hub: stubHub,

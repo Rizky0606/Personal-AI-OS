@@ -27,10 +27,13 @@ import type { PageRenderer } from '../modules/research/render.js';
 import { createSearxngClient } from '../modules/research/search.js';
 import { createResearchService, type ResearchService } from '../modules/research/service.js';
 import { createProjectsService } from '../modules/projects/service.js';
+import { createTaskBreakdown } from '../modules/tasks/breakdown.js';
+import { createTasksService, type TasksService } from '../modules/tasks/service.js';
 import { createWorkerRelay, type WorkerRelay } from '../modules/worker/relay.js';
 import { createWorkerHub } from '../modules/worker/routes.js';
 import { createRolesService, type RolesService } from '../modules/roles/service.js';
 import { createEventHub, type EventHub } from '../modules/runs/hub.js';
+import { createRunObserver } from '../modules/runs/observer.js';
 import { createRunner, type Runner } from '../modules/runs/runner.js';
 import { createRunsService } from '../modules/runs/service.js';
 import { createEventStore, type EventStore } from '../modules/runs/store.js';
@@ -52,6 +55,7 @@ export interface AuthEnv {
   research: ResearchService;
   schedules: ScheduleService;
   projects: ReturnType<typeof createProjectsService>;
+  tasks: TasksService;
   workerRelay: WorkerRelay;
   push: PushService;
   /** pg-boss bersama (hanya ada bila riset atau jadwal dinyalakan). */
@@ -116,6 +120,8 @@ export async function createAuthEnv(
     heartbeatMs?: number;
     /** Masa tunggu relay worker (putus-sambung dan pembatalan) agar tes tidak menunggu puluhan detik. */
     workerRelay?: { disconnectGraceMs?: number; cancelGraceMs?: number };
+    /** Batas run coding paralel per project untuk kartu kanban. */
+    taskMaxParallel?: number;
     rateLimits?: Partial<RateLimits>;
     logStream?: NodeJS.WritableStream;
   } = {},
@@ -140,10 +146,12 @@ export async function createAuthEnv(
   const workerHub = createWorkerHub();
   const workerRelay = createWorkerRelay({ hub: workerHub, projects });
   workerHub.onPresence((deviceId, online) => workerRelay.presence(deviceId, online));
+  const observer = createRunObserver();
   const runner = createRunner({
     db,
     store,
     hub,
+    observer,
     adapter: createHermesAdapter({
       baseUrl: options.hermesUrl ?? 'http://127.0.0.1:9',
       apiKey: 'kunci-hermes-uji',
@@ -195,7 +203,20 @@ export async function createAuthEnv(
     roles,
     now,
   });
-  const runs = createRunsService({ db, store, runner, hub, relay: workerRelay, chat });
+  const runs = createRunsService({ db, store, runner, hub, relay: workerRelay, chat, observer });
+  const tasks = createTasksService({
+    db,
+    hub,
+    chat,
+    routing,
+    roles,
+    breakdown: createTaskBreakdown({
+      complete: createRouterComplete(client, 'router-fast'),
+      roles,
+    }),
+    ...(options.taskMaxParallel ? { maxParallel: options.taskMaxParallel } : {}),
+  });
+  observer.bind((runId) => tasks.runChanged(runId));
   const schedules =
     options.schedules && boss
       ? createScheduleService({
@@ -254,6 +275,7 @@ export async function createAuthEnv(
     research,
     schedules,
     projects,
+    tasks,
     worker: { hub: workerHub, relay: workerRelay },
     ws: {
       hub,
@@ -300,6 +322,7 @@ export async function createAuthEnv(
     research,
     schedules,
     projects,
+    tasks,
     workerRelay,
     push,
     boss,
@@ -329,6 +352,7 @@ export async function createAuthEnv(
       await research.close().catch(() => undefined);
       await boss?.stop({ graceful: false, timeout: 5000 }).catch(() => undefined);
       await runner.idle();
+      await tasks.idle();
       await chat.idle();
       await app.close();
       await database.drop();

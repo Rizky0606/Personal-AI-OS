@@ -16,6 +16,7 @@ import { writeAudit } from '../audit/repo.js';
 import { toApprovalDto, toRunDto } from '../chat/dto.js';
 import type { ChatService } from '../chat/service.js';
 import type { EventHub } from './hub.js';
+import type { RunObserver } from './observer.js';
 import type { WorkerRelay } from '../worker/relay.js';
 import type { Runner } from './runner.js';
 import type { EventStore, StoredEvent } from './store.js';
@@ -82,8 +83,9 @@ export function createRunsService(deps: {
   hub: Pick<EventHub, 'publishLive'>;
   relay: Pick<WorkerRelay, 'review'>;
   chat: Pick<ChatService, 'sendMessage'>;
+  observer?: RunObserver;
 }): RunsService {
-  const { db, store, runner, hub, relay, chat } = deps;
+  const { db, store, runner, hub, relay, chat, observer } = deps;
 
   async function load(id: string) {
     const [row] = await db.select().from(runs).where(eq(runs.id, id));
@@ -101,6 +103,7 @@ export function createRunsService(deps: {
     if (!updated) throw notReviewable();
     const stored = await store.append(run.id, { type: 'run.status', status });
     if (run.conversationId) hub.publishLive(`conversation:${run.conversationId}`, stored.event);
+    observer?.notify(run.id);
     return updated;
   }
 
@@ -214,7 +217,7 @@ export function createRunsService(deps: {
               parts: [{ type: 'text', text: bundleComments(input.comments) }],
               ...(run.agentRole ? { role: run.agentRole } : {}),
             },
-            { continueFromRunId: run.id },
+            { continueFromRunId: run.id, ...(run.taskId ? { taskId: run.taskId } : {}) },
           );
           const settled = await settle(run, 'rejected');
           await writeAudit(db, {

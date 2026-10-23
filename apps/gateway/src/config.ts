@@ -42,6 +42,10 @@ const EnvSchema = z.object({
   BROWSER_EXECUTABLE_PATH: optionalString,
   /** Combo 9Router kecil untuk mengurai jadwal dari bahasa alami. */
   SCHEDULE_MODEL: withDefault(z.string().min(1), 'router-fast'),
+  /** Combo 9Router kecil untuk memecah ide menjadi kartu kanban. */
+  TASK_MODEL: withDefault(z.string().min(1), 'router-fast'),
+  /** Batas run coding yang berjalan bersamaan per project; sisanya mengantre. */
+  TASK_MAX_PARALLEL: withDefault(z.coerce.number().int().min(1).max(8), 2),
   /** File service account Firebase (JSON) untuk push FCM. Kosong = push dimatikan. Simpan di secrets/, bukan di repo. */
   FCM_SERVICE_ACCOUNT_FILE: optionalString,
   /** Batas waktu tiap cek dependensi di /readyz. */

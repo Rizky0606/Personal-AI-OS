@@ -6624,12 +6624,12 @@
           }
         },
         "responses": {
-          "201": {
-            "description": "Run coding yang dimulai",
+          "200": {
+            "description": "Kartu: run sudah dimulai (runId terisi) atau masuk antrean (runId null)",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Run"
+                  "$ref": "#/components/schemas/Task"
                 }
               }
             }

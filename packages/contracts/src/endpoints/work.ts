@@ -100,7 +100,9 @@ export const workEndpoints: readonly Endpoint[] = [
     auth: true,
     params: IdParamsSchema,
     body: RunTaskRequestSchema,
-    responses: [json(201, 'Run coding yang dimulai', RunSchema)],
+    responses: [
+      json(200, 'Kartu: run sudah dimulai (runId terisi) atau masuk antrean (runId null)', TaskSchema),
+    ],
     errors: [400, 401, 404, 409],
   },
   {
