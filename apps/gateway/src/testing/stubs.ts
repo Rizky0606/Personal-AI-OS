@@ -10,8 +10,17 @@ export const unusedAuth: AuthService = {
   login: unused('auth.login'),
   refresh: unused('auth.refresh'),
   logout: unused('auth.logout'),
+  registerWorker: unused('auth.registerWorker'),
   authenticate: unused('auth.authenticate'),
   deviceActive: unused('auth.deviceActive'),
+};
+
+export const unusedProjects: AppDeps['projects'] = {
+  list: unused('projects.list'),
+  create: unused('projects.create'),
+  update: unused('projects.update'),
+  ownedBy: unused('projects.ownedBy'),
+  ownsRun: unused('projects.ownsRun'),
 };
 
 export const unusedChat: AppDeps['chat'] = {

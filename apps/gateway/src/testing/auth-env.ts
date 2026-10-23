@@ -26,6 +26,7 @@ import type { DepthConfig } from '../modules/research/pipeline.js';
 import type { PageRenderer } from '../modules/research/render.js';
 import { createSearxngClient } from '../modules/research/search.js';
 import { createResearchService, type ResearchService } from '../modules/research/service.js';
+import { createProjectsService } from '../modules/projects/service.js';
 import { createRolesService, type RolesService } from '../modules/roles/service.js';
 import { createEventHub, type EventHub } from '../modules/runs/hub.js';
 import { createRunner, type Runner } from '../modules/runs/runner.js';
@@ -48,6 +49,7 @@ export interface AuthEnv {
   routing: RoutingService;
   research: ResearchService;
   schedules: ScheduleService;
+  projects: ReturnType<typeof createProjectsService>;
   push: PushService;
   /** pg-boss bersama (hanya ada bila riset atau jadwal dinyalakan). */
   boss: PgBoss | undefined;
@@ -220,6 +222,7 @@ export async function createAuthEnv(
     await saveOwner(db, keys, { password: OWNER_PASSWORD, totpSecret }, now);
   }
 
+  const projects = createProjectsService({ db });
   const app = buildApp({
     config: { LOG_LEVEL: options.logStream ? 'info' : 'silent', NODE_ENV: 'test' },
     health: { readiness: () => Promise.reject(new Error('tidak dipakai')) },
@@ -238,6 +241,7 @@ export async function createAuthEnv(
     routing,
     research,
     schedules,
+    projects,
     ws: {
       hub,
       store,
@@ -282,6 +286,7 @@ export async function createAuthEnv(
     routing,
     research,
     schedules,
+    projects,
     push,
     boss,
     chat,

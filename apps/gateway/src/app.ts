@@ -20,6 +20,9 @@ import { catalogRoutes } from './modules/llm/routes.js';
 import type { QuotaService, UsageRecorder } from './modules/llm/usage.js';
 import { routerRoutes } from './modules/router/routes.js';
 import type { RoutingService } from './modules/router/service.js';
+import { projectRoutes } from './modules/projects/routes.js';
+import type { ProjectsService } from './modules/projects/service.js';
+import { createWorkerHub, workerRoutes } from './modules/worker/routes.js';
 import { researchRoutes } from './modules/research/routes.js';
 import type { ResearchService } from './modules/research/service.js';
 import { scheduleRoutes } from './modules/schedules/routes.js';
@@ -61,6 +64,7 @@ export interface AppDeps {
   routing: RoutingService;
   research: ResearchService;
   schedules: ScheduleService;
+  projects: ProjectsService;
   /** WebSocket /v1/ws; `auth` diisi dari dependensi di atas. */
   ws: Omit<WsDeps, 'auth'>;
   rateLimits?: Partial<RateLimits>;
@@ -80,11 +84,13 @@ export function buildApp({
   routing,
   research,
   schedules,
+  projects,
   ws,
   rateLimits,
   logStream,
 }: AppDeps): FastifyInstance {
   const limits = { ...DEFAULT_RATE_LIMITS, ...rateLimits };
+  const workerHub = createWorkerHub();
   const loggerOptions: FastifyServerOptions['logger'] = {
     level: config.LOG_LEVEL,
     // Log tidak pernah memuat token, cookie, atau isi .env (SECURITY_OPS.md).
@@ -153,7 +159,16 @@ export function buildApp({
         await protectedScope.register(routerRoutes, { routing });
         await protectedScope.register(researchRoutes, { research });
         await protectedScope.register(scheduleRoutes, { schedules });
+        await protectedScope.register(projectRoutes, { projects });
         await protectedScope.register(wsRoutes, { ...ws, auth });
+        await protectedScope.register(workerRoutes, {
+          auth,
+          store: ws.store,
+          ownsRun: (deviceId, runId) => projects.ownsRun(deviceId, runId),
+          hub: workerHub,
+          ...(ws.heartbeatMs ? { heartbeatMs: ws.heartbeatMs } : {}),
+          ...(ws.now ? { now: ws.now } : {}),
+        });
       });
     },
     { prefix: API_PREFIX },

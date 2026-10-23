@@ -16,6 +16,7 @@ Semua klien memakai satu REST API `/v1` dan satu WebSocket `/v1/ws`. Skema didef
 | Auth | `POST /auth/login` | Password + TOTP, mendaftarkan perangkat, mengembalikan token |
 | Auth | `POST /auth/refresh`, `POST /auth/logout` | Perbarui atau cabut token perangkat |
 | Perangkat | `GET /devices`, `DELETE /devices/:id`, `POST /devices/:id/push-token` | Kelola perangkat dan token FCM |
+| Perangkat | `POST /devices/worker` | Desktop mendaftarkan worker sidecar (scope `app`); mengembalikan perangkat `worker` dan tokennya, worker lama bernama sama dicabut |
 | Model | `GET /models`, `GET /quota` | Daftar model dan combo dari 9Router, pemakaian dan kuota |
 | Role | `GET /roles`, `POST /route/preview` | Daftar role, uji router tanpa menjalankan agent |
 | Percakapan | `GET/POST /conversations`, `PATCH/DELETE /conversations/:id` | Daftar, buat, ubah judul, arsipkan |
@@ -71,10 +72,10 @@ Channel `user` membawa: `task.updated`, `schedule.result`, `research.completed`,
 
 ## Protokol worker
 
-- Worker membuka WebSocket ke gateway dengan token ber-scope `worker`.
+- Worker membuka WebSocket ke gateway di `/v1/worker/ws` dengan token ber-scope `worker` (header `Authorization` saat handshake). Satu koneksi aktif per perangkat; koneksi baru menggantikan yang lama. Gateway hanya menerima `run.event` untuk run milik project yang terdaftar atas perangkat itu.
 - Perintah dari gateway: `run.start` (runId, projectId, prompt, bundel role dan skill, model), `run.steer`, `run.cancel`, `approval.resolve`, `review.apply`.
 - Worker mengirim AgentEvent ke channel `run:<id>`. Gateway menyimpan lalu menyiarkan.
-- Aplikasi desktop dan worker bicara lewat WebSocket lokal di `127.0.0.1` dengan port acak dan token yang diberikan Tauri saat sidecar dijalankan.
+- Aplikasi desktop dan worker bicara lewat WebSocket lokal di `127.0.0.1` dengan port acak dan token yang diberikan Tauri saat sidecar dijalankan. Token dipakai sekali: balasan `ready` membawa token untuk koneksi berikutnya. Koneksi yang membawa header `Origin` (halaman web) ditolak. Skema pesan lokal ada di `packages/contracts/src/worker-local.ts`.
 
 ## Status run
 

@@ -22,6 +22,7 @@ import { createFcmClient, loadServiceAccount } from './modules/push/fcm.js';
 import { createPushService } from './modules/push/service.js';
 import { createScheduleParser } from './modules/schedules/parser.js';
 import { createScheduleService } from './modules/schedules/service.js';
+import { createProjectsService } from './modules/projects/service.js';
 import { createRolesService } from './modules/roles/service.js';
 import { createRouterComplete } from './modules/router/complete.js';
 import { createRoutingService } from './modules/router/service.js';
@@ -132,6 +133,7 @@ async function main(): Promise<void> {
     routing,
     research,
     schedules,
+    projects: createProjectsService({ db }),
     ws: {
       hub,
       store,

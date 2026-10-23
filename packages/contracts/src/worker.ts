@@ -72,3 +72,34 @@ export const WorkerEventFrameSchema = z
   })
   .meta({ id: 'WorkerEventFrame' });
 export type WorkerEventFrame = z.infer<typeof WorkerEventFrameSchema>;
+
+/** Path WebSocket worker di gateway (di bawah /v1). Handshake memakai header Authorization, scope `worker`. */
+export const WORKER_WS_PATH = '/worker/ws';
+
+export const WorkerPingFrameSchema = z.object({ type: z.literal('ping') });
+
+/** Worker ke gateway. */
+export const WorkerToGatewayFrameSchema = z
+  .discriminatedUnion('type', [WorkerEventFrameSchema, WorkerPingFrameSchema])
+  .meta({ id: 'WorkerToGatewayFrame' });
+export type WorkerToGatewayFrame = z.infer<typeof WorkerToGatewayFrameSchema>;
+
+export const WorkerReadyFrameSchema = z.object({ type: z.literal('ready'), deviceId: IdSchema });
+export const WorkerPongFrameSchema = z.object({ type: z.literal('pong') });
+export const WorkerErrorFrameSchema = z.object({
+  type: z.literal('error'),
+  code: z.enum(['invalid_message', 'run_not_owned', 'replaced']),
+  message: z.string(),
+  runId: IdSchema.optional(),
+});
+
+/** Gateway ke worker: perintah, atau kontrol koneksi. */
+export const GatewayToWorkerFrameSchema = z
+  .union([
+    WorkerCommandSchema,
+    WorkerReadyFrameSchema,
+    WorkerPongFrameSchema,
+    WorkerErrorFrameSchema,
+  ])
+  .meta({ id: 'GatewayToWorkerFrame' });
+export type GatewayToWorkerFrame = z.infer<typeof GatewayToWorkerFrameSchema>;

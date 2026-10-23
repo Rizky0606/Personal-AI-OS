@@ -22,6 +22,7 @@ const DOCUMENTED_ENDPOINTS = [
   'GET /devices',
   'DELETE /devices/:id',
   'POST /devices/:id/push-token',
+  'POST /devices/worker',
   'GET /models',
   'GET /quota',
   'GET /roles',

@@ -64,6 +64,11 @@ export const RefreshRequestSchema = z
 
 /* Perangkat */
 
+/** Desktop mendaftarkan worker sidecar-nya; gateway membuat perangkat kind `worker` (scope worker + llm). */
+export const RegisterWorkerRequestSchema = z
+  .object({ name: z.string().min(1).max(100) })
+  .meta({ id: 'RegisterWorkerRequest' });
+
 export const DeviceListSchema = itemsOf(DeviceSchema).meta({ id: 'DeviceList' });
 export const PushTokenRequestSchema = z
   .object({ pushToken: z.string().min(1) })
