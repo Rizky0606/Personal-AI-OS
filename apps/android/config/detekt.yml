@@ -1,0 +1,56 @@
+# Ambang disesuaikan untuk kode yang memang berbentuk parser dan mesin status (Markdown, RealtimeClient)
+# serta layar Compose yang menyusun banyak state. Aturannya tetap aktif; hanya batasnya yang dilonggarkan.
+build:
+  maxIssues: 0
+
+style:
+  MagicNumber:
+    active: false
+  MaxLineLength:
+    active: true
+    maxLineLength: 120
+  ReturnCount:
+    max: 7
+    excludeGuardClauses: true
+  UnusedPrivateMember:
+    active: true
+  WildcardImport:
+    active: true
+  LoopWithTooManyJumpStatements:
+    maxJumpCount: 3
+
+complexity:
+  LongMethod:
+    active: true
+    threshold: 100
+    ignoreAnnotated: ['Composable']
+  LongParameterList:
+    functionThreshold: 8
+    # Konstruktor yang dirakit Hilt (AuthRepository) memang membawa banyak dependensi.
+    constructorThreshold: 12
+    ignoreDefaultParameters: true
+    ignoreAnnotated: ['Composable']
+  CyclomaticComplexMethod:
+    threshold: 35
+    ignoreAnnotated: ['Composable']
+  NestedBlockDepth:
+    threshold: 6
+  ComplexCondition:
+    threshold: 5
+  TooManyFunctions:
+    active: false
+
+naming:
+  # Satu berkas boleh memuat tipe dan fungsi pendampingnya (mis. ButtonKind + AiosButton).
+  MatchingDeclarationName:
+    active: false
+  FunctionNaming:
+    ignoreAnnotated: ['Composable']
+  TopLevelPropertyNaming:
+    constantPattern: '[A-Z][A-Za-z0-9_]*'
+
+exceptions:
+  TooGenericExceptionCaught:
+    active: false
+  SwallowedException:
+    active: false

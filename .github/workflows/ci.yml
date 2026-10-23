@@ -1,0 +1,58 @@
+name: CI
+
+on: push
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: aios
+          POSTGRES_PASSWORD: aios-ci
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U aios"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Tes integrasi gateway memakai Postgres nyata; di CI tidak boleh dilewati.
+      TEST_DATABASE_URL: postgres://aios:aios-ci@127.0.0.1:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+
+  # Memverifikasi Dockerfile dan compose (tidak bisa dibangun di mesin tanpa Docker).
+  gateway-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image gateway
+        run: docker build -f apps/gateway/Dockerfile -t aios-gateway:ci .
+      - name: Image berjalan sebagai non-root dan berisi migrasi
+        run: |
+          test "$(docker run --rm --entrypoint id aios-gateway:ci -u)" != "0"
+          docker run --rm --entrypoint ls aios-gateway:ci drizzle/0000_init.sql
+      - name: Gateway gagal cepat tanpa DATABASE_URL
+        run: |
+          if docker run --rm aios-gateway:ci; then exit 1; fi
+      - name: Validasi compose
+        working-directory: infra/compose
+        env:
+          SEARXNG_TAG: ci
+          SEARXNG_SECRET: ci
+        run: |
+          mkdir -p secrets && echo ci > secrets/pg_password && touch gateway.env
+          docker compose config --quiet

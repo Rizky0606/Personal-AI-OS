@@ -1,0 +1,69 @@
+# Stack VPS: PostgreSQL, SearXNG, gateway. Hermes dan 9Router sudah berjalan di host (systemd).
+# Semua port hanya di 127.0.0.1; yang publik hanya nginx (443). Lihat docs/VPS_SETUP.md.
+#
+# Persiapan sekali (di folder ini):
+#   cp .env.example .env && cp gateway.env.example gateway.env
+#   mkdir -p secrets && openssl rand -hex 24 > secrets/pg_password
+#   chmod 600 .env gateway.env secrets/pg_password
+# lalu isi nilai di .env dan gateway.env (password di DATABASE_URL = isi secrets/pg_password).
+#
+# Jalankan:  docker compose up -d --build
+# Akun pemilik (sekali, interaktif; menampilkan QR TOTP):
+#   docker compose exec -it gateway node dist/cli/owner-init.js
+# Mengganti akun (semua perangkat dicabut):  ... node dist/cli/owner-init.js --reset
+name: aios
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: aios
+      POSTGRES_USER: aios
+      POSTGRES_PASSWORD_FILE: /run/secrets/pg_password
+    secrets: [pg_password]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    ports: ['127.0.0.1:5432:5432']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U aios -d aios']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  searxng:
+    # Kunci ke tag versi (SECURITY_OPS.md); isi SEARXNG_TAG di .env dan catat di infra/VERSIONS.md.
+    image: searxng/searxng:${SEARXNG_TAG:?isi SEARXNG_TAG di .env dengan tag versi SearXNG}
+    restart: unless-stopped
+    environment:
+      SEARXNG_SECRET: ${SEARXNG_SECRET:?isi SEARXNG_SECRET di .env (openssl rand -hex 32)}
+    volumes: [./searxng:/etc/searxng]
+    ports: ['127.0.0.1:8888:8080']
+
+  gateway:
+    image: aios-gateway:latest
+    build:
+      context: ../..
+      dockerfile: apps/gateway/Dockerfile
+    platform: linux/arm64
+    restart: unless-stopped
+    # Host network: dari container, 127.0.0.1 adalah VPS, jadi Hermes dan 9Router tetap di localhost.
+    network_mode: host
+    init: true
+    # File terpisah dari .env agar SEARXNG_SECRET tidak ikut masuk ke environment gateway.
+    env_file: gateway.env
+    # Push FCM (opsional): simpan service account Firebase di infra/compose/secrets/fcm.json (chmod 600),
+    # lalu aktifkan baris di bawah dan isi FCM_SERVICE_ACCOUNT_FILE=/run/secrets/fcm_service_account di gateway.env.
+    # Sengaja tidak aktif bawaan: bind mount ke file yang belum ada akan membuat direktori kosong.
+    #   volumes: ['./secrets/fcm.json:/run/secrets/fcm_service_account:ro']
+    command: ['sh', '-c', 'node dist/db/migrate.js && exec node dist/main.js']
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+secrets:
+  pg_password:
+    file: ./secrets/pg_password
+
+volumes:
+  pgdata:

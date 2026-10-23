@@ -1,0 +1,11 @@
+root = true
+
+[*.{kt,kts}]
+indent_size = 4
+max_line_length = 120
+ktlint_code_style = android_studio
+# Fungsi Composable bernama PascalCase.
+ktlint_function_naming_ignore_when_annotated_with = Composable
+# Urutan import dirapikan sekali oleh ./gradlew ktlintFormat; aturan ini tidak dipakai agar diff tetap kecil.
+ktlint_standard_import-ordering = disabled
+ktlint_standard_filename = disabled

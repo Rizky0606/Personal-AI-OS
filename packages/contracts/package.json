@@ -1,0 +1,33 @@
+{
+  "name": "@aios/contracts",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && node dist/openapi/cli.js",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run --passWithNoTests"
+  },
+  "devDependencies": {
+    "@aios/config": "workspace:*",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "@asteasolutions/zod-to-openapi": "catalog:"
+  },
+  "dependencies": {
+    "zod": "catalog:"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./openapi.json": "./openapi.json"
+  },
+  "files": [
+    "dist",
+    "openapi.json"
+  ]
+}

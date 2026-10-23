@@ -1,0 +1,15 @@
+# Konfigurasi SearXNG untuk research engine gateway.
+# secret_key diambil dari environment SEARXNG_SECRET (lihat docker-compose.yml).
+use_default_settings: true
+
+server:
+  # Limiter butuh Redis; instance ini privat dan hanya di loopback.
+  limiter: false
+  public_instance: false
+  image_proxy: false
+
+search:
+  # Format json wajib: dipakai research engine.
+  formats:
+    - html
+    - json

@@ -1,0 +1,10 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      "inputs": ["$TURBO_DEFAULT$", "!tokens.css", "!Tokens.kt"],
+      "outputs": ["dist/**", "tokens.css", "Tokens.kt"]
+    }
+  }
+}

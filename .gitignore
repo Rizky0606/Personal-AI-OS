@@ -1,0 +1,36 @@
+node_modules/
+dist/
+.turbo/
+coverage/
+*.tsbuildinfo
+
+# rahasia: hanya .env.example yang boleh di-commit
+.env
+.env.*
+!.env.example
+secrets/
+
+# Tauri / Rust
+**/src-tauri/target/
+**/src-tauri/gen/
+
+# Android
+apps/android/.gradle/
+apps/android/build/
+apps/android/app/build/
+apps/android/.kotlin/
+apps/android/captures/
+apps/android/local.properties
+*.keystore
+*.jks
+google-services.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Environment compose di VPS (hanya *.env.example yang boleh di-commit)
+*.env

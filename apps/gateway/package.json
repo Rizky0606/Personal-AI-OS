@@ -1,0 +1,54 @@
+{
+  "name": "@aios/gateway",
+  "private": true,
+  "type": "module",
+  "files": [
+    "dist",
+    "drizzle"
+  ],
+  "scripts": {
+    "dev": "tsx watch --env-file-if-exists=.env src/main.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/main.js",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run --passWithNoTests",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx --env-file-if-exists=.env src/db/migrate.ts",
+    "owner:init": "tsx --env-file-if-exists=.env src/cli/owner-init.ts",
+    "push:test": "tsx --env-file-if-exists=.env src/cli/push-test.ts"
+  },
+  "dependencies": {
+    "@aios/adapters": "workspace:*",
+    "@aios/contracts": "workspace:*",
+    "@aios/roles": "workspace:*",
+    "@fastify/rate-limit": "catalog:",
+    "@fastify/websocket": "catalog:",
+    "@mozilla/readability": "catalog:",
+    "@node-rs/argon2": "catalog:",
+    "cron-parser": "catalog:",
+    "drizzle-orm": "catalog:",
+    "fastify": "catalog:",
+    "jose": "catalog:",
+    "jsdom": "catalog:",
+    "pdfkit": "catalog:",
+    "pg": "catalog:",
+    "pg-boss": "catalog:",
+    "playwright-core": "catalog:",
+    "qrcode": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@aios/config": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/pdfkit": "catalog:",
+    "@types/pg": "catalog:",
+    "@types/qrcode": "catalog:",
+    "@types/ws": "catalog:",
+    "drizzle-kit": "catalog:",
+    "embedded-postgres": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "ws": "catalog:"
+  }
+}

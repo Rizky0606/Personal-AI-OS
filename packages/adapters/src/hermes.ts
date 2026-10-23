@@ -1,0 +1,237 @@
+import type { AgentEvent, Usage } from '@aios/contracts';
+import { errorEvent, parseUsage, summarize } from './events.js';
+import { parseSse } from './sse.js';
+import {
+  AdapterError,
+  type AdapterCapabilities,
+  type AgentAdapter,
+  type RunHandle,
+  type StartRunInput,
+} from './types.js';
+
+export interface HermesAdapterOptions {
+  /** Mis. `http://127.0.0.1:8642`; path `/v1/...` ditambahkan adapter. */
+  baseUrl: string;
+  apiKey?: string | undefined;
+  /** Nilai `X-Hermes-Session-Key`: cakupan memori jangka panjang, sama untuk semua percakapan pemilik. */
+  sessionKey?: string;
+  /** Hermes memakai modelnya sendiri kecuali `direct_model_requests` aktif; nilai ini hanya label. */
+  model?: string;
+  /** Batas menunggu header respons. */
+  connectTimeoutMs?: number;
+  /** Tanpa byte selama ini dianggap macet (Hermes mengirim keepalive tiap 10 detik). */
+  idleTimeoutMs?: number;
+  fetch?: typeof fetch;
+}
+
+export const HERMES_DEFAULT_MODEL = 'hermes-agent';
+
+/** Dibuktikan oleh dokumentasi Hermes; streaming ada, sisanya lewat jalur /v1/runs yang belum dipakai. */
+const CAPABILITIES: AdapterCapabilities = {
+  streaming: true,
+  approvals: false,
+  steer: false,
+  checkpoints: false,
+};
+
+type Abort = 'cancelled' | 'connect_timeout' | 'idle_timeout';
+
+const isRecord = (v: unknown): v is Record<string, unknown> =>
+  typeof v === 'object' && v !== null && !Array.isArray(v);
+
+function statusError(status: number): AdapterError {
+  if (status === 401 || status === 403) {
+    return new AdapterError('hermes_auth', 'Hermes menolak API key gateway.');
+  }
+  if (status === 409) {
+    return new AdapterError('hermes_session_conflict', 'Sesi Hermes ini dimiliki permukaan lain.');
+  }
+  if (status === 429) {
+    return new AdapterError('hermes_busy', 'Hermes sedang penuh. Coba lagi sebentar.', true);
+  }
+  if (status >= 500) {
+    return new AdapterError('hermes_unavailable', `Hermes menjawab HTTP ${status}.`, true);
+  }
+  return new AdapterError('hermes_rejected', `Hermes menolak permintaan (HTTP ${status}).`);
+}
+
+/**
+ * Adapter Hermes lewat `POST /v1/chat/completions` (stream). Riwayat percakapan dipegang Hermes
+ * berdasarkan `X-Hermes-Session-Id`, jadi hanya pesan baru yang dikirim. Pembatalan memutus koneksi;
+ * apakah Hermes ikut menghentikan run-nya belum terverifikasi (docs/VERIFICATION.md).
+ */
+export function createHermesAdapter(options: HermesAdapterOptions): AgentAdapter {
+  const {
+    apiKey,
+    sessionKey = 'owner',
+    model = HERMES_DEFAULT_MODEL,
+    connectTimeoutMs = 30_000,
+    idleTimeoutMs = 60_000,
+    fetch: doFetch = fetch,
+  } = options;
+  const url = `${options.baseUrl.replace(/\/+$/, '')}/v1/chat/completions`;
+
+  return {
+    id: 'hermes',
+    capabilities: () => CAPABILITIES,
+
+    startRun(input: StartRunInput): Promise<RunHandle> {
+      const controller = new AbortController();
+      let reason: Abort | undefined;
+      const stop = (why: Abort) => {
+        reason ??= why;
+        controller.abort();
+      };
+      if (input.signal?.aborted) stop('cancelled');
+      input.signal?.addEventListener('abort', () => stop('cancelled'), { once: true });
+
+      async function* events(): AsyncGenerator<AgentEvent> {
+        if (reason) return;
+        const messages: { role: string; content: string }[] = [];
+        if (input.systemPrompt) messages.push({ role: 'system', content: input.systemPrompt });
+        messages.push({ role: 'user', content: input.prompt });
+
+        const connectTimer = setTimeout(() => stop('connect_timeout'), connectTimeoutMs);
+        let res: Response;
+        try {
+          res = await doFetch(url, {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              accept: 'text/event-stream',
+              'x-hermes-session-key': sessionKey,
+              ...(input.sessionId ? { 'x-hermes-session-id': input.sessionId } : {}),
+              ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}),
+            },
+            body: JSON.stringify({
+              model: input.model ?? model,
+              stream: true,
+              stream_options: { include_usage: true },
+              messages,
+            }),
+            signal: controller.signal,
+          });
+        } catch {
+          if (reason === 'cancelled') return;
+          yield errorEvent(
+            reason === 'connect_timeout'
+              ? new AdapterError('hermes_timeout', 'Hermes tidak menjawab tepat waktu.', true)
+              : new AdapterError('hermes_unreachable', 'Hermes tidak terjangkau.', true),
+          );
+          return;
+        } finally {
+          clearTimeout(connectTimer);
+        }
+
+        if (!res.ok || !res.body) {
+          await res.body?.cancel().catch(() => undefined);
+          yield errorEvent(statusError(res.status));
+          return;
+        }
+
+        let idleTimer: NodeJS.Timeout | undefined;
+        const armIdle = () => {
+          clearTimeout(idleTimer);
+          idleTimer = setTimeout(() => stop('idle_timeout'), idleTimeoutMs);
+        };
+
+        let text = '';
+        let usage: Usage | null = null;
+        let finish: string | undefined;
+        let failure: string | undefined;
+        let done = false;
+        try {
+          armIdle();
+          for await (const msg of parseSse(res.body)) {
+            armIdle();
+            // Event bernama (mis. hermes.tool.progress) belum dipetakan: bentuk payload-nya belum terverifikasi.
+            if (msg.event && msg.event !== 'message') continue;
+            if (msg.data === '[DONE]') {
+              done = true;
+              break;
+            }
+            let chunk: unknown;
+            try {
+              chunk = JSON.parse(msg.data);
+            } catch {
+              continue;
+            }
+            if (!isRecord(chunk)) continue;
+            if (isRecord(chunk.error) && typeof chunk.error.message === 'string') {
+              failure = chunk.error.message;
+            }
+            usage = parseUsage(chunk.usage) ?? usage;
+            const choice = Array.isArray(chunk.choices) ? (chunk.choices[0] as unknown) : undefined;
+            if (!isRecord(choice)) continue;
+            if (typeof choice.finish_reason === 'string') finish = choice.finish_reason;
+            const delta = choice.delta;
+            if (!isRecord(delta)) continue;
+            if (typeof delta.reasoning_content === 'string' && delta.reasoning_content) {
+              yield {
+                type: 'reasoning.delta',
+                messageId: input.messageId,
+                text: delta.reasoning_content,
+              };
+            }
+            if (typeof delta.content === 'string' && delta.content) {
+              text += delta.content;
+              yield { type: 'message.delta', messageId: input.messageId, text: delta.content };
+            }
+          }
+        } catch {
+          if (reason === 'cancelled') return;
+          yield errorEvent(
+            reason === 'idle_timeout'
+              ? new AdapterError('hermes_stalled', 'Hermes berhenti mengirim data.', true)
+              : new AdapterError('hermes_stream_broken', 'Koneksi ke Hermes terputus.', true),
+          );
+          return;
+        } finally {
+          clearTimeout(idleTimer);
+        }
+        if (reason === 'cancelled') return;
+
+        if (finish === 'error' || failure) {
+          // Pesan dari Hermes (mis. admission_conflict) hanya kode pendek, bukan isi percakapan.
+          yield errorEvent(
+            new AdapterError('hermes_error', `Hermes melaporkan kegagalan: ${failure ?? 'error'}.`),
+          );
+          return;
+        }
+        if (finish === 'cancelled') {
+          yield errorEvent(new AdapterError('hermes_cancelled', 'Hermes menghentikan jawaban.'));
+          return;
+        }
+        if (!finish && !done) {
+          yield errorEvent(
+            new AdapterError('hermes_stream_truncated', 'Jawaban Hermes terputus.', true),
+          );
+          return;
+        }
+
+        yield {
+          type: 'message.completed',
+          messageId: input.messageId,
+          ...(usage ? { usage } : {}),
+        };
+        yield { type: 'run.completed', summary: summarize(text), ...(usage ? { usage } : {}) };
+      }
+
+      const unsupported = (what: string) =>
+        Promise.reject(
+          new AdapterError('unsupported', `Hermes (chat umum) belum mendukung ${what}.`),
+        );
+
+      return Promise.resolve({
+        runId: input.runId,
+        events: events(),
+        steer: () => unsupported('steer'),
+        resolveApproval: () => unsupported('approval'),
+        cancel: () => {
+          stop('cancelled');
+          return Promise.resolve();
+        },
+      });
+    },
+  };
+}

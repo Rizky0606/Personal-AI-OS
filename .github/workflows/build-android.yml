@@ -1,0 +1,73 @@
+name: Build Android
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+    paths:
+      - 'apps/android/**'
+      - 'packages/ui-tokens/**'
+      - '.github/workflows/build-android.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write # hanya dipakai untuk rilis draf pada tag
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/android
+    env:
+      # Keystore dan google-services.json hanya ada bila secret diisi; tanpa itu build tetap jalan.
+      HAS_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+      HAS_FIREBASE: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Pasang google-services.json (opsional, untuk push FCM)
+        if: env.HAS_FIREBASE == 'true'
+        run: echo "${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}" | base64 -d > app/google-services.json
+
+      - name: Pasang keystore rilis (opsional)
+        if: env.HAS_KEYSTORE == 'true'
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/release.jks"
+          echo "ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+
+      - name: Lint dan tes unit
+        run: ./gradlew check
+
+      - name: APK debug (selalu bisa dipasang)
+        run: ./gradlew assembleDebug
+
+      - name: APK release bertanda tangan
+        if: env.HAS_KEYSTORE == 'true' && startsWith(github.ref, 'refs/tags/v')
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew assembleRelease
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aios-android-apk
+          path: |
+            apps/android/app/build/outputs/apk/debug/*.apk
+            apps/android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+
+      - name: Rilis draf pada tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          files: |
+            apps/android/app/build/outputs/apk/debug/*.apk
+            apps/android/app/build/outputs/apk/release/*.apk

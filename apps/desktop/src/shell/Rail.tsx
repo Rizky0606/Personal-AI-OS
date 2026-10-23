@@ -1,0 +1,61 @@
+import { Link } from '@tanstack/react-router';
+import { CalendarClock, Folder, Kanban, MessageSquare, Search, Settings } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { copy } from '../copy';
+import { cn } from '../lib/cn';
+import { Tooltip } from '../ui/Tooltip';
+
+interface RailItem {
+  to: '/' | '/projects' | '/kanban' | '/schedules' | '/research' | '/settings';
+  label: string;
+  icon: ReactNode;
+}
+
+const ICON = { size: 18, strokeWidth: 1.5, 'aria-hidden': true } as const;
+
+const items: RailItem[] = [
+  { to: '/', label: copy.nav.chat, icon: <MessageSquare {...ICON} /> },
+  { to: '/projects', label: copy.nav.projects, icon: <Folder {...ICON} /> },
+  { to: '/kanban', label: copy.nav.kanban, icon: <Kanban {...ICON} /> },
+  { to: '/schedules', label: copy.nav.schedules, icon: <CalendarClock {...ICON} /> },
+  { to: '/research', label: copy.nav.research, icon: <Search {...ICON} /> },
+];
+
+const settings: RailItem = {
+  to: '/settings',
+  label: copy.nav.settings,
+  icon: <Settings {...ICON} />,
+};
+
+function RailLink({ item }: { item: RailItem }) {
+  return (
+    <Tooltip label={item.label}>
+      <Link
+        to={item.to}
+        aria-label={item.label}
+        className="inline-flex size-10 items-center justify-center rounded-control text-text-2 transition-colors duration-[120ms] ease-aios hover:bg-surface-2 hover:text-text"
+        activeOptions={{ exact: item.to === '/' }}
+        activeProps={{ className: cn('bg-accent-soft text-text') }}
+      >
+        {item.icon}
+      </Link>
+    </Tooltip>
+  );
+}
+
+/** Rail kiri 56px: Chat, Project, Kanban, Jadwal, Riset di atas; Pengaturan di bawah. */
+export function Rail() {
+  return (
+    <nav
+      aria-label={copy.shell.rail}
+      className="flex w-(--aios-rail-width) shrink-0 flex-col items-center justify-between border-r border-border bg-surface py-2"
+    >
+      <div className="flex flex-col items-center gap-1">
+        {items.map((item) => (
+          <RailLink key={item.to} item={item} />
+        ))}
+      </div>
+      <RailLink item={settings} />
+    </nav>
+  );
+}

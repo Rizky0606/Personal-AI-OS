@@ -1,0 +1,21 @@
+{
+  "name": "@aios/config",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./tsconfig.base.json": "./tsconfig.base.json",
+    "./eslint": "./eslint.js",
+    "./prettier": "./prettier.js"
+  },
+  "dependencies": {
+    "@eslint/js": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "globals": "catalog:",
+    "typescript-eslint": "catalog:"
+  },
+  "peerDependencies": {
+    "eslint": "catalog:",
+    "prettier": "catalog:",
+    "typescript": "catalog:"
+  }
+}

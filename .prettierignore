@@ -1,0 +1,15 @@
+node_modules
+dist
+.turbo
+coverage
+pnpm-lock.yaml
+apps/android
+**/src-tauri/target
+docs
+AGENTS.md
+README.md
+packages/contracts/openapi.json
+packages/ui-tokens/tokens.css
+packages/ui-tokens/Tokens.kt
+apps/gateway/drizzle
+infra/compose/searxng

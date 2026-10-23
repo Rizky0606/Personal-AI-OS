@@ -1,0 +1,47 @@
+{
+  "name": "@aios/desktop",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.json && vite build",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run --passWithNoTests",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@aios/contracts": "workspace:*",
+    "@aios/ui-tokens": "workspace:*",
+    "@radix-ui/react-dialog": "catalog:",
+    "@radix-ui/react-tabs": "catalog:",
+    "@radix-ui/react-toast": "catalog:",
+    "@radix-ui/react-tooltip": "catalog:",
+    "@tailwindcss/vite": "catalog:",
+    "@tanstack/react-query": "catalog:",
+    "@tanstack/react-router": "catalog:",
+    "@tauri-apps/api": "catalog:",
+    "@tauri-apps/plugin-http": "catalog:",
+    "@tauri-apps/plugin-websocket": "catalog:",
+    "zod": "catalog:",
+    "lucide-react": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "tailwindcss": "catalog:",
+    "zustand": "catalog:"
+  },
+  "devDependencies": {
+    "@aios/config": "workspace:*",
+    "@tauri-apps/cli": "catalog:",
+    "@testing-library/jest-dom": "catalog:",
+    "@testing-library/react": "catalog:",
+    "@testing-library/user-event": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "jsdom": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  }
+}

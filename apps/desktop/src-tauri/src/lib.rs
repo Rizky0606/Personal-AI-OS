@@ -1,0 +1,90 @@
+//! Cangkang Tauri yang tipis: semua logika aplikasi ada di TypeScript. Rust hanya menyediakan hal yang
+//! tidak bisa dilakukan webview dengan aman: penyimpanan rahasia di Windows Credential Manager dan nama perangkat.
+//! HTTP dan WebSocket ke gateway lewat plugin resmi (klien Rust, bukan fetch webview) supaya CORS tetap tertutup
+//! dan header Authorization bisa dipasang saat handshake WebSocket.
+
+use keyring::Entry;
+
+/// Nama layanan di Credential Manager; entri tampil sebagai `app.aios.desktop/<kunci>`.
+const SERVICE: &str = "app.aios.desktop";
+
+/// Kunci hanya huruf kecil, angka, `_` dan `-` (maks. 32): perintah ini tidak boleh jadi jalan membaca entri lain.
+fn entry(key: &str) -> Result<Entry, String> {
+    let valid = !key.is_empty()
+        && key.len() <= 32
+        && key
+            .bytes()
+            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_' || b == b'-');
+    if !valid {
+        return Err("kunci kredensial tidak valid".into());
+    }
+    Entry::new(SERVICE, key).map_err(|_| "penyimpanan kredensial tidak tersedia".to_string())
+}
+
+// Pesan error sengaja generik: tidak pernah memuat nilai rahasia.
+
+#[tauri::command]
+fn secret_get(key: String) -> Result<Option<String>, String> {
+    match entry(&key)?.get_password() {
+        Ok(value) => Ok(Some(value)),
+        Err(keyring::Error::NoEntry) => Ok(None),
+        Err(_) => Err("gagal membaca kredensial".into()),
+    }
+}
+
+#[tauri::command]
+fn secret_set(key: String, value: String) -> Result<(), String> {
+    entry(&key)?
+        .set_password(&value)
+        .map_err(|_| "gagal menyimpan kredensial".to_string())
+}
+
+#[tauri::command]
+fn secret_remove(key: String) -> Result<(), String> {
+    match entry(&key)?.delete_credential() {
+        Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
+        Err(_) => Err("gagal menghapus kredensial".into()),
+    }
+}
+
+/// Nama PC untuk daftar perangkat di server.
+#[tauri::command]
+fn device_name() -> String {
+    std::env::var("COMPUTERNAME")
+        .ok()
+        .filter(|name| !name.trim().is_empty())
+        .unwrap_or_else(|| "Windows PC".to_string())
+}
+
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    tauri::Builder::default()
+        .plugin(tauri_plugin_http::init())
+        .plugin(tauri_plugin_websocket::init())
+        .invoke_handler(tauri::generate_handler![
+            secret_get,
+            secret_set,
+            secret_remove,
+            device_name
+        ])
+        .run(tauri::generate_context!())
+        .expect("aplikasi gagal dijalankan");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn kunci_valid_diterima() {
+        assert!(entry("session").is_ok());
+        assert!(entry("a-b_9").is_ok());
+    }
+
+    #[test]
+    fn kunci_tidak_valid_ditolak() {
+        for key in ["", "Session", "a b", "../x", "a/b", &"k".repeat(33)] {
+            assert!(entry(key).is_err(), "harus ditolak: {key:?}");
+        }
+    }
+}

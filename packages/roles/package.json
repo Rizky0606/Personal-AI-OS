@@ -1,0 +1,36 @@
+{
+  "name": "@aios/roles",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run --passWithNoTests",
+    "eval:routing": "tsc -p tsconfig.build.json && node dist/eval/cli.js"
+  },
+  "devDependencies": {
+    "@aios/config": "workspace:*",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "roles",
+    "skills",
+    "evals"
+  ],
+  "dependencies": {
+    "@aios/contracts": "workspace:*",
+    "yaml": "catalog:",
+    "zod": "catalog:"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "name": "personal-ai-os",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.13.1",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "eslint . && prettier --check .",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "format": "prettier --write .",
+    "eval:routing": "pnpm --filter @aios/roles eval:routing"
+  },
+  "devDependencies": {
+    "@aios/config": "workspace:*",
+    "eslint": "catalog:",
+    "prettier": "catalog:",
+    "turbo": "catalog:",
+    "typescript": "catalog:"
+  }
+}

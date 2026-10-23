@@ -1,0 +1,343 @@
+# Backlog
+
+Ide di luar scope prompt saat ini dan perbedaan temuan verifikasi terhadap asumsi dokumen.
+
+## Perbedaan VERIFICATION.md terhadap dokumen (Fase 0)
+
+Sumber: `docs/VERIFICATION.md` bagian 4. Selesaikan sebelum fase yang disebut.
+
+- [ ] **ARCHITECTURE.md, Agent Adapter (Fase 6, 15):** `resolveApproval(id, decision, remember)` harus memetakan keputusan ke teks opsi `select` dari omp, bukan boolean. omp hanya punya "Approve <tool> for this session"; aturan "selalu izinkan" per project dan pola perintah disimpan dan dijawab otomatis oleh worker. Sesuaikan juga skema approval di `API_CONTRACT.md`.
+- [ ] **SECURITY_OPS.md, Worker (Fase 15):** omp default `yolo`. Worker wajib memberi `--approval-mode always-ask`.
+- [ ] **ARCHITECTURE.md, Adapter omp:** fallback "role sebagai pesan sistem pertama lewat RPC" tidak diperlukan. Pakai `--append-system-prompt` dan overlay `--config` (`skills.customDirectories`). Tidak ada command RPC untuk mengganti system prompt di tengah proses; ganti role berarti proses baru.
+- [ ] **Isolasi state omp (Fase 15):** pakai `PI_CODING_AGENT_DIR` atau `--profile` milik worker, dan batasi skill pihak ketiga yang ikut dimuat dari mesin pengguna.
+- [ ] **API_CONTRACT.md, `/models` (Fase 5):** `GET /v1/models` 9Router terbuka tanpa key dan memuat katalog bawaan (700 entri di instance kosong). Gateway perlu daftar model terkurasi.
+- [ ] **API_CONTRACT.md / Status (Fase 5):** kuota dan usage 9Router (`/api/usage/stats`) butuh login dashboard (cookie), bukan API key. Simpan password dashboard sebagai rahasia gateway terpisah.
+- [ ] **VPS_SETUP.md langkah 5:** 9Router default bind `0.0.0.0`; service wajib `-H 127.0.0.1` dan `--skip-update`. Ganti `INITIAL_PASSWORD` dan `API_KEY_SECRET`. `GET /api/keys` mengembalikan key lengkap.
+- [ ] **Hermes (Fase 6):** seluruh bagian Hermes di VERIFICATION.md belum diuji. Jalankan perintah di VERIFICATION.md bagian 5 di VPS, catat versi di `infra/VERSIONS.md`.
+
+## Temuan Fase 2 (contracts dan ui-tokens)
+
+### Kontras token tidak memenuhi WCAG AA
+
+`DESIGN_SYSTEM.md` mewajibkan AA tetapi nilai tabelnya sendiri gagal di beberapa pasangan. Nilai tabel dipakai apa adanya di `tokens.json`; pasangan yang gagal dikunci di `packages/ui-tokens/src/tokens.test.ts` (`KNOWN_FAILURES`) agar perbaikan atau regresi terlihat. Perlu keputusan desain sebelum Fase 11 (Android) dan 15 (desktop):
+
+- [ ] `text-3` (meta, placeholder) terang 3,6 sampai 4,0:1 dan gelap 3,5 sampai 4,1:1; butuh 4,5:1. Perlu `text-3` lebih gelap di tema terang dan lebih terang di tema gelap.
+- [ ] Label tombol primer: putih (`surface`) di atas `accent` terang hanya 3,9:1; teks `text` di atas `accent` gelap hanya 2,2:1. Perlu token `on-accent` (teks di atas aksen) per tema.
+- [ ] `warning` terang di atas `surface` 2,3:1, tidak cukup bahkan untuk ikon (3:1). Pakai `warning` hanya sebagai latar panel dengan teks `text` (7,7:1), bukan sebagai warna teks atau ikon.
+- [ ] `success` terang (3,7:1) dan `info` terang (3,9:1) hanya cukup untuk ikon, bukan teks. `accent` terang di atas latar 3,5 sampai 3,9:1: cukup untuk cincin fokus, bukan teks.
+- [ ] `border` dan `border-strong` (1,3 sampai 1,8:1) di bawah 3:1 untuk batas komponen (WCAG 1.4.11). Field input perlu batas yang lebih kuat atau penanda lain.
+- [ ] `accent-soft` terang berada sedikit di luar gamut sRGB; dipotong saat dikonversi ke `Tokens.kt`.
+
+### Asumsi contracts yang perlu dikonfirmasi
+
+- [ ] **Approval:** kontrak punya 3 jenis (`command`, `file_write`, `network`) sesuai `API_CONTRACT.md`. `SECURITY_OPS.md` juga mewajibkan approval untuk instalasi paket dan penghapusan file; sementara dianggap `command`. Tambah jenis bila UI perlu membedakan.
+- [ ] **Review per file:** `DESIGN_SYSTEM.md` menyebut terima/tolak per file dan semua, sedangkan `POST /runs/:id/review` hanya `{ decision, comments[] }`. Perluas kontrak di Fase 19 bila perlu terima sebagian.
+- [ ] **WebSocket:** `ping`/`pong` (heartbeat 20 detik) dan `unsubscribe` ditambahkan karena ARCHITECTURE.md menyebut heartbeat tanpa bentuk pesan. `seq` mulai dari 1 per channel; `lastSeq: 0` atau tanpa nilai berarti dari awal.
+- [ ] **Health:** `/healthz` dan `/readyz` ditempatkan di bawah `/v1` seperti endpoint lain. Uptime Kuma perlu URL yang sama.
+- [ ] **`/llm/v1/*`:** proxy OpenAI-compatible tidak dimodelkan di kontrak (diteruskan apa adanya ke 9Router).
+- [ ] **Bentuk respons:** nama field camelCase; kolom internal (`token_hash`, `push_token`, `storage_path`, `hermes_session_id`) tidak diekspos. `createdAt`/`updatedAt` ditambahkan. `hermes_session_id` dan baris DB lain didefinisikan di skema Drizzle (Fase 3), bukan di contracts.
+- [ ] **Bentuk yang saya tentukan karena dokumen tidak merinci:** status kartu `backlog|todo|running|review|done`, kedalaman riset `quick|standard|deep`, status riset `queued|running|completed|failed|cancelled`, tahap riset `planning|searching|reading|writing`, jenis `Quota` (`source`, `totals`, `byModel`, `byDay`), isi `readyz`, isi `Stack`, dan bagian pesan `text|file|tool`.
+- [ ] **OpenAPI:** union diskriminan dihasilkan sebagai `oneOf` tanpa blok `discriminator`; template channel (`run:<uuid>`) menjadi pola `^run:.*$` tanpa batasan UUID. Cukup untuk Android yang menulis model sendiri; tambahkan `discriminator` bila memakai generator klien otomatis.
+- [ ] **Kotlin:** package `app.aios.ui.tokens` dipilih sementara; sesuaikan dengan applicationId Android di Fase 11. `Tokens.kt` hanya memuat nama font; `FontFamily` dibuat di modul Android dari font yang dibundel.
+- [ ] **Tailwind:** `--spacing: 4px` membuat `p-3` = 12px, tetapi `p-7` (28px) juga valid walau di luar skala 4/8/12/16/20/24/32/40/48. Batasi lewat aturan lint UI di Fase 15 bila perlu.
+
+## Temuan Fase 3 (gateway)
+
+### Belum terverifikasi (butuh Docker, tidak ada di mesin pengembangan)
+
+- [ ] **Dockerfile dan compose belum pernah dibangun.** Yang sudah diuji di sini: build monorepo, `pnpm deploy --legacy --prod` (alur yang sama dengan Dockerfile), serta migrasi dan server dari hasil deploy terhadap Postgres 16 nyata. Job `gateway-image` di CI membangun image, memeriksa non-root dan migrasi, dan memvalidasi compose. Jalankan `docker compose up -d --build` di VPS dan cek `curl -s http://127.0.0.1:3000/v1/readyz`.
+- [ ] **Cek dependensi mengikuti dokumen, belum diuji pada layanan asli:** Hermes `GET /health` (dengan Bearer bila ada kunci), 9Router `GET /v1/models`, SearXNG `GET /healthz`. Konfirmasi di VPS; `VERIFICATION.md` bagian 5 sudah berisi perintah curl-nya.
+- [ ] **Tes memakai Postgres tertanam 16.14, produksi `postgres:16`.** CI memakai image resmi lewat `TEST_DATABASE_URL`.
+
+### Keputusan yang menyimpang dari kerangka di dokumen
+
+- [ ] **`VPS_SETUP.md` memakai satu `.env`; compose sekarang memakai dua file.** `.env` untuk interpolasi compose (`SEARXNG_TAG`, `SEARXNG_SECRET`) dan `gateway.env` untuk environment gateway, supaya rahasia SearXNG tidak masuk ke gateway. Perbarui langkah 6 di `VPS_SETUP.md`.
+- [ ] **`SEARXNG_TAG` wajib diisi** (compose gagal bila kosong) untuk memenuhi aturan versi terkunci di `SECURITY_OPS.md`, menggantikan `searxng/searxng:latest` di kerangka. Isi lalu catat di `infra/VERSIONS.md`.
+- [ ] **Kata sandi Postgres ada di dua tempat:** `secrets/pg_password` (dibaca Postgres) dan `DATABASE_URL` di `gateway.env` (dibaca gateway). Satu sumber (mis. `DATABASE_URL_FILE`) bisa ditambahkan nanti.
+- [ ] Image Node belum dikunci ke tag patch (`node:22-bookworm-slim`); kunci saat deploy pertama lewat `--build-arg NODE_IMAGE=...`.
+
+### Catatan desain
+
+- [ ] **ID dibuat aplikasi (UUIDv7), bukan default DB** (Postgres 16 tidak punya `uuidv7()`). Insert SQL manual harus menyertakan `id`.
+- [ ] **`/v1/readyz` publik lewat nginx** karena kontrak menandainya tanpa auth. Isinya hanya status dan latensi, tetapi sebaiknya dibatasi di nginx ke loopback atau Tailscale (Uptime Kuma berjalan lokal).
+- [ ] **`/readyz` membuktikan keterjangkauan, bukan kesiapan penuh:** `/v1/models` 9Router terbuka dan tidak membuktikan ada provider yang berfungsi (lihat `VERIFICATION.md`). Cek lebih dalam bisa masuk halaman Status.
+- [ ] **Belum ada (sengaja, di luar scope Fase 3):** auth, rate limit, header keamanan, CORS (tertutup secara default), `deviceId` dan `runId` di log. Dikerjakan di fase auth.
+- [ ] Logger adalah pino bawaan Fastify (tanpa dependensi pino terpisah). Kolom log request ID bernama `requestId`.
+
+## Temuan Fase 4 (auth)
+
+### Keputusan yang saya ambil karena dokumen tidak merinci
+
+- [ ] **Scope menurut jenis perangkat:** `android` dan `desktop` mendapat `app`; `worker` mendapat `worker` dan `llm` (omp di PC memakai `/llm/v1`). Endpoint `/llm/v1/*` sendiri belum ada (Fase 5), jadi pengecekan scope `llm` dan `worker` baru dipakai di sana. Ubah `SCOPES_BY_KIND` di `modules/auth/tokens.ts` bila pembagiannya berbeda.
+- [ ] **Satu login = satu perangkat baru.** Login ulang dari perangkat yang sama membuat baris `devices` baru (yang lama tetap aktif sampai dicabut dari halaman Perangkat). Perlu dedup (nama + jenis) atau ID perangkat dari klien bila daftar cepat membengkak.
+- [ ] **Refresh token berformat `<deviceId>.<acak>` dan kedaluwarsa 90 hari sejak rotasi terakhir (sliding),** bukan 90 hari tetap sejak login. Perangkat yang dipakai rutin tidak pernah diminta login ulang; yang diam 90 hari harus login ulang.
+- [ ] **Pemakaian ulang bersifat ketat, tanpa masa tenggang.** Bila respons refresh hilang di jaringan dan klien mengulang dengan token lama, perangkat dicabut dan pemilik harus login ulang. Dua refresh bersamaan dengan token yang sama diperlakukan sama. Klien harus menyimpan token baru sebelum memakainya dan tidak boleh mengulang refresh otomatis. Masa tenggang pendek (mis. 10 detik, jawaban yang sama) bisa ditambahkan bila ini mengganggu di jaringan seluler.
+- [ ] **Kode TOTP sekali pakai:** langkah yang sudah dipakai (dan yang lebih lama) ditolak. Dua login dalam 30 detik yang sama berarti yang kedua harus menunggu kode berikutnya.
+- [ ] **Pesan gagal login sama untuk password salah, TOTP salah, dan akun belum ada** (`invalid_credentials`), dan password selalu dihitung lewat argon2 (termasuk hash palsu) agar waktu respons tidak membocorkan keadaan akun.
+- [ ] **`AUTH_SECRET` satu rahasia untuk dua tujuan** (tanda tangan JWT dan enkripsi secret TOTP, diturunkan terpisah lewat HKDF). Mengganti nilainya mencabut semua token dan membuat TOTP tersimpan tidak terbaca, jadi perlu `owner:init --reset`.
+- [ ] **`owner_account` tidak ada di "Model data inti"** (satu baris, dijaga constraint). `devices` mendapat `refresh_expires_at` dan `revoked_at`; perangkat dicabut dengan menandai `revoked_at` (baris dipertahankan untuk audit), bukan dihapus.
+- [ ] **Setiap request terproteksi membaca baris `devices`** agar pencabutan berlaku seketika (bukan menunggu token 15 menit habis). `last_seen_at` diperbarui paling sering sekali per menit.
+- [ ] **`owner:init` di TTY** meminta konfirmasi kode TOTP sebelum menyimpan (agar salah pindai tidak mengunci pemilik). Tanpa TTY (pipa) password dibaca dari stdin dan tidak ada konfirmasi.
+
+### Keterbatasan yang diketahui
+
+- [ ] **Rate limit di memori:** hitungan hilang saat gateway restart dan tidak dibagi antar-instance. Cukup untuk satu proses di satu VPS. Login dibatasi per IP (5 per menit); belum ada penguncian global terhadap serangan dari banyak IP. IP klien dibaca dari `X-Forwarded-For` hanya bila datang dari loopback (nginx), jadi vhost nginx wajib mengirim `X-Forwarded-For` dan `X-Real-IP` apa adanya dari klien.
+- [ ] **Request tanpa token valid tidak dihitung di batas umum** (batas berjalan setelah autentikasi); verifikasi JWT murah, tetapi lonjakan tebakan token ditangani nginx/fail2ban.
+- [ ] **Belum ada** penyimpanan token di klien (Fase klien), halaman Perangkat, notifikasi saat perangkat baru login, dan rotasi `AUTH_SECRET` tanpa mencabut semua token.
+- [ ] **Contracts:** hanya daftar error OpenAPI yang bertambah (403 untuk scope dan 429 untuk rate limit pada endpoint terproteksi). Skema request/response tidak berubah.
+- [ ] **Argon2id memakai parameter minimum OWASP (m=19 MiB, t=2, p=1).** Bisa dinaikkan; hash lama tetap terverifikasi karena parameter ada di string hash.
+
+## Temuan Fase 5 (lapisan model)
+
+### Keputusan yang saya ambil karena dokumen tidak merinci
+
+- [ ] **Proxy ada di `/llm/v1/*` (root), bukan `/v1/llm/v1/*`.** API_CONTRACT.md menaruh semua endpoint di bawah `/v1`, tetapi VPS_SETUP.md dan VERIFICATION.md menyebut base URL provider omp sebagai `https://<domain>/llm/v1`. Saya mengikuti yang kedua; vhost nginx `location /` sudah meneruskannya. Kerjakan: samakan tabel di API_CONTRACT.md.
+- [ ] **Scope:** `/llm/v1/*` butuh `llm` (hanya perangkat `worker`). `/models` dan `/quota` butuh `app`. Akibatnya omp di worker tidak bisa memanggil `/v1/models`, tetapi bisa `/llm/v1/models` (diteruskan).
+- [ ] **`/quota` selalu dari tabel `runs` (`source: "runs"`)**, belum dari 9Router. Usage 9Router butuh cookie login dashboard (password dashboard disimpan di gateway), dan bentuk `byModel`/`byDay` di `GET /api/usage/stats` belum terverifikasi (VERIFICATION.md hanya mendata kunci tingkat atas). Menebak bentuknya melanggar aturan "jangan menebak". Saat bentuknya sudah dicek di VPS: tambah `NINEROUTER_DASHBOARD_PASSWORD` dan isi `source: "ninerouter"`.
+- [ ] **Kuota dari runs:** jendela tetap 30 hari, hari dihitung zona Asia/Jakarta, `requests` = jumlah run (bukan jumlah panggilan model), `costUsd` selalu 0 (usage run tidak menyimpan biaya), run tanpa `model` dikelompokkan sebagai `(tidak diketahui)`. Belum ada parameter rentang di kontrak.
+- [ ] **Usage per run lewat header `X-Aios-Run-Id`** pada panggilan `/llm/v1`. Adapter omp (Fase worker) wajib mengirimnya. Tanpa header, panggilan tetap dilayani tetapi usage tidak tercatat di mana pun. Usage ditambahkan (bukan ditimpa) dalam satu statement SQL, jadi banyak panggilan dalam satu run terjumlah benar. ID run yang tidak ada diabaikan (dicatat di log), format salah 400.
+- [ ] **Chat streaming: gateway menyalakan `stream_options.include_usage`** pada `POST /chat/completions` bila `stream:true`, karena tanpa itu tidak ada angka pemakaian di akhir stream. Endpoint lain (`/responses`, `/messages`) dibaca bila 9Router menyertakan usage, tetapi tidak dipaksa.
+- [ ] **Retry hanya untuk 502/503 dan gagal koneksi** (2 kali, jeda 250 ms lalu 500 ms). 504 dan timeout tidak diulang karena model mungkin sudah bekerja dan berbiaya. Timeout 120 detik sampai header respons (respons non-stream baru mengirim header setelah model selesai); stream dianggap macet bila tidak ada byte 120 detik.
+- [ ] **401/403 dari 9Router menjadi 502 `llm_upstream_auth`.** Itu berarti `NINEROUTER_API_KEY` gateway salah, jangan sampai terlihat seperti token perangkat kedaluwarsa oleh klien. Status lain (400, 404 "No active credentials", 429) diteruskan beserta body aslinya.
+- [ ] **Header diteruskan dengan allowlist:** `content-type`, `accept`, `openai-beta`, `anthropic-version`. Header lain (Authorization perangkat, cookie, `X-Forwarded-*`, `x-api-key`) tidak ikut. Balik: hanya `content-type`, `cache-control`, `retry-after`, plus `x-accel-buffering: no` untuk SSE.
+- [ ] **Path dijaga tetap di bawah `NINEROUTER_URL`** (`/../api/keys` ditolak), jadi proxy tidak bisa dipakai menjangkau `/api/*` dashboard 9Router. Hanya GET dan POST.
+- [ ] **Klien memutus koneksi (omp di-cancel) menghentikan panggilan ke 9Router**, supaya tidak ada generasi berbayar yang tidak dipakai.
+- [ ] **`/models` memakai daftar apa adanya dari 9Router** (combo di depan). VERIFICATION.md mencatat instance kosong mengembalikan ~700 model katalog yang belum tentu bisa dipakai, jadi di VPS daftar bisa sangat panjang. Penyaringan butuh `GET /api/providers` (cookie dashboard) atau daftar terkurasi. Cache 5 menit; saat 9Router gangguan, cache lama tetap dipakai (dicatat warning).
+- [ ] **Kontrak:** `ModelInfo` mendapat field `label` (wajib), `ModelListSchema` diekspor, dan `GET /models` mendokumentasikan 502. Klien yang sudah ada belum ada, jadi tidak ada pemakai lain yang perlu diubah.
+- [ ] **Panggilan model tidak masuk `audit_log`** (volume tinggi, dan isinya sudah ada di usage run). Log hanya memuat deviceId, runId, path, dan jumlah token, tidak pernah isi percakapan atau header Authorization.
+
+### Keterbatasan yang diketahui
+
+- [ ] Body respons JSON yang macet setelah header terkirim hanya berhenti saat klien memutus koneksi (belum ada batas idle untuk respons non-stream). Stream SSE sudah punya batas idle.
+- [ ] Rate limit umum (120 per menit per perangkat) juga berlaku untuk `/llm/v1`. Agent yang memanggil model sangat sering (banyak tool call) bisa menyentuhnya; naikkan khusus scope `llm` bila terjadi.
+- [ ] Unggahan di proxy dibatasi 25 MB (cocok dengan batas berkas). Respons non-JSON non-SSE (audio TTS) dialirkan tanpa dihitung usage.
+- [ ] Streaming nyata lewat nginx belum diuji (hanya langsung ke gateway). `proxy_buffering off` tidak wajib karena gateway mengirim `X-Accel-Buffering: no`, tetapi periksa di VPS.
+- [ ] Panggilan chat ke provider nyata lewat 9Router tetap **tidak terverifikasi** (VERIFICATION.md): tes memakai server tiruan OpenAI-compatible.
+
+## Temuan Fase 6 (chat umum, adapter, WebSocket)
+
+### Hermes: yang dipakai dan yang masih tidak terverifikasi
+
+- [ ] **Adapter memakai `POST /v1/chat/completions` (stream), bukan `/v1/runs`.** Dokumentasi resmi Hermes (dibaca ulang di fase ini) mendefinisikan `POST /v1/runs` (`input`, `session_id`, `instructions`, balasan `{run_id, status}`) dan `POST /v1/runs/{id}/stop`, tetapi tidak mendefinisikan format SSE `/v1/runs/{id}/events` maupun payload `message.delta`, `run.failed`, dan `run.cancelled`. Chat completions adalah format OpenAI standar dan terdokumentasi lengkap. **Konsekuensi:** cancel hanya memutus koneksi; apakah Hermes ikut menghentikan run-nya belum terverifikasi (VERIFICATION.md sudah mencatat ini). Bila ternyata tidak, pindah ke `/v1/runs` + `stop` (hanya `packages/adapters/src/hermes.ts` yang berubah).
+- [ ] **Semua perilaku Hermes di fase ini diuji terhadap server tiruan,** bukan Hermes asli (belum terpasang di mesin ini). Yang perlu dicek di VPS: (1) `X-Hermes-Session-Id` benar-benar memuat ulang transkrip di chat completions stateless, karena adapter hanya mengirim pesan baru; (2) `finish_reason` dan `[DONE]` seperti di dokumentasi; (3) cancel menghentikan run; (4) `hermes.tool.progress`.
+- [ ] **Event tool belum dipetakan.** Event SSE bernama `hermes.tool.progress` dilewati karena bentuk payload-nya tidak terdokumentasi, jadi chat umum belum menampilkan langkah tool. `capabilities()` melaporkan `approvals`, `steer`, `checkpoints` = false; `steer` dan `resolveApproval` melempar `unsupported`.
+- [ ] **`model` dikirim sebagai `hermes-agent`** (atau nilai `model` dari pesan). Hermes mengabaikannya kecuali `direct_model_requests: true`; pemilih model di UI belum berpengaruh pada Hermes.
+- [ ] **`X-Hermes-Session-Key` = `owner`** (tetap) agar memori jangka panjang konsisten lintas percakapan, sesuai rekomendasi VERIFICATION.md. `hermes_session_id` = `aios-<conversationId>`, disimpan di `conversations` saat pesan pertama.
+- [ ] **Hermes tidak menerima berkas:** pesan dengan bagian `file` ditolak 400 `files_not_supported` sampai ada alur lampiran (`POST /files`).
+
+### Keputusan yang saya ambil karena dokumen tidak merinci
+
+- [ ] **Alur status run chat mengikuti diagram penuh:** `queued → routing → preparing → running → completed`, masing-masing satu event `run.status`, ditambah `route.decided` (role `general`, confidence 1) di antara `routing` dan `preparing`. Event terakhir run selalu `run.status` berstatus akhir; `run.completed` dan `error` datang tepat sebelumnya. `message.completed` tiba sebelum `run.completed`.
+- [ ] **Seq WebSocket:** channel `run:<id>` memakai `run_events.seq` (bisa diputar ulang). Channel `conversation:<id>` hanya membawa `run.status` run percakapan itu dan channel `user` belum membawa apa pun; keduanya **hanya live** (seq penghitung di memori, `replay:false` di balasan `subscribed`). Setelah sambung ulang, klien memuat ulang lewat `GET /conversations/:id/messages` dan `GET /runs/:id`. API_CONTRACT.md menyebut "seq per channel" tanpa merinci log untuk channel selain run.
+- [ ] **`lastSeq` tidak dikirim = hanya event baru** (tanpa replay). Untuk mengambil semua event kirim `lastSeq: 0`.
+- [ ] **Pesan server baru di kontrak:** `subscribed` (ack sebelum replay, berisi seq terbaru) dan `error` (`invalid_message`, `not_found`, `too_many_channels`). Konstanta `WS_MAX_CHANNELS = 20` dan `WS_CLOSE_UNAUTHORIZED = 4401` ada di `packages/contracts/src/ws.ts`.
+- [ ] **Auth WebSocket lewat header `Authorization` saat handshake** (wscat `-H`, OkHttp). WebView/browser tidak bisa mengirim header di `WebSocket`; klien Tauri harus memakai plugin WebSocket Rust atau kita tambah jalur lain (mis. subprotocol). Query string sengaja tidak dipakai agar token tidak masuk log nginx.
+- [ ] **Umur koneksi:** heartbeat 20 detik (ping protokol WebSocket; klien yang tak membalas pong diputus). Pada tiap detak server juga memeriksa masa berlaku access token dan status perangkat; bila habis atau dicabut, koneksi ditutup dengan kode 4401 (`token_expired` / `device_revoked`) dan klien refresh token lalu sambung ulang dengan `lastSeq`. Klien yang terlalu lambat (>1 MiB tertahan) diputus dengan kode 1013; aman karena replay dari database tidak menghilangkan event.
+- [ ] **Satu run aktif per percakapan:** pesan baru saat masih ada run berjalan ditolak 409 `run_in_progress` (transkrip sesi Hermes harus berurutan). Kirim lagi setelah selesai atau cancel.
+- [ ] **Pesan asisten dibuat saat run dimulai** (teks kosong) dan diisi saat run berakhir (selesai, gagal, atau dibatalkan, termasuk teks sebagian). Klien yang membuka riwayat saat run berjalan melihat pesan kosong dan harus mengikuti event run.
+- [ ] **Setiap `message.delta` disimpan sebagai satu baris `run_events`.** Jawaban panjang berarti ratusan baris; cukup untuk satu pengguna. Penggabungan delta per ~50 ms bisa dilakukan bila tabel membengkak.
+- [ ] **Pemulihan setelah restart:** saat gateway start, run chat yang belum berstatus akhir ditandai `failed` (`gateway_restarted`, retryable), teks asisten dibangun ulang dari event delta, dan event `error` + `run.status failed` ditambahkan. Run tidak dilanjutkan otomatis.
+- [ ] **Judul otomatis:** model kecil lewat 9Router (`TITLE_MODEL`, default `router-fast`), maksimal 6 kata, dibuat di latar belakang pada pesan pertama dan hanya mengisi judul yang masih kosong. Bila 9Router gagal, judul = 6 kata pertama pesan. Tidak ada event WebSocket "percakapan berubah" di kontrak, jadi klien perlu memuat ulang daftar/percakapan untuk melihat judul.
+- [ ] **Daftar percakapan diurutkan menurut ID (waktu dibuat), bukan aktivitas terakhir,** karena kursor `before` memakai ID. Halaman pesan berisi pesan terbaru sebelum kursor, diurutkan kronologis di dalam halaman.
+- [ ] **Role selalu `general`;** `role` selain itu di body ditolak 400 `role_unsupported` sampai router (Fase 8). Endpoint run yang belum ada: `steer`, `approvals`, `review`, `reroute`.
+- [ ] **Urutan kunci JSON pada event hasil replay** bisa berbeda dari event live (jsonb Postgres menyusun ulang kunci). Isinya sama; klien harus mem-parse JSON, bukan membandingkan string.
+
+### Dependensi baru
+
+- [ ] `@fastify/websocket` (WebSocket di Fastify; membawa `ws`), dan dev: `ws`, `@types/ws` (klien WebSocket di tes). Tanpa pustaka ini endpoint `/v1/ws` harus menulis handshake sendiri.
+
+### Keterbatasan yang diketahui
+
+- [ ] Satu proses gateway: hub siaran ada di memori, jadi dua instance tidak saling melihat event live (replay dari DB tetap benar).
+- [ ] Run yang dibatalkan saat Hermes belum menjawab header hanya memutus koneksi lokal; sisi Hermes mengikuti catatan cancel di atas.
+- [ ] Rate limit umum (120/menit/perangkat) berlaku untuk REST; pesan WebSocket di dalam koneksi belum dibatasi selain ukuran (16 KB) dan jumlah channel.
+
+## Temuan Fase 7 (role dan skill)
+
+### Keputusan yang saya ambil karena dokumen tidak merinci
+
+- [ ] **Logika ada di `packages/roles`, gateway hanya membungkusnya.** Paket itu berisi skema Zod frontmatter, parser, registri (`loadRegistry`), dan builder bundel (`buildBundle`), sehingga worker (omp) bisa memakainya tanpa menyalin kode. Gateway menambah `modules/roles` (state registri, hot-reload, `GET /roles`). Konten ada di `packages/roles/roles/*.md` dan `packages/roles/skills/<id>/SKILL.md`.
+- [ ] **Validasi saat start mengumpulkan semua masalah sekaligus:** frontmatter salah (field asing ditolak), `id` ≠ nama file, `name` skill ≠ nama folder, skill yang dirujuk tidak ada, 5 skill inti hilang, handoff ke role yang tidak ada, `examples` < 5, `not_examples` < 2. Gateway tidak start dan mencetak daftar masalahnya.
+- [ ] **Hot-reload hanya saat `NODE_ENV=development`.** Perubahan file dimuat ulang (debounce 200 ms); hasil yang tidak valid ditolak, registri lama tetap dipakai, dan error dicatat. Bundel dihitung per run, jadi perubahan berlaku pada run berikutnya.
+- [ ] **Path pantauan dinormalisasi (`realpathSync.native`).** Di Windows, libuv mematikan seluruh proses (assertion native) bila path yang dipantau berbentuk nama pendek 8.3 (`C:\Users\RIZKYF~1\...`) sementara event memakai nama panjang. Ditemukan lewat tes; berlaku untuk dev di Windows.
+- [ ] **Skill inti selalu masuk bundel** walau tidak tertulis di `skills` role; semua file role tetap mencantumkannya seperti contoh di dokumen. Skill khusus masuk berurutan selama muat di anggaran; yang tidak muat dilewati utuh (`omittedSkills`), tidak dipotong di tengah. Skill inti tidak pernah dibuang; bila anggaran lebih kecil dari skill inti, bundel ditandai `overBudget`.
+- [ ] **Anggaran:** skill ≤ 4.000 token (dokumen). Anggaran seluruh bundel ≤ 6.000 token adalah **asumsi saya** (dokumen hanya menetapkan anggaran skill). Token diperkirakan `ceil(karakter / 3,5)` tanpa tokenizer (condong ke angka besar). Ukuran sekarang (perkiraan): general 1.259, debugger 1.321, reviewer 1.410, researcher 1.422, writer 1.436, backend 1.767, frontend 2.042; skill saja 877–1.723. Tes memastikan setiap role di bawah kedua anggaran.
+- [ ] **Format bundel:** `# Aturan perilaku agent` → `# Peran: <nama>` + isi role → `# Skill inti` → `# Skill khusus`, tiap skill sebagai `## <id>` diikuti isinya.
+- [ ] **Model dan combo di frontmatter adalah nama yang saya pilih:** `general-main`, `general-cheap`, `research-main` untuk role Umum; `coding-main` dan `coding-cheap` untuk role Coding (dua yang terakhir muncul di dokumen). Combo ini harus dibuat di 9Router; Hermes sendiri mengabaikan `model` (VERIFICATION.md). `approval`: `auto-safe` untuk researcher dan reviewer (baca saja), `ask` untuk sisanya.
+- [ ] **`GET /roles`** mengembalikan `RoleInfo` (id, name, group, engine, model, fallbackModel, approval, skills) dengan `skills` = skill inti + khusus. Isi prompt, handoff, dan contoh tidak dikirim ke klien (dipakai router di Fase 8). `RoleListSchema` ditambahkan ke contracts.
+- [x] **Hanya role `general` yang dipakai run** — diselesaikan di Fase 8 (router otomatis dan pilihan manual).
+- [ ] **Bundel dikirim sebagai satu pesan `system` di setiap request ke Hermes** (~1.300 token untuk general). Dokumentasi Hermes menyatakan pesan sistem ditumpuk di atas prompt inti-nya, tetapi **tidak terverifikasi** apakah pesan itu juga ikut tersimpan di transkrip sesi dan menumpuk tiap giliran. Cek di VPS; bila menumpuk, kirim hanya pada giliran pertama sesi atau saat role berubah.
+
+### Ringkasan skill UI (DESIGN_SYSTEM.md → ui-skills.com)
+
+Isi ditulis sendiri sebagai ringkasan prinsip, bukan salinan; dibaca dari halaman skill-nya (baseline-ui, better-colors, better-typography, emil-design-eng, harden, rams, web-design-guidelines) pada 2026-10-22. Pemetaan:
+
+- [ ] `ui-baseline`: baseline-ui (satu aksen, komponen yang sudah ada, gerak hanya bila perlu, transform/opacity, reduced-motion), better-colors (token semantik, satu warna satu makna, warna bukan satu-satunya penanda), better-typography (skala kecil, line-height tanpa satuan, tabular numerals, balance), emil-design-eng (gerak dengan tujuan, ease-out, transisi pendek), ditambah larangan anti AI slop dari DESIGN_SYSTEM.md.
+- [ ] `ui-states`: harden (data ekstrem, kegagalan jaringan, pesan error yang menunjukkan langkah berikutnya, cegah kirim ganda, bersihkan listener).
+- [ ] `a11y-check`: rams dan web-design-guidelines (label, fokus, kontras, target sentuh, status bukan hanya warna). **Isi web-design-guidelines tidak terbaca:** halaman skill-nya hanya menyebut aturan diambil dari dokumen jarak jauh, jadi checklist a11y bersumber dari rams dan dokumen proyek sendiri.
+- [ ] `better-interface` (alternatif rams di DESIGN_SYSTEM.md) tidak diringkas karena halamannya tidak diperiksa.
+
+### Keterbatasan yang diketahui
+
+- [ ] Belum ada evaluasi routing (`packages/roles/evals/routing.jsonl` dan `pnpm eval:routing`); itu bagian Fase 8 bersama router.
+- [ ] Skill dibaca dari disk saat start/reload dan dikirim utuh; belum ada pemilihan skill "hanya bila relevan" di luar anggaran.
+- [ ] Hot-reload tidak memantau penambahan folder `skills/` dan `roles/` itu sendiri (hanya isinya); restart gateway bila folder induk dibuat ulang.
+
+## Temuan Fase 8 (router otomatis)
+
+### Yang belum terverifikasi
+
+- [ ] **Akurasi router dengan model asli belum pernah diukur.** `pnpm eval:routing` butuh 9Router dengan combo `router-fast` yang punya kredensial provider; mesin ini tidak punya. Yang terbukti: logika aturan cepat, prompt, validasi, retry, dan harness eval (lewat model tiruan: mode benar 100% lulus, mode buruk 23,2% gagal exit 1, model mati exit 2). **Jalankan di VPS:** `NINEROUTER_URL=http://127.0.0.1:20128/v1 NINEROUTER_API_KEY=<key> pnpm eval:routing`. Tiap role harus ≥90%; bila ada yang kurang, lihat daftar "Salah" di keluarannya dan tambah contoh di file role (jangan menyalin kasus eval ke contoh role: tes melarangnya).
+- [ ] Dataset `packages/roles/evals/routing.jsonl` (82 kasus, 11–16 per role) ditulis oleh saya; 4 kasus lanjutan selesai lewat aturan, 3 lanjutan lain dan 4 kasus ambigu sengaja diserahkan ke model.
+
+### Keputusan yang saya ambil karena dokumen tidak merinci
+
+- [ ] **Logika router ada di `packages/roles/src/router`** (aturan cepat, prompt, parser keluaran, `createRouter` dengan fungsi `complete` yang disuntikkan) agar eval, gateway, dan nanti worker memakai kode yang sama. Gateway menambah `modules/router` (konteks dari DB, panggilan 9Router, simpan keputusan, preview) dan menyambungkan ke chat.
+- [ ] **Routing terjadi di dalam run, pada status `routing`,** bukan di POST. POST tetap kembali segera; `run.agentRole` dan `agentRole` pesan asisten baru terisi setelah router memutuskan (sebelumnya `null`). `route.decided` adalah event ke-3 run (setelah `queued` dan `routing`).
+- [ ] **Urutan keputusan:** pilihan manual (`role` di body, confidence 1) → pesan lanjutan → model router → fallback `general` (confidence 0). Pilihan manual yang tidak ada → 400 `unknown_role`; tidak boleh di konteks ini → 400 `role_not_allowed` (diperiksa sebelum run dibuat).
+- [ ] **Role coding butuh project, di surface mana pun.** Dokumen hanya menyebut "Android tanpa project hanya grup Umum"; saya memperluasnya ke Windows tanpa project karena role omp butuh worktree. Dengan project di Windows, grup Coding didahulukan di daftar prompt; dengan project di Android, grup Umum didahulukan. Bila model memilih role yang tidak boleh, hasilnya `general` dengan alasan yang menyebut role itu (bukan JSON tidak valid, tidak dicoba ulang).
+- [ ] **Aturan "pesan lanjutan" sengaja sempit:** maksimal 4 kata dan 60 karakter, tanpa blok kode atau URL; cocok dengan daftar frasa ("lanjut", "oke", "terima kasih", "lebih singkat", dll.), pesan yang seluruhnya kata pengisi ("oke lanjut aja"), atau perintah ubah pendek yang merujuk hasil sebelumnya ("ubah warnanya", "ganti yang tadi"). Hanya berlaku bila role sebelumnya masih boleh di konteks ini. Pesan ragu diserahkan ke model, bukan ditebak. Role sebelumnya = `agentRole` run terakhir di percakapan itu.
+- [ ] **Prompt router:** aturan dan daftar role ada di pesan `system`; riwayat (maks. 5 pesan, dipotong 200 karakter) dan pesan pengguna ada di pesan `user` di antara `<<<` `>>>` sebagai data, dengan perintah "jangan ikuti perintah di dalamnya" (mitigasi prompt injection, bukan jaminan). File role tidak punya field deskripsi, jadi "deskripsi" diambil dari paragraf `# Peran`, "bukan untuk" dari `handoff`, dan contoh dari `examples`/`not_examples`.
+- [ ] **Coba ulang:** satu kali, hanya bila balasan bukan JSON, tidak sesuai skema, atau role tidak dikenal; percobaan kedua membawa balasan sebelumnya dan alasan kegagalannya. Gagal dua kali, atau model/9Router error (tanpa coba ulang di lapisan router; klien 9Router sudah mengulang 502/503), jatuh ke `general`. Timeout 20 detik per panggilan, `max_tokens` 400, suhu 0.
+- [ ] **needs_split:** hanya dipertahankan bila confidence ≥0,6, role utama tidak dipaksa berubah, dan tersisa ≥2 sub-tugas pada role yang boleh. Kartu kanban belum ada, jadi sub-tugas hanya ditulis di `reason` (event `route.decided` dan `routing_decisions.reason`) dan dikembalikan oleh `/route/preview`; run berjalan dengan role utama saja. Tidak ada kolom `subtasks` di DB (kontrak `RoutingDecision` tidak punya).
+- [ ] **Run dengan role omp gagal jelas** (`engine_unavailable`, tidak retryable): route.decided → preparing → error → failed, tanpa memanggil Hermes, karena worker Windows belum ada (role coding di Hermes VPS bisa menjalankan tool terminal di server). `runs.engine` diisi `omp`. Role `researcher` (engine `research`) sementara dijalankan Hermes sampai research engine ada (Fase 9). Praktis role coding baru bisa terpilih bila percakapan punya project; belum ada endpoint untuk membuat project.
+- [ ] **Reroute:** menerima id pesan user atau pesan asisten; hanya untuk pesan user terakhir di percakapan (409 `not_latest_message`); role sama dengan keputusan terakhir ditolak (400 `same_role`); run yang masih berjalan dihentikan dulu. Koreksi merujuk keputusan router terakhir untuk pesan itu (bila tidak pernah tercatat, dibuatkan catatan confidence 0). Setiap reroute juga menyimpan keputusan manual baru (confidence 1). Jawaban lama tetap ada di riwayat, jadi satu pesan user bisa punya beberapa jawaban asisten.
+- [ ] **Hermes mengingat giliran lama:** reroute mengirim ulang prompt yang sama di sesi Hermes yang sama, jadi transkrip Hermes berisi pertanyaan dan jawaban role lama plus yang baru. Tidak ada cara menghapus giliran di API yang terdokumentasi; kalau mengganggu, buat sesi baru untuk reroute (kehilangan konteks percakapan sebelumnya).
+- [ ] **Koreksi di prompt:** 20 baris `routing_corrections` terbaru (urut ID), tampil sebagai `"<kutipan 120 karakter>" seharusnya <role>, bukan <role>`. Kutipan disimpan 200 karakter dan bisa memuat isi pesan pengguna.
+- [ ] **`/route/preview`** tidak menyimpan apa pun dan tidak membuat run, tetapi memanggil model router sungguhan (memakai kuota kecil) dan membaca 20 koreksi terbaru. `projectId` yang tidak ada → 404. Tanpa riwayat percakapan.
+- [ ] **Eval:** lulus bila **tiap role dan keseluruhan** ≥90% (PRD: "90% pada set uji per role"). Kode keluar 0 lulus, 1 di bawah ambang, 2 bila >50% kasus yang butuh model jatuh ke fallback (model tidak terjangkau; hasilnya bukan akurasi) atau dataset rusak. `pnpm eval:routing` mem-build paket roles dulu; butuh `pnpm build` untuk contracts. Env: `NINEROUTER_URL`, `NINEROUTER_API_KEY`, `ROUTER_MODEL` (default `router-fast`); argumen `--file`, `--threshold`, `--concurrency`.
+- [ ] **Registri sekarang mewajibkan role `general`** (cadangan router); gateway gagal start tanpa itu. `ROUTER_MODEL` ditambahkan ke konfigurasi (default `router-fast`), combo itu harus ada di 9Router.
+
+### Keterbatasan yang diketahui
+
+- [ ] Satu panggilan model router tambahan (~0,5–2 detik) di awal hampir setiap run; pesan lanjutan dan pilihan manual tidak memanggilnya. Belum ada cache keputusan.
+- [ ] Keputusan router tidak dikirim ke klien selain lewat event `route.decided`; belum ada endpoint untuk membaca `routing_decisions`.
+- [ ] Bundel role dikirim di setiap giliran, jadi pergantian role antar giliran menumpuk pesan sistem di sesi Hermes (lihat catatan Fase 7).
+
+## Temuan Fase 9 (deep research)
+
+### Yang belum terverifikasi
+
+- [ ] **Belum pernah dijalankan dengan SearXNG dan model asli.** Mesin ini tidak punya Docker (SearXNG), 9Router, maupun kredensial model. Yang terbukti: seluruh pipeline dengan SearXNG palsu, halaman palsu, dan model palsu (11 tes integrasi dengan pg-boss dan Postgres nyata); pengambilan dan ekstraksi **halaman web sungguhan** (Wikipedia id/en, IEA) lewat pengambil produksi; render JavaScript dengan Edge sungguhan; ekspor PDF. Yang belum: kualitas rencana, ringkasan, dan laporan dari model asli, dan keluaran JSON SearXNG asli dengan engine pilihan Anda. **Coba di VPS:** login → `POST /v1/research {"question":"...","depth":"quick"}` → ikuti event lewat WebSocket `run:<runId>` (atau `GET /v1/runs/<runId>/events`) → `GET /v1/research/<id>` → `GET /v1/research/<id>/export?format=md|pdf`. Bila SearXNG menjawab 403, `search.formats` di `infra/compose/searxng/settings.yml` belum memuat `json`.
+- [ ] **"Setiap klaim penting terhubung ke sumber" diverifikasi secara struktural, bukan semantik.** Kode memastikan setiap paragraf/butir faktual (≥6 kata, di luar bagian "Batasan") punya rujukan [n] yang sah dan menunjuk sumber yang benar-benar dibaca; daftar sumber (judul, URL, tanggal akses) disusun dari data, bukan dari model, jadi tidak bisa dikarang. Kode **tidak** memeriksa apakah isi sumber benar-benar mendukung kalimatnya; model bisa salah mengutip. Pemeriksaan entailment (model kedua) bisa ditambah.
+
+### Keputusan yang saya ambil karena dokumen tidak merinci
+
+- [ ] **Tiap job riset punya satu `run` (kind `research`, engine `research`, role `researcher`)** sehingga `research.progress` / `research.source` lewat event store dan WebSocket yang sama dengan chat (`run:<runId>`, bisa diputar ulang dengan `lastSeq`). `ResearchJob.runId` terisi saat dibuat. Notifikasi `research.completed` dikirim ke channel `user` (live saja, tidak tersimpan: perangkat yang offline tidak menerimanya; push FCM menunggu Fase 10).
+- [ ] **pg-boss v12** (antrean `research.run`, `retryLimit: 0`, satu job sekaligus, polling 1 detik). pg-boss membuat skema `pgboss` dan migrasinya sendiri saat start (butuh hak `CREATE` di database) dan memakai pool 3 koneksi sendiri; migrasi Drizzle tidak berubah. Sertakan skema `pgboss` di backup. pg-boss butuh Node ≥22.12 (image Docker memakai `node:22`; kunci ke tag patch ≥22.12 saat deploy).
+- [ ] **Job yang `running` saat gateway mati ditandai gagal** (`gateway_restarted`) dan tidak dilanjutkan; job `queued` tetap di antrean dan jalan setelah restart. Cancel job yang masih antre dilakukan langsung di database; pelaksana melewati job yang bukan `queued`.
+- [ ] **Kedalaman:** cepat ≈5 sumber (3 sub-pertanyaan, maks. 4 menit), standar ≈12 (5, 10 menit), mendalam ≈25 (7, 25 menit). Jumlah sumber bisa lebih dari target paling banyak sebanyak paralelisme pembaca (3), karena sumber yang sudah dibaca saat target tercapai tetap dipakai. Paralelisme: 3 pencarian, 4 pembacaan+ringkasan, 2 render browser; satu job per waktu. Pembacaan sumber berhenti di 70% batas waktu dan laporan tetap ditulis dari yang sudah ada (ditandai "sebagian karena batas waktu"); bila batas total habis sebelum ada laporan, job `failed` (`research_timeout`).
+- [ ] **Pemilihan sumber:** satu kueri per sub-pertanyaan ditambah pertanyaan utama; hasil digabung bergiliran menurut peringkat, dibuang bila duplikat (setelah normalisasi: tanpa www, skema, fragmen, parameter pelacak), domain berkualitas rendah (media sosial, video, bank gambar, situs unggah dokumen: daftar `LOW_QUALITY_DOMAINS` di `select.ts`), atau berkas non-HTML (pdf, docx, dst.), maksimal 2 sumber per domain (3 untuk mendalam). **PDF belum didukung** sebagai sumber. Halaman yang diteruskan (redirect) ke URL yang sudah dibaca, atau yang isinya sama, dihitung duplikat.
+- [ ] **Model:** `RESEARCH_MODEL` (default `research-main`) untuk rencana dan laporan, `RESEARCH_SUMMARY_MODEL` (default `general-cheap`) untuk ringkasan per sumber. Hanya penulisan laporan yang memakai bundel role `researcher` (skill sumber, rujukan, fakta vs opini) sebagai pesan sistem. Combo harus dibuat di 9Router. Pemakaian token tercatat ke `runs.usage`.
+- [ ] **Penanganan rujukan:** model menulis [n] sesuai nomor sumber yang diberikan; kode memeriksa; bila ada nomor tidak sah atau paragraf faktual tanpa rujukan, model diminta memperbaiki **satu kali**; sisanya diselesaikan kode: nomor tidak sah dibuang, paragraf tanpa rujukan ditandai terbuka `_(tanpa rujukan)_` dan dihitung di ringkasan run (tidak dihapus atau disembunyikan). Nomor dinomori ulang menurut kemunculan pertama, dan daftar sumber hanya memuat yang dikutip (`research_sources.used = true`); bila tidak ada satu pun rujukan, daftar memuat semua bahan bacaan.
+- [ ] **Keamanan pengambilan halaman (SSRF):** gateway berjalan di host yang sama dengan Hermes, 9Router, Postgres, dan SearXNG, jadi URL dari hasil pencarian tidak boleh menjangkau layanan internal. Ditolak: skema selain http/https, kredensial di URL, `localhost`/`*.internal`, IP privat/loopback/link-local/CGNAT/metadata cloud (termasuk bentuk desimal/heksa dan IPv4-mapped IPv6), dan nama host yang di-DNS ke alamat privat (diperiksa saat koneksi, jadi DNS rebinding tidak lolos). Redirect diperiksa ulang tiap lompatan (maks. 5). Renderer browser memeriksa setiap sub-permintaan dengan aturan yang sama. Opsi `allowPrivateHosts` hanya ada sebagai parameter kode untuk tes dengan server palsu; tidak ada variabel lingkungan yang membukanya.
+- [ ] **Isi halaman diperlakukan sebagai data tidak tepercaya** (pembatas `<<<ISI HALAMAN … ISI HALAMAN>>>` dan peringatan di pesan sistem ringkasan). Itu mitigasi prompt injection, bukan jaminan; ringkasan bisa membawa instruksi ke tahap sintesis.
+- [ ] **Pengambilan halaman:** User-Agent `PersonalAIOS-Research/1.0` (menyebut dirinya), tanpa cookie, timeout 15 detik, maks. 2 MB (dipotong), gzip/br/deflate dan charset ditangani. **robots.txt belum dihormati** dan halaman berbayar/login tidak bisa dibaca; keduanya jatuh ke "terlalu pendek" atau error HTTP.
+- [ ] **Halaman JavaScript:** dirender hanya bila teks statis < 400 karakter dan halaman penuh skrip (atau `div#root/#app/#__next`). Memakai `playwright-core` (library saja) dengan browser yang sudah terpasang di `BROWSER_EXECUTABLE_PATH`; tanpa variabel itu halaman seperti ini dilewati (`butuh_javascript`). Diuji dengan Edge sungguhan. **Image Docker perlu Chromium** (mis. `apt-get install chromium` di bookworm arm64) dan sebagai pengguna non-root Chromium sering butuh `--no-sandbox` (belum diatur; ditambah bila perlu setelah dicoba di VPS).
+- [ ] **PDF** dibuat dengan `pdfkit` dari Markdown tanpa browser: font bawaan Helvetica, jadi karakter di luar Latin-1/WinAnsi (CJK, emoji) menjadi `?`; belum ada nomor halaman; tautan sumber bisa diklik. Ekspor `md`: `text/markdown; charset=utf-8`. Nama berkas `riset-<6 kata pertama>.md|pdf`. Ekspor sebelum job selesai: 409.
+- [ ] **`ResearchJob` tidak punya field error:** alasan gagal ada di `runs.error` (`GET /runs/:runId`: `search_empty`, `no_candidates`, `no_sources`, `research_timeout`, `llm_http`, `gateway_restarted`, dst.).
+- [ ] **Search language:** SearXNG dipanggil dengan bahasa bawaannya (`all`). Pertanyaan berbahasa Indonesia mungkin perlu `language=id` atau engine tertentu setelah dicoba di VPS.
+- [ ] **Dependensi baru:** `pg-boss` (antrean sesuai ARCHITECTURE.md), `@mozilla/readability` + `jsdom` (ekstraksi teks bersih), `pdfkit` (+ `@types/pdfkit`), `playwright-core`. `@types/jsdom` sengaja **tidak** dipakai karena memuat `lib="dom"` ke seluruh proyek dan merusak tipe Node (`fetch`, `ReadableStream`); gantinya `src/types/jsdom.d.ts` minimal.
+
+### Perbaikan di luar fitur yang ditemukan lewat tes riset
+
+- [ ] **Event store: penulisan bersamaan bertabrakan.** `append` menghitung seq dari `max(seq)+1` dengan asumsi satu penulis per run; pembaca halaman paralel membuat tabrakan primary key dan job gagal `internal_error`. Sekarang `append` per run diantrekan (`runs/store.ts`), dengan tes 50 penulisan paralel. Ini juga melindungi run chat.
+- [ ] **Renderer** tidak memeriksa `AbortSignal` yang sudah batal sebelum/sesudah tiap tahap (render lolos walau dibatalkan); sekarang memeriksa.
+- [ ] **Stabilitas tes:** (1) rate limit umum di tes dinaikkan ke 1.000.000 karena helper polling tes (tiap 20 ms) melewati 1.000/menit dan menghasilkan 429 yang tampak seperti kegagalan acak; (2) pool database tes dikecilkan (4 koneksi) dan batas koneksinya 30 detik (default produksi 2 detik tetap), karena di Windows tiap koneksi adalah proses Postgres baru dan mesin yang sibuk memicu `Connection terminated due to connection timeout`; (3) `testTimeout` gateway 90 detik; (4) batas tunggu internal helper tes dilonggarkan (hanya terpakai saat tes gagal). Pada sesi ini CPU laptop sempat sangat lambat (loop sederhana 10× lebih lama dari normal) sehingga ini muncul; suite penuh kini selesai ±1 menit.
+
+### Keterbatasan yang diketahui
+
+- [ ] Tidak ada batas jumlah job yang mengantre; `POST /research` yang diulang-ulang menumpuk antrean (hanya pemilik). Satu job sekaligus berarti riset mendalam (hingga 25 menit) menahan yang lain.
+- [ ] Hasil pencarian hanya `general`; tidak ada kategori berita/ilmiah atau filter tanggal. Tanggal terbit hanya bila halaman menyebutnya (meta, Readability).
+- [ ] Ringkasan per sumber memakai maksimal 12.000 karakter pertama halaman.
+- [ ] Rencana tidak bisa diedit pemilik sebelum job berjalan (PRD: "rencana riset tampil"; saat ini hanya ditampilkan lewat event dan `plan`).
+
+## Temuan Fase 10 (jadwal dan push)
+
+- **Perubahan kontrak**: `ScheduleRunStatus` bertambah `missed` (kemunculan yang tidak dijalankan karena server mati atau run sebelumnya masih berjalan); `Schedule.conversationId` (percakapan khusus tempat hasil tiap run disimpan); `runScheduleNow` bisa 409, `parseSchedule` bisa 502. Klien perlu menangani status `missed`.
+- **Desain**: cron memakai `boss.schedule()` bawaan pg-boss (zona waktu per jadwal, `key` = id jadwal, `missed: 'skip'`), antrean `schedule.run` berkebijakan `stately` + `singletonKey` = id jadwal. Pagar keras ada di database: indeks unik parsial `schedule_runs_one_running`. pg-boss membuang kemunculan yang terlewat tanpa jejak, jadi gateway mencatatnya sendiri lewat `schedules.next_run_at` (saat start dan tiap 5 menit): maksimal 20 baris `missed` terbaru per pemulihan, sisanya hanya masuk log.
+- **Granularitas**: cron pg-boss per menit; "setiap 5 menit" berarti kelipatan 5 menit pada jam dinding, bukan 5 menit sejak dibuat.
+- **Percakapan jadwal** muncul di `GET /conversations` (surface `android`) dan sesi Hermes-nya menumpuk antar-run, sehingga konteks run lama ikut. Belum ada opsi "sesi baru tiap run" atau filter di daftar percakapan.
+- **Target research** selalu kedalaman `standard`; role coding (engine omp) tidak bisa dijadwalkan karena butuh worker Windows (ditolak 400 `role_not_schedulable`).
+- **Push**: hanya judul dan ID (`type`, `scheduleId`, `scheduleRunId`, `runId`, `conversationId`/`researchId`, `status`); isi diambil aplikasi setelah dibuka. Token yang dijawab `UNREGISTERED` dihapus dari perangkat dan dicatat di audit. Riset yang dipicu jadwal tidak mengirim push kedua.
+- **Belum terverifikasi di perangkat nyata**: pengiriman FCM ke HP tidak bisa diuji di mesin ini (tidak ada kredensial Firebase). Diuji terhadap server OAuth/FCM palsu (token JWT RS256, payload, retry, token mati). Verifikasi nyata: taruh service account di `secrets/`, isi `FCM_SERVICE_ACCOUNT_FILE`, login dari aplikasi Android dengan `pushToken`, lalu jalankan `pnpm --filter gateway push:test`.
+- **Parser**: 15 kalimat contoh diuji dengan model palsu (menguji validasi, penjelasan, 3 waktu berikutnya). Kualitas model sungguhan belum terukur; set `PARSE_LIVE_URL`/`PARSE_LIVE_KEY`/`PARSE_LIVE_MODEL` untuk menjalankan kalimat yang sama ke 9Router.
+- Ide: ubah/ulang jadwal sekali jalan ("besok jam 7"), jam tenang (quiet hours) untuk push, tombol "jalankan terlewat", dan pembersihan `schedule_runs` lama.
+
+## Temuan Fase 11 (kerangka Android)
+
+- **Belum pernah dikompilasi.** Mesin pengembangan tidak punya JDK, Android SDK, atau Gradle, jadi seluruh proyek `apps/android` ditulis tanpa build. Langkah pertama di mesin yang punya Android Studio: `./gradlew ktlintFormat` lalu `./gradlew check`, dan perbaiki error kompilasi/versi yang muncul. Versi pustaka di `infra/VERSIONS.md` dipilih dari pengetahuan sampai pertengahan 2026 dan belum dicek terhadap rilis terbaru; targetSdk 36 perlu dinaikkan bila ada yang lebih baru dan stabil.
+- **Detekt dan ktlint** diaktifkan sesuai CODING_STANDARDS tetapi konfigurasinya belum diuji: aturan `import-ordering` dimatikan (dirapikan oleh `ktlintFormat`), aturan detekt yang berisik dilonggarkan di `config/detekt.yml`. Kotlin ditahan di 2.0.21 supaya cocok dengan detekt 1.23.8; naikkan bersama detekt 2.x.
+- **Model API tulisan tangan** (`data/api/Dto.kt`), bukan hasil generate dari `openapi.json`: untuk Fase 11 hanya Auth/Device/Problem. Mengganti ke generator (mis. openapi-generator) layak dipertimbangkan sebelum model chat/riset/jadwal ditambah; sementara itu tiap perubahan kontrak harus diikuti di sini.
+- **Push token belum dikirim.** Login belum membawa `pushToken` karena Firebase Messaging belum dipasang (`google-services.json` tidak boleh di-commit). Fase yang memasang FCM memanggil `POST /devices/:id/push-token`.
+- **Penyimpanan token**: DataStore + AES-256-GCM (Tink) dengan keyset dibungkus Android Keystore, bukan `EncryptedSharedPreferences` (deprecated). Bila Keystore kehilangan kunci (mis. setelah restore), sesi dianggap kosong dan pengguna login ulang. `allowBackup=false` dan aturan ekstraksi data mengecualikan semuanya dari cadangan.
+- **Refresh token**: satu mutex untuk semua request; refresh ditolak (400/401) = sesi diakhiri dengan pesan "Sesi berakhir"; 5xx/jaringan saat refresh **tidak** menghapus sesi. Alasan mutex: gateway menganggap pemakaian ulang refresh token sebagai pencurian dan mencabut perangkat.
+- **HTTP hanya untuk build debug ke localhost/10.0.2.2** (network security config debug); release hanya HTTPS.
+- **Tab Chat/Riset/Jadwal masih state kosong.** Kerangka `StateHost` (memuat, kosong, error, offline) sudah ada dan dipamerkan di katalog debug; fase berikutnya mengisi datanya. Tes Compose UI (androidTest) belum ada, hanya tes unit JVM.
+- **Ikon**: vektor gaya Lucide ditulis tangan (garis 1.5) di `res/drawable`, bukan paket Lucide resmi; ikon Pengaturan memakai "sliders-horizontal". Ikon peluncur adalah placeholder.
+- **Room** terpasang dengan satu tabel `cache_entry` generik agar KSP/skema berjalan; tabel percakapan/pesan menyusul di Fase 12.
+- Ide: tombol "Tampilkan" password memakai teks (bukan ikon mata) demi aksesibilitas; bisa diganti ikon + label a11y.
+
+## Temuan Fase 12 (chat Android)
+
+- **Belum dikompilasi atau dijalankan** (sama seperti Fase 11: tidak ada JDK/Android SDK di mesin pengembangan). Tes JVM ditulis tetapi belum pernah berjalan; jalankan `./gradlew ktlintFormat` lalu `./gradlew check` dan perbaiki yang muncul. Klaim "mulus di HP kelas menengah" dan "tidak ada pesan hilang saat putus jaringan" **belum terbukti di perangkat**; yang ada hanya tes logika dengan soket palsu dan jam virtual.
+- **Lampiran ditunda** (keputusan pengguna): `POST /files` ada di kontrak tetapi tidak ada di gateway, dan belum jelas bagaimana `file` part sampai ke Hermes. Android tidak punya tombol lampiran sama sekali (tidak ada UI mati). Fase tersendiri: endpoint multipart + penyimpanan + batas 25 MB + validasi mime + pemakaian di run, baru UI-nya.
+- **"Hapus" = arsip di server**: API hanya punya `DELETE /conversations/:id` yang mengarsipkan. Menu Hapus menghapus dari cache perangkat dan mengarsipkan di server (dialog menjelaskannya); percakapan bisa muncul lagi di filter Arsip setelah penyegaran dari perangkat lain.
+- **Edit pesan terakhir** tidak punya endpoint: Edit mengisi composer dengan teks lama dan mengirimnya sebagai pesan baru; riwayat lama tetap ada. Kirim ulang = pesan baru berisi teks yang sama.
+- **Reroute hanya untuk jawaban terakhir** (server menolak yang lain dengan 409), jadi chip role hanya bisa diketuk di sana. Pemilih role menyembunyikan role coding (engine omp butuh worker Windows).
+- **Streaming**: klien selalu berlangganan `run:<id>` dari `lastSeq 0` lalu mendedupe berdasarkan seq (hanya channel `run:*`; `user` dan `conversation:*` tidak direplay dan seq-nya bisa kembali ke awal setelah server restart). Tiap 15 detik status run dipoll sebagai jaring pengaman bila event penutup tidak sampai. Setelah run selesai, pesan diambil ulang dari server (sumber kebenaran) sebelum tampilan live dilepas.
+- **Reconnect**: backoff 1, 2, 4, 8, 16, 30 detik (+0–20% jitter di produksi), reset setelah tersambung, close 4401 atau handshake 401 memicu refresh token lalu sambung tanpa jeda. Koneksi dibiarkan hidup 30 detik setelah pelanggan terakhir pergi. Ping OkHttp tiap 20 detik mendeteksi sambungan setengah mati.
+- **Cache Room** (DB versi 2): percakapan dan pesan; skema lama dibuang (`fallbackToDestructiveMigration`) karena hanya cache. Cache dihapus saat login dan logout. Daftar percakapan aktif tidak menghapus baris lokal yang diarsipkan dari perangkat lain sampai filter Arsip disegarkan. Belum ada tes DAO (butuh instrumentasi).
+- **Performa**: daftar pesan memakai `reverseLayout` dengan key stabil, item `@Immutable`, Markdown diurai di luar thread utama untuk jawaban panjang. Penguraian ulang tiap delta masih O(panjang jawaban); bila terasa berat di perangkat nyata, throttle delta ke ±50 ms di ViewModel atau urai hanya blok terakhir.
+- **Markdown buatan sendiri** (tanpa dependensi baru): judul, paragraf, daftar bersarang, kutipan, kode berpagar (tombol salin), tabel, garis, tebal/miring/coret/kode/tautan http(s)/mailto. Belum ada: gambar, HTML mentah, daftar tugas, catatan kaki, penekanan bersarang yang rumit (`*a **b** c*`).
+- **ViewModel per sesi**: `ChatViewModel` dikunci dengan ID perangkat agar percakapan akun sebelumnya tidak terbawa setelah logout/login; instance lama tinggal di memori sampai Activity dihancurkan.
+- Belum ada: suara, pencarian di dalam pesan, ekspor, pemilih model per role (default "Otomatis" mengikuti role), tes Compose UI.
+
+## Temuan Fase 13 (riset Android)
+
+- **Belum dikompilasi atau dijalankan** (tanpa JDK/Android SDK, sama seperti Fase 11–12). Tes JVM ditulis tetapi belum pernah berjalan. Share sheet, FileProvider, dan membuka tautan sumber hanya terverifikasi di tingkat kode; "aplikasi ditutup lalu laporan terbuka" butuh uji di perangkat, dan notifikasinya menunggu Fase 14.
+- **Nomor `[n]` mengacu ke daftar di laporan, bukan ke array `sources` API.** Server menomori ulang rujukan menurut kemunculan dan menaruh `## Daftar sumber` di akhir Markdown. Klien mengurai bagian itu (`ReportParser`) untuk membuat `[n]` bisa diketuk dan untuk daftar sumber di bawah laporan; hanya URL http/https yang dipakai. Bila format bagian itu berubah di gateway, parser ikut berubah (ada tes). Target ketuk `[n]` kecil (teks inline); pertimbangkan sheet pratinjau sumber.
+- **Jumlah sumber di daftar** dihitung dari laporan, jadi hanya tampil untuk job selesai; job berjalan menampilkan jumlah live di layar progres. `GET /research` mengirim `reportMd` utuh untuk setiap job (30 per halaman); sebaiknya kontrak menambah `sourceCount` dan menghilangkan `reportMd` dari daftar. Belum dilakukan karena menyentuh gateway.
+- **Progres**: layar berlangganan `run:<runId>` dari seq 0, jadi membuka ulang di tengah riset memutar ulang tahap dan sumber; polling `GET /research/:id` tiap 5 detik menjadi jaring pengaman dan penjemput rencana sub-pertanyaan (tersimpan di job, diambil saat tahap berganti). Daftar menyegarkan diri tiap 10 detik selama ada job berjalan dan saat `research.completed` masuk di channel `user`. Batang kemajuan = (indeks tahap + kemajuan tahap) / 4 dan hanya perkiraan.
+- **Lanjutkan di chat** membuat percakapan baru ("Lanjutan: …") dan mengirim satu pesan berisi laporan utuh plus instruksi merangkum, karena API tidak punya cara menyisipkan konteks tanpa menjalankan run. Konsekuensinya satu panggilan model dan satu blok pesan pengguna yang panjang. Alternatif: endpoint konteks/sistem di gateway.
+- **Ekspor**: laporan diunduh dari `/research/:id/export?format=`, ditulis ke `cache/exports` (berkas lama dihapus tiap ekspor), dibagikan lewat FileProvider dengan izin baca sementara. Nama berkas dari header server dibersihkan. PDF dibuat server (pdfkit), bukan di perangkat.
+- **Tanpa cache offline untuk riset**: daftar dan laporan butuh jaringan (Room hanya menyimpan chat). Menambah tabel riset ke cache sekaligus mengatasi payload daftar di atas.
+- Belum ada: pembatalan dari daftar, hapus job (tidak ada endpoint), riset ulang dengan pertanyaan yang sama sebagai satu ketukan (tombol "Riset ulang" hanya membuka form kosong), filter status.
+
+## Verifikasi Android pertama (Fase 11–13)
+
+- **Status**: `./gradlew check` lulus di Android Studio (Gradle 8.13, JBR 21): ktlint, detekt, kompilasi debug dan release, lint Android, dan 110 tes unit. Catatan "belum dikompilasi" di temuan Fase 11–13 berlaku sampai titik ini; yang **masih belum terbukti** adalah perilaku di perangkat/emulator (login ke server nyata, streaming, reconnect, share sheet, tampilan terang/gelap) dan tes Compose UI/DAO (belum ada).
+- **Yang diperbaiki saat verifikasi pertama**: `syncUiTokens` memakai direktori sebagai sumber (bukan task) dan semua task ktlint/detekt/ksp/compile/lint bergantung padanya; `jvmToolchain(17)` dihapus (JBR bawaan Android Studio cukup, `jvmTarget` tetap 17); `distinctUntilChanged` pada `StateFlow` (error kompilasi); nama tes JVM tanpa `:`; ambang detekt dilonggarkan untuk parser/mesin status (aturan tetap aktif; `MatchingDeclarationName` dimatikan).
+- **Bug nyata yang ketahuan tes**: (1) `RealtimeClient` menyala ulang tanpa jeda saat tidak ada sesi (token null) selama masih ada pelanggan, sehingga memakan CPU; (2) layar chat bisa menampilkan error layar penuh padahal cache ada bila jaringan gagal cepat, karena cache dibaca dari state yang belum terisi.
+- **Pelajaran tes coroutine**: `advanceUntilIdle()` (baik `TestScope` maupun scheduler) berhenti saat hanya tersisa tugas *background*, dan `runTest` ikut menunggu tugas foreground. Timer di `backgroundScope` harus dimajukan dengan `advanceTimeBy` + `runCurrent`; `viewModelScope` (dispatcher Main = foreground) dengan loop polling abadi harus dibatalkan di akhir tes (`viewModelScope.cancel()`), kalau tidak `runTest` macet. Tes kelas ViewModel/Realtime memakai `Timeout` 30 detik agar tes yang berputar gagal dengan nama jelas.
+- `testLogging` penuh untuk tes yang gagal diaktifkan di `app/build.gradle.kts`.
+- Peringatan kompilasi tersisa: `LocalClipboardManager` deprecated (ganti `LocalClipboard`, API suspend).
+
+## Temuan Fase 14 (jadwal, notifikasi, share, suara di Android)
+
+- **Status verifikasi**: kode ditulis setelah `./gradlew check` pertama lulus, tetapi Fase 14 sendiri belum dijalankan. Tes JVM mencakup tautan notifikasi/share, pemetaan kanal, pendaftaran token, format waktu, dan ViewModel jadwal. **Belum terbukti di perangkat** (butuh server di VPS dan, untuk push, `google-services.json` serta service account): notifikasi sampai ke HP, ketukan membuka layar yang tepat, share intent, dan SpeechRecognizer. Keempat fitur itu perlu uji manual di perangkat nyata sesuai syarat selesai fase.
+- **Perubahan gateway**: payload FCM kini membawa `android.notification.channel_id` (`riset`, `jadwal`, `umum`, dipetakan dari `data.type`) supaya notifikasi yang ditampilkan sistem saat aplikasi tertutup masuk kanal yang benar. Isi tetap hanya judul dan ID.
+- **Firebase opsional**: plugin google-services hanya diterapkan bila `app/google-services.json` ada; tanpa itu `FirebaseApp` tidak terinisialisasi, token FCM `null`, banner izin notifikasi tidak muncul, dan login tidak mengirim `pushToken`. Versi BOM 33.7.0 dan plugin 4.4.2 belum dicek ke rilis terbaru.
+- **Token**: dikirim saat login (`pushToken` di request) dan disinkronkan tiap aplikasi dibuka dalam keadaan login; kunci pendaftaran adalah "perangkat|token". `onNewToken` mendaftar ulang. Token yang dijawab UNREGISTERED oleh FCM dihapus server; aplikasi baru mendaftar lagi saat token berganti atau login ulang.
+- **Izin notifikasi (Android 13+)**: banner satu kalimat non-modal, sekali saja ("Nanti" juga menandainya sudah ditampilkan). Bila ditolak, pengguna harus mengaktifkannya di pengaturan sistem.
+- **Share intent**: `text/plain` saja (teks atau URL); judul halaman ditambahkan di baris pertama bila belum ada di teks; maksimal 20.000 karakter. Membuka chat baru dengan isian terisi, tidak pernah terkirim otomatis. Gambar/berkas menunggu fitur lampiran.
+- **Suara**: SpeechRecognizer bawaan Android (bahasa id-ID), tahan untuk bicara, hasil sementara mengisi composer dan tetap bisa diedit; ada aksi klik semantik untuk TalkBack. Butuh layanan pengenalan suara di perangkat (biasanya Google); mode luring bergantung paket bahasa. Endpoint STT 9Router tidak dipakai (belum diverifikasi ada).
+- **Jadwal**: tidak ada endpoint ambil-satu, jadi detail mencari dari daftar; hasil terakhir diambil per jadwal (1 panggilan `/runs?limit=1` per jadwal, paralel). Waktu jadwal tidak bisa diubah dari detail (hanya nama, perintah, aktif/nonaktif); mengubah waktu = hapus lalu buat lagi dengan kalimat baru. Zona waktu selalu `Asia/Jakarta` saat membuat.
+- Ketukan notifikasi jadwal membuka percakapan hasil (bila ada), selain itu detail jadwal; notifikasi uji tidak membuka apa-apa.
+
+## Temuan Fase 15 (scaffold desktop)
+
+- **Terverifikasi di mesin pengembangan**: typecheck, build Vite, lint, dan 68 tes Vitest (auth, refresh satu-pintu, `RealtimeClient` dengan jam virtual, deteksi bangun dari tidur, store UI, shortcut, layar login, kerangka shell). **Belum terverifikasi**: sisi Rust dan cangkang Tauri (mesin ini tidak punya MSVC Build Tools, jadi `cargo`/`tauri dev` tidak bisa dijalankan), penyimpanan di Windows Credential Manager, handshake WebSocket lewat `tauri-plugin-websocket` dengan header Authorization, dan kriteria "PC tidur 1 jam lalu tersambung kembali dalam 10 detik" di perangkat nyata. Itu perlu uji manual setelah prasyarat di `apps/desktop/README.md` terpasang.
+- **HTTP/WebSocket lewat plugin Tauri** (bukan fetch/WebSocket webview): gateway menutup CORS (SECURITY_OPS) dan hanya mengautentikasi WebSocket lewat header saat handshake, yang tidak bisa dipasang webview. Gateway tidak diubah. Izin `http:default` di `capabilities/default.json` dibatasi ke `https://*` dan loopback; WebSocket memakai `websocket:default` (plugin tidak punya scope URL).
+- **Penyimpanan token**: satu entri JSON di Credential Manager lewat crate `keyring` 3 (backend `windows-native`), kunci dibatasi `[a-z0-9_-]{1,32}`. Batas entri Windows 2560 byte; access JWT + refresh token saat ini jauh di bawahnya, tetapi `SessionVault` menolak menyimpan bila lebih. Di peramban biasa (`vite dev`) ada `BrowserDevSecretStore` berbasis localStorage khusus pengembangan UI.
+- **Reconnect dan bangun dari tidur**: backoff 1 sampai 30 detik, replay `lastSeq` untuk `run:*`, ping heartbeat 20 detik (jawaban harus datang dalam 10 detik), dan `probe()` setelah event `visibilitychange`, `online`, atau lompatan jam >15 detik (ping, tanpa jawaban 4 detik = putus dan sambung ulang). Token juga diperbarui saat bangun. Bug yang ketahuan tes: `onOpen` dari transport Tauri datang sebelum `open()` mengembalikan tautan soket sehingga frame `subscribe` pertama terbuang; sudah diperbaiki.
+- **Login**: guard kirim ganda sekarang sinkron (ref), bukan state, karena dua event submit beruntun bisa lolos sebelum render ulang.
+- **Layar isi** (Chat, Project, Kanban, Jadwal, Riset) masih placeholder dengan kerangka lima keadaan (`StateView`); sidebar juga kosong. Isinya datang di Fase 16 dan seterusnya. Palet perintah kosong sesuai prompt.
+- **Router** memakai hash history dan rute kode (bukan file-based); rute \`/dev/catalog\` hanya ada saat \`import.meta.env.DEV\`.
+- **Dependensi baru** (tercantum di prompt kecuali satu): React 19, Vite 8, Tailwind 4 (+ \`@tailwindcss/vite\`), TanStack Router/Query, Radix (dialog, tabs, toast, tooltip), Zustand, lucide-react, \`@tauri-apps/*\`. Tambahan di luar daftar: \`@testing-library/jest-dom\` (matcher untuk tes komponen). Ukuran bundel JS ±575 kB (belum dipecah; aplikasi lokal).
+- **Ikon aplikasi** dibuat dari skrip sederhana (kotak aksen dengan tanda terminal) dan dihasilkan oleh \`tauri icon\`; placeholder sampai identitas visual final ada. Versi crate Rust (\`tauri\` 2, plugin 2, \`keyring\` 3) belum dikunci oleh \`Cargo.lock\` karena belum pernah di-build di sini: commit \`Cargo.lock\` setelah build pertama.
+- **Belum ada**: pembaruan otomatis aplikasi, tanda tangan kode installer, memulai otomatis saat login Windows, ikon tray, dan penyimpanan jendela (ukuran/posisi).
+
+## Ide di luar scope
+
+(kosong)

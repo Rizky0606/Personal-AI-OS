@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Gaya Lucide: garis 1.5, ujung bulat. Diwarnai lewat tint di Icon. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+    <path android:fillColor="#00000000" android:pathData="M21,4h-7" android:strokeColor="#FF000000" android:strokeLineCap="round" android:strokeLineJoin="round" android:strokeWidth="1.5" />
+    <path android:fillColor="#00000000" android:pathData="M10,4H3" android:strokeColor="#FF000000" android:strokeLineCap="round" android:strokeLineJoin="round" android:strokeWidth="1.5" />
+    <path android:fillColor="#00000000" android:pathData="M21,12h-9" android:strokeColor="#FF000000" android:strokeLineCap="round" android:strokeLineJoin="round" android:strokeWidth="1.5" />
+    <path android:fillColor="#00000000" android:pathData="M8,12H3" android:strokeColor="#FF000000" android:strokeLineCap="round" android:strokeLineJoin="round" android:strokeWidth="1.5" />
+    <path android:fillColor="#00000000" android:pathData="M21,20h-5" android:strokeColor="#FF000000" android:strokeLineCap="round" android:strokeLineJoin="round" android:strokeWidth="1.5" />
+    <path android:fillColor="#00000000" android:pathData="M12,20H3" android:strokeColor="#FF000000" android:strokeLineCap="round" android:strokeLineJoin="round" android:strokeWidth="1.5" />
+    <path android:fillColor="#00000000" android:pathData="M14,2v4" android:strokeColor="#FF000000" android:strokeLineCap="round" android:strokeLineJoin="round" android:strokeWidth="1.5" />
+    <path android:fillColor="#00000000" android:pathData="M8,10v4" android:strokeColor="#FF000000" android:strokeLineCap="round" android:strokeLineJoin="round" android:strokeWidth="1.5" />
+    <path android:fillColor="#00000000" android:pathData="M16,18v4" android:strokeColor="#FF000000" android:strokeLineCap="round" android:strokeLineJoin="round" android:strokeWidth="1.5" />
+</vector>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Hanya untuk window sebelum Compose tampil (mencegah kilatan warna). Nilainya harus sama dengan
+    Tokens.lightColors.bg / Tokens.darkColors.bg; TokensSyncTest menjaga kesamaannya.
+-->
+<resources>
+    <color name="window_background">#FFFAFAF9</color>
+</resources>

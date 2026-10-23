@@ -1,0 +1,82 @@
+{"id":"gen-01","message":"Jelaskan apa itu inflasi dengan bahasa sederhana","surface":"android","expect":"general"}
+{"id":"gen-02","message":"Rekomendasi film sci-fi yang bagus untuk akhir pekan ini","surface":"android","expect":"general"}
+{"id":"gen-03","message":"Bantu aku membandingkan kopi arabika dan robusta dari rasanya","surface":"android","expect":"general"}
+{"id":"gen-04","message":"Buatkan daftar persiapan pindahan rumah supaya tidak ada yang terlewat","surface":"android","expect":"general"}
+{"id":"gen-05","message":"Berapa lama waktu terbaik merebus telur supaya matang setengah?","surface":"android","expect":"general"}
+{"id":"gen-06","message":"Terjemahkan 'terima kasih banyak atas bantuannya' ke bahasa Jepang","surface":"windows","expect":"general","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"gen-07","message":"Kasih tips supaya tidur lebih nyenyak","surface":"android","expect":"general"}
+{"id":"gen-08","message":"oke lanjut","surface":"android","expect":"general","previousRole":"general","tags":["lanjutan"]}
+{"id":"gen-09","message":"Hai","surface":"android","expect":"general","tags":["ambigu"]}
+{"id":"gen-10","message":"Aku bingung mau mulai dari mana","surface":"android","expect":"general","tags":["ambigu"]}
+{"id":"gen-11","message":"Tolong benerin tombol login yang error di aplikasiku","surface":"android","expect":"general","tags":["android-tanpa-project"]}
+{"id":"gen-12","message":"Apa kabar? Lagi ngapain?","surface":"windows","expect":"general"}
+{"id":"gen-13","message":"Kenapa kode Python-ku error IndexError di baris 5?","surface":"android","expect":"general","tags":["android-tanpa-project"]}
+{"id":"gen-14","message":"tolong bantu","surface":"windows","expect":"general","tags":["ambigu"]}
+{"id":"gen-15","message":"Cek ini dong","surface":"windows","expect":"general","tags":["ambigu"]}
+{"id":"gen-16","message":"Apa pendapatmu?","surface":"android","expect":"general","tags":["ambigu"]}
+{"id":"res-01","message":"Cari tahu perbandingan harga laptop gaming di bawah 15 juta yang terbaru beserta sumbernya","surface":"android","expect":"researcher"}
+{"id":"res-02","message":"Riset dampak puasa intermiten terhadap kolesterol, cantumkan jurnalnya","surface":"android","expect":"researcher"}
+{"id":"res-03","message":"Apa saja perubahan terbaru aturan pajak untuk freelancer di Indonesia? Sertakan rujukan resminya","surface":"windows","expect":"researcher","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"res-04","message":"Bandingkan Postgres, MySQL, dan SQLite untuk aplikasi pribadi, lengkap dengan referensi","surface":"android","expect":"researcher"}
+{"id":"res-05","message":"Berapa pangsa pasar mobil listrik di Asia Tenggara tahun lalu? Sebutkan sumber datanya","surface":"android","expect":"researcher"}
+{"id":"res-06","message":"Telusuri kontroversi suplemen kreatin dan rangkum temuan ilmiahnya","surface":"android","expect":"researcher"}
+{"id":"res-07","message":"Kumpulkan data jumlah penduduk kota-kota besar di Jawa dari BPS","surface":"android","expect":"researcher"}
+{"id":"res-08","message":"Siapa saja kompetitor utama aplikasi catatan seperti Notion dan apa fitur terbarunya?","surface":"windows","expect":"researcher","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"res-09","message":"tambahkan sumber dari tahun 2025 juga","surface":"android","expect":"researcher","previousRole":"researcher","tags":["lanjutan"]}
+{"id":"res-10","message":"Rangkum dua pandangan ahli soal kerja jarak jauh versus di kantor, dengan rujukan","surface":"android","expect":"researcher"}
+{"id":"res-11","message":"Verifikasi klaim bahwa air lemon hangat menurunkan berat badan, cari buktinya","surface":"android","expect":"researcher"}
+{"id":"wri-01","message":"Buatkan script TikTok 30 detik tentang tips hemat uang bulanan","surface":"android","expect":"writer"}
+{"id":"wri-02","message":"Tulis caption LinkedIn untuk pengumuman aku pindah kerja","surface":"android","expect":"writer"}
+{"id":"wri-03","message":"Draft email follow up ke klien yang belum membayar invoice, nadanya sopan tapi tegas","surface":"android","expect":"writer"}
+{"id":"wri-04","message":"Beri 5 ide judul video YouTube tentang belajar coding untuk pemula","surface":"android","expect":"writer"}
+{"id":"wri-05","message":"Rapikan paragraf ini biar enak dibaca: kemarin aku ke pasar beli banyak sayur tapi lupa bawa dompet","surface":"android","expect":"writer"}
+{"id":"wri-06","message":"Tulis pidato singkat 2 menit untuk acara perpisahan kantor","surface":"windows","expect":"writer","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"wri-07","message":"Ubah teks ini jadi lebih santai untuk Instagram story","surface":"android","expect":"writer"}
+{"id":"wri-08","message":"Buatkan naskah pembuka podcast tentang kebiasaan membaca","surface":"android","expect":"writer"}
+{"id":"wri-09","message":"lebih santai lagi bahasanya","surface":"android","expect":"writer","previousRole":"writer","tags":["lanjutan"]}
+{"id":"wri-10","message":"Bikin bio Instagram untuk fotografer lepas, maksimal 150 karakter","surface":"android","expect":"writer"}
+{"id":"wri-11","message":"Tuliskan surat lamaran kerja untuk posisi admin","surface":"android","expect":"writer"}
+{"id":"fro-01","message":"Tombol simpan di halaman profil kepotong di layar HP, tolong rapikan CSS-nya","surface":"windows","expect":"frontend","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"fro-02","message":"Tambahkan skeleton loading di daftar produk","surface":"windows","expect":"frontend","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"fro-03","message":"Dropdown filter tidak bisa dipakai dengan keyboard, perbaiki aksesibilitasnya","surface":"windows","expect":"frontend","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"fro-04","message":"Ubah ukuran font judul di beranda dan atur ulang jarak antar kartu","surface":"windows","expect":"frontend","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"fro-05","message":"Buat komponen modal konfirmasi hapus dengan fokus yang benar","surface":"windows","expect":"frontend","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"fro-06","message":"Animasi sidebar terasa patah-patah, bisa dihaluskan?","surface":"windows","expect":"frontend","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"fro-07","message":"Form pendaftaran perlu validasi di sisi klien dengan pesan error di bawah input","surface":"windows","expect":"frontend","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"fro-08","message":"ubah warnanya","surface":"windows","expect":"frontend","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"},"previousRole":"frontend","tags":["lanjutan"]}
+{"id":"fro-09","message":"Halaman keranjang kosong terlihat hambar, desain ulang empty state-nya","surface":"windows","expect":"frontend","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"fro-10","message":"Pindahkan state keranjang dari props drilling ke context di komponen React","surface":"windows","expect":"frontend","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"fro-11","message":"Tabel pesanan lambat saat scroll 5000 baris, pakai virtualisasi","surface":"windows","expect":"frontend","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"bac-01","message":"Buat endpoint POST /invoices yang menerima daftar item dan menghitung total","surface":"windows","expect":"backend","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"bac-02","message":"Tambahkan kolom discount_code ke tabel orders lewat migrasi","surface":"windows","expect":"backend","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"bac-03","message":"Pasang rate limit 10 request per menit di endpoint reset password","surface":"windows","expect":"backend","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"bac-04","message":"Implementasikan verifikasi tanda tangan webhook pembayaran","surface":"windows","expect":"backend","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"bac-05","message":"Pindahkan logika perhitungan ongkir ke service terpisah dan tambahkan tes","surface":"windows","expect":"backend","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"bac-06","message":"Buat job terjadwal yang membersihkan sesi kedaluwarsa tiap malam","surface":"windows","expect":"backend","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"bac-07","message":"API daftar produk perlu pagination berbasis kursor","surface":"windows","expect":"backend","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"bac-08","message":"Tambahkan autentikasi JWT dengan rotasi refresh token","surface":"windows","expect":"backend","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"bac-09","message":"Query laporan penjualan perlu index, tambahkan dan buat migrasinya","surface":"windows","expect":"backend","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"bac-10","message":"lanjut","surface":"windows","expect":"backend","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"},"previousRole":"backend","tags":["lanjutan"]}
+{"id":"bac-11","message":"Integrasikan pengiriman email lewat SMTP untuk notifikasi pesanan","surface":"windows","expect":"backend","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"dbg-01","message":"Muncul TypeError: Cannot read properties of undefined (reading 'map') saat halaman produk dibuka","surface":"windows","expect":"debugger","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"dbg-02","message":"Kenapa tes checkout kadang lolos kadang gagal di CI?","surface":"windows","expect":"debugger","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"dbg-03","message":"Aplikasi memory leak setelah dipakai satu jam, cari penyebabnya","surface":"windows","expect":"debugger","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"dbg-04","message":"Request ke /orders kadang 500 tapi lognya tidak jelas, tolong telusuri","surface":"windows","expect":"debugger","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"dbg-05","message":"Total harga keranjang selisih 1 rupiah di beberapa pesanan, kenapa bisa begitu?","surface":"windows","expect":"debugger","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"dbg-06","message":"Build gagal: Cannot find module './utils' padahal filenya ada","surface":"windows","expect":"debugger","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"dbg-07","message":"Setelah update React, form login tidak bisa disubmit dan ada error di console","surface":"windows","expect":"debugger","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"dbg-08","message":"UnhandledPromiseRejection muncul di auth.ts baris 42 tiap user logout, tolong lacak","surface":"windows","expect":"debugger","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"dbg-09","message":"ulangi lagi, masih error juga","surface":"windows","expect":"debugger","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"},"previousRole":"debugger","tags":["lanjutan"]}
+{"id":"dbg-10","message":"Pesanan tersimpan dobel kalau tombol bayar diklik dua kali, kenapa bisa?","surface":"windows","expect":"debugger","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"dbg-11","message":"Kenapa setelah deploy kemarin CPU server naik sampai 90 persen?","surface":"windows","expect":"debugger","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"rev-01","message":"Review perubahan di branch feat/payment sebelum aku merge","surface":"windows","expect":"reviewer","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"rev-02","message":"Tolong periksa apakah kode upload file ini aman dari path traversal","surface":"windows","expect":"reviewer","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"rev-03","message":"Cek diff terakhir, ada yang keluar dari scope tugas tidak?","surface":"windows","expect":"reviewer","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"rev-04","message":"Nilai kualitas tes di pull request ini","surface":"windows","expect":"reviewer","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"rev-05","message":"Audit keamanan modul autentikasi, laporkan temuan menurut tingkat risikonya","surface":"windows","expect":"reviewer","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"rev-06","message":"Apakah perubahan ini membocorkan token di log? Tolong review","surface":"windows","expect":"reviewer","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"rev-07","message":"Lihat diff ini dan beri catatan sebelum dikirim ke tim","surface":"windows","expect":"reviewer","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"rev-08","message":"oke terima kasih","surface":"windows","expect":"reviewer","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"},"previousRole":"reviewer","tags":["lanjutan"]}
+{"id":"rev-09","message":"Review dependensi baru yang kutambahkan di package.json, aman atau tidak?","surface":"windows","expect":"reviewer","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"rev-10","message":"Komentari kualitas kode di commit terakhir saja, jangan diubah","surface":"windows","expect":"reviewer","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"rev-11","message":"Periksa apakah konfigurasi CORS di PR ini terlalu longgar","surface":"windows","expect":"reviewer","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}

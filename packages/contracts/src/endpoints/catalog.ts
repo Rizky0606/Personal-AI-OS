@@ -1,0 +1,52 @@
+import {
+  ModelListSchema,
+  QuotaSchema,
+  RoleListSchema,
+  RouteDecisionSchema,
+  RoutePreviewRequestSchema,
+} from '../api-schemas.js';
+import { json, type Endpoint } from '../endpoint.js';
+
+export const catalogEndpoints: readonly Endpoint[] = [
+  {
+    operationId: 'listModels',
+    method: 'get',
+    path: '/models',
+    tag: 'Model',
+    summary: 'Daftar model dan combo dari 9Router',
+    auth: true,
+    responses: [json(200, 'Daftar model', ModelListSchema)],
+    errors: [401, 502],
+  },
+  {
+    operationId: 'getQuota',
+    method: 'get',
+    path: '/quota',
+    tag: 'Model',
+    summary: 'Pemakaian dan kuota',
+    auth: true,
+    responses: [json(200, 'Pemakaian', QuotaSchema)],
+    errors: [401],
+  },
+  {
+    operationId: 'listRoles',
+    method: 'get',
+    path: '/roles',
+    tag: 'Role',
+    summary: 'Daftar role',
+    auth: true,
+    responses: [json(200, 'Daftar role', RoleListSchema)],
+    errors: [401],
+  },
+  {
+    operationId: 'previewRoute',
+    method: 'post',
+    path: '/route/preview',
+    tag: 'Role',
+    summary: 'Uji router tanpa menjalankan agent',
+    auth: true,
+    body: RoutePreviewRequestSchema,
+    responses: [json(200, 'Keputusan router', RouteDecisionSchema)],
+    errors: [400, 401, 404],
+  },
+];

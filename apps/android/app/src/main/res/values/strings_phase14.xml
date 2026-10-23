@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Notifikasi -->
+    <string name="channel_research">Riset</string>
+    <string name="channel_research_desc">Pemberitahuan saat riset selesai.</string>
+    <string name="channel_schedule">Jadwal</string>
+    <string name="channel_schedule_desc">Hasil jadwal yang berjalan di server.</string>
+    <string name="channel_general">Umum</string>
+    <string name="channel_general_desc">Notifikasi lain, termasuk notifikasi uji.</string>
+    <string name="notification_prompt">Izinkan notifikasi agar hasil riset dan jadwal sampai ke HP, walau aplikasi ditutup.</string>
+    <string name="notification_prompt_allow">Izinkan</string>
+    <string name="notification_prompt_later">Nanti</string>
+
+    <!-- Suara -->
+    <string name="chat_voice_hold">Tahan untuk bicara</string>
+    <string name="chat_voice_stop">Berhenti merekam</string>
+    <string name="chat_voice_listening">Mendengarkan…</string>
+    <string name="chat_voice_unavailable">Pengenalan suara tidak tersedia di perangkat ini. Pasang atau aktifkan layanan suara Google.</string>
+    <string name="chat_voice_no_speech">Tidak ada suara yang terdengar. Tahan tombol mikrofon lalu bicara.</string>
+    <string name="chat_voice_permission">Izin mikrofon dibutuhkan untuk input suara. Izinkan di pengaturan aplikasi.</string>
+    <string name="chat_voice_failed">Pengenalan suara gagal. Coba lagi atau ketik pesannya.</string>
+
+    <!-- Jadwal -->
+    <string name="schedule_new">Jadwal baru</string>
+    <string name="schedule_list_empty">Belum ada jadwal. Tulis jadwal dalam kalimat biasa, mis. "setiap Senin jam 7 pagi ringkas berita AI".</string>
+    <string name="schedule_list_error">Jadwal belum bisa dimuat. Periksa koneksi lalu coba lagi.</string>
+    <string name="schedule_off">Nonaktif</string>
+    <string name="schedule_next">Berikutnya: %1$s</string>
+    <string name="schedule_next_none">Belum ada waktu berikutnya</string>
+    <string name="schedule_last">Terakhir: %1$s, %2$s</string>
+    <string name="schedule_never_run">Belum pernah berjalan</string>
+    <string name="schedule_toggle">Aktifkan jadwal %1$s</string>
+    <string name="schedule_run_succeeded">Berhasil</string>
+    <string name="schedule_run_failed">Gagal</string>
+    <string name="schedule_run_missed">Terlewat</string>
+    <string name="schedule_run_running">Berjalan</string>
+
+    <string name="schedule_text_label">Kapan dan apa</string>
+    <string name="schedule_text_hint">setiap Senin jam 7 pagi ringkas berita AI</string>
+    <string name="schedule_text_support">Tulis seperti biasa. Server membacanya, lalu Anda memeriksa hasilnya sebelum disimpan.</string>
+    <string name="schedule_error_text_short">Tulis jadwal yang lebih lengkap, mis. waktu dan tugasnya.</string>
+    <string name="schedule_error_fields">Nama dan perintah tidak boleh kosong.</string>
+    <string name="schedule_parse">Baca jadwal</string>
+    <string name="schedule_parsing">Membaca…</string>
+    <string name="schedule_preview_title">Periksa jadwal</string>
+    <string name="schedule_next_three">Tiga waktu jalan berikutnya</string>
+    <string name="schedule_name_label">Nama</string>
+    <string name="schedule_prompt_label">Perintah untuk agent</string>
+    <string name="schedule_save">Simpan jadwal</string>
+    <string name="schedule_saving">Menyimpan…</string>
+    <string name="schedule_save_changes">Simpan perubahan</string>
+    <string name="schedule_saved">Perubahan disimpan.</string>
+    <string name="schedule_edit_text">Ubah kalimatnya</string>
+    <string name="schedule_target_chat">Chat</string>
+    <string name="schedule_target_research">Riset</string>
+    <string name="schedule_target_role">Role</string>
+
+    <string name="schedule_run_now">Jalankan sekarang</string>
+    <string name="schedule_running_now">Memulai…</string>
+    <string name="schedule_run_started">Dijalankan. Hasilnya muncul di riwayat dan percakapan jadwal.</string>
+    <string name="schedule_error_running">Jadwal ini masih berjalan. Tunggu selesai dulu.</string>
+    <string name="schedule_open_results">Lihat hasil di chat</string>
+    <string name="schedule_history_title">Riwayat</string>
+    <string name="schedule_history_empty">Belum ada riwayat. Jalankan sekarang untuk mencoba.</string>
+    <string name="schedule_history_more">Muat lebih banyak</string>
+    <string name="schedule_delete">Hapus jadwal</string>
+    <string name="schedule_delete_title">Hapus jadwal ini?</string>
+    <string name="schedule_delete_body">Jadwal dan riwayat run dihapus. Percakapan hasilnya tetap ada sebagai arsip.</string>
+</resources>

@@ -1,0 +1,16 @@
+# Konteks build = akar repo. Jaga kecil dan jangan pernah menyertakan rahasia.
+**/node_modules
+**/dist
+**/.turbo
+.git
+.github
+**/.env
+**/.env.*
+!**/.env.example
+**/*.env
+infra/compose/secrets
+**/secrets
+apps/android
+apps/desktop/src-tauri/target
+docs
+*.log

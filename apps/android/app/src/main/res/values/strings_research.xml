@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Daftar -->
+    <string name="research_new">Riset baru</string>
+    <string name="research_list_empty">Belum ada riset. Tulis satu pertanyaan dan server akan membaca sumbernya, lalu menyusun laporan bersitasi.</string>
+    <string name="research_list_error">Daftar riset belum bisa dimuat. Periksa koneksi lalu coba lagi.</string>
+    <string name="research_status_queued">Antre</string>
+    <string name="research_status_running">Berjalan</string>
+    <string name="research_status_completed">Selesai</string>
+    <string name="research_status_failed">Gagal</string>
+    <string name="research_status_cancelled">Dibatalkan</string>
+    <string name="research_sources_count">%1$d sumber</string>
+    <string name="research_time_just_now">baru saja</string>
+    <string name="research_time_minutes">%1$d menit lalu</string>
+    <string name="research_time_hours">%1$d jam lalu</string>
+    <string name="research_row_summary">%1$s · %2$s</string>
+    <string name="research_loading_more">Memuat riset lama</string>
+
+    <!-- Form -->
+    <string name="research_form_title">Riset baru</string>
+    <string name="research_question_label">Pertanyaan</string>
+    <string name="research_question_hint">Mis. bagaimana perkembangan kendaraan listrik di Asia Tenggara?</string>
+    <string name="research_question_support">Semakin spesifik, semakin tajam laporannya.</string>
+    <string name="research_error_question_short">Tulis pertanyaan yang lebih lengkap, minimal 8 karakter.</string>
+    <string name="research_depth_label">Kedalaman</string>
+    <string name="research_depth_quick">Cepat</string>
+    <string name="research_depth_standard">Standar</string>
+    <string name="research_depth_deep">Mendalam</string>
+    <string name="research_depth_quick_desc">±5 sumber, paling lama 4 menit.</string>
+    <string name="research_depth_standard_desc">±12 sumber, paling lama 10 menit.</string>
+    <string name="research_depth_deep_desc">±25 sumber, paling lama 25 menit.</string>
+    <string name="research_start">Mulai riset</string>
+    <string name="research_starting">Memulai…</string>
+    <string name="research_form_note">Riset berjalan di server; aplikasi boleh ditutup.</string>
+
+    <!-- Progres -->
+    <string name="research_progress_title">Riset berjalan</string>
+    <string name="research_progress_closed_hint">Aplikasi boleh ditutup. Riset tetap berjalan di server.</string>
+    <string name="research_stage_planning">Menyusun rencana</string>
+    <string name="research_stage_searching">Mencari sumber</string>
+    <string name="research_stage_reading">Membaca sumber</string>
+    <string name="research_stage_writing">Menulis laporan</string>
+    <string name="research_stage_waiting">Menunggu giliran</string>
+    <string name="research_plan_title">Rencana sub-pertanyaan</string>
+    <string name="research_plan_pending">Rencana muncul di sini begitu perencana selesai.</string>
+    <string name="research_sources_live">Sumber masuk (%1$d)</string>
+    <string name="research_sources_none">Belum ada sumber yang masuk.</string>
+    <string name="research_cancel">Batalkan riset</string>
+    <string name="research_cancelling">Membatalkan…</string>
+    <string name="research_failed_title">Riset gagal</string>
+    <string name="research_failed_generic">Server tidak bisa menyelesaikan riset ini. Coba lagi dengan pertanyaan yang lebih sempit atau kedalaman lain.</string>
+    <string name="research_cancelled_note">Riset dibatalkan.</string>
+    <string name="research_retry_new">Riset ulang</string>
+    <string name="research_detail_error">Riset belum bisa dimuat. Periksa koneksi lalu coba lagi.</string>
+
+    <!-- Laporan -->
+    <string name="research_report_title">Laporan</string>
+    <string name="research_report_empty">Laporan kosong. Coba riset ulang.</string>
+    <string name="research_sources_title">Daftar sumber</string>
+    <string name="research_source_open">Buka sumber %1$s</string>
+    <string name="research_share_md">Bagikan Markdown</string>
+    <string name="research_share_pdf">Bagikan PDF</string>
+    <string name="research_exporting">Menyiapkan…</string>
+    <string name="research_share_chooser">Bagikan laporan</string>
+    <string name="research_continue_chat">Lanjutkan di chat</string>
+    <string name="research_continuing">Membuat percakapan…</string>
+    <string name="research_depth_chip">Kedalaman %1$s</string>
+</resources>
