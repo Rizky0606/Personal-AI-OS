@@ -1,4 +1,4 @@
-import { Link } from '@tanstack/react-router';
+import { Link, useRouterState } from '@tanstack/react-router';
 import { CalendarClock, Folder, Kanban, MessageSquare, Search, Settings } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { copy } from '../copy';
@@ -27,15 +27,25 @@ const settings: RailItem = {
   icon: <Settings {...ICON} />,
 };
 
+/** Chat aktif di "/" dan di "/chat/<id>"; bagian lain aktif untuk rute turunannya. */
+function isActive(to: string, pathname: string): boolean {
+  if (to === '/') return pathname === '/' || pathname.startsWith('/chat');
+  return pathname === to || pathname.startsWith(`${to}/`);
+}
+
 function RailLink({ item }: { item: RailItem }) {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const active = isActive(item.to, pathname);
   return (
     <Tooltip label={item.label}>
       <Link
         to={item.to}
         aria-label={item.label}
-        className="inline-flex size-10 items-center justify-center rounded-control text-text-2 transition-colors duration-[120ms] ease-aios hover:bg-surface-2 hover:text-text"
-        activeOptions={{ exact: item.to === '/' }}
-        activeProps={{ className: cn('bg-accent-soft text-text') }}
+        aria-current={active ? 'page' : undefined}
+        className={cn(
+          'inline-flex size-10 items-center justify-center rounded-control text-text-2 transition-colors duration-[120ms] ease-aios hover:bg-surface-2 hover:text-text',
+          active && 'bg-accent-soft text-text',
+        )}
       >
         {item.icon}
       </Link>
