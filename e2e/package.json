@@ -1,0 +1,26 @@
+{
+  "name": "@aios/e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:app": "vite build --config vite.e2e.config.ts",
+    "e2e": "pnpm run build:app && playwright test",
+    "test:only": "playwright test",
+    "typecheck": "tsc -p tsconfig.json && tsc -p harness/tsconfig.json"
+  },
+  "dependencies": {
+    "@aios/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "catalog:",
+    "@playwright/test": "catalog:",
+    "@types/node": "catalog:",
+    "@types/ws": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "ws": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "@tailwindcss/vite": "catalog:",
+    "embedded-postgres": "catalog:"
+  }
+}

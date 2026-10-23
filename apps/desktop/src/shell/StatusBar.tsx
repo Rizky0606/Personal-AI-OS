@@ -93,7 +93,7 @@ export function StatusBar() {
         </span>
         <Link
           to="/quota"
-          aria-label={copy.status.quotaLabel}
+          title={copy.status.quotaLabel}
           className="underline-offset-2 hover:text-text hover:underline"
         >
           {quotaLabel}

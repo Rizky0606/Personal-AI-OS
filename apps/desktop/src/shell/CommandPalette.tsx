@@ -129,7 +129,13 @@ export function CommandPalette() {
                     >
                       <span className="min-w-0 truncate">{item.label}</span>
                       {item.hint ? (
-                        <span className="shrink-0 font-mono text-caption text-text-3">
+                        <span
+                          className={cn(
+                            'shrink-0 font-mono text-caption',
+                            // text-3 tidak cukup kontras di atas latar terpilih (accent-soft).
+                            selected ? 'text-text-2' : 'text-text-3',
+                          )}
+                        >
                           {item.hint}
                         </span>
                       ) : null}

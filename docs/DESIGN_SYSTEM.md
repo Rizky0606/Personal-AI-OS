@@ -38,8 +38,8 @@ Nilai di bawah adalah titik awal. Kontras wajib diverifikasi minimal WCAG AA saa
 | `border-strong` | oklch(0.84 0.005 90) | oklch(0.38 0.006 90) | Field aktif, pemisah penting |
 | `text` | oklch(0.22 0.01 90) | oklch(0.94 0.005 90) | Teks utama |
 | `text-2` | oklch(0.45 0.01 90) | oklch(0.72 0.006 90) | Teks sekunder, label |
-| `text-3` | oklch(0.60 0.008 90) | oklch(0.56 0.006 90) | Meta, placeholder |
-| `accent` | oklch(0.62 0.17 45) | oklch(0.72 0.15 50) | Aksi utama, fokus, sedang berjalan |
+| `text-3` | oklch(0.54 0.008 90) | oklch(0.62 0.006 90) | Meta, placeholder |
+| `accent` | oklch(0.58 0.165 45) | oklch(0.72 0.15 50) | Aksi utama, fokus, sedang berjalan |
 | `accent-soft` | oklch(0.95 0.04 45) | oklch(0.30 0.06 45) | Latar chip aktif, seleksi |
 | `success` | oklch(0.60 0.13 150) | oklch(0.72 0.13 150) | Selesai, tes lulus, baris tambah di diff |
 | `warning` | oklch(0.75 0.15 80) | oklch(0.80 0.14 80) | Butuh izin, kuota menipis |

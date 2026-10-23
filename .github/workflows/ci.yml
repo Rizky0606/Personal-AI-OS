@@ -36,6 +36,31 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
 
+  # E2E desktop (UI asli + gateway, worker, Postgres tertanam; layanan eksternal palsu). Uji run coding
+  # dilewati bila omp tidak terpasang di runner.
+  e2e-desktop:
+    runs-on: ubuntu-latest
+    env:
+      E2E_BROWSER: chrome
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Bangun paket yang dipakai harness
+        run: |
+          pnpm --filter @aios/contracts build
+          pnpm --filter @aios/adapters build
+      - run: pnpm --filter @aios/e2e e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: e2e-hasil
+          path: e2e/test-results
+
   # Memverifikasi Dockerfile dan compose (tidak bisa dibangun di mesin tanpa Docker).
   gateway-image:
     runs-on: ubuntu-latest
