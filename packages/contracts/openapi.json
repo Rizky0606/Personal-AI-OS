@@ -4102,6 +4102,109 @@
           "status"
         ]
       },
+      "Status": {
+        "type": "object",
+        "properties": {
+          "gateway": {
+            "type": "object",
+            "properties": {
+              "version": {
+                "type": "string"
+              },
+              "adaptersVersion": {
+                "type": "string"
+              },
+              "node": {
+                "type": "string"
+              },
+              "uptimeSec": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "version",
+              "adaptersVersion",
+              "node",
+              "uptimeSec"
+            ]
+          },
+          "readiness": {
+            "$ref": "#/components/schemas/Readiness"
+          },
+          "workers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "deviceId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "online": {
+                  "type": "boolean"
+                },
+                "lastSeenAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "deviceId",
+                "name",
+                "online",
+                "lastSeenAt"
+              ]
+            }
+          },
+          "jobs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "queue": {
+                  "type": "string"
+                },
+                "queued": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "active": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "failed": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "queue",
+                "queued",
+                "active",
+                "failed"
+              ]
+            }
+          },
+          "activeRuns": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "gateway",
+          "readiness",
+          "workers",
+          "jobs",
+          "activeRuns"
+        ]
+      },
       "Readiness": {
         "type": "object",
         "properties": {
@@ -8068,6 +8171,62 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/status": {
+      "get": {
+        "operationId": "getStatus",
+        "tags": [
+          "Kesehatan"
+        ],
+        "summary": "Versi, dependensi, worker, dan antrean job untuk halaman Status",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Status sistem",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Belum login atau token tidak berlaku",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token tidak punya scope yang dibutuhkan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             }

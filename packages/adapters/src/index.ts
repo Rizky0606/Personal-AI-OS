@@ -7,3 +7,4 @@ export * from './omp-stdio.js';
 export * from './worker-relay.js';
 export * from './queue.js';
 export * from './uuidv7.js';
+export * from './version.js';

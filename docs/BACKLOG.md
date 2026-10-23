@@ -428,6 +428,16 @@ Isi ditulis sendiri sebagai ringkasan prinsip, bukan salinan; dibaca dari halama
 - **Belum terbukti**: tampilan terminal/palet/Kuota/Pembanding belum dilihat di Tauri atau peramban (jsdom saja; xterm.js diganti tiruan di tes, jadi rendering, fit, dan tema xterm belum teruji); alur "hanya keyboard" teruji per bagian (Ctrl+K, Ctrl+1..6, panah, Alt+panah di Kanban), tetapi belum dijalani utuh oleh manusia; fokus keyboard di dalam tab Diff (komentar baris) tidak diaudit ulang di fase ini.
 - **Belum ada**: Rail tidak punya ikon Kuota/Pembanding (dibuka dari palet, status bar, atau Pengaturan); pembanding tanpa riwayat dan tanpa streaming; palet tidak mencari riset atau isi pesan.
 
+## Temuan Fase 23 (keamanan, backup, observability)
+
+- **Audit** ada di `docs/SECURITY_AUDIT.md`: nol temuan tinggi; satu temuan sedang diperbaiki (gateway menolak `HOST` non-loopback di produksi). Auth/scope diaudit lewat tes yang membaca route yang benar-benar terdaftar (hook `onRoute`) dan mencocokkannya dengan kontrak, jadi route baru tanpa penjagaan menggagalkan CI.
+- **Backup/restore/systemd/Kuma/cek versi/tes beban ditulis dan diuji hanya dengan perintah palsu** (`infra/scripts/selftest.sh`, jalan di CI): urutan perintah, retensi, penanganan gagal, dan restore tidak menyentuh database produksi. **Belum pernah dijalankan** dengan restic, Docker, Postgres, atau Oracle Object Storage sungguhan, jadi syarat "restore uji berhasil" di VPS masih harus dijalani sekali (`sudo infra/scripts/restore.sh`, langkah di `docs/VPS_SETUP.md`). Format `pg_restore` dari dump `-Fc`, nama skema migrasi `drizzle.__drizzle_migrations`, dan bendera restic belum dibuktikan di lingkungan nyata.
+- **Tes beban belum dijalankan di VPS**: tidak ada akses VPS dari sini, jadi tidak ada angka memori/CPU. Yang ada: skrip (`infra/scripts/loadtest.mjs`) yang menjalankan 5 run chat + 1 riset mendalam dan mengambil sampel `/proc`, diuji alurnya terhadap server palsu. Angka nyata harus dicatat setelah dijalankan di VPS.
+- **Halaman Status**: `GET /status` (scope `app`) + layar desktop. Versi gateway/adapter adalah konstanta manual (`apps/gateway/src/version.ts`, `packages/adapters/src/version.ts`) yang perlu dinaikkan bersama rilis. Versi Hermes tidak ditampilkan (Hermes tidak melaporkan versinya lewat `/health`; hanya terjangkau atau tidak). Versi omp dan ketersediaan browser dilaporkan worker lokal (status PC ini); worker lain hanya online/offline dan terakhir terlihat. Antrean job dari pg-boss (`getQueues`); `failed` adalah hitungan bergulir, bukan total seumur hidup.
+- **Uptime Kuma** hanya sebagai profil compose `monitoring`; notifikasi Telegram dikonfigurasi di UI Kuma (langkah di VPS_SETUP), bukan lewat file.
+- **Nginx**: contoh konfigurasi ditambahkan (`infra/nginx/aios.conf.example`), belum dijalankan.
+- **Tes yang bergantung beban**: dua tes jadwal desktop dan satu tes koordinator worker sesekali melewati batas waktu saat seluruh suite berjalan paralel di Windows; lulus bila dijalankan sendiri atau diulang.
+
 ## Ide di luar scope
 
 (kosong)

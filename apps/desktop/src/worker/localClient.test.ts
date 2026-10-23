@@ -8,6 +8,8 @@ const STATUS: WorkerStatus = {
   deviceId: null,
   activeRuns: 0,
   version: '0.1.0',
+  ompVersion: null,
+  browserAvailable: false,
 };
 
 /** Worker palsu yang menjalankan protokol lokal: hello berantai, permintaan/balasan, dorongan. */

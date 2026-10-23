@@ -21,6 +21,7 @@ const PATHS = [
   '/research/$researchId',
   '/kanban',
   '/quota',
+  '/status',
   '/compare',
 ];
 

@@ -23,6 +23,7 @@ import { createPushService } from './modules/push/service.js';
 import { createScheduleParser } from './modules/schedules/parser.js';
 import { createScheduleService } from './modules/schedules/service.js';
 import { createProjectsService } from './modules/projects/service.js';
+import { createStatusService } from './modules/status/service.js';
 import { createCompareService } from './modules/compare/service.js';
 import { createTaskBreakdown } from './modules/tasks/breakdown.js';
 import { createTasksService } from './modules/tasks/service.js';
@@ -143,9 +144,10 @@ async function main(): Promise<void> {
     log: { ...log, info: (obj, msg) => app.log.info(obj, msg) },
   });
 
+  const health = createHealthService({ config, pingDatabase: () => pool.query('select 1') });
   const app = buildApp({
     config,
-    health: createHealthService({ config, pingDatabase: () => pool.query('select 1') }),
+    health,
     auth: createAuthService({ db, keys, log: { warn: (obj, msg) => app.log.warn(obj, msg) } }),
     devices: createDevicesService({ db }),
     llm: {
@@ -163,6 +165,12 @@ async function main(): Promise<void> {
     projects,
     tasks,
     compare: createCompareService({ client }),
+    status: createStatusService({
+      db,
+      health,
+      isWorkerOnline: (id) => workerHub.isOnline(id),
+      queues: boss,
+    }),
     worker: { hub: workerHub, relay: workerRelay },
     ws: {
       hub,

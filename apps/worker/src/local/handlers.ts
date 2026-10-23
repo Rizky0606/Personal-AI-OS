@@ -22,14 +22,18 @@ export interface HandlerDeps {
   terminal: TerminalService;
   worktrees: WorktreeManager;
   version: string;
+  /** Info alat di PC; diisi tak-sinkron setelah worker berjalan. */
+  tools: { ompVersion: string | null; browserAvailable: boolean };
 }
 
-export function workerStatus({ link, processes, version }: HandlerDeps): WorkerStatus {
+export function workerStatus({ link, processes, version, tools }: HandlerDeps): WorkerStatus {
   return {
     gateway: link.state,
     deviceId: link.deviceId,
     activeRuns: processes.activeRunIds().length,
     version,
+    ompVersion: tools.ompVersion,
+    browserAvailable: tools.browserAvailable,
   };
 }
 

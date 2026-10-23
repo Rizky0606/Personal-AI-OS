@@ -42,7 +42,14 @@ const inspection = (over: Partial<ProjectInspection> = {}): ProjectInspection =>
 const connected = () =>
   setWorker({
     local: 'connected',
-    status: { gateway: 'connected', deviceId: WORKER, activeRuns: 0, version: '0.1.0' },
+    status: {
+      gateway: 'connected',
+      deviceId: WORKER,
+      activeRuns: 0,
+      version: '0.1.0',
+      ompVersion: null,
+      browserAvailable: false,
+    },
   });
 
 beforeEach(() => {

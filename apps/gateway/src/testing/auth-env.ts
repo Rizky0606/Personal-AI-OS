@@ -27,6 +27,7 @@ import type { PageRenderer } from '../modules/research/render.js';
 import { createSearxngClient } from '../modules/research/search.js';
 import { createResearchService, type ResearchService } from '../modules/research/service.js';
 import { createProjectsService } from '../modules/projects/service.js';
+import { createStatusService, type StatusService } from '../modules/status/service.js';
 import { createCompareService } from '../modules/compare/service.js';
 import { createTaskBreakdown } from '../modules/tasks/breakdown.js';
 import { createTasksService, type TasksService } from '../modules/tasks/service.js';
@@ -40,6 +41,16 @@ import { createRunsService } from '../modules/runs/service.js';
 import { createEventStore, type EventStore } from '../modules/runs/store.js';
 import { unusedResearch, unusedSchedules } from './stubs.js';
 import { createTestDatabase, type TestDatabase } from './db.js';
+
+const READY = {
+  status: 'ok' as const,
+  checks: {
+    postgres: { ok: true, latencyMs: 1 },
+    hermes: { ok: true, latencyMs: 1 },
+    ninerouter: { ok: true, latencyMs: 1 },
+    searxng: { ok: true, latencyMs: 1 },
+  },
+};
 
 export const OWNER_PASSWORD = 'correct-horse-battery';
 export const AUTH_SECRET = 'rahasia-uji-'.padEnd(48, 'x');
@@ -57,6 +68,7 @@ export interface AuthEnv {
   schedules: ScheduleService;
   projects: ReturnType<typeof createProjectsService>;
   tasks: TasksService;
+  status: StatusService;
   workerRelay: WorkerRelay;
   push: PushService;
   /** pg-boss bersama (hanya ada bila riset atau jadwal dinyalakan). */
@@ -257,6 +269,13 @@ export async function createAuthEnv(
     await saveOwner(db, keys, { password: OWNER_PASSWORD, totpSecret }, now);
   }
 
+  const status = createStatusService({
+    db,
+    health: { readiness: () => Promise.resolve(READY) },
+    isWorkerOnline: (id) => workerHub.isOnline(id),
+    queues: boss,
+    now,
+  });
   const app = buildApp({
     config: { LOG_LEVEL: options.logStream ? 'info' : 'silent', NODE_ENV: 'test' },
     health: { readiness: () => Promise.reject(new Error('tidak dipakai')) },
@@ -278,6 +297,7 @@ export async function createAuthEnv(
     projects,
     tasks,
     compare: createCompareService({ client }),
+    status,
     worker: { hub: workerHub, relay: workerRelay },
     ws: {
       hub,
@@ -325,6 +345,7 @@ export async function createAuthEnv(
     schedules,
     projects,
     tasks,
+    status,
     workerRelay,
     push,
     boss,

@@ -42,3 +42,19 @@ export async function resolveOmp(
   }
   throw new OmpNotFoundError();
 }
+
+/** Versi omp (`omp --version`), atau null bila tidak terpasang atau tidak menjawab. Tidak pernah melempar. */
+export async function readOmpVersion(env: NodeJS.ProcessEnv = process.env): Promise<string | null> {
+  try {
+    const exe = await resolveOmp(env);
+    const { execFile } = await import('node:child_process');
+    return await new Promise<string | null>((resolve) => {
+      execFile(exe, ['--version'], { timeout: 8000, windowsHide: true }, (error, stdout) => {
+        const match = error ? null : /\d+\.\d+\.\d+\S*/.exec(stdout);
+        resolve(match ? match[0] : null);
+      });
+    });
+  } catch {
+    return null;
+  }
+}

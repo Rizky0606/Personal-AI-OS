@@ -426,3 +426,35 @@ export const ReadinessSchema = z
     }),
   })
   .meta({ id: 'Readiness' });
+
+export const StatusSchema = z
+  .object({
+    gateway: z.object({
+      version: z.string(),
+      /** Versi paket adapter mesin agent (Hermes, omp, relay worker). */
+      adaptersVersion: z.string(),
+      node: z.string(),
+      uptimeSec: z.number().int().nonnegative(),
+    }),
+    readiness: ReadinessSchema,
+    workers: z.array(
+      z.object({
+        deviceId: IdSchema,
+        name: z.string(),
+        online: z.boolean(),
+        lastSeenAt: TimestampSchema.nullable(),
+      }),
+    ),
+    /** Antrean job (pg-boss): riset dan jadwal. */
+    jobs: z.array(
+      z.object({
+        queue: z.string(),
+        queued: z.number().int().nonnegative(),
+        active: z.number().int().nonnegative(),
+        failed: z.number().int().nonnegative(),
+      }),
+    ),
+    /** Run yang belum selesai (di luar menunggu tinjauan). */
+    activeRuns: z.number().int().nonnegative(),
+  })
+  .meta({ id: 'Status' });

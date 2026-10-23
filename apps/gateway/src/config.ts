@@ -12,6 +12,8 @@ const EnvSchema = z.object({
   NODE_ENV: withDefault(z.enum(['development', 'test', 'production']), 'development'),
   /** Dengan network_mode host, 0.0.0.0 akan membuka gateway ke publik. Biarkan loopback; nginx yang publik. */
   HOST: withDefault(z.string().min(1), '127.0.0.1'),
+  /** Izinkan HOST selain loopback di produksi (mis. di belakang jaringan privat). Bawaan: ditolak. */
+  ALLOW_PUBLIC_BIND: withDefault(z.enum(['true', 'false']), 'false'),
   PORT: withDefault(z.coerce.number().int().min(1).max(65535), 3000),
   LOG_LEVEL: withDefault(
     z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']),
@@ -54,6 +56,8 @@ const EnvSchema = z.object({
 
 export type Config = z.infer<typeof EnvSchema>;
 
+const LOOPBACK = new Set(['127.0.0.1', '::1', 'localhost']);
+
 /** Gagal cepat saat start. Pesan menyebut nama variabel dan alasannya, tidak pernah nilainya. */
 export class ConfigError extends Error {
   constructor(readonly issues: { variable: string; message: string }[]) {
@@ -66,7 +70,24 @@ export class ConfigError extends Error {
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const parsed = EnvSchema.safeParse(env);
-  if (parsed.success) return parsed.data;
+  if (parsed.success) {
+    const { data } = parsed;
+    // network_mode host + HOST=0.0.0.0 membuka gateway langsung ke internet, melewati nginx dan TLS.
+    if (
+      data.NODE_ENV === 'production' &&
+      data.ALLOW_PUBLIC_BIND !== 'true' &&
+      !LOOPBACK.has(data.HOST)
+    ) {
+      throw new ConfigError([
+        {
+          variable: 'HOST',
+          message:
+            'di produksi gateway hanya boleh mendengarkan di loopback (127.0.0.1). Biarkan nginx yang publik, atau isi ALLOW_PUBLIC_BIND=true bila memang disengaja.',
+        },
+      ]);
+    }
+    return data;
+  }
   throw new ConfigError(
     parsed.error.issues.map((i) => ({
       variable: String(i.path[0] ?? '(env)'),

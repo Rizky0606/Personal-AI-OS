@@ -64,6 +64,7 @@ const DOCUMENTED_ENDPOINTS = [
   'POST /files',
   'GET /healthz',
   'GET /readyz',
+  'GET /status',
 ];
 
 describe('endpoint REST', () => {

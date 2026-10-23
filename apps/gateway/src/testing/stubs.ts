@@ -27,6 +27,8 @@ export const unusedProjects: AppDeps['projects'] = {
 
 export const unusedCompare: AppDeps['compare'] = { run: unused('compare.run') };
 
+export const unusedStatus: AppDeps['status'] = { get: unused('status.get') };
+
 export const unusedTasks: AppDeps['tasks'] = {
   list: unused('tasks.list'),
   create: unused('tasks.create'),

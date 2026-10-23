@@ -48,7 +48,8 @@ export function usePaletteItems(open: boolean, close: () => void): PaletteItem[]
         | '/research'
         | '/settings'
         | '/quota'
-        | '/compare',
+        | '/compare'
+        | '/status',
     ) => done(() => void navigate({ to }));
     const items: PaletteItem[] = [
       {
@@ -110,6 +111,13 @@ export function usePaletteItems(open: boolean, close: () => void): PaletteItem[]
         label: copy.nav.settings,
         hint: 'Ctrl+6',
         run: go('/settings'),
+      },
+      {
+        id: 'go-status',
+        group: 'go',
+        label: copy.status.page.title,
+        keywords: 'versi kesehatan antrean worker dependensi',
+        run: go('/status'),
       },
       { id: 'go-quota', group: 'go', label: copy.quota.title, run: go('/quota') },
       {

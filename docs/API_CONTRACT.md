@@ -36,7 +36,8 @@ Semua klien memakai satu REST API `/v1` dan satu WebSocket `/v1/ws`. Skema didef
 | Berkas | `POST /files` | Unggah lampiran (maks 25 MB) |
 | Model | `POST /compare` | `{ prompt, models[2..3] }` → `{ results[{ model, ok, text, latencyMs, usage, error }] }`; paralel lewat 9Router tanpa streaming, satu model gagal tidak menggagalkan yang lain, tidak membuat percakapan atau run |
 | Proxy model | `/llm/v1/*` | Diteruskan ke 9Router, hanya token ber-scope `llm` |
-| Kesehatan | `GET /healthz`, `GET /readyz` | Cek layanan dan dependensi |
+| Kesehatan | `GET /healthz`, `GET /readyz` | Cek layanan dan dependensi (tanpa auth, untuk pemantau) |
+| Kesehatan | `GET /status` | Halaman Status (scope `app`): versi gateway dan adapter, dependensi, worker terdaftar dan statusnya, antrean job, run berjalan |
 
 ## WebSocket
 

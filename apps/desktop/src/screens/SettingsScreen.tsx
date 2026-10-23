@@ -49,6 +49,9 @@ export function SettingsScreen() {
           {copy.settings.tools}
         </h2>
         <div className="flex gap-2">
+          <Link to="/status" className="text-ui text-text underline underline-offset-2">
+            {copy.status.page.title}
+          </Link>
           <Link to="/quota" className="text-ui text-text underline underline-offset-2">
             {copy.quota.title}
           </Link>

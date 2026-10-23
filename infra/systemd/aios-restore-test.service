@@ -1,0 +1,15 @@
+[Unit]
+Description=Uji restore backup Personal AI OS ke database sementara
+Wants=network-online.target docker.service
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/srv/personal-ai-os/infra/scripts/restore.sh
+User=root
+Nice=15
+IOSchedulingClass=idle
+PrivateTmp=true
+ProtectHome=true
+NoNewPrivileges=true
+TimeoutStartSec=2h

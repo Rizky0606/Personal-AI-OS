@@ -30,6 +30,8 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Uji mandiri skrip backup, restore, dan cek versi (perintah palsu)
+        run: bash infra/scripts/selftest.sh
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
@@ -53,6 +55,8 @@ jobs:
         env:
           SEARXNG_TAG: ci
           SEARXNG_SECRET: ci
+          KUMA_TAG: ci
         run: |
           mkdir -p secrets && echo ci > secrets/pg_password && touch gateway.env
           docker compose config --quiet
+          docker compose --profile monitoring config --quiet

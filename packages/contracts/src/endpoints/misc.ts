@@ -5,6 +5,7 @@ import {
   HealthSchema,
   IdParamsSchema,
   ReadinessSchema,
+  StatusSchema,
   ResearchExportQuerySchema,
   ResearchJobDetailSchema,
 } from '../api-schemas.js';
@@ -105,6 +106,16 @@ export const miscEndpoints: readonly Endpoint[] = [
     auth: false,
     responses: [json(200, 'Hidup', HealthSchema)],
     errors: [],
+  },
+  {
+    operationId: 'getStatus',
+    method: 'get',
+    path: '/status',
+    tag: 'Kesehatan',
+    summary: 'Versi, dependensi, worker, dan antrean job untuk halaman Status',
+    auth: true,
+    responses: [json(200, 'Status sistem', StatusSchema)],
+    errors: [401],
   },
   {
     operationId: 'readyz',

@@ -14,7 +14,7 @@ import { ProcessManager } from './process/manager.js';
 import { ProjectBindings } from './projects/bindings.js';
 import { RunCoordinator } from './runs/coordinator.js';
 import { ReviewService } from './runs/review.js';
-import { resolveOmp } from './runs/omp-path.js';
+import { readOmpVersion, resolveOmp } from './runs/omp-path.js';
 import { ApprovalRules } from './runs/rules.js';
 import { WorktreeManager } from './runs/worktree.js';
 import { WORKER_VERSION } from './version.js';
@@ -183,6 +183,12 @@ export async function startWorker(options: WorkerOptions): Promise<RunningWorker
     }
   }
 
+  // Diisi tak-sinkron; status berikutnya (dorongan atau status.get) sudah memuatnya.
+  const tools = { ompVersion: null as string | null, browserAvailable: preview.browserAvailable };
+  void readOmpVersion(env).then((v) => {
+    tools.ompVersion = v;
+    pushStatus();
+  });
   const deps = {
     allowed,
     bindings,
@@ -193,6 +199,7 @@ export async function startWorker(options: WorkerOptions): Promise<RunningWorker
     terminal,
     worktrees,
     version: WORKER_VERSION,
+    tools,
   };
   const server = new LocalServer({
     token: options.token,

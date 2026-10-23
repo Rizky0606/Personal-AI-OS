@@ -61,9 +61,24 @@ services:
       postgres:
         condition: service_healthy
 
+  # Opsional: docker compose --profile monitoring up -d uptime-kuma
+  # Dashboard hanya di 127.0.0.1:3001 (akses lewat Tailscale atau SSH tunnel). Telegram diatur di UI Kuma
+  # (Settings > Notifications); token bot tersimpan di database Kuma, bukan di repo. Lihat docs/VPS_SETUP.md.
+  uptime-kuma:
+    profiles: [monitoring]
+    image: louislam/uptime-kuma:${KUMA_TAG:?isi KUMA_TAG di .env dengan tag versi Uptime Kuma}
+    restart: unless-stopped
+    # Kuma memantau gateway, Hermes, dan 9Router di localhost VPS, jadi memakai jaringan host.
+    network_mode: host
+    environment:
+      UPTIME_KUMA_HOST: 127.0.0.1
+      UPTIME_KUMA_PORT: '3001'
+    volumes: [kumadata:/app/data]
+
 secrets:
   pg_password:
     file: ./secrets/pg_password
 
 volumes:
   pgdata:
+  kumadata:

@@ -44,6 +44,10 @@ export const useTasks = (projectId: string | null) =>
 export const useQuota = () =>
   useQuery({ queryKey: ['quota'], queryFn: api.getQuota, staleTime: MINUTES });
 
+/** Status sistem; disegarkan tiap 15 detik selama halaman Status terbuka. */
+export const useSystemStatus = () =>
+  useQuery({ queryKey: ['status'], queryFn: api.getStatus, refetchInterval: 15_000 });
+
 export const useSchedules = () => useQuery({ queryKey: ['schedules'], queryFn: api.listSchedules });
 
 export const useScheduleRuns = (scheduleId: string) =>

@@ -11,6 +11,7 @@ import {
   ResearchJobSchema,
   CompareResponseSchema,
   QuotaSchema,
+  StatusSchema,
   RerouteResponseSchema,
   ReviewResponseSchema,
   RoleListSchema,
@@ -67,6 +68,7 @@ export type ResearchJobDetail = z.infer<typeof ResearchJobDetailSchema>;
 export type ScheduleParse = z.infer<typeof ScheduleParseResponseSchema>;
 export type CreateScheduleInput = z.input<typeof CreateScheduleRequestSchema>;
 export type CreateProjectInput = z.input<typeof CreateProjectRequestSchema>;
+export type SystemStatus = z.infer<typeof StatusSchema>;
 export type Quota = z.infer<typeof QuotaSchema>;
 export type CompareResult = z.infer<typeof CompareResponseSchema>['results'][number];
 export type CreateTaskInput = z.input<typeof CreateTaskRequestSchema>;
@@ -166,6 +168,7 @@ export function createGatewayApi(call: Call) {
         commitMessage?: string;
       },
     ) => get(`/runs/${runId}/review`, ReviewResponseSchema, { method: 'POST', body: input }),
+    getStatus: () => get('/status', StatusSchema),
     getQuota: () => get('/quota', QuotaSchema),
     /** Satu prompt ke 2-3 model sekaligus; galat per model ada di hasilnya. */
     compareModels: async (prompt: string, models: string[]) =>

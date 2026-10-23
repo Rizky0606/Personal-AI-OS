@@ -49,6 +49,11 @@ function sectionFor(pathname: string): Section {
       list: <ResearchList />,
       action: { label: copy.research.newResearch, to: '/research' },
     };
+  if (pathname.startsWith('/status'))
+    return {
+      title: copy.status.page.title,
+      list: <EmptyState message={copy.status.page.sidebar} />,
+    };
   if (pathname.startsWith('/quota'))
     return { title: copy.quota.title, list: <EmptyState message={copy.quota.empty} /> };
   if (pathname.startsWith('/compare'))

@@ -16,7 +16,14 @@ const { AllowedFolders } = await import('./AllowedFolders');
 const connected = () =>
   setWorker({
     local: 'connected',
-    status: { gateway: 'connected', deviceId: null, activeRuns: 0, version: '0.1.0' },
+    status: {
+      gateway: 'connected',
+      deviceId: null,
+      activeRuns: 0,
+      version: '0.1.0',
+      ompVersion: null,
+      browserAvailable: false,
+    },
   });
 
 beforeEach(() => {
@@ -122,7 +129,15 @@ describe('workerIndicator', () => {
   const status = (
     gateway: 'offline' | 'connecting' | 'connected' | 'reconnecting',
     deviceId: string | null = null,
-  ) => ({ gateway, deviceId, activeRuns: 0, version: 'x' }) as const;
+  ) =>
+    ({
+      gateway,
+      deviceId,
+      activeRuns: 0,
+      version: 'x',
+      ompVersion: null,
+      browserAvailable: false,
+    }) as const;
   const at = (s: WorkerSnapshot) => workerIndicator(s);
 
   it('mati bila worker lokal tidak ada; menyambung ulang selama lokal belum siap', () => {

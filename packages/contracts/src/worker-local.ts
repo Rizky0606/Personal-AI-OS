@@ -35,6 +35,10 @@ export const WorkerStatusSchema = z
     deviceId: IdSchema.nullable(),
     activeRuns: z.number().int().nonnegative(),
     version: z.string(),
+    /** Versi omp yang ditemukan di PC ini; null bila tidak terpasang. */
+    ompVersion: z.string().nullable().default(null),
+    /** Edge/Chrome ditemukan untuk tool browser agent dan tangkapan elemen. */
+    browserAvailable: z.boolean().default(false),
   })
   .meta({ id: 'WorkerStatus' });
 export type WorkerStatus = z.infer<typeof WorkerStatusSchema>;

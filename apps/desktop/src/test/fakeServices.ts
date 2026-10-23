@@ -55,6 +55,7 @@ export const api: FakeApi = {
   resolveApproval: fn<'resolveApproval'>(),
   reviewRun: fn<'reviewRun'>(),
   cancelRun: fn<'cancelRun'>(),
+  getStatus: fn<'getStatus'>(),
   getQuota: fn<'getQuota'>(),
   compareModels: fn<'compareModels'>(),
   listTasks: fn<'listTasks'>(),

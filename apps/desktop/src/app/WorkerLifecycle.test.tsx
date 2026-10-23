@@ -36,7 +36,14 @@ describe('StatusBar: status worker', () => {
   it('tersambung, menyambung ulang, dan mati mengikuti keadaan worker', async () => {
     setWorker({
       local: 'connected',
-      status: { gateway: 'connected', deviceId: 'd', activeRuns: 0, version: '0.1.0' },
+      status: {
+        gateway: 'connected',
+        deviceId: 'd',
+        activeRuns: 0,
+        version: '0.1.0',
+        ompVersion: null,
+        browserAvailable: false,
+      },
     });
     await renderScreen(<StatusBar />);
     expect(screen.getByRole('status', { name: copy.workerStatus.connected })).toBeInTheDocument();

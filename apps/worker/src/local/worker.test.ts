@@ -177,7 +177,14 @@ describe('token berantai', () => {
     const server = new LocalServer({
       token: TOKEN,
       handle: () => Promise.resolve({}),
-      status: () => ({ gateway: 'offline', deviceId: null, activeRuns: 0, version: 'x' }),
+      status: () => ({
+        gateway: 'offline',
+        deviceId: null,
+        activeRuns: 0,
+        version: 'x',
+        ompVersion: null,
+        browserAvailable: false,
+      }),
       helloTimeoutMs: 50,
     });
     const port = await server.start();

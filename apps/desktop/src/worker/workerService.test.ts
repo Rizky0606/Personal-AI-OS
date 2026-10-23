@@ -28,6 +28,8 @@ const status = (over: Partial<WorkerStatus> = {}): WorkerStatus => ({
   deviceId: null,
   activeRuns: 0,
   version: '0.1.0',
+  ompVersion: null,
+  browserAvailable: false,
   ...over,
 });
 
