@@ -9,6 +9,8 @@ import app.aios.android.data.Connectivity
 import app.aios.android.data.api.ApiError
 import app.aios.android.data.api.DEFAULT_TIMEZONE
 import app.aios.android.data.api.Problem
+import app.aios.android.data.api.problemBody
+import app.aios.android.data.api.problemJson
 import app.aios.android.data.api.Schedule
 import app.aios.android.data.api.ScheduleParse
 import app.aios.android.data.api.ScheduleRun
@@ -26,7 +28,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
 import retrofit2.HttpException
 import javax.inject.Inject
 
@@ -48,8 +49,7 @@ private const val MIN_TEXT = 6
 /** Detail masalah dari body RFC 9457 bila ada; dipakai untuk menjelaskan kenapa kalimat ditolak. */
 internal fun Throwable.problemDetail(): String? = (this as? HttpException)?.let { http ->
     runCatching {
-        val body = http.response()?.errorBody()?.string().orEmpty()
-        Json { ignoreUnknownKeys = true }.decodeFromString(Problem.serializer(), body).detail
+        problemJson.decodeFromString(Problem.serializer(), http.problemBody().orEmpty()).detail
     }.getOrNull()
 }
 
@@ -59,14 +59,14 @@ data class ScheduleListUi(
     val items: List<Schedule> = emptyList(),
     val lastRuns: Map<String, ScheduleRun> = emptyMap(),
     val loading: Boolean = true,
-    val error: ApiError? = null,
+    val error: ApiError? = null
 )
 
 @HiltViewModel
 class ScheduleListViewModel @Inject constructor(
     private val repo: ScheduleRepository,
     realtime: RealtimeClient,
-    private val connectivity: Connectivity,
+    private val connectivity: Connectivity
 ) : ViewModel() {
     private val state = MutableStateFlow(ScheduleListUi())
     val ui: StateFlow<ScheduleListUi> = state.asStateFlow()
@@ -95,7 +95,11 @@ class ScheduleListViewModel @Inject constructor(
             } catch (e: Exception) {
                 val error = e.toApiError(connectivity.isConnected())
                 state.update {
-                    if (it.items.isEmpty() && !silent) it.copy(loading = false, error = error) else it.copy(loading = false)
+                    if (it.items.isEmpty() && !silent) {
+                        it.copy(loading = false, error = error)
+                    } else {
+                        it.copy(loading = false)
+                    }
                 }
             }
         }
@@ -133,13 +137,13 @@ data class ScheduleCreateUi(
     @StringRes val textError: Int? = null,
     /** Penjelasan dari server (mis. kalimat bukan jadwal berulang), sudah berbahasa Indonesia. */
     val serverMessage: String? = null,
-    @StringRes val formError: Int? = null,
+    @StringRes val formError: Int? = null
 )
 
 @HiltViewModel
 class ScheduleCreateViewModel @Inject constructor(
     private val repo: ScheduleRepository,
-    private val connectivity: Connectivity,
+    private val connectivity: Connectivity
 ) : ViewModel() {
     private val state = MutableStateFlow(ScheduleCreateUi())
     val ui: StateFlow<ScheduleCreateUi> = state.asStateFlow()
@@ -221,7 +225,7 @@ data class ScheduleDetailUi(
     val runningNow: Boolean = false,
     val saving: Boolean = false,
     val editName: String = "",
-    val editPrompt: String = "",
+    val editPrompt: String = ""
 )
 
 @HiltViewModel
@@ -229,7 +233,7 @@ class ScheduleDetailViewModel @Inject constructor(
     savedState: SavedStateHandle,
     private val repo: ScheduleRepository,
     realtime: RealtimeClient,
-    private val connectivity: Connectivity,
+    private val connectivity: Connectivity
 ) : ViewModel() {
     private val id: String = checkNotNull(savedState.get<String>("id"))
 
@@ -269,7 +273,7 @@ class ScheduleDetailViewModel @Inject constructor(
                         loading = false,
                         error = null,
                         editName = if (first) schedule.name else it.editName,
-                        editPrompt = if (first) schedule.prompt else it.editPrompt,
+                        editPrompt = if (first) schedule.prompt else it.editPrompt
                     )
                 }
             } catch (e: CancellationException) {

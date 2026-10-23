@@ -62,7 +62,9 @@ class NotificationPromptViewModel @Inject constructor(
 fun NotificationPrompt(viewModel: NotificationPromptViewModel = hiltViewModel()) {
     val context = LocalContext.current
     val shown by viewModel.shown.collectAsStateWithLifecycle()
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { viewModel.dismiss() }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        viewModel.dismiss()
+    }
     val needsPermission = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
         ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
         PackageManager.PERMISSION_GRANTED

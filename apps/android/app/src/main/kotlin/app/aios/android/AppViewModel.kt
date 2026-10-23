@@ -54,7 +54,8 @@ class AppViewModel @Inject constructor(
     }
 
     init {
-        // Token FCM bisa berganti kapan saja; pastikan perangkat ini terdaftar tiap aplikasi dibuka dalam keadaan login.
+        // Token FCM bisa berganti kapan saja; pastikan perangkat ini terdaftar
+        // tiap aplikasi dibuka dalam keadaan login.
         viewModelScope.launch {
             auth.session.map { it?.deviceId }.filterNotNull().distinctUntilChanged().collect { push.sync(it) }
         }

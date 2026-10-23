@@ -123,7 +123,9 @@ fun Composer(
                     decorationBox = { inner ->
                         if (draft.isEmpty()) {
                             Text(
-                                text = stringResource(if (voice.listening) R.string.chat_voice_listening else R.string.chat_composer_hint),
+                                text = stringResource(
+                                    if (voice.listening) R.string.chat_voice_listening else R.string.chat_composer_hint
+                                ),
                                 style = AiosTheme.type.chat,
                                 color = colors.text3
                             )
@@ -213,6 +215,10 @@ private fun MicButton(voice: VoiceInputState) {
             },
         contentAlignment = Alignment.Center
     ) {
-        AiosIcon(R.drawable.ic_mic, contentDescription = null, tint = if (voice.listening) colors.accent else colors.text)
+        AiosIcon(
+            R.drawable.ic_mic,
+            contentDescription = null,
+            tint = if (voice.listening) colors.accent else colors.text
+        )
     }
 }

@@ -6,7 +6,8 @@
     "build:app": "vite build --config vite.e2e.config.ts",
     "e2e": "pnpm run build:app && playwright test",
     "test:only": "playwright test",
-    "typecheck": "tsc -p tsconfig.json && tsc -p harness/tsconfig.json"
+    "typecheck": "tsc -p tsconfig.json && tsc -p harness/tsconfig.json",
+    "android": "tsx harness/android-run.ts"
   },
   "dependencies": {
     "@aios/contracts": "workspace:*"
@@ -14,13 +15,14 @@
   "devDependencies": {
     "@axe-core/playwright": "catalog:",
     "@playwright/test": "catalog:",
+    "@tailwindcss/vite": "catalog:",
     "@types/node": "catalog:",
     "@types/ws": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "embedded-postgres": "catalog:",
+    "tsx": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
-    "ws": "catalog:",
-    "@vitejs/plugin-react": "catalog:",
-    "@tailwindcss/vite": "catalog:",
-    "embedded-postgres": "catalog:"
+    "ws": "catalog:"
   }
 }

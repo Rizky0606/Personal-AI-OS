@@ -8,7 +8,7 @@ object IntentLinks {
         PushKeys.TYPE,
         PushKeys.SCHEDULE_ID,
         PushKeys.CONVERSATION_ID,
-        PushKeys.RESEARCH_ID,
+        PushKeys.RESEARCH_ID
     )
 
     fun from(intent: Intent?): AppLink? {
@@ -16,7 +16,7 @@ object IntentLinks {
         if (intent.action == Intent.ACTION_SEND && intent.type?.startsWith("text/") == true) {
             return AppLinks.fromShare(
                 subject = intent.getStringExtra(Intent.EXTRA_SUBJECT),
-                text = intent.getStringExtra(Intent.EXTRA_TEXT),
+                text = intent.getStringExtra(Intent.EXTRA_TEXT)
             )
         }
         // Notifikasi yang ditampilkan sistem membawa data FCM sebagai extras pada intent peluncur.

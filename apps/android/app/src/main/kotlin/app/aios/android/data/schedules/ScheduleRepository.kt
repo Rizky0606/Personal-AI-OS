@@ -9,6 +9,8 @@ import app.aios.android.data.api.ScheduleParse
 import app.aios.android.data.api.ScheduleParseRequest
 import app.aios.android.data.api.ScheduleRun
 import app.aios.android.data.api.UpdateScheduleRequest
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 
 /** Jadwal selalu dibaca dari server (tanpa cache): hasil dan waktu jalan berikutnya harus segar. */
 interface ScheduleRepository {
@@ -42,8 +44,8 @@ class RemoteScheduleRepository(private val api: ScheduleApi) : ScheduleRepositor
             timezone = draft.timezone,
             prompt = prompt.trim(),
             target = draft.target,
-            agentRole = draft.agentRole,
-        ),
+            agentRole = draft.agentRole
+        )
     )
 
     override suspend fun update(id: String, name: String?, prompt: String?, enabled: Boolean?) =
@@ -57,12 +59,11 @@ class RemoteScheduleRepository(private val api: ScheduleApi) : ScheduleRepositor
 
     override suspend fun runs(id: String, before: String?) = api.runs(id, before)
 
-    override suspend fun lastRuns(schedules: List<Schedule>): Map<String, ScheduleRun> =
-        kotlinx.coroutines.coroutineScope {
-            schedules.map { s ->
-                kotlinx.coroutines.async {
-                    runCatching { api.runs(s.id, limit = 1).items.firstOrNull() }.getOrNull()?.let { s.id to it }
-                }
-            }.mapNotNull { it.await() }.toMap()
-        }
+    override suspend fun lastRuns(schedules: List<Schedule>): Map<String, ScheduleRun> = coroutineScope {
+        schedules.map { s ->
+            async {
+                runCatching { api.runs(s.id, limit = 1).items.firstOrNull() }.getOrNull()?.let { s.id to it }
+            }
+        }.mapNotNull { it.await() }.toMap()
+    }
 }

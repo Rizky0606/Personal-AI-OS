@@ -1,6 +1,7 @@
 package app.aios.android.push
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -40,6 +41,8 @@ class AiosMessagingService : FirebaseMessagingService() {
         scope.launch { registrar.onNewToken(tokens.current()?.deviceId, token) }
     }
 
+    // Izin POST_NOTIFICATIONS diperiksa di canNotify(); lint tidak bisa melihatnya lewat fungsi pembantu.
+    @SuppressLint("MissingPermission")
     override fun onMessageReceived(message: RemoteMessage) {
         val title = message.notification?.title ?: message.data["title"] ?: return
         if (!canNotify()) return
@@ -51,7 +54,7 @@ class AiosMessagingService : FirebaseMessagingService() {
             this,
             message.messageId.hashCode(),
             open,
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
         val notification = NotificationCompat.Builder(this, NotificationChannels.forType(type))
             .setSmallIcon(R.drawable.ic_notification)
@@ -67,8 +70,7 @@ class AiosMessagingService : FirebaseMessagingService() {
         super.onDestroy()
     }
 
-    private fun canNotify(): Boolean =
-        Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
-            PackageManager.PERMISSION_GRANTED
+    private fun canNotify(): Boolean = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+        ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
+        PackageManager.PERMISSION_GRANTED
 }
