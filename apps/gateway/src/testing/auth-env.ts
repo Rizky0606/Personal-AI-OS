@@ -195,7 +195,7 @@ export async function createAuthEnv(
     roles,
     now,
   });
-  const runs = createRunsService({ db, store, runner });
+  const runs = createRunsService({ db, store, runner, hub, relay: workerRelay, chat });
   const schedules =
     options.schedules && boss
       ? createScheduleService({

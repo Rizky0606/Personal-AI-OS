@@ -83,7 +83,7 @@ async function main(): Promise<void> {
     routing,
     roles,
   });
-  const runs = createRunsService({ db, store, runner });
+  const runs = createRunsService({ db, store, runner, hub, relay: workerRelay, chat });
   const usage = createUsageRecorder(db);
   const research = createResearchService({
     db,

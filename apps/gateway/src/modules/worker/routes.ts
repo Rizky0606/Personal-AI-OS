@@ -6,6 +6,7 @@ import {
   type AgentEvent,
   type GatewayToWorkerFrame,
   type WorkerCommand,
+  type WorkerReviewResultFrame,
 } from '@aios/contracts';
 import type { FastifyBaseLogger, FastifyPluginCallback } from 'fastify';
 import type { WebSocket } from 'ws';
@@ -27,6 +28,8 @@ export interface WorkerHubDeps {
   auth: AuthService;
   /** Event run dari worker diteruskan ke runner lewat relay; hasilnya menentukan balasan ke worker. */
   onRunEvent(deviceId: string, runId: string, event: AgentEvent): 'ok' | 'not_active' | 'not_owned';
+  /** Jawaban worker atas `review.apply`. */
+  onReviewResult(deviceId: string, frame: WorkerReviewResultFrame): void;
   heartbeatMs?: number;
   now?: () => number;
 }
@@ -110,6 +113,10 @@ function handleConnection(
         }
         if (frame.data.type === 'ping') {
           send({ type: 'pong' });
+          return;
+        }
+        if (frame.data.type === 'review.result') {
+          deps.onReviewResult(auth.deviceId, frame.data);
           return;
         }
         const { runId, event } = frame.data;

@@ -6,6 +6,7 @@ import {
   ListConversationsQuerySchema,
   PageQuerySchema,
   RerouteRequestSchema,
+  ReviewRequestSchema,
   RunEventsQuerySchema,
   SendMessageRequestSchema,
   SteerRequestSchema,
@@ -82,6 +83,14 @@ export const chatRoutes: FastifyPluginCallback<{ chat: ChatService; runs: RunsSe
   });
 
   app.post('/runs/:id/cancel', guard, (req) => runs.cancel(IdParamsSchema.parse(req.params).id));
+
+  app.post('/runs/:id/review', guard, (req) =>
+    runs.review(
+      requireAuth(req).deviceId,
+      IdParamsSchema.parse(req.params).id,
+      ReviewRequestSchema.parse(req.body),
+    ),
+  );
 
   app.post('/runs/:id/steer', guard, async (req, reply) => {
     const { id } = IdParamsSchema.parse(req.params);

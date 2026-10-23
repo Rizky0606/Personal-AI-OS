@@ -49,6 +49,7 @@ export const unusedRuns: AppDeps['runs'] = {
   cancel: unused('runs.cancel'),
   resolveApproval: unused('runs.resolveApproval'),
   steer: unused('runs.steer'),
+  review: unused('runs.review'),
   exists: unused('runs.exists'),
 };
 

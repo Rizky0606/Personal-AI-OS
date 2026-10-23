@@ -32,6 +32,8 @@ export interface LaunchInput {
   sessionId: string;
   /** Project percakapan ini; wajib untuk role yang berjalan di worker (omp). */
   projectId: string | null;
+  /** Revisi setelah komentar review: melanjutkan worktree dan branch run ini. */
+  continueFromRunId?: string | undefined;
   /** Memutuskan role (router atau pilihan manual) dan menyimpannya; dipanggil pada status `routing`. */
   resolveRole(signal: AbortSignal): Promise<ResolvedRole>;
 }
@@ -204,9 +206,20 @@ export function createRunner(deps: RunnerDeps): Runner {
           } else {
             runnable = true;
             coding = true;
+            // Revisi memakai branch run sebelumnya; run baru pertama kali memakai branch dari id-nya sendiri.
+            const [previous] = input.continueFromRunId
+              ? await db
+                  .select({ branch: runs.branch })
+                  .from(runs)
+                  .where(eq(runs.id, input.continueFromRunId))
+              : [];
             await db
               .update(runs)
-              .set({ kind: 'coding', engine: 'omp', branch: workerBranchFor(run.id) })
+              .set({
+                kind: 'coding',
+                engine: 'omp',
+                branch: previous?.branch ?? workerBranchFor(run.id),
+              })
               .where(eq(runs.id, run.id));
           }
         } else if (engine && RUNNABLE_ENGINES.has(engine)) {
@@ -234,6 +247,9 @@ export function createRunner(deps: RunnerDeps): Runner {
             systemPrompt: deps.roles.bundle(chosenRole).systemPrompt,
             sessionId: input.sessionId,
             ...(coding && input.projectId ? { projectId: input.projectId, role: chosenRole } : {}),
+            ...(coding && input.continueFromRunId
+              ? { continueFromRunId: input.continueFromRunId }
+              : {}),
             ...(run.model ? { model: run.model } : {}),
             signal: ctl.abort.signal,
           });

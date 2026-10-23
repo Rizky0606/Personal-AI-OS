@@ -168,6 +168,7 @@ export function buildApp({
         await protectedScope.register(workerRoutes, {
           auth,
           onRunEvent: (deviceId, runId, event) => workerRelay.feed(deviceId, runId, event),
+          onReviewResult: (deviceId, frame) => workerRelay.reviewResult(deviceId, frame),
           hub: workerHub,
           ...(ws.heartbeatMs ? { heartbeatMs: ws.heartbeatMs } : {}),
           ...(ws.now ? { now: ws.now } : {}),
