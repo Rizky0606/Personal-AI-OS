@@ -3,6 +3,7 @@ import {
   WS_HEARTBEAT_INTERVAL_MS,
   WORKER_WS_PATH,
   WorkerToGatewayFrameSchema,
+  type AgentEvent,
   type GatewayToWorkerFrame,
   type WorkerCommand,
 } from '@aios/contracts';
@@ -10,10 +11,11 @@ import type { FastifyBaseLogger, FastifyPluginCallback } from 'fastify';
 import type { WebSocket } from 'ws';
 import { requireAuth, requireScope } from '../auth/guard.js';
 import type { AuthContext, AuthService } from '../auth/service.js';
-import type { EventStore } from '../runs/store.js';
 
 /** Kode penutupan untuk koneksi yang digantikan koneksi baru dari perangkat yang sama. */
 export const WORKER_CLOSE_REPLACED = 4409;
+
+export type PresenceListener = (deviceId: string, online: boolean) => void;
 
 export interface WorkerHub {
   /** Mengirim perintah ke worker yang sedang tersambung; false bila tidak ada koneksi. */
@@ -23,9 +25,8 @@ export interface WorkerHub {
 
 export interface WorkerHubDeps {
   auth: AuthService;
-  store: EventStore;
-  /** Run ini milik project yang terdaftar atas perangkat worker tersebut? */
-  ownsRun(deviceId: string, runId: string): Promise<boolean>;
+  /** Event run dari worker diteruskan ke runner lewat relay; hasilnya menentukan balasan ke worker. */
+  onRunEvent(deviceId: string, runId: string, event: AgentEvent): 'ok' | 'not_active' | 'not_owned';
   heartbeatMs?: number;
   now?: () => number;
 }
@@ -34,12 +35,20 @@ export interface WorkerHubDeps {
 export function createWorkerHub(): WorkerHub & {
   attach(deviceId: string, socket: WebSocket): void;
   detach(deviceId: string, socket: WebSocket): void;
+  /** Dipanggil saat perangkat worker tersambung atau terputus (bukan saat sekadar digantikan koneksi baru). */
+  onPresence(listener: PresenceListener): void;
 } {
   const sockets = new Map<string, WebSocket>();
+  const presence: PresenceListener[] = [];
   return {
+    onPresence(listener) {
+      presence.push(listener);
+    },
     attach(deviceId, socket) {
       const previous = sockets.get(deviceId);
       sockets.set(deviceId, socket);
+      if (!previous) presence.forEach((listener) => listener(deviceId, true));
+      else if (previous.readyState !== previous.OPEN) presence.forEach((l) => l(deviceId, true));
       if (previous && previous !== socket) {
         const frame: GatewayToWorkerFrame = {
           type: 'error',
@@ -51,7 +60,9 @@ export function createWorkerHub(): WorkerHub & {
       }
     },
     detach(deviceId, socket) {
-      if (sockets.get(deviceId) === socket) sockets.delete(deviceId);
+      if (sockets.get(deviceId) !== socket) return;
+      sockets.delete(deviceId);
+      presence.forEach((listener) => listener(deviceId, false));
     },
     send(deviceId, command) {
       const socket = sockets.get(deviceId);
@@ -71,7 +82,7 @@ function handleConnection(
   deps: WorkerHubDeps & { hub: ReturnType<typeof createWorkerHub> },
   log: FastifyBaseLogger,
 ): void {
-  const { hub, store } = deps;
+  const { hub } = deps;
   const heartbeatMs = deps.heartbeatMs ?? WS_HEARTBEAT_INTERVAL_MS;
   const now = deps.now ?? Date.now;
   const send = (frame: GatewayToWorkerFrame) => {
@@ -85,7 +96,7 @@ function handleConnection(
   let chain: Promise<void> = Promise.resolve();
   socket.on('message', (data: Buffer, isBinary: boolean) => {
     chain = chain
-      .then(async () => {
+      .then(() => {
         let raw: unknown;
         try {
           raw = isBinary ? undefined : JSON.parse(data.toString('utf8'));
@@ -102,16 +113,22 @@ function handleConnection(
           return;
         }
         const { runId, event } = frame.data;
-        if (!(await deps.ownsRun(auth.deviceId, runId))) {
+        const result = deps.onRunEvent(auth.deviceId, runId, event);
+        if (result === 'not_owned') {
           send({
             type: 'error',
             code: 'run_not_owned',
             message: 'Run ini bukan milik project yang terdaftar atas worker ini.',
             runId,
           });
-          return;
+        } else if (result === 'not_active') {
+          send({
+            type: 'error',
+            code: 'run_not_active',
+            message: 'Run ini tidak sedang berjalan di gateway.',
+            runId,
+          });
         }
-        await store.append(runId, event);
       })
       .catch((err: unknown) => log.error({ err }, 'worker ws: gagal memproses pesan'));
   });

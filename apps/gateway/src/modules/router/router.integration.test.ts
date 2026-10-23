@@ -333,7 +333,7 @@ describe('chat memakai role yang dipilih router', () => {
 });
 
 describe('project aktif dan mesin yang belum tersedia', () => {
-  it('chat per folder di Windows: coding didahulukan di prompt; role omp gagal jelas karena worker belum ada', async () => {
+  it('chat per folder di Windows: coding didahulukan di prompt; role omp gagal jelas karena worker tidak tersambung', async () => {
     routerAnswer = () => route('frontend', 0.93);
     const conv = await conversation({ surface: 'windows', projectId });
     const { run } = await send(conv.id, 'Tombol simpan kepotong di layar kecil');
@@ -349,7 +349,7 @@ describe('project aktif dan mesin yang belum tersedia', () => {
       status: 'failed',
       agentRole: 'frontend',
       engine: 'omp',
-      error: { code: 'engine_unavailable', retryable: false },
+      error: { code: 'worker_offline', retryable: true },
     });
     expect(hermes.requests).toHaveLength(0);
     const all = await events(run.id);
@@ -358,6 +358,7 @@ describe('project aktif dan mesin yang belum tersedia', () => {
       'routing',
       'route.decided',
       'preparing',
+      'running',
       'error',
       'failed',
     ]);

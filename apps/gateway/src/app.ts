@@ -22,7 +22,8 @@ import { routerRoutes } from './modules/router/routes.js';
 import type { RoutingService } from './modules/router/service.js';
 import { projectRoutes } from './modules/projects/routes.js';
 import type { ProjectsService } from './modules/projects/service.js';
-import { createWorkerHub, workerRoutes } from './modules/worker/routes.js';
+import type { WorkerRelay } from './modules/worker/relay.js';
+import { workerRoutes, type createWorkerHub } from './modules/worker/routes.js';
 import { researchRoutes } from './modules/research/routes.js';
 import type { ResearchService } from './modules/research/service.js';
 import { scheduleRoutes } from './modules/schedules/routes.js';
@@ -65,6 +66,8 @@ export interface AppDeps {
   research: ResearchService;
   schedules: ScheduleService;
   projects: ProjectsService;
+  /** Hub koneksi worker dan relay-nya; dibuat di luar karena runner juga memakai relay. */
+  worker: { hub: ReturnType<typeof createWorkerHub>; relay: WorkerRelay };
   /** WebSocket /v1/ws; `auth` diisi dari dependensi di atas. */
   ws: Omit<WsDeps, 'auth'>;
   rateLimits?: Partial<RateLimits>;
@@ -85,12 +88,13 @@ export function buildApp({
   research,
   schedules,
   projects,
+  worker,
   ws,
   rateLimits,
   logStream,
 }: AppDeps): FastifyInstance {
   const limits = { ...DEFAULT_RATE_LIMITS, ...rateLimits };
-  const workerHub = createWorkerHub();
+  const { hub: workerHub, relay: workerRelay } = worker;
   const loggerOptions: FastifyServerOptions['logger'] = {
     level: config.LOG_LEVEL,
     // Log tidak pernah memuat token, cookie, atau isi .env (SECURITY_OPS.md).
@@ -163,8 +167,7 @@ export function buildApp({
         await protectedScope.register(wsRoutes, { ...ws, auth });
         await protectedScope.register(workerRoutes, {
           auth,
-          store: ws.store,
-          ownsRun: (deviceId, runId) => projects.ownsRun(deviceId, runId),
+          onRunEvent: (deviceId, runId, event) => workerRelay.feed(deviceId, runId, event),
           hub: workerHub,
           ...(ws.heartbeatMs ? { heartbeatMs: ws.heartbeatMs } : {}),
           ...(ws.now ? { now: ws.now } : {}),

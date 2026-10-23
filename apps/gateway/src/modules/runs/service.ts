@@ -1,9 +1,11 @@
-import { TERMINAL_RUN_STATUSES, type Run } from '@aios/contracts';
-import { eq } from 'drizzle-orm';
+import { AdapterError } from '@aios/adapters';
+import { TERMINAL_RUN_STATUSES, type Approval, type Run } from '@aios/contracts';
+import { and, eq } from 'drizzle-orm';
 import type { Database } from '../../db/client.js';
-import { runs } from '../../db/schema/index.js';
+import { approvals, runs } from '../../db/schema/index.js';
 import { AppError } from '../../errors.js';
-import { toRunDto } from '../chat/dto.js';
+import { writeAudit } from '../audit/repo.js';
+import { toApprovalDto, toRunDto } from '../chat/dto.js';
 import type { Runner } from './runner.js';
 import type { EventStore, StoredEvent } from './store.js';
 
@@ -15,6 +17,15 @@ export interface RunsService {
     limit: number,
   ): Promise<{ items: StoredEvent[]; lastSeq: number }>;
   cancel(id: string): Promise<Run>;
+  /** Keputusan pengguna atas permintaan izin; diteruskan ke mesin (worker) yang menunggunya. */
+  resolveApproval(
+    actorDeviceId: string,
+    runId: string,
+    approvalId: string,
+    input: { decision: 'allow' | 'deny'; remember: boolean },
+  ): Promise<Approval>;
+  /** Mengarahkan agent yang sedang berjalan dengan teks baru. */
+  steer(runId: string, text: string): Promise<void>;
   /** Ada tidaknya run; dipakai WebSocket sebelum berlangganan. */
   exists(id: string): Promise<boolean>;
 }
@@ -55,6 +66,61 @@ export function createRunsService(deps: {
         throw new AppError(409, 'run_not_active', 'Run ini tidak sedang berjalan di gateway.');
       }
       return toRunDto(await load(id));
+    },
+
+    async resolveApproval(actorDeviceId, runId, approvalId, { decision, remember }) {
+      const [row] = await db
+        .select()
+        .from(approvals)
+        .where(and(eq(approvals.id, approvalId), eq(approvals.runId, runId)));
+      if (!row) throw new AppError(404, 'approval_not_found', 'Permintaan izin tidak ditemukan.');
+      if (row.status !== 'pending') {
+        throw new AppError(
+          409,
+          'approval_already_resolved',
+          'Permintaan izin ini sudah diputuskan.',
+        );
+      }
+      try {
+        const outcome = await runner.resolveApproval(runId, approvalId, decision, remember);
+        if (outcome === 'inactive') {
+          throw new AppError(409, 'run_not_active', 'Run ini tidak sedang berjalan di gateway.');
+        }
+      } catch (error) {
+        if (error instanceof AdapterError) {
+          throw new AppError(error.retryable ? 503 : 409, error.code, error.message);
+        }
+        throw error;
+      }
+      const [updated] = await db
+        .update(approvals)
+        .set({
+          status: decision === 'allow' ? 'allowed' : 'denied',
+          remember: decision === 'allow' && remember,
+          decidedAt: new Date(),
+        })
+        .where(and(eq(approvals.id, approvalId), eq(approvals.status, 'pending')))
+        .returning();
+      await writeAudit(db, {
+        actorDeviceId,
+        action: 'approval.decided',
+        target: `approval:${approvalId} ${decision}${remember ? ' remember' : ''}`,
+      });
+      return toApprovalDto(updated ?? row);
+    },
+
+    async steer(runId, text) {
+      await load(runId);
+      try {
+        if ((await runner.steer(runId, text)) === 'inactive') {
+          throw new AppError(409, 'run_not_active', 'Run ini tidak sedang berjalan di gateway.');
+        }
+      } catch (error) {
+        if (error instanceof AdapterError) {
+          throw new AppError(error.retryable ? 503 : 409, error.code, error.message);
+        }
+        throw error;
+      }
     },
 
     async exists(id) {

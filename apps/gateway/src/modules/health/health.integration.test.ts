@@ -13,6 +13,7 @@ import {
   unusedLlm,
   unusedResearch,
   unusedProjects,
+  unusedWorker,
   unusedSchedules,
   unusedRoles,
   unusedRouting,
@@ -88,6 +89,7 @@ async function makeApp(setup: Setup = {}) {
     research: unusedResearch,
     schedules: unusedSchedules,
     projects: unusedProjects,
+    worker: unusedWorker,
     routing: unusedRouting,
     ws: unusedWs,
     health: createHealthService({

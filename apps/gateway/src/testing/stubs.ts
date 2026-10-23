@@ -1,4 +1,6 @@
 import type { AppDeps } from '../app.js';
+import { createWorkerRelay } from '../modules/worker/relay.js';
+import { createWorkerHub } from '../modules/worker/routes.js';
 import type { AuthService } from '../modules/auth/service.js';
 import type { DevicesService } from '../modules/devices/service.js';
 
@@ -20,7 +22,13 @@ export const unusedProjects: AppDeps['projects'] = {
   create: unused('projects.create'),
   update: unused('projects.update'),
   ownedBy: unused('projects.ownedBy'),
-  ownsRun: unused('projects.ownsRun'),
+  workerOf: unused('projects.workerOf'),
+};
+
+const stubHub = createWorkerHub();
+export const unusedWorker: AppDeps['worker'] = {
+  hub: stubHub,
+  relay: createWorkerRelay({ hub: stubHub, projects: { workerOf: unused('projects.workerOf') } }),
 };
 
 export const unusedChat: AppDeps['chat'] = {
@@ -39,6 +47,8 @@ export const unusedRuns: AppDeps['runs'] = {
   get: unused('runs.get'),
   events: unused('runs.events'),
   cancel: unused('runs.cancel'),
+  resolveApproval: unused('runs.resolveApproval'),
+  steer: unused('runs.steer'),
   exists: unused('runs.exists'),
 };
 

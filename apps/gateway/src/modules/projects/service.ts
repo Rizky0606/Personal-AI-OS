@@ -3,7 +3,7 @@ import type {
   Project,
   UpdateProjectRequestSchema,
 } from '@aios/contracts';
-import { desc, eq, sql } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import type { z } from 'zod';
 import type { Database } from '../../db/client.js';
 import { projects } from '../../db/schema/index.js';
@@ -26,8 +26,8 @@ export interface ProjectsService {
   ): Promise<Project>;
   /** Project milik worker ini? Dipakai hub worker sebelum menerima event run. */
   ownedBy(projectId: string, workerDeviceId: string): Promise<boolean>;
-  /** Run ini milik project (lewat kartu atau percakapan) yang terdaftar atas worker tersebut? */
-  ownsRun(workerDeviceId: string, runId: string): Promise<boolean>;
+  /** Perangkat worker pemilik project; undefined bila project tidak ada. */
+  workerOf(projectId: string): Promise<string | undefined>;
 }
 
 const notFound = () => new AppError(404, 'project_not_found', 'Project tidak ditemukan.');
@@ -119,16 +119,12 @@ export function createProjectsService(deps: { db: Database }): ProjectsService {
       return row?.workerDeviceId === workerDeviceId;
     },
 
-    async ownsRun(workerDeviceId, runId) {
-      const result = await db.execute(sql`
-        select 1
-        from runs r
-        left join tasks t on t.id = r.task_id
-        left join conversations c on c.id = r.conversation_id
-        join projects p on p.id = coalesce(t.project_id, c.project_id)
-        where r.id = ${runId}::uuid and p.worker_device_id = ${workerDeviceId}::uuid
-        limit 1`);
-      return result.rows.length > 0;
+    async workerOf(projectId) {
+      const [row] = await db
+        .select({ workerDeviceId: projects.workerDeviceId })
+        .from(projects)
+        .where(eq(projects.id, projectId));
+      return row?.workerDeviceId;
     },
   };
 }

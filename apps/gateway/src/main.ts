@@ -1,4 +1,4 @@
-import { createHermesAdapter } from '@aios/adapters';
+import { createHermesAdapter, createWorkerRelayAdapter } from '@aios/adapters';
 import { RegistryError } from '@aios/roles';
 import { buildApp } from './app.js';
 import { ConfigError, loadConfig } from './config.js';
@@ -23,6 +23,8 @@ import { createPushService } from './modules/push/service.js';
 import { createScheduleParser } from './modules/schedules/parser.js';
 import { createScheduleService } from './modules/schedules/service.js';
 import { createProjectsService } from './modules/projects/service.js';
+import { createWorkerRelay } from './modules/worker/relay.js';
+import { createWorkerHub } from './modules/worker/routes.js';
 import { createRolesService } from './modules/roles/service.js';
 import { createRouterComplete } from './modules/router/complete.js';
 import { createRoutingService } from './modules/router/service.js';
@@ -55,11 +57,16 @@ async function main(): Promise<void> {
   const boss = createBoss(config.DATABASE_URL, log);
   const hub = createEventHub();
   const store = createEventStore(db, hub);
+  const projects = createProjectsService({ db });
+  const workerHub = createWorkerHub();
+  const workerRelay = createWorkerRelay({ hub: workerHub, projects });
+  workerHub.onPresence((deviceId, online) => workerRelay.presence(deviceId, online));
   const runner = createRunner({
     db,
     store,
     hub,
     adapter: createHermesAdapter({ baseUrl: config.HERMES_URL, apiKey: config.HERMES_API_KEY }),
+    workerAdapter: createWorkerRelayAdapter({ relay: workerRelay }),
     roles,
     log,
   });
@@ -133,7 +140,8 @@ async function main(): Promise<void> {
     routing,
     research,
     schedules,
-    projects: createProjectsService({ db }),
+    projects,
+    worker: { hub: workerHub, relay: workerRelay },
     ws: {
       hub,
       store,

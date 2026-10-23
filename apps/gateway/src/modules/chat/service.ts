@@ -101,7 +101,8 @@ export function createChatService(deps: {
       .where(
         and(
           eq(runs.conversationId, conversationId),
-          notInArray(runs.status, [...TERMINAL_RUN_STATUSES]),
+          // needs_review menunggu manusia, bukan mesin yang masih bekerja: tidak memblokir pesan baru.
+          notInArray(runs.status, [...TERMINAL_RUN_STATUSES, 'needs_review']),
         ),
       )
       .limit(1);
@@ -324,6 +325,7 @@ export function createChatService(deps: {
         assistantMessageId,
         prompt,
         sessionId,
+        projectId: conversation.projectId,
         resolveRole: makeResolver({
           conversation,
           runId: run.id,
@@ -456,6 +458,7 @@ export function createChatService(deps: {
         assistantMessageId,
         prompt,
         sessionId,
+        projectId: conversation.projectId,
         resolveRole: makeResolver({
           conversation,
           runId: run.id,

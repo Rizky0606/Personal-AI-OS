@@ -1,5 +1,11 @@
-import type { Conversation, Message, Run, RoutingCorrection } from '@aios/contracts';
-import type { conversations, messages, routingCorrections, runs } from '../../db/schema/index.js';
+import type { Approval, Conversation, Message, Run, RoutingCorrection } from '@aios/contracts';
+import type {
+  approvals,
+  conversations,
+  messages,
+  routingCorrections,
+  runs,
+} from '../../db/schema/index.js';
 
 /** `hermes_session_id` tidak diekspos ke klien (entities.ts). */
 export function toConversationDto(row: typeof conversations.$inferSelect): Conversation {
@@ -25,6 +31,18 @@ export function toMessageDto(row: typeof messages.$inferSelect): Message {
     model: row.model,
     runId: row.runId,
     createdAt: row.createdAt.toISOString(),
+  };
+}
+
+export function toApprovalDto(row: typeof approvals.$inferSelect): Approval {
+  return {
+    id: row.id,
+    runId: row.runId,
+    kind: row.kind,
+    detail: row.detail,
+    status: row.status,
+    remember: row.remember,
+    decidedAt: row.decidedAt?.toISOString() ?? null,
   };
 }
 

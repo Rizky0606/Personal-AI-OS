@@ -4,5 +4,6 @@ export * from './sse.js';
 export * from './hermes.js';
 export * from './omp.js';
 export * from './omp-stdio.js';
+export * from './worker-relay.js';
 export * from './queue.js';
 export * from './uuidv7.js';

@@ -120,7 +120,13 @@ describe('handshake', () => {
 
 describe('run.event', () => {
   it('event run milik project worker disimpan berurutan dan disiarkan ke pelanggan run:<id>', async () => {
-    const { worker, runId } = await setup('Worker E');
+    const { worker, project, runId } = await setup('Worker E');
+    // Seperti runner: relay menyimpan dan menyiarkan event yang datang dari worker.
+    await env.workerRelay.listen(runId, project.id, {
+      onEvent: (event) => void env.store.append(runId, event),
+      onDisconnect: () => undefined,
+      onReconnect: () => undefined,
+    });
     const app = await TestWs.connect(url.replace('/worker/ws', '/ws'), desktop);
     app.send({ type: 'subscribe', channel: `run:${runId}` });
     await app.until(
@@ -146,6 +152,11 @@ describe('run.event', () => {
   it('run milik worker lain ditolak run_not_owned dan tidak disimpan', async () => {
     const mine = await setup('Worker M');
     const other = await setup('Worker O');
+    await env.workerRelay.listen(other.runId, other.project.id, {
+      onEvent: (event) => void env.store.append(other.runId, event),
+      onDisconnect: () => undefined,
+      onReconnect: () => undefined,
+    });
     const conn = await FakeWorker.connect(mine.worker.accessToken);
 
     conn.send({ type: 'run.event', runId: other.runId, event: delta('curang') });
@@ -156,6 +167,23 @@ describe('run.event', () => {
 
     const stored = RunEventsResponseSchema.parse(
       (await env.get(`/runs/${other.runId}/events`, desktop)).json(),
+    );
+    expect(stored.items).toEqual([]);
+    conn.close();
+  });
+
+  it('run yang tidak sedang berjalan di gateway dijawab run_not_active dan tidak disimpan', async () => {
+    const { worker, runId } = await setup('Worker T');
+    const conn = await FakeWorker.connect(worker.accessToken);
+
+    conn.send({ type: 'run.event', runId, event: delta('tanpa pendengar') });
+    await conn.until(
+      () => conn.frames.some((f) => f.type === 'error' && f.code === 'run_not_active'),
+      'run_not_active',
+    );
+
+    const stored = RunEventsResponseSchema.parse(
+      (await env.get(`/runs/${runId}/events`, desktop)).json(),
     );
     expect(stored.items).toEqual([]);
     conn.close();
