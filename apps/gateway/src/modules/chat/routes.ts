@@ -1,15 +1,19 @@
 import {
+  ApprovalDecisionRequestSchema,
+  ApprovalParamsSchema,
   CreateConversationRequestSchema,
   IdParamsSchema,
   ListConversationsQuerySchema,
   PageQuerySchema,
   RerouteRequestSchema,
+  ReviewRequestSchema,
   RunEventsQuerySchema,
   SendMessageRequestSchema,
+  SteerRequestSchema,
   UpdateConversationRequestSchema,
 } from '@aios/contracts';
 import type { FastifyPluginCallback } from 'fastify';
-import { requireScope } from '../auth/guard.js';
+import { requireAuth, requireScope } from '../auth/guard.js';
 import type { RunsService } from '../runs/service.js';
 import type { ChatService } from './service.js';
 
@@ -79,6 +83,30 @@ export const chatRoutes: FastifyPluginCallback<{ chat: ChatService; runs: RunsSe
   });
 
   app.post('/runs/:id/cancel', guard, (req) => runs.cancel(IdParamsSchema.parse(req.params).id));
+
+  app.post('/runs/:id/review', guard, (req) =>
+    runs.review(
+      requireAuth(req).deviceId,
+      IdParamsSchema.parse(req.params).id,
+      ReviewRequestSchema.parse(req.body),
+    ),
+  );
+
+  app.post('/runs/:id/steer', guard, async (req, reply) => {
+    const { id } = IdParamsSchema.parse(req.params);
+    await runs.steer(id, SteerRequestSchema.parse(req.body).text);
+    return reply.code(204).send();
+  });
+
+  app.post('/runs/:id/approvals/:approvalId', guard, (req) => {
+    const { id, approvalId } = ApprovalParamsSchema.parse(req.params);
+    return runs.resolveApproval(
+      requireAuth(req).deviceId,
+      id,
+      approvalId,
+      ApprovalDecisionRequestSchema.parse(req.body),
+    );
+  });
 
   done();
 };

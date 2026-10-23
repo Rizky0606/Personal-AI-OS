@@ -1,4 +1,6 @@
 import type { AppDeps } from '../app.js';
+import { createWorkerRelay } from '../modules/worker/relay.js';
+import { createWorkerHub } from '../modules/worker/routes.js';
 import type { AuthService } from '../modules/auth/service.js';
 import type { DevicesService } from '../modules/devices/service.js';
 
@@ -10,8 +12,38 @@ export const unusedAuth: AuthService = {
   login: unused('auth.login'),
   refresh: unused('auth.refresh'),
   logout: unused('auth.logout'),
+  registerWorker: unused('auth.registerWorker'),
   authenticate: unused('auth.authenticate'),
   deviceActive: unused('auth.deviceActive'),
+};
+
+export const unusedProjects: AppDeps['projects'] = {
+  list: unused('projects.list'),
+  create: unused('projects.create'),
+  update: unused('projects.update'),
+  ownedBy: unused('projects.ownedBy'),
+  workerOf: unused('projects.workerOf'),
+};
+
+export const unusedCompare: AppDeps['compare'] = { run: unused('compare.run') };
+
+export const unusedStatus: AppDeps['status'] = { get: unused('status.get') };
+
+export const unusedTasks: AppDeps['tasks'] = {
+  list: unused('tasks.list'),
+  create: unused('tasks.create'),
+  update: unused('tasks.update'),
+  run: unused('tasks.run'),
+  breakdown: unused('tasks.breakdown'),
+  runChanged: unused('tasks.runChanged'),
+  start: unused('tasks.start'),
+  idle: unused('tasks.idle'),
+};
+
+const stubHub = createWorkerHub();
+export const unusedWorker: AppDeps['worker'] = {
+  hub: stubHub,
+  relay: createWorkerRelay({ hub: stubHub, projects: { workerOf: unused('projects.workerOf') } }),
 };
 
 export const unusedChat: AppDeps['chat'] = {
@@ -30,6 +62,9 @@ export const unusedRuns: AppDeps['runs'] = {
   get: unused('runs.get'),
   events: unused('runs.events'),
   cancel: unused('runs.cancel'),
+  resolveApproval: unused('runs.resolveApproval'),
+  steer: unused('runs.steer'),
+  review: unused('runs.review'),
   exists: unused('runs.exists'),
 };
 

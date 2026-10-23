@@ -59,12 +59,14 @@ fun ScheduleListScreen(
     snackbar: SnackbarHostState,
     onNew: () -> Unit,
     onOpen: (Schedule) -> Unit,
-    viewModel: ScheduleListViewModel = hiltViewModel(),
+    viewModel: ScheduleListViewModel = hiltViewModel()
 ) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
     val context = LocalContext.current
     LaunchedEffect(viewModel) {
-        viewModel.events.collect { if (it is ScheduleEvent.Notice) snackbar.showSnackbar(context.getString(it.message)) }
+        viewModel.events.collect {
+            if (it is ScheduleEvent.Notice) snackbar.showSnackbar(context.getString(it.message))
+        }
     }
     val state = when {
         ui.loading -> ScreenState.Loading
@@ -78,14 +80,14 @@ fun ScheduleListScreen(
                 text = stringResource(R.string.schedule_new),
                 onClick = onNew,
                 kind = ButtonKind.Primary,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth()
             )
         }
         StateHost(
             state = state,
             offline = !online,
             emptyMessage = stringResource(R.string.schedule_list_empty),
-            onRetry = { viewModel.refresh() },
+            onRetry = { viewModel.refresh() }
         ) {
             LazyColumn {
                 items(ui.items, key = { it.id }) { schedule ->
@@ -93,7 +95,7 @@ fun ScheduleListScreen(
                         schedule = schedule,
                         lastRun = ui.lastRuns[schedule.id],
                         onClick = { onOpen(schedule) },
-                        onToggle = { viewModel.setEnabled(schedule, it) },
+                        onToggle = { viewModel.setEnabled(schedule, it) }
                     )
                 }
             }
@@ -113,7 +115,7 @@ private fun ScheduleRow(schedule: Schedule, lastRun: ScheduleRun?, onClick: () -
         stringResource(
             R.string.schedule_last,
             runStatusLabel(it.status),
-            relativeLabel(RelativeTime.of(it.startedAt, System.currentTimeMillis())),
+            relativeLabel(RelativeTime.of(it.startedAt, System.currentTimeMillis()))
         )
     } ?: stringResource(R.string.schedule_never_run)
     val switchLabel = stringResource(R.string.schedule_toggle, schedule.name)
@@ -130,11 +132,11 @@ private fun ScheduleRow(schedule: Schedule, lastRun: ScheduleRun?, onClick: () -
                     checkedThumbColor = AiosTheme.onAccent,
                     uncheckedTrackColor = AiosTheme.colors.surface2,
                     uncheckedThumbColor = AiosTheme.colors.text3,
-                    uncheckedBorderColor = AiosTheme.colors.borderStrong,
+                    uncheckedBorderColor = AiosTheme.colors.borderStrong
                 ),
-                modifier = Modifier.semantics { contentDescription = switchLabel },
+                modifier = Modifier.semantics { contentDescription = switchLabel }
             )
-        },
+        }
     )
 }
 
@@ -145,7 +147,7 @@ fun runStatusLabel(status: String): String = stringResource(
         "failed" -> R.string.schedule_run_failed
         "missed" -> R.string.schedule_run_missed
         else -> R.string.schedule_run_running
-    },
+    }
 )
 
 /* ---------- Buat ---------- */
@@ -154,7 +156,7 @@ fun runStatusLabel(status: String): String = stringResource(
 fun ScheduleCreateScreen(
     online: Boolean,
     onCreated: (String) -> Unit,
-    viewModel: ScheduleCreateViewModel = hiltViewModel(),
+    viewModel: ScheduleCreateViewModel = hiltViewModel()
 ) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
     LaunchedEffect(viewModel) {
@@ -162,10 +164,13 @@ fun ScheduleCreateScreen(
     }
     val colors = AiosTheme.colors
     Column(
-        modifier = Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState()),
+        modifier = Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState())
     ) {
         if (!online) OfflineBanner()
-        Column(modifier = Modifier.padding(Tokens.Space.s16), verticalArrangement = Arrangement.spacedBy(Tokens.Space.s16)) {
+        Column(
+            modifier = Modifier.padding(Tokens.Space.s16),
+            verticalArrangement = Arrangement.spacedBy(Tokens.Space.s16)
+        ) {
             ui.formError?.let { ErrorBanner(message = ui.serverMessage ?: stringResource(it)) }
             val draft = ui.draft
             if (draft == null) {
@@ -177,22 +182,34 @@ fun ScheduleCreateScreen(
                     supportingText = stringResource(R.string.schedule_text_support),
                     errorText = ui.textError?.let { stringResource(it) },
                     enabled = !ui.parsing,
-                    singleLine = false,
+                    singleLine = false
                 )
                 AiosButton(
                     text = stringResource(if (ui.parsing) R.string.schedule_parsing else R.string.schedule_parse),
                     onClick = viewModel::parse,
                     kind = ButtonKind.Primary,
                     enabled = !ui.parsing,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth()
                 )
             } else {
-                Text(stringResource(R.string.schedule_preview_title), style = AiosTheme.type.section, color = colors.text)
+                Text(
+                    stringResource(R.string.schedule_preview_title),
+                    style = AiosTheme.type.section,
+                    color = colors.text
+                )
                 Text(draft.description, style = AiosTheme.type.chat, color = colors.accent)
                 Column(verticalArrangement = Arrangement.spacedBy(Tokens.Space.s4)) {
-                    Text(stringResource(R.string.schedule_next_three), style = AiosTheme.type.meta, color = colors.text2)
+                    Text(
+                        stringResource(R.string.schedule_next_three),
+                        style = AiosTheme.type.meta,
+                        color = colors.text2
+                    )
                     draft.nextRuns.forEach { iso ->
-                        Text(ScheduleFormat.instant(iso, draft.timezone) ?: iso, style = AiosTheme.type.mono, color = colors.text)
+                        Text(
+                            ScheduleFormat.instant(iso, draft.timezone) ?: iso,
+                            style = AiosTheme.type.mono,
+                            color = colors.text
+                        )
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(Tokens.Space.s8)) {
@@ -202,26 +219,26 @@ fun ScheduleCreateScreen(
                 AiosTextField(
                     value = ui.name,
                     onValueChange = viewModel::onName,
-                    label = stringResource(R.string.schedule_name_label),
+                    label = stringResource(R.string.schedule_name_label)
                 )
                 AiosTextField(
                     value = ui.prompt,
                     onValueChange = viewModel::onPrompt,
                     label = stringResource(R.string.schedule_prompt_label),
-                    singleLine = false,
+                    singleLine = false
                 )
                 AiosButton(
                     text = stringResource(if (ui.saving) R.string.schedule_saving else R.string.schedule_save),
                     onClick = viewModel::save,
                     kind = ButtonKind.Primary,
                     enabled = !ui.saving,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth()
                 )
                 AiosButton(
                     text = stringResource(R.string.schedule_edit_text),
                     onClick = viewModel::editText,
                     kind = ButtonKind.Ghost,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }
@@ -234,7 +251,7 @@ private fun targetLabel(target: String): String = stringResource(
         TARGET_RESEARCH -> R.string.schedule_target_research
         TARGET_CHAT -> R.string.schedule_target_chat
         else -> R.string.schedule_target_role
-    },
+    }
 )
 
 /* ---------- Detail ---------- */
@@ -245,7 +262,7 @@ fun ScheduleDetailScreen(
     snackbar: SnackbarHostState,
     onOpenConversation: (String) -> Unit,
     onClosed: () -> Unit,
-    viewModel: ScheduleDetailViewModel = hiltViewModel(),
+    viewModel: ScheduleDetailViewModel = hiltViewModel()
 ) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -268,7 +285,7 @@ fun ScheduleDetailScreen(
             schedule == null -> ErrorBanner(
                 message = stringResource(R.string.schedule_list_error),
                 onRetry = { viewModel.load() },
-                modifier = Modifier.padding(Tokens.Space.s16),
+                modifier = Modifier.padding(Tokens.Space.s16)
             )
             else -> DetailBody(ui, schedule, viewModel, onOpenConversation) { confirmDelete = true }
         }
@@ -277,8 +294,20 @@ fun ScheduleDetailScreen(
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
             containerColor = AiosTheme.colors.surface,
-            title = { Text(stringResource(R.string.schedule_delete_title), style = AiosTheme.type.section, color = AiosTheme.colors.text) },
-            text = { Text(stringResource(R.string.schedule_delete_body), style = AiosTheme.type.ui, color = AiosTheme.colors.text2) },
+            title = {
+                Text(
+                    stringResource(R.string.schedule_delete_title),
+                    style = AiosTheme.type.section,
+                    color = AiosTheme.colors.text
+                )
+            },
+            text = {
+                Text(
+                    stringResource(R.string.schedule_delete_body),
+                    style = AiosTheme.type.ui,
+                    color = AiosTheme.colors.text2
+                )
+            },
             confirmButton = {
                 AiosButton(
                     stringResource(R.string.chat_delete_confirm),
@@ -286,12 +315,16 @@ fun ScheduleDetailScreen(
                         confirmDelete = false
                         viewModel.delete()
                     },
-                    kind = ButtonKind.Danger,
+                    kind = ButtonKind.Danger
                 )
             },
             dismissButton = {
-                AiosButton(stringResource(R.string.chat_delete_cancel), onClick = { confirmDelete = false }, kind = ButtonKind.Ghost)
-            },
+                AiosButton(
+                    stringResource(R.string.chat_delete_cancel),
+                    onClick = { confirmDelete = false },
+                    kind = ButtonKind.Ghost
+                )
+            }
         )
     }
 }
@@ -302,13 +335,13 @@ private fun DetailBody(
     schedule: Schedule,
     viewModel: ScheduleDetailViewModel,
     onOpenConversation: (String) -> Unit,
-    onDelete: () -> Unit,
+    onDelete: () -> Unit
 ) {
     val colors = AiosTheme.colors
     val next = ScheduleFormat.instant(schedule.nextRunAt, schedule.timezone)
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(Tokens.Space.s16),
-        verticalArrangement = Arrangement.spacedBy(Tokens.Space.s16),
+        verticalArrangement = Arrangement.spacedBy(Tokens.Space.s16)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
@@ -321,13 +354,13 @@ private fun DetailBody(
                         else -> stringResource(R.string.schedule_next_none)
                     },
                     style = AiosTheme.type.meta,
-                    color = colors.text2,
+                    color = colors.text2
                 )
             }
             Switch(
                 checked = schedule.enabled,
                 onCheckedChange = viewModel::setEnabled,
-                modifier = Modifier.semantics { contentDescription = schedule.name },
+                modifier = Modifier.semantics { contentDescription = schedule.name }
             )
         }
 
@@ -337,31 +370,35 @@ private fun DetailBody(
                 onClick = viewModel::runNow,
                 kind = ButtonKind.Primary,
                 enabled = !ui.runningNow,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f)
             )
             schedule.conversationId?.let { conversation ->
                 AiosButton(
                     text = stringResource(R.string.schedule_open_results),
                     onClick = { onOpenConversation(conversation) },
                     kind = ButtonKind.Secondary,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f)
                 )
             }
         }
 
-        AiosTextField(value = ui.editName, onValueChange = viewModel::onName, label = stringResource(R.string.schedule_name_label))
+        AiosTextField(
+            value = ui.editName,
+            onValueChange = viewModel::onName,
+            label = stringResource(R.string.schedule_name_label)
+        )
         AiosTextField(
             value = ui.editPrompt,
             onValueChange = viewModel::onPrompt,
             label = stringResource(R.string.schedule_prompt_label),
-            singleLine = false,
+            singleLine = false
         )
         AiosButton(
             text = stringResource(if (ui.saving) R.string.schedule_saving else R.string.schedule_save_changes),
             onClick = viewModel::saveEdits,
             kind = ButtonKind.Secondary,
             enabled = !ui.saving,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth()
         )
 
         Text(stringResource(R.string.schedule_history_title), style = AiosTheme.type.section, color = colors.text)
@@ -372,7 +409,7 @@ private fun DetailBody(
                 ui.runs.forEach { run ->
                     AiosListItem(
                         title = runStatusLabel(run.status),
-                        supporting = ScheduleFormat.instant(run.startedAt, schedule.timezone) ?: run.startedAt,
+                        supporting = ScheduleFormat.instant(run.startedAt, schedule.timezone) ?: run.startedAt
                     )
                 }
                 if (ui.nextBefore != null) {
@@ -380,7 +417,7 @@ private fun DetailBody(
                         text = stringResource(R.string.schedule_history_more),
                         onClick = viewModel::loadMoreRuns,
                         kind = ButtonKind.Ghost,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             }
@@ -390,7 +427,7 @@ private fun DetailBody(
             text = stringResource(R.string.schedule_delete),
             onClick = onDelete,
             kind = ButtonKind.Danger,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth()
         )
     }
 }

@@ -1,12 +1,14 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { LoginScreen } from '../screens/LoginScreen';
 import { applyTheme, useUiStore } from '../state/uiStore';
 import { Toaster } from '../ui/Toaster';
 import { TooltipProvider } from '../ui/Tooltip';
 import { useAuthState } from './hooks';
+import { queryClient } from './queryClient';
 import { RealtimeLifecycle } from './RealtimeLifecycle';
+import { WorkerLifecycle } from './WorkerLifecycle';
 import { router } from './router';
 import { auth } from './services';
 
@@ -24,9 +26,6 @@ function readLastServer(): string {
 export function App() {
   const state = useAuthState();
   const theme = useUiStore((s) => s.theme);
-  const [queryClient] = useState(
-    () => new QueryClient({ defaultOptions: { queries: { retry: 1, staleTime: 30_000 } } }),
-  );
 
   useEffect(() => {
     void auth.init();
@@ -47,6 +46,7 @@ export function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider delayDuration={400}>
         <RealtimeLifecycle />
+        <WorkerLifecycle />
         {state.status === 'loading' ? (
           <div className="h-full bg-bg" />
         ) : state.status === 'signedOut' ? (

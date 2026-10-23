@@ -1,4 +1,10 @@
+import { Link } from '@tanstack/react-router';
 import { useConnection, useOnline } from '../app/hooks';
+import { useModels, useQuota, useRoles } from '../api/queries';
+import { formatCost, formatTokens } from '../lib/format';
+import { useUiStore } from '../state/uiStore';
+import { useProjects, useWorker } from '../worker/hooks';
+import { workerIndicator } from '../worker/status';
 import { copy } from '../copy';
 import { cn } from '../lib/cn';
 import type { ConnectionState } from '../realtime/client';
@@ -34,16 +40,64 @@ export function StatusBar() {
   const connection = useConnection();
   const online = useOnline();
   const view = connectionView(connection, online);
+  const worker = workerIndicator(useWorker());
+  const activeProjectId = useUiStore((s) => s.activeProjectId);
+  const runBranch = useUiStore((s) => s.activeRunBranch);
+  const project = useProjects().data?.find((p) => p.id === activeProjectId);
+  const activeRole = useUiStore((s) => s.activeRole);
+  const modelId = useUiStore((s) => s.model);
+  const roles = useRoles().data;
+  const models = useModels().data;
+  const quota = useQuota().data;
+  const roleLabel = activeRole
+    ? (roles?.find((r) => r.id === activeRole)?.name ?? activeRole)
+    : copy.status.role;
+  const modelLabel = modelId
+    ? (models?.find((m) => m.id === modelId)?.label ?? modelId)
+    : copy.status.model;
+  const quotaLabel = quota
+    ? copy.status.quotaSummary(
+        formatTokens(quota.totals.inputTokens + quota.totals.outputTokens),
+        formatCost(quota.totals.costUsd),
+      )
+    : copy.status.quota;
+  // Selama run coding berjalan: branch kerja agent; selain itu branch bawaan project.
+  const projectLabel = project
+    ? `${project.name} · ${runBranch ?? project.defaultBranch}`
+    : copy.status.project;
   return (
     <footer className="flex h-(--aios-statusbar-height) shrink-0 items-center justify-between border-t border-border bg-surface px-3 font-mono text-caption text-text-2">
       <div className="flex items-center gap-4">
-        <span>{copy.status.project}</span>
-        <span>{copy.status.role}</span>
-        <span>{copy.status.model}</span>
+        <span>{projectLabel}</span>
+        <span>{roleLabel}</span>
+        <span className="max-w-48 truncate">{modelLabel}</span>
       </div>
       <div className="flex items-center gap-4">
-        <span>{copy.status.worker}</span>
-        <span>{copy.status.quota}</span>
+        <span
+          role="status"
+          aria-label={copy.workerStatus[worker]}
+          className="flex items-center gap-2"
+        >
+          <span
+            aria-hidden="true"
+            className={cn(
+              'size-2 rounded-full',
+              worker === 'connected'
+                ? 'bg-success'
+                : worker === 'reconnecting'
+                  ? 'bg-warning'
+                  : 'bg-text-3',
+            )}
+          />
+          {copy.workerStatus[worker]}
+        </span>
+        <Link
+          to="/quota"
+          title={copy.status.quotaLabel}
+          className="underline-offset-2 hover:text-text hover:underline"
+        >
+          {quotaLabel}
+        </Link>
         <span role="status" className="flex items-center gap-2">
           <span aria-hidden="true" className={cn('size-2 rounded-full', dotTone[view.tone])} />
           {view.label}

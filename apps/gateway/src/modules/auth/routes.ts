@@ -2,10 +2,11 @@ import {
   LoginRequestSchema,
   LoginResponseSchema,
   RefreshRequestSchema,
+  RegisterWorkerRequestSchema,
   TokenPairSchema,
 } from '@aios/contracts';
 import type { FastifyPluginCallback } from 'fastify';
-import { requireAuth } from './guard.js';
+import { requireAuth, requireScope } from './guard.js';
 import type { AuthService } from './service.js';
 
 export interface AuthRouteOptions {
@@ -38,6 +39,13 @@ export const sessionRoutes: FastifyPluginCallback<{ auth: AuthService }> = (app,
   app.post('/auth/logout', async (req, reply) => {
     await opts.auth.logout(requireAuth(req).deviceId);
     return reply.code(204).send();
+  });
+
+  // Hanya aplikasi (scope app) yang boleh membuat perangkat worker; token worker tidak bisa membuat worker lain.
+  app.post('/devices/worker', { onRequest: requireScope('app') }, async (req, reply) => {
+    const { name } = RegisterWorkerRequestSchema.parse(req.body);
+    const registered = await opts.auth.registerWorker(requireAuth(req).deviceId, name);
+    return reply.code(201).send(LoginResponseSchema.parse(registered));
   });
 
   done();

@@ -220,7 +220,7 @@ export class AuthSession {
   /** Request ke gateway dengan Bearer dari sesi; satu kali ulang setelah refresh bila 401. */
   async authedFetch(
     path: string,
-    init: { method?: string; body?: unknown } = {},
+    init: { method?: string; body?: unknown; raw?: boolean } = {},
   ): Promise<unknown> {
     for (let attempt = 0; attempt < 2; attempt++) {
       const session = this.currentSession();
@@ -240,10 +240,15 @@ export class AuthSession {
     throw new ApiProblem(401, 'session_expired', 'Sesi berakhir. Masuk lagi.');
   }
 
+  /** Unduh isi biner/teks apa adanya (ekspor riset). Aturan auth dan refresh sama dengan [authedFetch]. */
+  async authedBlob(path: string): Promise<Blob> {
+    return (await this.authedFetch(path, { raw: true })) as Blob;
+  }
+
   private async request(
     base: string,
     path: string,
-    options: { method?: string; body?: unknown; token?: string },
+    options: { method?: string; body?: unknown; token?: string; raw?: boolean },
   ): Promise<unknown> {
     let response: Response;
     try {
@@ -263,6 +268,8 @@ export class AuthSession {
       );
     }
     if (response.status === 204) return null;
+    // Unduhan (ekspor laporan): isi apa adanya; hanya error yang diurai sebagai JSON.
+    if (options.raw && response.ok) return response.blob();
     const text = await response.text();
     const json = parseJson(text);
     if (!response.ok) {

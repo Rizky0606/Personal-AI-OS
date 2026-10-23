@@ -22,7 +22,7 @@ data class Schedule(
     val nextRunAt: String? = null,
     val conversationId: String? = null,
     val createdAt: String,
-    val updatedAt: String,
+    val updatedAt: String
 )
 
 @Serializable
@@ -36,7 +36,7 @@ data class ScheduleRun(
     /** running, succeeded, failed, missed. */
     val status: String,
     val startedAt: String,
-    val finishedAt: String? = null,
+    val finishedAt: String? = null
 )
 
 @Serializable
@@ -47,14 +47,14 @@ data class CreateScheduleRequest(
     val prompt: String,
     val target: String,
     val agentRole: String? = null,
-    val enabled: Boolean = true,
+    val enabled: Boolean = true
 )
 
 @Serializable
 data class UpdateScheduleRequest(
     val name: String? = null,
     val prompt: String? = null,
-    val enabled: Boolean? = null,
+    val enabled: Boolean? = null
 )
 
 @Serializable
@@ -70,5 +70,5 @@ data class ScheduleParse(
     val target: String,
     val agentRole: String? = null,
     val description: String,
-    val nextRuns: List<String>,
+    val nextRuns: List<String>
 )

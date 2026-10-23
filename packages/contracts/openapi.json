@@ -1496,6 +1496,10 @@
               "model": {
                 "type": "string",
                 "minLength": 1
+              },
+              "continueFromRunId": {
+                "type": "string",
+                "format": "uuid"
               }
             },
             "required": [
@@ -1630,6 +1634,15 @@
                     "body"
                   ]
                 }
+              },
+              "merge": {
+                "type": "boolean",
+                "default": false
+              },
+              "commitMessage": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
               }
             },
             "required": [
@@ -1985,6 +1998,19 @@
           "items"
         ]
       },
+      "RegisterWorkerRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
       "PushTokenRequest": {
         "type": "object",
         "properties": {
@@ -2152,6 +2178,85 @@
           "totals",
           "byModel",
           "byDay"
+        ]
+      },
+      "CompareResponse": {
+        "type": "object",
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "model": {
+                  "type": "string"
+                },
+                "ok": {
+                  "type": "boolean"
+                },
+                "text": {
+                  "type": "string"
+                },
+                "latencyMs": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "usage": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Usage"
+                    },
+                    {
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    }
+                  ]
+                },
+                "error": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "model",
+                "ok",
+                "text",
+                "latencyMs",
+                "usage",
+                "error"
+              ]
+            }
+          }
+        },
+        "required": [
+          "results"
+        ]
+      },
+      "CompareRequest": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8000
+          },
+          "models": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 2,
+            "maxItems": 3
+          }
+        },
+        "required": [
+          "prompt",
+          "models"
         ]
       },
       "RoleList": {
@@ -2990,6 +3095,54 @@
           "decision"
         ]
       },
+      "ReviewResponse": {
+        "type": "object",
+        "properties": {
+          "run": {
+            "$ref": "#/components/schemas/Run"
+          },
+          "branch": {
+            "type": "string"
+          },
+          "commit": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "merged": {
+            "type": "boolean"
+          },
+          "mergeSkipped": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "dirty",
+              "detached",
+              "not_fast_forward",
+              "nothing_to_merge",
+              null
+            ]
+          },
+          "revisionRunId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "run",
+          "branch",
+          "commit",
+          "merged",
+          "mergeSkipped",
+          "revisionRunId"
+        ]
+      },
       "ReviewRequest": {
         "type": "object",
         "properties": {
@@ -3025,6 +3178,15 @@
               ]
             },
             "default": []
+          },
+          "merge": {
+            "type": "boolean",
+            "default": false
+          },
+          "commitMessage": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
           }
         },
         "required": [
@@ -3940,6 +4102,109 @@
           "status"
         ]
       },
+      "Status": {
+        "type": "object",
+        "properties": {
+          "gateway": {
+            "type": "object",
+            "properties": {
+              "version": {
+                "type": "string"
+              },
+              "adaptersVersion": {
+                "type": "string"
+              },
+              "node": {
+                "type": "string"
+              },
+              "uptimeSec": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "version",
+              "adaptersVersion",
+              "node",
+              "uptimeSec"
+            ]
+          },
+          "readiness": {
+            "$ref": "#/components/schemas/Readiness"
+          },
+          "workers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "deviceId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "online": {
+                  "type": "boolean"
+                },
+                "lastSeenAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "deviceId",
+                "name",
+                "online",
+                "lastSeenAt"
+              ]
+            }
+          },
+          "jobs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "queue": {
+                  "type": "string"
+                },
+                "queued": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "active": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "failed": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "queue",
+                "queued",
+                "active",
+                "failed"
+              ]
+            }
+          },
+          "activeRuns": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "gateway",
+          "readiness",
+          "workers",
+          "jobs",
+          "activeRuns"
+        ]
+      },
       "Readiness": {
         "type": "object",
         "properties": {
@@ -4270,6 +4535,81 @@
         }
       }
     },
+    "/devices/worker": {
+      "post": {
+        "operationId": "registerWorker",
+        "tags": [
+          "Perangkat"
+        ],
+        "summary": "Daftarkan worker sidecar (scope app). Worker lama dengan nama sama dicabut; token dikembalikan sekali",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterWorkerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Perangkat worker dan token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Permintaan tidak valid",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Belum login atau token tidak berlaku",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token tidak punya scope yang dibutuhkan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/devices/{id}": {
       "delete": {
         "operationId": "deleteDevice",
@@ -4514,6 +4854,81 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Quota"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Belum login atau token tidak berlaku",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token tidak punya scope yang dibutuhkan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/compare": {
+      "post": {
+        "operationId": "compareModels",
+        "tags": [
+          "Model"
+        ],
+        "summary": "Satu prompt ke 2-3 model sekaligus, dengan waktu dan usage per model",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompareRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Jawaban per model",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompareResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Permintaan tidak valid",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             }
@@ -5878,11 +6293,11 @@
         },
         "responses": {
           "200": {
-            "description": "Run setelah review",
+            "description": "Hasil tinjauan",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Run"
+                  "$ref": "#/components/schemas/ReviewResponse"
                 }
               }
             }
@@ -6466,12 +6881,12 @@
           }
         },
         "responses": {
-          "201": {
-            "description": "Run coding yang dimulai",
+          "200": {
+            "description": "Kartu: run sudah dimulai (runId terisi) atau masuk antrean (runId null)",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Run"
+                  "$ref": "#/components/schemas/Task"
                 }
               }
             }
@@ -7756,6 +8171,62 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/status": {
+      "get": {
+        "operationId": "getStatus",
+        "tags": [
+          "Kesehatan"
+        ],
+        "summary": "Versi, dependensi, worker, dan antrean job untuk halaman Status",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Status sistem",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Belum login atau token tidak berlaku",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token tidak punya scope yang dibutuhkan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             }

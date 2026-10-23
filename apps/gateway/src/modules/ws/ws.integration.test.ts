@@ -362,7 +362,7 @@ describe('heartbeat dan sesi', () => {
   let hbUrl: string;
   let hbToken: string;
   beforeAll(async () => {
-    hb = await createAuthEnv(inject('testDatabaseUrl'), { heartbeatMs: 60 });
+    hb = await createAuthEnv(inject('testDatabaseUrl'), { heartbeatMs: 200 });
     hbToken = (await hb.loginOk({ kind: 'desktop' })).accessToken;
     await hb.app.listen({ port: 0, host: '127.0.0.1' });
     hbUrl = `ws://127.0.0.1:${(hb.app.server.address() as AddressInfo).port}/v1/ws`;

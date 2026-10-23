@@ -6,6 +6,7 @@ on:
     tags: ['v*']
     paths:
       - 'apps/desktop/**'
+      - 'apps/worker/**'
       - 'packages/contracts/**'
       - 'packages/ui-tokens/**'
       - 'pnpm-lock.yaml'
@@ -30,17 +31,53 @@ jobs:
         with:
           workspaces: apps/desktop/src-tauri
 
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
       - run: pnpm install --frozen-lockfile
+      # Paket workspace dipakai lewat dist/; bangun dulu supaya tes dan bundel Bun menemukannya.
+      - name: Bangun paket kontrak dan adapter
+        run: |
+          pnpm --filter @aios/contracts build
+          pnpm --filter @aios/adapters build
       - name: Tes UI desktop
         run: pnpm --filter @aios/desktop test
+      # tauri-build mewajibkan sidecar (externalBin) ada saat kompilasi, jadi worker dibangun lebih dulu.
+      - name: Bangun sidecar worker (Bun)
+        run: pnpm --filter @aios/worker build:sidecar
+      - name: Uji asap sidecar
+        run: pnpm --filter @aios/worker smoke:sidecar
       - name: Cek Rust (clippy dan tes)
         working-directory: apps/desktop/src-tauri
         run: |
           cargo clippy --all-targets -- -D warnings
           cargo test
 
+      # Build tag: updater aktif. Kunci privat penanda tangan hanya ada sebagai secret Actions (tidak pernah di repo).
+      # Kunci publik dan repo rilis disuntikkan lewat config tambahan, jadi tauri.conf.json tetap berisi placeholder.
+      - name: Siapkan config rilis (updater)
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        env:
+          UPDATER_PUBKEY: ${{ secrets.TAURI_UPDATER_PUBKEY }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          test -n "$UPDATER_PUBKEY" && test -n "$TAURI_SIGNING_PRIVATE_KEY" || { echo "secret TAURI_UPDATER_PUBKEY dan TAURI_SIGNING_PRIVATE_KEY wajib untuk rilis"; exit 1; }
+          node -e 'const fs=require("fs");const v=process.env.GITHUB_REF_NAME.slice(1);fs.writeFileSync("apps/desktop/src-tauri/tauri.release.conf.json",JSON.stringify({version:v,bundle:{createUpdaterArtifacts:true},plugins:{updater:{pubkey:process.env.UPDATER_PUBKEY,endpoints:["https://github.com/"+process.env.GITHUB_REPOSITORY+"/releases/latest/download/latest.json"],windows:{installMode:"passive"}}}}))'
+          echo "TAURI_CONFIG_ARGS=--config src-tauri/tauri.release.conf.json" >> "$GITHUB_ENV"
+
       - name: Bangun installer NSIS
-        run: pnpm --filter @aios/desktop tauri build
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        shell: bash
+        run: pnpm --filter @aios/desktop tauri build $TAURI_CONFIG_ARGS
+
+      - name: Susun latest.json untuk updater
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: node infra/scripts/make-latest-json.mjs --version "${GITHUB_REF_NAME#v}" --repo "$GITHUB_REPOSITORY" --dir apps/desktop/src-tauri/target/release/bundle/nsis --out apps/desktop/src-tauri/target/release/bundle/nsis/latest.json
 
       - uses: actions/upload-artifact@v4
         with:
@@ -53,4 +90,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           draft: true
-          files: apps/desktop/src-tauri/target/release/bundle/nsis/*.exe
+          files: |
+            apps/desktop/src-tauri/target/release/bundle/nsis/*.exe
+            apps/desktop/src-tauri/target/release/bundle/nsis/*.sig
+            apps/desktop/src-tauri/target/release/bundle/nsis/latest.json

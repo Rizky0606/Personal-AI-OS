@@ -32,7 +32,7 @@ interface ScheduleApi {
     suspend fun runs(
         @Path("id") id: String,
         @Query("before") before: String? = null,
-        @Query("limit") limit: Int = RUNS_PAGE,
+        @Query("limit") limit: Int = RUNS_PAGE
     ): Page<ScheduleRun>
 
     companion object {

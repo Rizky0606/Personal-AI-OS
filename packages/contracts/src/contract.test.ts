@@ -22,8 +22,10 @@ const DOCUMENTED_ENDPOINTS = [
   'GET /devices',
   'DELETE /devices/:id',
   'POST /devices/:id/push-token',
+  'POST /devices/worker',
   'GET /models',
   'GET /quota',
+  'POST /compare',
   'GET /roles',
   'POST /route/preview',
   'GET /conversations',
@@ -62,6 +64,7 @@ const DOCUMENTED_ENDPOINTS = [
   'POST /files',
   'GET /healthz',
   'GET /readyz',
+  'GET /status',
 ];
 
 describe('endpoint REST', () => {

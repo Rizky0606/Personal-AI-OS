@@ -80,18 +80,51 @@ volumes:
 
 ## Vhost nginx
 
-```nginx
-location / {
-    proxy_pass http://127.0.0.1:3000;
-    proxy_http_version 1.1;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection "upgrade";
-    proxy_set_header Host $host;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_read_timeout 3600s;   # stream panjang dan WebSocket
-    client_max_body_size 25m;   # lampiran
-}
+Contoh lengkap (TLS, redirect, WebSocket, batas ukuran, rate limit kasar, header keamanan, hanya `/v1` dan `/llm/v1` yang diteruskan) ada di `infra/nginx/aios.conf.example`. Gateway percaya `X-Forwarded-For` hanya dari `127.0.0.1` (nginx di host yang sama); jangan memasang nginx di host lain tanpa mengubah `trustProxy`.
+
+## Backup, restore, dan pemantauan (Fase 23)
+
+Semua skrip ada di `infra/scripts`; unit systemd di `infra/systemd`. Skrip diuji dengan perintah palsu lewat `bash infra/scripts/selftest.sh` (jalan di CI); yang belum pernah dijalankan adalah restic/Docker/Oracle sungguhan.
+
+### Backup harian
+
+1. Pasang restic (`apt install restic`) dan buat bucket Oracle Object Storage beserta Customer Secret Key (API S3-compatible).
+2. `sudo mkdir -p /etc/aios && sudo cp infra/scripts/backup.env.example /etc/aios/backup.env`, isi `RESTIC_REPOSITORY`, kunci akses, `COMPOSE_DIR`, dan `HERMES_DATA_DIR`; `sudo chmod 600 /etc/aios/backup.env`.
+3. Buat kata sandi repositori: `openssl rand -base64 32 | sudo tee /etc/aios/restic-password` lalu `chmod 600`. **Simpan salinannya di luar VPS** (pengelola kata sandi): tanpanya backup tidak bisa dibuka.
+4. `sudo -E restic init` (sekali; dengan variabel dari `backup.env`), lalu uji manual: `sudo infra/scripts/backup.sh`.
+5. Pasang timer: `sudo cp infra/systemd/aios-*.{service,timer} /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable --now aios-backup.timer aios-restore-test.timer`. Sesuaikan `ExecStart` bila repo tidak di `/srv/personal-ai-os`.
+
+Yang dicadangkan: dump `pg_dump -Fc` database, folder data Hermes, `.env`, `gateway.env`, dan `secrets/` (restic mengenkripsi seluruh repositori). Retensi 7 harian, 4 mingguan, 6 bulanan; cek integritas ringan tiap hari.
+
+### Uji restore
+
+`sudo infra/scripts/restore.sh` memulihkan snapshot terbaru ke database **sementara** (`aios_restore_<waktu>`), memeriksa tabel inti dan migrasi, mencetak jumlah baris untuk dibandingkan dengan produksi, lalu menghapusnya. Tidak menyentuh database `aios`. Opsi: `--keep` (pertahankan database sementara), `--snapshot ID`, `--target-dir D` (pulihkan juga file Hermes dan konfigurasi ke folder D). Timer bulanan menjalankannya otomatis; jalankan manual sekali setelah backup pertama.
+
+### Uptime Kuma + Telegram
+
+`cd infra/compose && docker compose --profile monitoring up -d uptime-kuma` (isi `KUMA_TAG` di `.env`). Dashboard di `127.0.0.1:3001`; buka lewat Tailscale atau `ssh -L 3001:127.0.0.1:3001`. Di UI Kuma:
+
+1. Buat bot lewat @BotFather, simpan token; kirim pesan ke bot lalu ambil `chat_id` (`https://api.telegram.org/bot<token>/getUpdates`).
+2. Settings > Notifications > Setup Notification > Telegram, isi token dan chat id, centang "Default enabled", Test.
+3. Monitor HTTP: `http://127.0.0.1:3000/v1/readyz` (interval 60 dtk, terima status 200 saja; 503 berarti ada dependensi mati), `http://127.0.0.1:3000/v1/healthz`.
+4. Dua monitor tipe **Push** untuk backup dan uji restore; salin URL push-nya ke `KUMA_PUSH_URL` dan `KUMA_RESTORE_PUSH_URL` di `backup.env`. Set "heartbeat interval" 26 jam (backup) dan 33 hari (restore) agar backup yang tidak jalan juga memicu notifikasi.
+
+Token bot tersimpan di database Kuma (volume `kumadata`), bukan di repo.
+
+### Cek versi tool
+
+`infra/scripts/check-versions.sh` membandingkan omp, 9Router, Hermes, SearXNG, PostgreSQL, dan Node di VPS dengan blok kunci di `infra/VERSIONS.md`. Kode keluar 1 bila berbeda atau tidak terpasang (`--lenient` hanya melaporkan). Jalankan sebelum dan sesudah upgrade; isi kunci Hermes dan SearXNG saat pertama kali dicek.
+
+### Tes beban ringan
+
+Dari mesin mana pun yang bisa menjangkau gateway (idealnya dari VPS agar sampel sumber daya terbaca):
+
+```bash
+# Token dari perangkat uji khusus (login sekali lewat POST /v1/auth/login); jangan dibagikan.
+AIOS_URL=https://aios.contoh.com AIOS_TOKEN=<access> AIOS_REFRESH_TOKEN=<refresh>   node infra/scripts/loadtest.mjs --out beban.json
 ```
+
+Menjalankan 5 run chat bersamaan dan 1 riset `deep`, lalu mencetak waktu tiap pekerjaan dan, di Linux, CPU (rata-rata dan puncak), memori terpakai, swap, serta RSS puncak gateway, Hermes, 9Router, Postgres, dan Chromium. Catat hasilnya di `docs/BACKLOG.md`. Untuk membandingkan sebelum dan sesudah perubahan, simpan `beban.json`.
 
 ## Yang dipasang di PC Windows
 

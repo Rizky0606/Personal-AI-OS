@@ -89,6 +89,9 @@ describe('kontras WCAG AA', () => {
     ['text-2', 'bg'],
     ['text-2', 'surface'],
     ['text-2', 'surface-2'],
+    ['text-3', 'bg'],
+    ['text-3', 'surface'],
+    ['text-3', 'surface-2'],
     ['text', 'accent-soft'],
     ['danger', 'surface'],
   ];
@@ -121,11 +124,7 @@ describe('kontras WCAG AA', () => {
    * `min` adalah ambang yang tidak tercapai (4.5 untuk teks, 3 untuk non-teks).
    */
   const KNOWN_FAILURES: { theme: 'light' | 'dark'; fg: ColorName; bg: ColorName; min: number }[] = [
-    { theme: 'light', fg: 'text-3', bg: 'surface', min: 4.5 },
-    { theme: 'light', fg: 'text-3', bg: 'bg', min: 4.5 },
-    { theme: 'dark', fg: 'text-3', bg: 'surface', min: 4.5 },
     { theme: 'light', fg: 'warning', bg: 'surface', min: 3 },
-    { theme: 'light', fg: 'surface', bg: 'accent', min: 4.5 },
     { theme: 'dark', fg: 'text', bg: 'accent', min: 4.5 },
   ];
 

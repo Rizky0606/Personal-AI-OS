@@ -110,6 +110,8 @@ body {
   *::before,
   *::after {
     animation-duration: 1ms !important;
+    /* Tanpa ini animasi tak berhingga berkedip tiap 1 ms alih-alih berhenti. */
+    animation-iteration-count: 1 !important;
     transition-duration: 1ms !important;
   }
 }
@@ -135,4 +137,37 @@ body {
 }
 :root[data-theme='dark'] {
   --aios-on-accent: var(--aios-bg);
+}
+
+/* Warna sintaks di diff (highlight.js), dari token desain: tanpa tema pihak ketiga. */
+.hljs-keyword,
+.hljs-literal,
+.hljs-built_in {
+  color: var(--aios-accent);
+}
+.hljs-string,
+.hljs-regexp,
+.hljs-addition {
+  color: var(--aios-success);
+}
+.hljs-number,
+.hljs-meta,
+.hljs-attr,
+.hljs-attribute {
+  color: var(--aios-warning);
+}
+.hljs-title,
+.hljs-function,
+.hljs-type,
+.hljs-class,
+.hljs-tag,
+.hljs-name {
+  color: var(--aios-info);
+}
+.hljs-comment,
+.hljs-quote {
+  color: var(--aios-text-3);
+}
+.hljs-deletion {
+  color: var(--aios-danger);
 }

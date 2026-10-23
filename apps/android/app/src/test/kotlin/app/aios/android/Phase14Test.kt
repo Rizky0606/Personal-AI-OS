@@ -79,7 +79,7 @@ class AppLinksTest {
             "type" to "schedule.result",
             "scheduleId" to "s1",
             "conversationId" to "c1",
-            "status" to "succeeded",
+            "status" to "succeeded"
         )
         assertEquals(AppLink.OpenConversation("c1"), AppLinks.fromPush(withConversation))
         assertEquals(AppLink.OpenSchedule("s1"), AppLinks.fromPush(withConversation - "conversationId"))
@@ -100,11 +100,11 @@ class AppLinksTest {
         assertEquals(AppLink.SharedText("halo"), AppLinks.fromShare(null, "  halo  "))
         assertEquals(
             AppLink.SharedText("Judul Berita\nhttps://contoh.com/a"),
-            AppLinks.fromShare("Judul Berita", "https://contoh.com/a"),
+            AppLinks.fromShare("Judul Berita", "https://contoh.com/a")
         )
         assertEquals(
             AppLink.SharedText("Judul Berita - https://contoh.com/a"),
-            AppLinks.fromShare("Judul Berita", "Judul Berita - https://contoh.com/a"),
+            AppLinks.fromShare("Judul Berita", "Judul Berita - https://contoh.com/a")
         )
         assertEquals(AppLink.SharedText("hanya judul"), AppLinks.fromShare("hanya judul", null))
     }
@@ -155,7 +155,10 @@ class ScheduleFormatTest {
         assertEquals("Sen, 26 Okt 07.00 WIB", ScheduleFormat.instant("2026-10-26T00:00:00.000Z", "Asia/Jakarta"))
         assertEquals("Sen, 26 Okt 07.00 WITA", ScheduleFormat.instant("2026-10-25T23:00:00.000Z", "Asia/Makassar"))
         assertEquals("Sen, 26 Okt 08.05 WIT", ScheduleFormat.instant("2026-10-25T23:05:00.000Z", "Asia/Jayapura"))
-        assertEquals("Min, 1 Nov 00.30 Europe/Paris", ScheduleFormat.instant("2026-10-31T23:30:00.000Z", "Europe/Paris"))
+        assertEquals(
+            "Min, 1 Nov 00.30 Europe/Paris",
+            ScheduleFormat.instant("2026-10-31T23:30:00.000Z", "Europe/Paris")
+        )
     }
 
     @Test
@@ -171,9 +174,9 @@ class ScheduleFormatTest {
             envelope(
                 "user",
                 3,
-                """{"type":"schedule.result","scheduleId":"s1","scheduleRunId":"sr1","runId":null,"status":"failed"}""",
+                """{"type":"schedule.result","scheduleId":"s1","scheduleRunId":"sr1","runId":null,"status":"failed"}"""
             ),
-            testJson,
+            testJson
         ) as Frame.Envelope
         assertEquals(ServerEvent.ScheduleResult("s1", "failed"), frame.event)
     }
@@ -273,9 +276,10 @@ class PushRegistrarTest {
         try {
             server.enqueue(
                 MockResponse().setBody(
-                    """{"accessToken":"a","refreshToken":"r","expiresIn":900,"device":{"id":"dev-9","kind":"android",""" +
-                        """"name":"HP","scopes":["app"],"lastSeenAt":null,"createdAt":"$TS"}}""",
-                ),
+                    """{"accessToken":"a","refreshToken":"r","expiresIn":900,""" +
+                        """"device":{"id":"dev-9","kind":"android",""" +
+                        """"name":"HP","scopes":["app"],"lastSeenAt":null,"createdAt":"$TS"}}"""
+                )
             )
             val store = FakeTokenStore(null)
             val http = TestHttp(server, store)
@@ -291,7 +295,7 @@ class PushRegistrarTest {
                 isConnected = { true },
                 clock = { NOW_MS },
                 pushToken = { "fcm-login" },
-                onPushRegistered = { device, token -> registered += device to token },
+                onPushRegistered = { device, token -> registered += device to token }
             )
 
             repo.login(server.url("/").toString().trimEnd('/'), "rahasia-panjang", "123456")
@@ -311,16 +315,21 @@ fun schedule(
     enabled: Boolean = true,
     name: String = "Berita AI",
     prompt: String = "Ringkas berita AI.",
-    conversationId: String? = "cs1",
+    conversationId: String? = "cs1"
 ) = Schedule(
     id, name, "0 7 * * 1", "Asia/Jakarta", prompt, "chat", null, enabled,
-    "2026-10-26T00:00:00.000Z", conversationId, TS, TS,
+    "2026-10-26T00:00:00.000Z", conversationId, TS, TS
 )
 
 fun parsed() = ScheduleParse(
-    "Berita AI", "0 7 * * 1", "Asia/Jakarta", "Ringkas berita AI.", "chat", null,
+    "Berita AI",
+    "0 7 * * 1",
+    "Asia/Jakarta",
+    "Ringkas berita AI.",
+    "chat",
+    null,
     "Setiap Senin 07.00 WIB",
-    listOf("2026-10-26T00:00:00.000Z", "2026-11-02T00:00:00.000Z", "2026-11-09T00:00:00.000Z"),
+    listOf("2026-10-26T00:00:00.000Z", "2026-11-02T00:00:00.000Z", "2026-11-09T00:00:00.000Z")
 )
 
 private class FakeScheduleRepo : ScheduleRepository {
@@ -359,7 +368,7 @@ private class FakeScheduleRepo : ScheduleRepository {
         val next = current.copy(
             name = name?.trim() ?: current.name,
             prompt = prompt?.trim() ?: current.prompt,
-            enabled = enabled ?: current.enabled,
+            enabled = enabled ?: current.enabled
         )
         items[items.indexOf(current)] = next
         return next
@@ -376,8 +385,7 @@ private class FakeScheduleRepo : ScheduleRepository {
         return run("rr", "queued")
     }
 
-    override suspend fun runs(id: String, before: String?): Page<ScheduleRun> =
-        Page(runsBySchedule[id].orEmpty(), null)
+    override suspend fun runs(id: String, before: String?): Page<ScheduleRun> = Page(runsBySchedule[id].orEmpty(), null)
 
     override suspend fun lastRuns(schedules: List<Schedule>): Map<String, ScheduleRun> =
         schedules.mapNotNull { s -> runsBySchedule[s.id]?.firstOrNull()?.let { s.id to it } }.toMap()
@@ -387,8 +395,8 @@ private fun httpError(status: Int, code: String, detail: String) = HttpException
     Response.error<Unit>(
         status,
         """{"type":"t","title":"t","status":$status,"detail":"$detail","code":"$code"}"""
-            .toResponseBody("application/problem+json".toMediaType()),
-    ),
+            .toResponseBody("application/problem+json".toMediaType())
+    )
 )
 
 private fun scheduleRun(status: String, id: String = "sr1") = ScheduleRun(id, "s1", "rr", status, TS, TS)
@@ -429,16 +437,17 @@ class ScheduleViewModelsTest {
         }
     }
 
-    private fun TestScope.listVm(r: Rig) = r.track(ScheduleListViewModel(r.repo, r.realtime, r.connectivity)).also { vm ->
-        backgroundScope.launch { vm.events.collect { r.events += it } }
-    }
+    private fun TestScope.listVm(r: Rig) =
+        r.track(ScheduleListViewModel(r.repo, r.realtime, r.connectivity)).also { vm ->
+            backgroundScope.launch { vm.events.collect { r.events += it } }
+        }
 
     private fun TestScope.createVm(r: Rig) = r.track(ScheduleCreateViewModel(r.repo, r.connectivity)).also { vm ->
         backgroundScope.launch { vm.events.collect { r.events += it } }
     }
 
     private fun TestScope.detailVm(r: Rig, id: String = "s1") = r.track(
-        ScheduleDetailViewModel(SavedStateHandle(mapOf("id" to id)), r.repo, r.realtime, r.connectivity),
+        ScheduleDetailViewModel(SavedStateHandle(mapOf("id" to id)), r.repo, r.realtime, r.connectivity)
     ).also { vm -> backgroundScope.launch { vm.events.collect { r.events += it } } }
 
     /* daftar */
@@ -503,8 +512,8 @@ class ScheduleViewModelsTest {
             envelope(
                 "user",
                 1,
-                """{"type":"schedule.result","scheduleId":"s1","scheduleRunId":"sr1","runId":null,"status":"failed"}""",
-            ),
+                """{"type":"schedule.result","scheduleId":"s1","scheduleRunId":"sr1","runId":null,"status":"failed"}"""
+            )
         )
         runCurrent()
 
@@ -557,7 +566,7 @@ class ScheduleViewModelsTest {
     }
 
     @Test
-    fun `kalimat yang bukan jadwal berulang menampilkan penjelasan server dan tidak menyimpan apa pun`() = rigTest { r ->
+    fun `kalimat bukan jadwal berulang menampilkan penjelasan server dan tidak menyimpan apa pun`() = rigTest { r ->
         r.repo.parseResult = null
         val vm = createVm(r)
         vm.onText("besok jam 7 ingatkan rapat")

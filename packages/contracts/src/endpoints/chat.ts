@@ -7,6 +7,7 @@ import {
   RerouteRequestSchema,
   RerouteResponseSchema,
   ReviewRequestSchema,
+  ReviewResponseSchema,
   RunEventsQuerySchema,
   RunEventsResponseSchema,
   SendMessageRequestSchema,
@@ -169,7 +170,7 @@ export const chatEndpoints: readonly Endpoint[] = [
     auth: true,
     params: IdParamsSchema,
     body: ReviewRequestSchema,
-    responses: [json(200, 'Run setelah review', RunSchema)],
+    responses: [json(200, 'Hasil tinjauan', ReviewResponseSchema)],
     errors: [400, 401, 404, 409],
   },
 ];

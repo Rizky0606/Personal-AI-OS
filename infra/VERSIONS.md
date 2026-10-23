@@ -3,6 +3,18 @@
 Dikunci sesuai `docs/SECURITY_OPS.md` (Pembaruan). Sumber: `docs/VERIFICATION.md` (Fase 0, 2026-10-22).
 Upgrade satu komponen per waktu: baca changelog, jalankan tes adapter, baru naikkan versi di sini.
 
+<!-- versions:begin -->
+
+omp=18.12.6
+9router=0.5.59
+hermes=
+searxng=
+postgres=16
+node=22
+<!-- versions:end -->
+
+Blok di atas dibaca `infra/scripts/check-versions.sh` (kunci kosong = belum dikunci; awalan seperti `16` cocok dengan `16.4`). Ubah blok dan tabel bersamaan.
+
 | Tool         | Versi terkunci  | Lokasi              | Status                                                                                                   |
 | ------------ | --------------- | ------------------- | -------------------------------------------------------------------------------------------------------- |
 | omp          | 18.12.6         | PC Windows          | Terverifikasi (RPC diuji langsung)                                                                       |
@@ -10,6 +22,9 @@ Upgrade satu komponen per waktu: baca changelog, jalankan tes adapter, baru naik
 | Hermes Agent | belum diketahui | VPS                 | Tidak terverifikasi. Rilis terbaru di GitHub v0.22.4 (2026-10-21). Isi setelah `hermes --version` di VPS |
 | SearXNG      | belum dikunci   | VPS (Docker)        | Kunci ke tag versi saat setup (lihat `docs/VPS_SETUP.md`)                                                |
 | PostgreSQL   | 16              | VPS (Docker)        | Sesuai `docs/ARCHITECTURE.md`                                                                            |
+| restic       | belum dikunci   | VPS                 | Backup harian (`infra/scripts/backup.sh`). Catat hasil `restic version` saat pasang                      |
+| Uptime Kuma  | belum dikunci   | VPS (Docker)        | Profil compose `monitoring`; isi `KUMA_TAG`. Telegram diatur di UI                                       |
+| nginx        | bawaan distro   | VPS                 | Contoh vhost di `infra/nginx/aios.conf.example`                                                          |
 
 ## Toolchain repo
 
@@ -61,15 +76,23 @@ Upgrade satu komponen per waktu: baca changelog, jalankan tes adapter, baru naik
 
 ## Desktop (`apps/desktop`)
 
-| Komponen                                                   | Versi                                |
-| ---------------------------------------------------------- | ------------------------------------ |
-| React / React DOM                                          | ^19.3.1                              |
-| Vite / @vitejs/plugin-react                                | ^8.3.5 / ^6.1.2                      |
-| Tailwind CSS (+ @tailwindcss/vite)                         | ^4.3.3                               |
-| TanStack Router / Query                                    | ^1.170.46 / ^5.104.5                 |
-| Radix UI (dialog, tabs, toast, tooltip)                    | ^1.3.1 / ^1.2.1 / ^1.3.1 / ^1.4.1    |
-| Zustand / lucide-react                                     | ^5.0.16 / ^1.61.0                    |
-| @tauri-apps/api, plugin-http, plugin-websocket, cli        | ^2.12.4 / ^2.8.3 / ^2.5.0 / ^2.12.4  |
-| Tauri (crate) / tauri-plugin-http / tauri-plugin-websocket | 2 / 2 / 2 (belum dikunci Cargo.lock) |
-| keyring (crate, backend windows-native)                    | 3                                    |
-| @testing-library/react / user-event / jest-dom, jsdom      | ^16.3.3 / ^14.6.8 / ^7.0.1, ^30.1.3  |
+| Komponen                                                     | Versi                                |
+| ------------------------------------------------------------ | ------------------------------------ |
+| React / React DOM                                            | ^19.3.1                              |
+| Vite / @vitejs/plugin-react                                  | ^8.3.5 / ^6.1.2                      |
+| Tailwind CSS (+ @tailwindcss/vite)                           | ^4.3.3                               |
+| TanStack Router / Query                                      | ^1.170.46 / ^5.104.5                 |
+| Radix UI (dialog, tabs, toast, tooltip)                      | ^1.3.1 / ^1.2.1 / ^1.3.1 / ^1.4.1    |
+| Radix UI dropdown-menu                                       | ^2.2.1                               |
+| @tauri-apps/plugin-opener / tauri-plugin-opener (crate)      | ^2.7.2 / 2                           |
+| Zustand / lucide-react                                       | ^5.0.16 / ^1.61.0                    |
+| @tauri-apps/api, plugin-http, plugin-websocket, cli          | ^2.12.4 / ^2.8.3 / ^2.5.0 / ^2.12.4  |
+| Tauri (crate) / tauri-plugin-http / tauri-plugin-websocket   | 2 / 2 / 2 (belum dikunci Cargo.lock) |
+| @tauri-apps/plugin-dialog / tauri-plugin-dialog (crate)      | ^2.8.3 / 2                           |
+| serde / serde_json / getrandom (crate)                       | 1 / 1 / 0.2                          |
+| Worker: ws / Bun (alat build sidecar)                        | ^8.22.0 / 1.4.2                      |
+| Worker: playwright-core (tool browser agent, Edge/Chrome PC) | ^1.64.1                              |
+| highlight.js (warna sintaks diff)                            | ^11.11.1                             |
+| @xterm/xterm / @xterm/addon-fit (tab Terminal)               | ^6.0.0 / ^0.11.0                     |
+| keyring (crate, backend windows-native)                      | 3                                    |
+| @testing-library/react / user-event / jest-dom, jsdom        | ^16.3.3 / ^14.6.8 / ^7.0.1, ^30.1.3  |

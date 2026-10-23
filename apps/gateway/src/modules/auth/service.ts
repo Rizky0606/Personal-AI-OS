@@ -11,6 +11,7 @@ import {
   findDevice,
   getOwner,
   insertDevice,
+  listActiveDevices,
   revokeDevice,
   rotateRefreshHash,
   touchDevice,
@@ -53,6 +54,11 @@ export interface AuthService {
   login(input: LoginInput, meta: { ip: string }): Promise<LoginResponse>;
   refresh(refreshToken: string, meta: { ip: string }): Promise<TokenPair>;
   logout(deviceId: string): Promise<void>;
+  /**
+   * Desktop mendaftarkan worker sidecar-nya. Worker aktif bernama sama dicabut (diganti), lalu perangkat
+   * `worker` baru dibuat dengan token sendiri. Dipanggil dengan token scope `app`.
+   */
+  registerWorker(actorDeviceId: string, name: string): Promise<LoginResponse>;
   authenticate(accessToken: string): Promise<AuthContext>;
   /** Perangkat masih ada dan belum dicabut; dipakai koneksi WebSocket yang berumur panjang. */
   deviceActive(deviceId: string): Promise<boolean>;
@@ -176,6 +182,46 @@ export function createAuthService({ db, keys, now = Date.now, log }: AuthService
         accessToken: await accessFor(rotated),
         refreshToken: next.token,
         expiresIn: ACCESS_TTL_SECONDS,
+      };
+    },
+
+    async registerWorker(actorDeviceId, name) {
+      const at = now();
+      for (const old of await listActiveDevices(db)) {
+        if (
+          old.kind === 'worker' &&
+          old.name === name &&
+          (await revokeDevice(db, old.id, new Date(at)))
+        ) {
+          await writeAudit(db, {
+            actorDeviceId,
+            action: 'worker.replaced',
+            target: `device:${old.id}`,
+          });
+        }
+      }
+      const id = uuidv7();
+      const refresh = generateRefreshToken(id);
+      const device = await insertDevice(db, {
+        id,
+        kind: 'worker',
+        name,
+        scopes: [...SCOPES_BY_KIND.worker],
+        pushToken: null,
+        tokenHash: refresh.hash,
+        refreshExpiresAt: new Date(at + REFRESH_TTL_MS),
+        lastSeenAt: new Date(at),
+      });
+      await writeAudit(db, {
+        actorDeviceId,
+        action: 'worker.registered',
+        target: `device:${device.id}`,
+      });
+      return {
+        accessToken: await accessFor(device),
+        refreshToken: refresh.token,
+        expiresIn: ACCESS_TTL_SECONDS,
+        device: toDeviceDto(device),
       };
     },
 

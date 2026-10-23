@@ -42,7 +42,7 @@ class SpeechController(
     private val onPartial: (String) -> Unit,
     private val onFinal: (String) -> Unit,
     private val onError: (VoiceError) -> Unit,
-    private val onListening: (Boolean) -> Unit,
+    private val onListening: (Boolean) -> Unit
 ) {
     private var recognizer: SpeechRecognizer? = null
 
@@ -89,7 +89,7 @@ class SpeechController(
             Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
                 .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                 .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "id-ID")
-                .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true),
+                .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
         )
         recognizer = created
         onListening(true)
@@ -116,7 +116,7 @@ class VoiceInputState(val listening: Boolean, val start: () -> Unit, val stop: (
 fun rememberVoiceInput(
     currentDraft: () -> String,
     onDraft: (String) -> Unit,
-    onError: (VoiceError) -> Unit,
+    onError: (VoiceError) -> Unit
 ): VoiceInputState {
     val context = LocalContext.current
     var listening by remember { mutableStateOf(false) }
@@ -131,7 +131,7 @@ fun rememberVoiceInput(
             onPartial = { setDraft(appendTranscript(base, it)) },
             onFinal = { setDraft(appendTranscript(base, it)) },
             onError = { fail(it) },
-            onListening = { listening = it },
+            onListening = { listening = it }
         )
     }
     DisposableEffect(controller) { onDispose { controller.destroy() } }

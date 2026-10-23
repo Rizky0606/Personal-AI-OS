@@ -5,7 +5,11 @@ export interface ShortcutActions {
   newChat(): void;
   toggleSidebar(): void;
   toggleRightPanel(): void;
+  /** Ctrl+1..6: Chat, Project, Kanban, Jadwal, Riset, Pengaturan (urutan rail). */
+  navigate(slot: number): void;
 }
+
+export const NAV_SLOTS = 6;
 
 /** Peta tombol ke aksi; null bila bukan shortcut aplikasi. Murni, agar mudah dites. */
 export function shortcutFor(
@@ -22,18 +26,19 @@ export function shortcutFor(
     case 'j':
       return 'toggleRightPanel';
     default:
-      return null;
+      return /^[1-6]$/.test(event.key) ? 'navigate' : null;
   }
 }
 
-/** Shortcut global: Ctrl+K palette, Ctrl+N chat baru, Ctrl+B sidebar, Ctrl+J panel kanan. */
+/** Shortcut global: Ctrl+K palette, Ctrl+N chat baru, Ctrl+B sidebar, Ctrl+J panel kanan, Ctrl+1..6 pindah layar. */
 export function useShortcuts(actions: ShortcutActions): void {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const action = shortcutFor(event);
       if (!action) return;
       event.preventDefault();
-      actions[action]();
+      if (action === 'navigate') actions.navigate(Number(event.key));
+      else actions[action]();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);

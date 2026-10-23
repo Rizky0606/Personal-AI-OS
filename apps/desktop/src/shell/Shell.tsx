@@ -1,8 +1,14 @@
-import { Outlet, useRouterState } from '@tanstack/react-router';
-import { PanelLeftOpen, PanelRight } from 'lucide-react';
-import { useMemo } from 'react';
+import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
+import { PanelLeftOpen, PanelRight, Plus } from 'lucide-react';
+import { useEffect, useMemo, useRef, type ReactNode } from 'react';
+import { ConversationList } from '../chat/ConversationList';
+import { ProjectSwitcher } from '../chat/ProjectSwitcher';
 import { copy } from '../copy';
+import { ProjectList } from '../projects/ProjectList';
+import { ResearchList } from '../research/ResearchList';
+import { ScheduleList } from '../schedules/ScheduleList';
 import { useUiStore } from '../state/uiStore';
+import { EmptyState } from '../ui/EmptyState';
 import { IconButton } from '../ui/IconButton';
 import { CommandPalette } from './CommandPalette';
 import { Rail } from './Rail';
@@ -13,24 +19,59 @@ import { useShortcuts } from './useShortcuts';
 
 interface Section {
   title: string;
-  sidebarEmpty: string;
+  /** Isi sidebar bagian ini. */
+  list: ReactNode;
+  /** Aksi utama di header sidebar. */
+  action?: { label: string; to: '/' | '/research' };
 }
 
-/** Judul bagian dan teks kosong sidebar menurut rute aktif. */
+/** Tujuan Ctrl+1..6, sama dengan urutan rail. */
+const NAV_ROUTES = ['/', '/projects', '/kanban', '/schedules', '/research', '/settings'] as const;
+
+/** Judul bagian dan isi sidebar menurut rute aktif. */
 function sectionFor(pathname: string): Section {
-  if (pathname.startsWith('/projects'))
-    return { title: copy.nav.projects, sidebarEmpty: copy.screens.projectsEmpty };
+  if (pathname.startsWith('/projects')) return { title: copy.nav.projects, list: <ProjectList /> };
   if (pathname.startsWith('/kanban'))
-    return { title: copy.nav.kanban, sidebarEmpty: copy.screens.kanbanEmpty };
+    return {
+      title: copy.nav.kanban,
+      list: (
+        <>
+          <ProjectSwitcher to="/kanban" allowGeneral={false} />
+          <EmptyState message={copy.kanban.sidebarHint} />
+        </>
+      ),
+    };
   if (pathname.startsWith('/schedules'))
-    return { title: copy.nav.schedules, sidebarEmpty: copy.screens.schedulesEmpty };
+    return { title: copy.nav.schedules, list: <ScheduleList /> };
   if (pathname.startsWith('/research'))
-    return { title: copy.nav.research, sidebarEmpty: copy.screens.researchEmpty };
+    return {
+      title: copy.nav.research,
+      list: <ResearchList />,
+      action: { label: copy.research.newResearch, to: '/research' },
+    };
+  if (pathname.startsWith('/status'))
+    return {
+      title: copy.status.page.title,
+      list: <EmptyState message={copy.status.page.sidebar} />,
+    };
+  if (pathname.startsWith('/quota'))
+    return { title: copy.quota.title, list: <EmptyState message={copy.quota.empty} /> };
+  if (pathname.startsWith('/compare'))
+    return { title: copy.compare.title, list: <EmptyState message={copy.compare.intro} /> };
   if (pathname.startsWith('/settings'))
-    return { title: copy.nav.settings, sidebarEmpty: copy.settings.shortcuts };
+    return { title: copy.nav.settings, list: <EmptyState message={copy.settings.shortcuts} /> };
   if (pathname.startsWith('/dev'))
-    return { title: copy.nav.catalog, sidebarEmpty: copy.nav.catalog };
-  return { title: copy.nav.chat, sidebarEmpty: copy.screens.chatEmpty };
+    return { title: copy.nav.catalog, list: <EmptyState message={copy.nav.catalog} /> };
+  return {
+    title: copy.nav.chat,
+    list: (
+      <>
+        <ProjectSwitcher />
+        <ConversationList />
+      </>
+    ),
+    action: { label: copy.chat.newChat, to: '/' },
+  };
 }
 
 /**
@@ -38,12 +79,22 @@ function sectionFor(pathname: string): Section {
  */
 export function Shell() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const navigate = useNavigate();
   const sidebarOpen = useUiStore((s) => s.sidebarOpen);
   const rightPanelOpen = useUiStore((s) => s.rightPanelOpen);
   const toggleSidebar = useUiStore((s) => s.toggleSidebar);
   const toggleRightPanel = useUiStore((s) => s.toggleRightPanel);
   const setPaletteOpen = useUiStore((s) => s.setPaletteOpen);
   const requestNewChat = useUiStore((s) => s.requestNewChat);
+  const newChatSignal = useUiStore((s) => s.newChatSignal);
+
+  // Ctrl+N dari layar mana pun membuka chat baru.
+  const lastSignal = useRef(newChatSignal);
+  useEffect(() => {
+    if (newChatSignal === lastSignal.current) return;
+    lastSignal.current = newChatSignal;
+    void navigate({ to: '/' });
+  }, [newChatSignal, navigate]);
 
   const actions = useMemo(
     () => ({
@@ -51,8 +102,12 @@ export function Shell() {
       newChat: requestNewChat,
       toggleSidebar,
       toggleRightPanel,
+      navigate: (slot: number) => {
+        const target = NAV_ROUTES[slot - 1];
+        if (target) void navigate({ to: target });
+      },
     }),
-    [setPaletteOpen, requestNewChat, toggleSidebar, toggleRightPanel],
+    [setPaletteOpen, requestNewChat, toggleSidebar, toggleRightPanel, navigate],
   );
   useShortcuts(actions);
   const section = sectionFor(pathname);
@@ -61,7 +116,26 @@ export function Shell() {
     <div className="flex h-full flex-col bg-bg text-text">
       <div className="flex min-h-0 flex-1">
         <Rail />
-        {sidebarOpen ? <Sidebar title={section.title} emptyMessage={section.sidebarEmpty} /> : null}
+        {sidebarOpen ? (
+          <Sidebar
+            title={section.title}
+            action={
+              section.action ? (
+                <IconButton
+                  label={section.action.label}
+                  onClick={() => {
+                    if (section.action?.to === '/') requestNewChat();
+                    else void navigate({ to: '/research' });
+                  }}
+                >
+                  <Plus size={16} strokeWidth={1.5} aria-hidden="true" />
+                </IconButton>
+              ) : undefined
+            }
+          >
+            {section.list}
+          </Sidebar>
+        ) : null}
         <main aria-label={copy.shell.mainArea} className="flex min-w-0 flex-1 flex-col">
           <div className="flex h-10 shrink-0 items-center justify-between border-b border-border px-2">
             <div className="flex items-center gap-2">

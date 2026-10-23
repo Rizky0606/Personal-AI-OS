@@ -1,4 +1,4 @@
-import { createHermesAdapter } from '@aios/adapters';
+import { createHermesAdapter, createWorkerRelayAdapter } from '@aios/adapters';
 import { LoginResponseSchema, type ResearchDepth, type DeviceKind } from '@aios/contracts';
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
 import { buildApp, type RateLimits } from '../app.js';
@@ -26,13 +26,31 @@ import type { DepthConfig } from '../modules/research/pipeline.js';
 import type { PageRenderer } from '../modules/research/render.js';
 import { createSearxngClient } from '../modules/research/search.js';
 import { createResearchService, type ResearchService } from '../modules/research/service.js';
+import { createProjectsService } from '../modules/projects/service.js';
+import { createStatusService, type StatusService } from '../modules/status/service.js';
+import { createCompareService } from '../modules/compare/service.js';
+import { createTaskBreakdown } from '../modules/tasks/breakdown.js';
+import { createTasksService, type TasksService } from '../modules/tasks/service.js';
+import { createWorkerRelay, type WorkerRelay } from '../modules/worker/relay.js';
+import { createWorkerHub } from '../modules/worker/routes.js';
 import { createRolesService, type RolesService } from '../modules/roles/service.js';
 import { createEventHub, type EventHub } from '../modules/runs/hub.js';
+import { createRunObserver } from '../modules/runs/observer.js';
 import { createRunner, type Runner } from '../modules/runs/runner.js';
 import { createRunsService } from '../modules/runs/service.js';
 import { createEventStore, type EventStore } from '../modules/runs/store.js';
 import { unusedResearch, unusedSchedules } from './stubs.js';
 import { createTestDatabase, type TestDatabase } from './db.js';
+
+const READY = {
+  status: 'ok' as const,
+  checks: {
+    postgres: { ok: true, latencyMs: 1 },
+    hermes: { ok: true, latencyMs: 1 },
+    ninerouter: { ok: true, latencyMs: 1 },
+    searxng: { ok: true, latencyMs: 1 },
+  },
+};
 
 export const OWNER_PASSWORD = 'correct-horse-battery';
 export const AUTH_SECRET = 'rahasia-uji-'.padEnd(48, 'x');
@@ -48,6 +66,10 @@ export interface AuthEnv {
   routing: RoutingService;
   research: ResearchService;
   schedules: ScheduleService;
+  projects: ReturnType<typeof createProjectsService>;
+  tasks: TasksService;
+  status: StatusService;
+  workerRelay: WorkerRelay;
   push: PushService;
   /** pg-boss bersama (hanya ada bila riset atau jadwal dinyalakan). */
   boss: PgBoss | undefined;
@@ -109,6 +131,10 @@ export async function createAuthEnv(
     hermesUrl?: string;
     hermesIdleMs?: number;
     heartbeatMs?: number;
+    /** Masa tunggu relay worker (putus-sambung dan pembatalan) agar tes tidak menunggu puluhan detik. */
+    workerRelay?: { disconnectGraceMs?: number; cancelGraceMs?: number };
+    /** Batas run coding paralel per project untuk kartu kanban. */
+    taskMaxParallel?: number;
     rateLimits?: Partial<RateLimits>;
     logStream?: NodeJS.WritableStream;
   } = {},
@@ -129,15 +155,25 @@ export async function createAuthEnv(
   const roles = createRolesService();
   const hub = createEventHub(now);
   const store = createEventStore(db, hub);
+  const projects = createProjectsService({ db });
+  const workerHub = createWorkerHub();
+  const workerRelay = createWorkerRelay({ hub: workerHub, projects });
+  workerHub.onPresence((deviceId, online) => workerRelay.presence(deviceId, online));
+  const observer = createRunObserver();
   const runner = createRunner({
     db,
     store,
     hub,
+    observer,
     adapter: createHermesAdapter({
       baseUrl: options.hermesUrl ?? 'http://127.0.0.1:9',
       apiKey: 'kunci-hermes-uji',
       idleTimeoutMs: options.hermesIdleMs ?? 5000,
       connectTimeoutMs: 5000,
+    }),
+    workerAdapter: createWorkerRelayAdapter({
+      relay: workerRelay,
+      ...(options.workerRelay ?? {}),
     }),
     roles,
   });
@@ -180,7 +216,20 @@ export async function createAuthEnv(
     roles,
     now,
   });
-  const runs = createRunsService({ db, store, runner });
+  const runs = createRunsService({ db, store, runner, hub, relay: workerRelay, chat, observer });
+  const tasks = createTasksService({
+    db,
+    hub,
+    chat,
+    routing,
+    roles,
+    breakdown: createTaskBreakdown({
+      complete: createRouterComplete(client, 'router-fast'),
+      roles,
+    }),
+    ...(options.taskMaxParallel ? { maxParallel: options.taskMaxParallel } : {}),
+  });
+  observer.bind((runId) => tasks.runChanged(runId));
   const schedules =
     options.schedules && boss
       ? createScheduleService({
@@ -220,6 +269,13 @@ export async function createAuthEnv(
     await saveOwner(db, keys, { password: OWNER_PASSWORD, totpSecret }, now);
   }
 
+  const status = createStatusService({
+    db,
+    health: { readiness: () => Promise.resolve(READY) },
+    isWorkerOnline: (id) => workerHub.isOnline(id),
+    queues: boss,
+    now,
+  });
   const app = buildApp({
     config: { LOG_LEVEL: options.logStream ? 'info' : 'silent', NODE_ENV: 'test' },
     health: { readiness: () => Promise.reject(new Error('tidak dipakai')) },
@@ -238,6 +294,11 @@ export async function createAuthEnv(
     routing,
     research,
     schedules,
+    projects,
+    tasks,
+    compare: createCompareService({ client }),
+    status,
+    worker: { hub: workerHub, relay: workerRelay },
     ws: {
       hub,
       store,
@@ -282,6 +343,10 @@ export async function createAuthEnv(
     routing,
     research,
     schedules,
+    projects,
+    tasks,
+    status,
+    workerRelay,
     push,
     boss,
     chat,
@@ -310,6 +375,7 @@ export async function createAuthEnv(
       await research.close().catch(() => undefined);
       await boss?.stop({ graceful: false, timeout: 5000 }).catch(() => undefined);
       await runner.idle();
+      await tasks.idle();
       await chat.idle();
       await app.close();
       await database.drop();

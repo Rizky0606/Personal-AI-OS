@@ -25,7 +25,7 @@ interface RegistrationStore {
 class PushRegistrar(
     private val source: PushTokenSource,
     private val api: DevicesApi,
-    private val settings: RegistrationStore,
+    private val settings: RegistrationStore
 ) {
     val available: Boolean get() = source.available
 

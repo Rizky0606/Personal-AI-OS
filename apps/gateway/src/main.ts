@@ -1,4 +1,4 @@
-import { createHermesAdapter } from '@aios/adapters';
+import { createHermesAdapter, createWorkerRelayAdapter } from '@aios/adapters';
 import { RegistryError } from '@aios/roles';
 import { buildApp } from './app.js';
 import { ConfigError, loadConfig } from './config.js';
@@ -22,10 +22,18 @@ import { createFcmClient, loadServiceAccount } from './modules/push/fcm.js';
 import { createPushService } from './modules/push/service.js';
 import { createScheduleParser } from './modules/schedules/parser.js';
 import { createScheduleService } from './modules/schedules/service.js';
+import { createProjectsService } from './modules/projects/service.js';
+import { createStatusService } from './modules/status/service.js';
+import { createCompareService } from './modules/compare/service.js';
+import { createTaskBreakdown } from './modules/tasks/breakdown.js';
+import { createTasksService } from './modules/tasks/service.js';
+import { createWorkerRelay } from './modules/worker/relay.js';
+import { createWorkerHub } from './modules/worker/routes.js';
 import { createRolesService } from './modules/roles/service.js';
 import { createRouterComplete } from './modules/router/complete.js';
 import { createRoutingService } from './modules/router/service.js';
 import { createEventHub } from './modules/runs/hub.js';
+import { createRunObserver } from './modules/runs/observer.js';
 import { createRunner } from './modules/runs/runner.js';
 import { createRunsService } from './modules/runs/service.js';
 import { createEventStore } from './modules/runs/store.js';
@@ -54,11 +62,18 @@ async function main(): Promise<void> {
   const boss = createBoss(config.DATABASE_URL, log);
   const hub = createEventHub();
   const store = createEventStore(db, hub);
+  const projects = createProjectsService({ db });
+  const workerHub = createWorkerHub();
+  const workerRelay = createWorkerRelay({ hub: workerHub, projects });
+  workerHub.onPresence((deviceId, online) => workerRelay.presence(deviceId, online));
+  const observer = createRunObserver(log);
   const runner = createRunner({
     db,
     store,
     hub,
+    observer,
     adapter: createHermesAdapter({ baseUrl: config.HERMES_URL, apiKey: config.HERMES_API_KEY }),
+    workerAdapter: createWorkerRelayAdapter({ relay: workerRelay }),
     roles,
     log,
   });
@@ -75,7 +90,21 @@ async function main(): Promise<void> {
     routing,
     roles,
   });
-  const runs = createRunsService({ db, store, runner });
+  const runs = createRunsService({ db, store, runner, hub, relay: workerRelay, chat, observer });
+  const tasks = createTasksService({
+    db,
+    hub,
+    chat,
+    routing,
+    roles,
+    breakdown: createTaskBreakdown({
+      complete: createRouterComplete(client, config.TASK_MODEL),
+      roles,
+    }),
+    maxParallel: config.TASK_MAX_PARALLEL,
+    log,
+  });
+  observer.bind((runId) => tasks.runChanged(runId));
   const usage = createUsageRecorder(db);
   const research = createResearchService({
     db,
@@ -115,9 +144,10 @@ async function main(): Promise<void> {
     log: { ...log, info: (obj, msg) => app.log.info(obj, msg) },
   });
 
+  const health = createHealthService({ config, pingDatabase: () => pool.query('select 1') });
   const app = buildApp({
     config,
-    health: createHealthService({ config, pingDatabase: () => pool.query('select 1') }),
+    health,
     auth: createAuthService({ db, keys, log: { warn: (obj, msg) => app.log.warn(obj, msg) } }),
     devices: createDevicesService({ db }),
     llm: {
@@ -132,6 +162,16 @@ async function main(): Promise<void> {
     routing,
     research,
     schedules,
+    projects,
+    tasks,
+    compare: createCompareService({ client }),
+    status: createStatusService({
+      db,
+      health,
+      isWorkerOnline: (id) => workerHub.isOnline(id),
+      queues: boss,
+    }),
+    worker: { hub: workerHub, relay: workerRelay },
     ws: {
       hub,
       store,
@@ -164,6 +204,7 @@ async function main(): Promise<void> {
   push.start();
   const recovered = await runner.recoverOrphans();
   if (recovered > 0) app.log.warn({ recovered }, 'run tertinggal ditandai gagal setelah restart');
+  await tasks.start();
 
   await app.listen({ host: config.HOST, port: config.PORT });
 }

@@ -1,0 +1,11 @@
+{
+  "extends": "@aios/config/tsconfig.base.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["tests", "shims", "playwright.config.ts", "vite.e2e.config.ts"]
+}

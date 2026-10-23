@@ -45,6 +45,7 @@ export interface ChatService {
   sendMessage(
     conversationId: string,
     input: z.infer<typeof SendMessageRequestSchema>,
+    options?: { continueFromRunId?: string; taskId?: string },
   ): Promise<{ message: Message; run: Run }>;
   /** Mengganti role pesan terakhir, mencatat koreksi, dan menjalankan ulang dengan role baru. */
   reroute(
@@ -101,7 +102,8 @@ export function createChatService(deps: {
       .where(
         and(
           eq(runs.conversationId, conversationId),
-          notInArray(runs.status, [...TERMINAL_RUN_STATUSES]),
+          // needs_review menunggu manusia, bukan mesin yang masih bekerja: tidak memblokir pesan baru.
+          notInArray(runs.status, [...TERMINAL_RUN_STATUSES, 'needs_review']),
         ),
       )
       .limit(1);
@@ -260,7 +262,7 @@ export function createChatService(deps: {
       };
     },
 
-    async sendMessage(conversationId, input) {
+    async sendMessage(conversationId, input, options) {
       const conversation = await getConversation(conversationId);
       if (conversation.archivedAt) {
         throw new AppError(409, 'conversation_archived', 'Percakapan sudah diarsipkan.');
@@ -286,7 +288,13 @@ export function createChatService(deps: {
         // Role belum diketahui: router memutuskannya pada status `routing` di dalam run.
         const [runRow] = await tx
           .insert(runs)
-          .values({ kind: 'chat', engine: 'hermes', model, conversationId })
+          .values({
+            kind: 'chat',
+            engine: 'hermes',
+            model,
+            conversationId,
+            ...(options?.taskId ? { taskId: options.taskId } : {}),
+          })
           .returning();
         const [userRow] = await tx
           .insert(messages)
@@ -324,6 +332,8 @@ export function createChatService(deps: {
         assistantMessageId,
         prompt,
         sessionId,
+        projectId: conversation.projectId,
+        ...(options?.continueFromRunId ? { continueFromRunId: options.continueFromRunId } : {}),
         resolveRole: makeResolver({
           conversation,
           runId: run.id,
@@ -456,6 +466,7 @@ export function createChatService(deps: {
         assistantMessageId,
         prompt,
         sessionId,
+        projectId: conversation.projectId,
         resolveRole: makeResolver({
           conversation,
           runId: run.id,

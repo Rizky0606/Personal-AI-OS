@@ -22,9 +22,10 @@ import {
   RoleIdSchema,
   SurfaceSchema,
   TimestampSchema,
+  UsageSchema,
 } from './common.js';
 import { RunEventSchema } from './events.js';
-import { ReviewCommentSchema } from './worker.js';
+import { MergeSkippedSchema, ReviewCommentSchema } from './worker.js';
 
 /*
  * Request dan response setiap endpoint REST (API_CONTRACT.md, "Endpoint REST").
@@ -64,6 +65,11 @@ export const RefreshRequestSchema = z
 
 /* Perangkat */
 
+/** Desktop mendaftarkan worker sidecar-nya; gateway membuat perangkat kind `worker` (scope worker + llm). */
+export const RegisterWorkerRequestSchema = z
+  .object({ name: z.string().min(1).max(100) })
+  .meta({ id: 'RegisterWorkerRequest' });
+
 export const DeviceListSchema = itemsOf(DeviceSchema).meta({ id: 'DeviceList' });
 export const PushTokenRequestSchema = z
   .object({ pushToken: z.string().min(1) })
@@ -98,6 +104,35 @@ export const QuotaSchema = z
     byDay: z.array(z.object({ date: z.iso.date(), ...UsageTotalsShape })),
   })
   .meta({ id: 'Quota' });
+
+export const MAX_COMPARE_MODELS = 3;
+
+export const CompareRequestSchema = z
+  .object({
+    prompt: z.string().min(1).max(8000),
+    /** 2 sampai 3 model berbeda (id dari GET /models). */
+    models: z
+      .array(z.string().min(1))
+      .min(2)
+      .max(MAX_COMPARE_MODELS)
+      .refine((m) => new Set(m).size === m.length, 'model tidak boleh sama'),
+  })
+  .meta({ id: 'CompareRequest' });
+
+export const CompareResultSchema = z.object({
+  model: z.string(),
+  ok: z.boolean(),
+  text: z.string(),
+  /** Waktu sampai jawaban lengkap, ms. */
+  latencyMs: z.number().int().nonnegative(),
+  usage: UsageSchema.nullable(),
+  /** Pesan galat per model; model lain tetap menjawab. */
+  error: z.string().nullable(),
+});
+
+export const CompareResponseSchema = z
+  .object({ results: z.array(CompareResultSchema) })
+  .meta({ id: 'CompareResponse' });
 
 export const RoleInfoSchema = z
   .object({
@@ -217,12 +252,36 @@ export const ApprovalDecisionRequestSchema = z
   })
   .meta({ id: 'ApprovalDecisionRequest' });
 
+/**
+ * Tinjauan hasil run coding. `accept`: perubahan di-commit pada branch kerja agent; `merge` juga menggabungkannya
+ * ke branch kerja pengguna. `reject` tanpa komentar membuang worktree; `reject` dengan komentar mengembalikan
+ * hasil ke agent (run baru di worktree yang sama, komentar dibundel jadi satu pesan).
+ */
 export const ReviewRequestSchema = z
   .object({
     decision: z.enum(['accept', 'reject']),
     comments: z.array(ReviewCommentSchema).default([]),
+    /** Hanya untuk `accept`: gabungkan ke branch kerja pengguna (bila bersih); default hanya membiarkan branch. */
+    merge: z.boolean().default(false),
+    /** Pesan commit Conventional Commits; kosong = pesan buatan agent. */
+    commitMessage: z.string().trim().min(1).max(200).optional(),
   })
   .meta({ id: 'ReviewRequest' });
+
+export const ReviewResponseSchema = z
+  .object({
+    /** Run yang ditinjau setelah keputusan (accepted atau rejected). */
+    run: RunSchema,
+    branch: z.string(),
+    /** SHA commit hasil terima; null bila ditolak atau tidak ada perubahan. */
+    commit: z.string().nullable(),
+    merged: z.boolean(),
+    /** Alasan penggabungan dilewati; branch tetap ada. */
+    mergeSkipped: MergeSkippedSchema.nullable(),
+    /** Id run baru bila hasil dikembalikan ke agent dengan komentar. */
+    revisionRunId: IdSchema.nullable(),
+  })
+  .meta({ id: 'ReviewResponse' });
 
 /* Project dan kanban */
 
@@ -367,3 +426,35 @@ export const ReadinessSchema = z
     }),
   })
   .meta({ id: 'Readiness' });
+
+export const StatusSchema = z
+  .object({
+    gateway: z.object({
+      version: z.string(),
+      /** Versi paket adapter mesin agent (Hermes, omp, relay worker). */
+      adaptersVersion: z.string(),
+      node: z.string(),
+      uptimeSec: z.number().int().nonnegative(),
+    }),
+    readiness: ReadinessSchema,
+    workers: z.array(
+      z.object({
+        deviceId: IdSchema,
+        name: z.string(),
+        online: z.boolean(),
+        lastSeenAt: TimestampSchema.nullable(),
+      }),
+    ),
+    /** Antrean job (pg-boss): riset dan jadwal. */
+    jobs: z.array(
+      z.object({
+        queue: z.string(),
+        queued: z.number().int().nonnegative(),
+        active: z.number().int().nonnegative(),
+        failed: z.number().int().nonnegative(),
+      }),
+    ),
+    /** Run yang belum selesai (di luar menunggu tinjauan). */
+    activeRuns: z.number().int().nonnegative(),
+  })
+  .meta({ id: 'Status' });

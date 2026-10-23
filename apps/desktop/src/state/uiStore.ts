@@ -5,7 +5,7 @@ export type ThemeMode = 'system' | 'light' | 'dark';
 export type RightPanelTab = 'preview' | 'diff' | 'terminal' | 'files';
 
 export const RIGHT_PANEL_MIN = 280;
-export const RIGHT_PANEL_MAX = 720;
+export const RIGHT_PANEL_MAX = 960;
 export const RIGHT_PANEL_DEFAULT = 420;
 
 export const clampPanelWidth = (width: number): number =>
@@ -13,6 +13,17 @@ export const clampPanelWidth = (width: number): number =>
     RIGHT_PANEL_MAX,
     Math.max(RIGHT_PANEL_MIN, Math.round(Number.isFinite(width) ? width : RIGHT_PANEL_DEFAULT)),
   );
+
+/** Konteks dari preview (mis. elemen terpilih) yang ikut terkirim bersama pesan berikutnya. */
+export interface ContextAttachment {
+  id: string;
+  /** Label singkat di composer, mis. selector elemen. */
+  label: string;
+  /** Teks yang ditambahkan ke pesan. */
+  text: string;
+  /** Data URL PNG untuk pratinjau kecil; tidak dikirim. */
+  thumbnail?: string | undefined;
+}
 
 interface UiState {
   sidebarOpen: boolean;
@@ -23,8 +34,32 @@ interface UiState {
   paletteOpen: boolean;
   /** Naik tiap Ctrl+N; layar chat memakainya untuk memulai percakapan baru. */
   newChatSignal: number;
+  /** Project yang sedang dikerjakan (chat per folder); null = chat umum. */
+  activeProjectId: string | null;
+  /** Branch kerja agent dari run coding yang sedang berjalan, untuk status bar; tidak disimpan. */
+  activeRunBranch: string | null;
+  /** Run coding yang hasilnya sedang menunggu tinjauan (tab Diff); tidak disimpan. */
+  reviewRunId: string | null;
+  /** Model pilihan untuk pesan berikutnya; null = otomatis (router/combo). Diingat antar sesi. */
+  model: string | null;
+  setModel: (model: string | null) => void;
+  /** Role yang sedang dipakai chat (pilihan manual atau keputusan router) untuk status bar; tidak disimpan. */
+  activeRole: string | null;
+  setActiveRole: (role: string | null) => void;
+  /** Lampiran konteks untuk pesan berikutnya; tidak disimpan. */
+  attachments: ContextAttachment[];
+  addAttachment: (attachment: ContextAttachment) => void;
+  removeAttachment: (id: string) => void;
+  clearAttachments: () => void;
+  /** Membuka panel kanan di tab Diff untuk run ini. */
+  openReview: (runId: string) => void;
+  setReviewRunId: (runId: string | null) => void;
+  setActiveProject: (id: string | null) => void;
+  setActiveRunBranch: (branch: string | null) => void;
   toggleSidebar: () => void;
   toggleRightPanel: () => void;
+  /** Membuka panel kanan di tab tertentu. */
+  openPanel: (tab: RightPanelTab) => void;
   setRightPanelWidth: (width: number) => void;
   setRightPanelTab: (tab: RightPanelTab) => void;
   setTheme: (theme: ThemeMode) => void;
@@ -43,8 +78,29 @@ export const useUiStore = create<UiState>()(
       theme: 'system',
       paletteOpen: false,
       newChatSignal: 0,
+      activeProjectId: null,
+      activeRunBranch: null,
+      reviewRunId: null,
+      model: null,
+      setModel: (model) => set({ model }),
+      activeRole: null,
+      setActiveRole: (activeRole) => set({ activeRole }),
+      attachments: [],
+      addAttachment: (attachment) =>
+        set((s) => ({
+          attachments: [...s.attachments.filter((a) => a.id !== attachment.id), attachment],
+        })),
+      removeAttachment: (id) =>
+        set((s) => ({ attachments: s.attachments.filter((a) => a.id !== id) })),
+      clearAttachments: () => set({ attachments: [] }),
+      openReview: (reviewRunId) =>
+        set({ reviewRunId, rightPanelOpen: true, rightPanelTab: 'diff' }),
+      setReviewRunId: (reviewRunId) => set({ reviewRunId }),
+      setActiveProject: (activeProjectId) => set({ activeProjectId, activeRunBranch: null }),
+      setActiveRunBranch: (activeRunBranch) => set({ activeRunBranch }),
       toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
       toggleRightPanel: () => set((s) => ({ rightPanelOpen: !s.rightPanelOpen })),
+      openPanel: (rightPanelTab) => set({ rightPanelOpen: true, rightPanelTab }),
       setRightPanelWidth: (width) => set({ rightPanelWidth: clampPanelWidth(width) }),
       setRightPanelTab: (rightPanelTab) => set({ rightPanelTab }),
       setTheme: (theme) => set({ theme }),
@@ -59,6 +115,8 @@ export const useUiStore = create<UiState>()(
         rightPanelOpen: s.rightPanelOpen,
         rightPanelWidth: s.rightPanelWidth,
         rightPanelTab: s.rightPanelTab,
+        activeProjectId: s.activeProjectId,
+        model: s.model,
         theme: s.theme,
       }),
       // Nilai tersimpan yang rusak atau di luar batas dikembalikan ke aman.

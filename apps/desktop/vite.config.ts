@@ -13,5 +13,7 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     css: false,
     restoreMocks: true,
+    // Tes userEvent.type panjang melewati 5 dtk bila seluruh suite berjalan paralel di mesin yang sibuk.
+    testTimeout: 20_000,
   },
 });

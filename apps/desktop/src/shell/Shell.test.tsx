@@ -1,4 +1,5 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import {
   RouterProvider,
   createMemoryHistory,
@@ -6,11 +7,15 @@ import {
   createRoute,
   createRouter,
 } from '@tanstack/react-router';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { copy } from '../copy';
 import { RIGHT_PANEL_DEFAULT, useUiStore } from '../state/uiStore';
+import { resetApi } from '../test/fakeServices';
 import { TooltipProvider } from '../ui/Tooltip';
-import { Shell } from './Shell';
+
+vi.mock('../app/services', async () => (await import('../test/fakeServices')).fakeServices);
+
+const { Shell } = await import('./Shell');
 
 async function renderShell(path = '/') {
   const root = createRootRoute({ component: Shell });
@@ -23,10 +28,13 @@ async function renderShell(path = '/') {
     ),
     history: createMemoryHistory({ initialEntries: [path] }),
   });
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const view = render(
-    <TooltipProvider>
-      <RouterProvider router={router} />
-    </TooltipProvider>,
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <RouterProvider router={router} />
+      </TooltipProvider>
+    </QueryClientProvider>,
   );
   await screen.findByRole('navigation', { name: copy.shell.rail });
   return { router, ...view };
@@ -35,6 +43,7 @@ async function renderShell(path = '/') {
 const ctrl = (key: string) => act(() => void fireEvent.keyDown(window, { key, ctrlKey: true }));
 
 beforeEach(() => {
+  resetApi();
   useUiStore.setState(useUiStore.getInitialState(), true);
 });
 
@@ -105,17 +114,32 @@ describe('Shell', () => {
     expect(handle).toHaveAttribute('aria-valuenow', String(RIGHT_PANEL_DEFAULT + 32));
   });
 
-  it('Ctrl+K membuka palet perintah yang kosong; Ctrl+N menaikkan sinyal chat baru', async () => {
+  it('Ctrl+K membuka palet perintah; Ctrl+N menaikkan sinyal chat baru', async () => {
     await renderShell();
 
     ctrl('k');
-    expect(await screen.findByRole('dialog', { name: copy.shell.palette })).toHaveTextContent(
-      copy.shell.paletteHint,
+    expect(await screen.findByRole('dialog', { name: copy.palette.title })).toHaveTextContent(
+      copy.palette.newChat,
     );
 
     const before = useUiStore.getState().newChatSignal;
     ctrl('n');
     expect(useUiStore.getState().newChatSignal).toBe(before + 1);
+  });
+
+  it('Ctrl+1..6 berpindah layar sesuai urutan rail, tanpa mouse', async () => {
+    const { router } = await renderShell();
+
+    for (const [digit, path] of [
+      ['3', '/kanban'],
+      ['4', '/schedules'],
+      ['6', '/settings'],
+      ['2', '/projects'],
+      ['1', '/'],
+    ] as const) {
+      ctrl(digit);
+      await waitFor(() => expect(router.state.location.pathname).toBe(path));
+    }
   });
 
   it('judul bagian dan sidebar mengikuti rute', async () => {
@@ -124,6 +148,39 @@ describe('Shell', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: copy.nav.research }),
     ).toBeInTheDocument();
-    expect(screen.getByText(copy.screens.researchEmpty)).toBeInTheDocument();
+    expect(await screen.findByText(copy.research.listEmpty)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: copy.research.newResearch })).toBeInTheDocument();
+  });
+
+  it('sidebar chat menampilkan percakapan dari server dan tombol Chat baru', async () => {
+    const { api } = await import('../test/fakeServices');
+    api.listConversations.mockResolvedValue({
+      items: [
+        {
+          id: '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f',
+          title: 'Rencana rilis',
+          surface: 'windows',
+          projectId: null,
+          pinned: false,
+          archivedAt: null,
+          createdAt: '2026-10-22T06:38:00Z',
+          updatedAt: '2026-10-22T06:38:00Z',
+        },
+      ],
+      nextBefore: null,
+    });
+    await renderShell();
+
+    expect(await screen.findByText('Rencana rilis')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: copy.chat.newChat })).toBeInTheDocument();
+  });
+
+  it('Chat baru dari sidebar menaikkan sinyal chat baru', async () => {
+    await renderShell();
+    const before = useUiStore.getState().newChatSignal;
+
+    fireEvent.click(screen.getByRole('button', { name: copy.chat.newChat }));
+
+    expect(useUiStore.getState().newChatSignal).toBe(before + 1);
   });
 });

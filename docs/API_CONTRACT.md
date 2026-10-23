@@ -16,6 +16,7 @@ Semua klien memakai satu REST API `/v1` dan satu WebSocket `/v1/ws`. Skema didef
 | Auth | `POST /auth/login` | Password + TOTP, mendaftarkan perangkat, mengembalikan token |
 | Auth | `POST /auth/refresh`, `POST /auth/logout` | Perbarui atau cabut token perangkat |
 | Perangkat | `GET /devices`, `DELETE /devices/:id`, `POST /devices/:id/push-token` | Kelola perangkat dan token FCM |
+| Perangkat | `POST /devices/worker` | Desktop mendaftarkan worker sidecar (scope `app`); mengembalikan perangkat `worker` dan tokennya, worker lama bernama sama dicabut |
 | Model | `GET /models`, `GET /quota` | Daftar model dan combo dari 9Router, pemakaian dan kuota |
 | Role | `GET /roles`, `POST /route/preview` | Daftar role, uji router tanpa menjalankan agent |
 | Percakapan | `GET/POST /conversations`, `PATCH/DELETE /conversations/:id` | Daftar, buat, ubah judul, arsipkan |
@@ -24,17 +25,19 @@ Semua klien memakai satu REST API `/v1` dan satu WebSocket `/v1/ws`. Skema didef
 | Run | `GET /runs/:id`, `GET /runs/:id/events?afterSeq=` | Status dan putar ulang event |
 | Run | `POST /runs/:id/steer`, `POST /runs/:id/cancel` | Arahkan atau hentikan agent |
 | Run | `POST /runs/:id/approvals/:approvalId` | `{ decision: allow \| deny, remember }` |
-| Run | `POST /runs/:id/review` | `{ decision: accept \| reject, comments[] }` |
+| Run | `POST /runs/:id/review` | `{ decision: accept \| reject, comments[], merge?, commitMessage? }`; hasil `{ run, branch, commit, merged, mergeSkipped, revisionRunId }`. `accept` = satu commit di branch `aios/…` (opsional fast-forward ke branch kerja); `reject` = buang; `reject` dengan `comments` = run baru di worktree yang sama (`revisionRunId`) |
 | Project | `GET/POST /projects`, `PATCH /projects/:id` | Project terdaftar per worker (path tetap lokal) |
-| Kanban | `GET /projects/:id/tasks`, `POST /tasks`, `PATCH /tasks/:id` | Kartu, status, urutan, role |
-| Kanban | `POST /tasks/:id/run`, `POST /tasks/breakdown` | Kerjakan kartu; AI memecah ide jadi usulan kartu |
+| Kanban | `GET /projects/:id/tasks`, `POST /tasks`, `PATCH /tasks/:id` | Kartu, status, urutan, role. `PATCH` dengan `status`/`position` memindahkan kartu; urutan kedua kolom dirapikan server. Hanya Backlog, Todo, dan Done yang bisa dituju; Running dan Review diisi sistem |
+| Kanban | `POST /tasks/:id/run`, `POST /tasks/breakdown` | Kerjakan kartu (run coding; mengembalikan kartu: `runId` terisi bila dimulai, `null` bila mengantre karena slot project penuh); AI memecah ide jadi usulan kartu (belum disimpan) |
 | Jadwal | `GET/POST /schedules`, `PATCH/DELETE /schedules/:id` | Kelola jadwal |
 | Jadwal | `POST /schedules/parse`, `POST /schedules/:id/run-now`, `GET /schedules/:id/runs` | Bahasa alami ke cron, jalankan sekarang, riwayat |
 | Riset | `POST /research`, `GET /research`, `GET /research/:id` | Buat dan pantau job riset |
 | Riset | `POST /research/:id/cancel`, `GET /research/:id/export?format=md\|pdf` | Batalkan, ekspor |
 | Berkas | `POST /files` | Unggah lampiran (maks 25 MB) |
+| Model | `POST /compare` | `{ prompt, models[2..3] }` → `{ results[{ model, ok, text, latencyMs, usage, error }] }`; paralel lewat 9Router tanpa streaming, satu model gagal tidak menggagalkan yang lain, tidak membuat percakapan atau run |
 | Proxy model | `/llm/v1/*` | Diteruskan ke 9Router, hanya token ber-scope `llm` |
-| Kesehatan | `GET /healthz`, `GET /readyz` | Cek layanan dan dependensi |
+| Kesehatan | `GET /healthz`, `GET /readyz` | Cek layanan dan dependensi (tanpa auth, untuk pemantau) |
+| Kesehatan | `GET /status` | Halaman Status (scope `app`): versi gateway dan adapter, dependensi, worker terdaftar dan statusnya, antrean job, run berjalan |
 
 ## WebSocket
 
@@ -69,12 +72,19 @@ Setiap event dari server dibungkus envelope yang sama:
 
 Channel `user` membawa: `task.updated`, `schedule.result`, `research.completed`, `notification`.
 
+## Kartu kanban
+
+Kartu mengikuti run terbarunya: run berjalan = **Running**, `needs_review` = **Review**, `accepted` = **Done**, `failed`/`cancelled`/`rejected` = kembali ke **Todo** (kegagalan juga memicu `notification` level error). Tolak dengan komentar membuat run revisi, jadi kartu tetap Running. Kartu antre = status `running` dengan `runId` null; dimulai sendiri saat slot kosong (batas `TASK_MAX_PARALLEL`, default 2 per project). Kartu dengan run aktif tidak bisa dipindah (409 `task_running`); kartu antre boleh dikeluarkan. Setiap run kartu berjalan di worktree dan branch sendiri (`aios/<id>`), jadi run paralel tidak saling mengganggu.
+
 ## Protokol worker
 
-- Worker membuka WebSocket ke gateway dengan token ber-scope `worker`.
-- Perintah dari gateway: `run.start` (runId, projectId, prompt, bundel role dan skill, model), `run.steer`, `run.cancel`, `approval.resolve`, `review.apply`.
+- Worker membuka WebSocket ke gateway di `/v1/worker/ws` dengan token ber-scope `worker` (header `Authorization` saat handshake). Satu koneksi aktif per perangkat; koneksi baru menggantikan yang lama. Gateway hanya menerima `run.event` untuk run milik project yang terdaftar atas perangkat itu.
+- Perintah dari gateway: `run.start` (runId, projectId, prompt, bundel role dan skill, model, `continueFromRunId` untuk revisi), `run.steer`, `run.cancel`, `approval.resolve`, `review.apply` (dijawab worker dengan frame `review.result`; gateway menunggu maksimal 30 detik, dan worker menjawab perintah yang diulang dengan hasil yang sama).
+- Isi diff tidak lewat gateway: aplikasi desktop membacanya dari worker lokal (`review.get`, `review.undo`, `review.revertFile`); ke gateway hanya event `diff.updated` (daftar file, tambah, hapus) dan `checkpoint.created`.
+- Terminal: shell sungguhan (PTY) di worker, satu per project atau per worktree run. Desktop memakai `terminal.open` (mengembalikan id dan riwayat keluaran), `terminal.write`, `terminal.resize`, `terminal.close`; worker mendorong `terminal.data` dan `terminal.exit`. Tidak lewat gateway.
+- Preview website: desktop membaca dan mengendalikannya dari worker lokal (`preview.start`, `preview.get`, `preview.stop`, `preview.shot`; worker mendorong `preview.state`). Ke gateway hanya event `preview.ready` (URL proxy lokal) selama run berjalan. Agent memakai tool browser lewat server MCP lokal worker, bukan lewat gateway.
 - Worker mengirim AgentEvent ke channel `run:<id>`. Gateway menyimpan lalu menyiarkan.
-- Aplikasi desktop dan worker bicara lewat WebSocket lokal di `127.0.0.1` dengan port acak dan token yang diberikan Tauri saat sidecar dijalankan.
+- Aplikasi desktop dan worker bicara lewat WebSocket lokal di `127.0.0.1` dengan port acak dan token yang diberikan Tauri saat sidecar dijalankan. Token dipakai sekali: balasan `ready` membawa token untuk koneksi berikutnya. Koneksi yang membawa header `Origin` (halaman web) ditolak. Skema pesan lokal ada di `packages/contracts/src/worker-local.ts`.
 
 ## Status run
 

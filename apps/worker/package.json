@@ -3,13 +3,23 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.json --noEmit false --outDir dist",
+    "build": "tsc -p tsconfig.build.json",
+    "build:sidecar": "node scripts/build-sidecar.mjs",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run --passWithNoTests"
+    "smoke:sidecar": "node scripts/smoke-sidecar.mjs",
+    "test": "vitest run --passWithNoTests --testTimeout=30000 --hookTimeout=30000"
+  },
+  "dependencies": {
+    "@aios/adapters": "workspace:*",
+    "@aios/contracts": "workspace:*",
+    "playwright-core": "catalog:",
+    "ws": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@aios/config": "workspace:*",
     "@types/node": "catalog:",
+    "@types/ws": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

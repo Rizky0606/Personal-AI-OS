@@ -4,6 +4,8 @@ Karena worker bisa menjalankan perintah di PC dan gateway memegang akses ke semu
 
 ## Jaringan
 
+Hasil audit terakhir dan temuannya ada di `docs/SECURITY_AUDIT.md`; tes `security.audit.integration.test.ts` menjaga auth dan scope setiap route di CI. Di produksi gateway menolak start bila `HOST` bukan loopback kecuali `ALLOW_PUBLIC_BIND=true`.
+
 - Publik hanya 443 (nginx). SSH dibatasi ke Tailscale setelah Tailscale stabil.
 - Hermes, 9Router, Postgres, SearXNG, Uptime Kuma hanya di 127.0.0.1.
 - Rate limit di gateway: login 5 per menit, API umum 120 per menit per perangkat.

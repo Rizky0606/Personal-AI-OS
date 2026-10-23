@@ -5,6 +5,7 @@ import {
   LoginResponseSchema,
   PushTokenRequestSchema,
   RefreshRequestSchema,
+  RegisterWorkerRequestSchema,
   TokenPairSchema,
 } from '../api-schemas.js';
 import { json, noContent, type Endpoint } from '../endpoint.js';
@@ -51,6 +52,18 @@ export const authDevicesEndpoints: readonly Endpoint[] = [
     auth: true,
     responses: [json(200, 'Daftar perangkat', DeviceListSchema)],
     errors: [401],
+  },
+  {
+    operationId: 'registerWorker',
+    method: 'post',
+    path: '/devices/worker',
+    tag: 'Perangkat',
+    summary:
+      'Daftarkan worker sidecar (scope app). Worker lama dengan nama sama dicabut; token dikembalikan sekali',
+    auth: true,
+    body: RegisterWorkerRequestSchema,
+    responses: [json(201, 'Perangkat worker dan token', LoginResponseSchema)],
+    errors: [400, 401, 403],
   },
   {
     operationId: 'deleteDevice',

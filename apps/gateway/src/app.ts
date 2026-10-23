@@ -8,6 +8,10 @@ import { authenticateHook } from './modules/auth/guard.js';
 import { authRoutes, sessionRoutes } from './modules/auth/routes.js';
 import type { AuthService } from './modules/auth/service.js';
 import { chatRoutes } from './modules/chat/routes.js';
+import { statusRoutes } from './modules/status/routes.js';
+import type { StatusService } from './modules/status/service.js';
+import { compareRoutes } from './modules/compare/routes.js';
+import type { CompareService } from './modules/compare/service.js';
 import type { ChatService } from './modules/chat/service.js';
 import { deviceRoutes } from './modules/devices/routes.js';
 import type { DevicesService } from './modules/devices/service.js';
@@ -20,6 +24,12 @@ import { catalogRoutes } from './modules/llm/routes.js';
 import type { QuotaService, UsageRecorder } from './modules/llm/usage.js';
 import { routerRoutes } from './modules/router/routes.js';
 import type { RoutingService } from './modules/router/service.js';
+import { projectRoutes } from './modules/projects/routes.js';
+import type { ProjectsService } from './modules/projects/service.js';
+import { taskRoutes } from './modules/tasks/routes.js';
+import type { TasksService } from './modules/tasks/service.js';
+import type { WorkerRelay } from './modules/worker/relay.js';
+import { workerRoutes, type createWorkerHub } from './modules/worker/routes.js';
 import { researchRoutes } from './modules/research/routes.js';
 import type { ResearchService } from './modules/research/service.js';
 import { scheduleRoutes } from './modules/schedules/routes.js';
@@ -61,6 +71,12 @@ export interface AppDeps {
   routing: RoutingService;
   research: ResearchService;
   schedules: ScheduleService;
+  projects: ProjectsService;
+  tasks: TasksService;
+  compare: CompareService;
+  status: StatusService;
+  /** Hub koneksi worker dan relay-nya; dibuat di luar karena runner juga memakai relay. */
+  worker: { hub: ReturnType<typeof createWorkerHub>; relay: WorkerRelay };
   /** WebSocket /v1/ws; `auth` diisi dari dependensi di atas. */
   ws: Omit<WsDeps, 'auth'>;
   rateLimits?: Partial<RateLimits>;
@@ -80,11 +96,17 @@ export function buildApp({
   routing,
   research,
   schedules,
+  projects,
+  tasks,
+  compare,
+  status,
+  worker,
   ws,
   rateLimits,
   logStream,
 }: AppDeps): FastifyInstance {
   const limits = { ...DEFAULT_RATE_LIMITS, ...rateLimits };
+  const { hub: workerHub, relay: workerRelay } = worker;
   const loggerOptions: FastifyServerOptions['logger'] = {
     level: config.LOG_LEVEL,
     // Log tidak pernah memuat token, cookie, atau isi .env (SECURITY_OPS.md).
@@ -153,7 +175,19 @@ export function buildApp({
         await protectedScope.register(routerRoutes, { routing });
         await protectedScope.register(researchRoutes, { research });
         await protectedScope.register(scheduleRoutes, { schedules });
+        await protectedScope.register(projectRoutes, { projects });
+        await protectedScope.register(taskRoutes, { tasks });
+        await protectedScope.register(compareRoutes, { compare });
+        await protectedScope.register(statusRoutes, { status });
         await protectedScope.register(wsRoutes, { ...ws, auth });
+        await protectedScope.register(workerRoutes, {
+          auth,
+          onRunEvent: (deviceId, runId, event) => workerRelay.feed(deviceId, runId, event),
+          onReviewResult: (deviceId, frame) => workerRelay.reviewResult(deviceId, frame),
+          hub: workerHub,
+          ...(ws.heartbeatMs ? { heartbeatMs: ws.heartbeatMs } : {}),
+          ...(ws.now ? { now: ws.now } : {}),
+        });
       });
     },
     { prefix: API_PREFIX },

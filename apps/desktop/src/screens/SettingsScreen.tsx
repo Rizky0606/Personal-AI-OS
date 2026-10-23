@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router';
 import { useState } from 'react';
 import { useAuthState } from '../app/hooks';
 import { auth } from '../app/services';
@@ -6,6 +7,8 @@ import { useUiStore, type ThemeMode } from '../state/uiStore';
 import { Button } from '../ui/Button';
 import { Chip } from '../ui/Chip';
 import { ListItem } from '../ui/ListItem';
+import { UpdateSection } from '../updater/UpdateSection';
+import { AllowedFolders } from '../worker/AllowedFolders';
 
 const themes: { value: ThemeMode; label: string }[] = [
   { value: 'system', label: copy.settings.themeSystem },
@@ -40,6 +43,25 @@ export function SettingsScreen() {
         <ListItem title={copy.settings.device} trailing={session?.deviceName ?? ''} />
       </section>
 
+      <AllowedFolders />
+
+      <section aria-labelledby="settings-tools" className="flex flex-col gap-2">
+        <h2 id="settings-tools" className="text-section font-semibold text-text">
+          {copy.settings.tools}
+        </h2>
+        <div className="flex gap-2">
+          <Link to="/status" className="text-ui text-text underline underline-offset-2">
+            {copy.status.page.title}
+          </Link>
+          <Link to="/quota" className="text-ui text-text underline underline-offset-2">
+            {copy.quota.title}
+          </Link>
+          <Link to="/compare" className="text-ui text-text underline underline-offset-2">
+            {copy.compare.title}
+          </Link>
+        </div>
+      </section>
+
       <section aria-labelledby="settings-theme" className="flex flex-col gap-2">
         <h2 id="settings-theme" className="text-section font-semibold text-text">
           {copy.settings.theme}
@@ -64,6 +86,8 @@ export function SettingsScreen() {
           <li>{copy.shortcuts.rightPanel}</li>
         </ul>
       </section>
+
+      <UpdateSection />
 
       <div>
         <Button variant="danger" disabled={loggingOut} onClick={() => void logout()}>

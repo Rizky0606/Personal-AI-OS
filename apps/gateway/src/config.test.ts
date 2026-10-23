@@ -18,6 +18,17 @@ describe('loadConfig', () => {
     expect(c.HERMES_API_KEY).toBeUndefined();
   });
 
+  it('produksi menolak HOST non-loopback kecuali ALLOW_PUBLIC_BIND=true', () => {
+    const prod = { ...base, NODE_ENV: 'production' };
+    expect(() => loadConfig({ ...prod, HOST: '0.0.0.0' })).toThrow(/loopback/);
+    expect(loadConfig({ ...prod, HOST: '127.0.0.1' }).HOST).toBe('127.0.0.1');
+    expect(loadConfig({ ...prod, HOST: '0.0.0.0', ALLOW_PUBLIC_BIND: 'true' }).HOST).toBe(
+      '0.0.0.0',
+    );
+    // Pengembangan dan tes tidak dibatasi.
+    expect(loadConfig({ ...base, HOST: '0.0.0.0' }).HOST).toBe('0.0.0.0');
+  });
+
   it('menganggap string kosong dari .env sebagai tidak diisi', () => {
     const c = loadConfig({ ...base, HERMES_API_KEY: '', PORT: '', LOG_LEVEL: ' ' });
     expect(c.HERMES_API_KEY).toBeUndefined();

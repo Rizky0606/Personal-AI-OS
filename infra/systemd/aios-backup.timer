@@ -1,0 +1,11 @@
+[Unit]
+Description=Jadwal backup harian Personal AI OS
+
+[Timer]
+OnCalendar=*-*-* 03:15:00
+RandomizedDelaySec=15min
+# Bila VPS mati saat jadwal, jalankan begitu menyala.
+Persistent=true
+
+[Install]
+WantedBy=timers.target

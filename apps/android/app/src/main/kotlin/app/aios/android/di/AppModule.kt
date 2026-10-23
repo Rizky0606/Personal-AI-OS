@@ -148,6 +148,7 @@ object AppModule {
 
     @Provides
     @Singleton
+    @Suppress("LongParameterList") // Penyedia Hilt: tiap parameter adalah dependensi yang dirakit.
     fun authRepository(
         store: TokenStore,
         publicApi: PublicAuthApi,

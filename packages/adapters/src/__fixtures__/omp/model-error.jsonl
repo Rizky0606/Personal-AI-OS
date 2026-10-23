@@ -1,0 +1,19 @@
+< {"type":"ready","protocolVersion":1,"supportedProtocolVersions":[1,2],"maxFrameBytes":1048576,"maxReassembledFrameBytes":67108864}
+> {"id":"ar","type":"set_auto_retry","enabled":false}
+< {"type":"extension_ui_request","id":"15b11ec20bf2993c","method":"setWidget","widgetKey":"autoresearch"}
+< {"type":"available_commands_update","commands":[{"name":"model","description":"Show current model selection","source":"builtin"}]}
+< {"id":"ar","type":"response","command":"set_auto_retry","success":true}
+> {"id":"p1","type":"prompt","message":"halo"}
+< {"id":"p1","type":"response","command":"prompt","success":true}
+< {"type":"agent_start"}
+< {"type":"turn_start"}
+< {"type":"message_start","message":{"role":"user","content":[{"type":"text","text":"halo"}],"attribution":"user","timestamp":1792733984994},"messageId":"msg-1"}
+< {"type":"message_end","message":{"role":"user","content":[{"type":"text","text":"halo"}],"attribution":"user","timestamp":1792733984994},"messageId":"msg-1"}
+< {"type":"message_start","message":{"role":"assistant","content":[],"api":"openai-completions","provider":"aios","model":"mock-1","usage":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"totalTokens":0,"cost":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"total":0}},"stopReason":"error","timestamp":1792734003805,"errorStatus":500,"errorId":135168,"errorMessage":"500 boom dari model\nboom dari model (type=server_error)","duration":15524.728100000004},"messageId":"msg-2"}
+< {"type":"message_end","message":{"role":"assistant","content":[],"api":"openai-completions","provider":"aios","model":"mock-1","usage":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"totalTokens":0,"cost":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"total":0}},"stopReason":"error","timestamp":1792734003805,"errorStatus":500,"errorId":135168,"errorMessage":"500 boom dari model\nboom dari model (type=server_error)","duration":15524.728100000004,"completedAt":1792734019363},"messageId":"msg-2"}
+< {"type":"turn_end","message":{"role":"assistant","content":[],"api":"openai-completions","provider":"aios","model":"mock-1","usage":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"totalTokens":0,"cost":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"total":0}},"stopReason":"error","timestamp":1792734003805,"errorStatus":500,"errorId":135168,"errorMessage":"500 boom dari model\nboom dari model (type=server_error)","duration":15524.728100000004},"toolResults":[]}
+< {"type":"extension_ui_request","id":"15b11ee3d0f2993d","method":"setWidget","widgetKey":"autoresearch"}
+< {"type":"agent_end","messages":[{"role":"user","content":[{"type":"text","text":"halo"}],"attribution":"user","timestamp":1792733984994},{"role":"assistant","content":[],"api":"openai-completions","provider":"aios","model":"mock-1","usage":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"totalTokens":0,"cost":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"total":0}},"stopReason":"error","timestamp":1792734003805,"errorStatus":500,"errorId":135168,"errorMessage":"500 boom dari model\nboom dari model (type=server_error)","duration":15524.728100000004}],"isTerminal":true,"yielded":true}
+< {"type":"prompt_result","id":"p1","agentInvoked":true,"status":"error","sessionSettled":true,"error":{"message":"500 boom dari model\nboom dari model (type=server_error)","provider":"aios","model":"mock-1","retryable":true,"httpStatus":500}}
+< {"type":"session_settled"}
+< {"type":"extension_ui_request","id":"15b11ee3d7f2993e","method":"setWidget","widgetKey":"autoresearch"}

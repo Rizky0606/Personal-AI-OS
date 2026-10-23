@@ -19,6 +19,14 @@ describe('shortcutFor', () => {
     expect(shortcutFor(key('j'))).toBe('toggleRightPanel');
   });
 
+  it('Ctrl+1..6 berpindah layar; 0 dan 7 bukan shortcut', () => {
+    for (const digit of ['1', '2', '3', '4', '5', '6']) {
+      expect(shortcutFor(key(digit))).toBe('navigate');
+    }
+    expect(shortcutFor(key('0'))).toBeNull();
+    expect(shortcutFor(key('7'))).toBeNull();
+  });
+
   it('tanpa Ctrl, dengan Alt/Shift, atau tombol lain diabaikan', () => {
     expect(shortcutFor(key('k', { ctrlKey: false }))).toBeNull();
     expect(shortcutFor(key('k', { altKey: true }))).toBeNull();
@@ -38,6 +46,7 @@ describe('useShortcuts', () => {
     newChat: vi.fn(),
     toggleSidebar: vi.fn(),
     toggleRightPanel: vi.fn(),
+    navigate: vi.fn(),
   });
 
   it('memanggil aksi yang tepat dan mencegah perilaku bawaan peramban (Ctrl+N, Ctrl+K)', () => {
@@ -54,6 +63,16 @@ describe('useShortcuts', () => {
     expect(actions.palette).toHaveBeenCalledTimes(1);
     expect(actions.toggleSidebar).toHaveBeenCalledTimes(1);
     expect(actions.toggleRightPanel).toHaveBeenCalledTimes(1);
+  });
+
+  it('Ctrl+angka memanggil navigate dengan nomor slotnya', () => {
+    const actions = make();
+    render(<Harness actions={actions} />);
+
+    fireEvent.keyDown(window, { key: '3', ctrlKey: true });
+    fireEvent.keyDown(window, { key: '6', ctrlKey: true });
+
+    expect(actions.navigate.mock.calls).toEqual([[3], [6]]);
   });
 
   it('tombol biasa tidak memicu apa pun; pendengar dilepas saat unmount', () => {

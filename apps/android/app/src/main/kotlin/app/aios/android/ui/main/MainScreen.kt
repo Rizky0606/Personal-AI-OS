@@ -67,8 +67,6 @@ import app.aios.android.debug.debugRoutes
 import app.aios.android.ui.components.AiosIcon
 import app.aios.android.ui.components.AiosSnackbarHost
 import app.aios.android.ui.components.Hairline
-import app.aios.android.ui.components.ScreenState
-import app.aios.android.ui.components.StateHost
 import app.aios.android.ui.settings.SettingsScreen
 import app.aios.android.ui.theme.AiosTheme
 import app.aios.ui.tokens.Tokens
@@ -191,84 +189,84 @@ fun MainScreen(online: Boolean, sessionKey: String, link: AppLink?, onLinkConsum
             snackbarHost = { AiosSnackbarHost(snackbar) }
         ) { padding ->
             Column(modifier = Modifier.padding(padding)) {
-            NotificationPrompt()
-            NavHost(
-                navController = nav,
-                startDestination = Routes.CHAT,
-                modifier = Modifier.weight(1f),
-                enterTransition = { fadeIn(transition) },
-                exitTransition = { fadeOut(transition) },
-                popEnterTransition = { fadeIn(transition) },
-                popExitTransition = { fadeOut(transition) }
-            ) {
-                composable(Routes.CHAT) { ChatScreen(chatVm, snackbar) }
-                composable(Routes.RESEARCH) {
-                    ResearchListScreen(
-                        online = online,
-                        onNew = { nav.navigate(Routes.RESEARCH_NEW) },
-                        onOpen = { nav.navigate("research/${it.id}") }
-                    )
-                }
-                composable(Routes.RESEARCH_NEW) {
-                    ResearchFormScreen(
-                        onCreated = { id ->
-                            nav.navigate("research/$id") { popUpTo(Routes.RESEARCH) }
-                        }
-                    )
-                }
-                composable(
-                    route = Routes.RESEARCH_DETAIL,
-                    arguments = listOf(navArgument("id") { type = NavType.StringType })
+                NotificationPrompt()
+                NavHost(
+                    navController = nav,
+                    startDestination = Routes.CHAT,
+                    modifier = Modifier.weight(1f),
+                    enterTransition = { fadeIn(transition) },
+                    exitTransition = { fadeOut(transition) },
+                    popEnterTransition = { fadeIn(transition) },
+                    popExitTransition = { fadeOut(transition) }
                 ) {
-                    ResearchDetailScreen(
-                        online = online,
-                        snackbar = snackbar,
-                        onOpenChat = { conversationId ->
-                            chatVm.open(conversationId)
-                            nav.navigate(Routes.CHAT) {
-                                popUpTo(nav.graph.findStartDestination().id)
-                                launchSingleTop = true
+                    composable(Routes.CHAT) { ChatScreen(chatVm, snackbar) }
+                    composable(Routes.RESEARCH) {
+                        ResearchListScreen(
+                            online = online,
+                            onNew = { nav.navigate(Routes.RESEARCH_NEW) },
+                            onOpen = { nav.navigate("research/${it.id}") }
+                        )
+                    }
+                    composable(Routes.RESEARCH_NEW) {
+                        ResearchFormScreen(
+                            onCreated = { id ->
+                                nav.navigate("research/$id") { popUpTo(Routes.RESEARCH) }
                             }
-                        },
-                        onNewResearch = { nav.navigate(Routes.RESEARCH_NEW) }
-                    )
+                        )
+                    }
+                    composable(
+                        route = Routes.RESEARCH_DETAIL,
+                        arguments = listOf(navArgument("id") { type = NavType.StringType })
+                    ) {
+                        ResearchDetailScreen(
+                            online = online,
+                            snackbar = snackbar,
+                            onOpenChat = { conversationId ->
+                                chatVm.open(conversationId)
+                                nav.navigate(Routes.CHAT) {
+                                    popUpTo(nav.graph.findStartDestination().id)
+                                    launchSingleTop = true
+                                }
+                            },
+                            onNewResearch = { nav.navigate(Routes.RESEARCH_NEW) }
+                        )
+                    }
+                    composable(Routes.SCHEDULES) {
+                        ScheduleListScreen(
+                            online = online,
+                            snackbar = snackbar,
+                            onNew = { nav.navigate(Routes.SCHEDULE_NEW) },
+                            onOpen = { nav.navigate("schedules/${it.id}") }
+                        )
+                    }
+                    composable(Routes.SCHEDULE_NEW) {
+                        ScheduleCreateScreen(
+                            online = online,
+                            onCreated = { id -> nav.navigate("schedules/$id") { popUpTo(Routes.SCHEDULES) } }
+                        )
+                    }
+                    composable(
+                        route = Routes.SCHEDULE_DETAIL,
+                        arguments = listOf(navArgument("id") { type = NavType.StringType })
+                    ) {
+                        ScheduleDetailScreen(
+                            online = online,
+                            snackbar = snackbar,
+                            onOpenConversation = { conversationId ->
+                                chatVm.open(conversationId)
+                                nav.navigate(Routes.CHAT) {
+                                    popUpTo(nav.graph.findStartDestination().id)
+                                    launchSingleTop = true
+                                }
+                            },
+                            onClosed = { nav.popBackStack(Routes.SCHEDULES, inclusive = false) }
+                        )
+                    }
+                    composable(Routes.SETTINGS) {
+                        SettingsScreen(onOpenCatalog = { nav.navigate(DebugFeatures.ROUTE) })
+                    }
+                    debugRoutes()
                 }
-                composable(Routes.SCHEDULES) {
-                    ScheduleListScreen(
-                        online = online,
-                        snackbar = snackbar,
-                        onNew = { nav.navigate(Routes.SCHEDULE_NEW) },
-                        onOpen = { nav.navigate("schedules/${it.id}") }
-                    )
-                }
-                composable(Routes.SCHEDULE_NEW) {
-                    ScheduleCreateScreen(
-                        online = online,
-                        onCreated = { id -> nav.navigate("schedules/$id") { popUpTo(Routes.SCHEDULES) } }
-                    )
-                }
-                composable(
-                    route = Routes.SCHEDULE_DETAIL,
-                    arguments = listOf(navArgument("id") { type = NavType.StringType })
-                ) {
-                    ScheduleDetailScreen(
-                        online = online,
-                        snackbar = snackbar,
-                        onOpenConversation = { conversationId ->
-                            chatVm.open(conversationId)
-                            nav.navigate(Routes.CHAT) {
-                                popUpTo(nav.graph.findStartDestination().id)
-                                launchSingleTop = true
-                            }
-                        },
-                        onClosed = { nav.popBackStack(Routes.SCHEDULES, inclusive = false) }
-                    )
-                }
-                composable(Routes.SETTINGS) {
-                    SettingsScreen(onOpenCatalog = { nav.navigate(DebugFeatures.ROUTE) })
-                }
-                debugRoutes()
-            }
             }
         }
     }

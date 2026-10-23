@@ -32,7 +32,10 @@ data class ApiError(
     }
 }
 
-private val problemJson = Json { ignoreUnknownKeys = true }
+internal val problemJson = Json { ignoreUnknownKeys = true }
+
+/** Isi galat tanpa menghabiskan sumbernya, supaya pembaca kedua (mis. detail server) tetap melihatnya. */
+internal fun HttpException.problemBody(): String? = response()?.errorBody()?.source()?.peek()?.readUtf8()
 
 /** Memetakan exception Retrofit/OkHttp. `connected` membedakan "tidak ada internet" dari "server tidak terjangkau". */
 fun Throwable.toApiError(connected: Boolean = true): ApiError = when (this) {
@@ -51,7 +54,7 @@ private fun networkError(connected: Boolean): ApiError = if (connected) {
 
 private fun httpError(e: HttpException): ApiError {
     val problem = runCatching {
-        e.response()?.errorBody()?.string()?.let { problemJson.decodeFromString(Problem.serializer(), it) }
+        e.problemBody()?.let { problemJson.decodeFromString(Problem.serializer(), it) }
     }.getOrNull()
     val code = problem?.code
     val fields = problem?.errors.orEmpty()

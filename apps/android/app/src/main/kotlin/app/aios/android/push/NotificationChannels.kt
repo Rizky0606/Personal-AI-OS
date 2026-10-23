@@ -24,7 +24,7 @@ object NotificationChannels {
         listOf(
             Triple(RESEARCH, R.string.channel_research, R.string.channel_research_desc),
             Triple(SCHEDULE, R.string.channel_schedule, R.string.channel_schedule_desc),
-            Triple(GENERAL, R.string.channel_general, R.string.channel_general_desc),
+            Triple(GENERAL, R.string.channel_general, R.string.channel_general_desc)
         ).forEach { (id, name, description) ->
             val channel = NotificationChannel(id, context.getString(name), NotificationManager.IMPORTANCE_DEFAULT)
             channel.description = context.getString(description)

@@ -1,0 +1,17 @@
+[Unit]
+Description=Backup harian Personal AI OS (pg_dump + restic)
+Wants=network-online.target docker.service
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/srv/personal-ai-os/infra/scripts/backup.sh
+# Hanya membaca konfigurasi sendiri; tulis ke direktori sementara dan kunci.
+User=root
+Nice=10
+IOSchedulingClass=idle
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=full
+NoNewPrivileges=true
+TimeoutStartSec=2h
