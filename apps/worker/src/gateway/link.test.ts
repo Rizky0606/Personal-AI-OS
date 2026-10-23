@@ -82,6 +82,28 @@ describe('GatewayLink: sambung dan kirim', () => {
   });
 });
 
+describe('GatewayLink: run ditolak gateway', () => {
+  it('error run_not_active / run_not_owned memanggil onRunRejected; error lain diabaikan', async () => {
+    const rejected: string[] = [];
+    const { link } = makeLink({ onRunRejected: (runId) => rejected.push(runId) });
+    link.setSession(session());
+    await until(() => link.state === 'connected', 'connected');
+
+    gateway.last.socket.send(
+      JSON.stringify({ type: 'error', code: 'run_not_active', message: 'x', runId: RUN }),
+    );
+    gateway.last.socket.send(
+      JSON.stringify({ type: 'error', code: 'run_not_owned', message: 'x', runId: RUN }),
+    );
+    gateway.last.socket.send(
+      JSON.stringify({ type: 'error', code: 'invalid_message', message: 'x' }),
+    );
+
+    await until(() => rejected.length === 2, 'run ditolak');
+    expect(rejected).toEqual([RUN, RUN]);
+  });
+});
+
 describe('GatewayLink: reconnect', () => {
   it('putus lalu menyambung ulang otomatis dan kembali connected', async () => {
     const { link, states } = makeLink();

@@ -20,6 +20,15 @@ export interface LiveProgress {
   message: string | undefined;
 }
 
+export interface PendingApproval {
+  approvalId: string;
+  kind: 'command' | 'file_write' | 'network';
+  /** Perintah, path, atau URL persis yang diminta agent. */
+  detail: string;
+  cwd: string | undefined;
+  toolCallId: string | undefined;
+}
+
 export interface RunFailure {
   code: string;
   message: string;
@@ -37,11 +46,19 @@ export interface LiveRun {
   reasoning: string;
   tools: ToolStep[];
   sources: LiveSource[];
+  approvals: PendingApproval[];
   research: LiveProgress;
   error: RunFailure | null;
 }
 
 export const isTerminal = (status: RunStatus): boolean => TERMINAL_RUN_STATUSES.includes(status);
+
+/**
+ * Tidak ada lagi aktivitas yang ditunggu dari mesin: status final, atau `needs_review` (run coding selesai dan
+ * menunggu tinjauan manusia, bukan status final di diagram tetapi tidak ada yang mengalir lagi).
+ */
+export const isSettled = (status: RunStatus): boolean =>
+  isTerminal(status) || status === 'needs_review';
 
 export const newLiveRun = (runId: string): LiveRun => ({
   runId,
@@ -52,6 +69,7 @@ export const newLiveRun = (runId: string): LiveRun => ({
   reasoning: '',
   tools: [],
   sources: [],
+  approvals: [],
   research: { stage: null, progress: 0, message: undefined },
   error: null,
 });
@@ -94,6 +112,22 @@ export function reduceLiveRun(run: LiveRun, event: ServerEvent): LiveRun {
             : t,
         ),
       };
+    case 'approval.requested':
+      return {
+        ...run,
+        approvals: [
+          ...run.approvals.filter((a) => a.approvalId !== event.approvalId),
+          {
+            approvalId: event.approvalId,
+            kind: event.kind,
+            detail: event.detail,
+            cwd: event.cwd,
+            toolCallId: event.toolCallId,
+          },
+        ],
+      };
+    case 'approval.resolved':
+      return { ...run, approvals: run.approvals.filter((a) => a.approvalId !== event.approvalId) };
     case 'research.progress':
       return {
         ...run,

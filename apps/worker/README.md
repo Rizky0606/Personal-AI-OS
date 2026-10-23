@@ -34,7 +34,14 @@ Protokol lokal: `packages/contracts/src/worker-local.ts`. Protokol ke gateway: `
 - Path project hanya disimpan di worker (`projects.json`); gateway hanya menerima nama, stack, dan branch bawaan.
 - Log ke stderr tanpa token atau isi folder.
 
+## Run coding (Fase 18)
+
+`run.start` dari gateway dijalankan oleh `RunCoordinator`: `git worktree add` ke `aios/<id>` (di luar repo kerja), omp lewat adapter di `packages/adapters` (`--approval-mode always-ask`, role lewat berkas di luar worktree), LLM lewat proxy lokal, dan event dikirim ke gateway (ditahan selama koneksi putus). Izin yang diminta omp ditanyakan ke pengguna kecuali ada aturan "selalu" untuk perintah persis itu di project tersebut. Hasil ditinjau lewat `review.apply`: diterima = commit di branch `aios/...`, ditolak = worktree dan branch dihapus; run tanpa perubahan dibuang sendiri.
+
+- omp dicari sebagai `omp.exe` di PATH, atau lokasi di `AIOS_OMP_PATH`.
+- `pnpm --filter @aios/worker test` menjalankan juga uji end-to-end dengan omp sungguhan bila terpasang (dilewati bila tidak).
+
 ## Belum ada
 
-- Adapter omp, worktree, approval, dan eksekusi run coding (Fase 18). Perintah `run.start` dari gateway dijawab `error worker_not_ready` lalu `run.status failed` supaya run tidak menggantung.
+- Diff dan checkpoint (Fase 19), pembersihan worktree sisa setelah crash, dan SQLite.
 - Penyimpanan SQLite (ARCHITECTURE.md menyebut SQLite milik worker); saat ini cukup dua berkas JSON.

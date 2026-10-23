@@ -7,7 +7,7 @@
     "build:sidecar": "node scripts/build-sidecar.mjs",
     "typecheck": "tsc -p tsconfig.json",
     "smoke:sidecar": "node scripts/smoke-sidecar.mjs",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests --testTimeout=30000 --hookTimeout=30000"
   },
   "dependencies": {
     "@aios/adapters": "workspace:*",

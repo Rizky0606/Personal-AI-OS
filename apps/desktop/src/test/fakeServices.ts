@@ -52,6 +52,7 @@ export const api: FakeApi = {
   sendMessage: fn<'sendMessage'>(),
   rerouteMessage: fn<'rerouteMessage'>(),
   getRun: fn<'getRun'>(),
+  resolveApproval: fn<'resolveApproval'>(),
   cancelRun: fn<'cancelRun'>(),
   listSchedules: fn<'listSchedules'>(),
   createSchedule: fn<'createSchedule'>(),

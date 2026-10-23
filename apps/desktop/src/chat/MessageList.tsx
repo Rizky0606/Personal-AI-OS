@@ -2,9 +2,10 @@ import type { Message } from '@aios/contracts';
 import type { RoleInfo } from '../api/gateway';
 import { useLayoutEffect, useRef } from 'react';
 import { copy } from '../copy';
-import { isTerminal, type LiveRun } from '../realtime/liveRun';
+import { isSettled, type LiveRun, type PendingApproval } from '../realtime/liveRun';
 import { Button } from '../ui/Button';
 import { ErrorBanner } from '../ui/ErrorBanner';
+import { ApprovalPanel } from './ApprovalPanel';
 import { AssistantMessage, type AssistantPart } from './AssistantMessage';
 import { messageText } from './messageData';
 import { UserMessage } from './UserMessage';
@@ -20,6 +21,10 @@ export interface MessageListProps {
   /** Jawaban asisten terakhir: satu-satunya yang chip rolenya bisa diganti. */
   rerunnableId: string | null;
   onReroute: (role: string) => void;
+  /** Permintaan izin agent yang menunggu jawaban pengguna. */
+  approvals: PendingApproval[];
+  resolvingApprovals: ReadonlySet<string>;
+  onResolveApproval: (approvalId: string, decision: 'allow' | 'deny', remember: boolean) => void;
   hasMore: boolean;
   loadingOlder: boolean;
   onLoadOlder: () => void;
@@ -62,6 +67,9 @@ export function MessageList({
   failure,
   rerunnableId,
   onReroute,
+  approvals,
+  resolvingApprovals,
+  onResolveApproval,
   hasMore,
   loadingOlder,
   onLoadOlder,
@@ -74,7 +82,7 @@ export function MessageList({
     if (el && stick.current) el.scrollTop = el.scrollHeight;
   });
 
-  const streaming = live !== undefined && !isTerminal(live.status);
+  const streaming = live !== undefined && !isSettled(live.status);
   // Selama run berjalan, jawabannya ditampilkan dari aliran live, bukan dari daftar (hindari ganda).
   const shown = live
     ? messages.filter((m) => !(m.author === 'assistant' && m.runId === live.runId))
@@ -135,6 +143,16 @@ export function MessageList({
             ) : null}
           </div>
         ) : null}
+        {approvals.map((approval) => (
+          <ApprovalPanel
+            key={approval.approvalId}
+            approval={approval}
+            busy={resolvingApprovals.has(approval.approvalId)}
+            onResolve={(decision, remember) =>
+              onResolveApproval(approval.approvalId, decision, remember)
+            }
+          />
+        ))}
         {failure !== null ? (
           <ErrorBanner
             message={failure ? `${copy.chat.runFailed} ${failure}` : copy.chat.runFailed}

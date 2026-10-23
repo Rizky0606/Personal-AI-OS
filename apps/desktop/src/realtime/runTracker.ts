@@ -1,5 +1,5 @@
 import type { EventEnvelope, Run } from '@aios/contracts';
-import { isTerminal, newLiveRun, reduceLiveRun, type LiveRun, type RunFailure } from './liveRun';
+import { isSettled, newLiveRun, reduceLiveRun, type LiveRun, type RunFailure } from './liveRun';
 
 export interface RunTrackerDeps {
   realtime: { subscribe(channel: string, handler: (envelope: EventEnvelope) => void): () => void };
@@ -68,7 +68,7 @@ export class RunTracker {
 
   private async poll(runId: string): Promise<void> {
     const current = this.runs.get(runId);
-    if (!current || isTerminal(current.status)) return;
+    if (!current || isSettled(current.status)) return;
     try {
       const run = await this.deps.fetchRun(runId);
       this.apply(runId, (live) => ({
@@ -87,7 +87,7 @@ export class RunTracker {
     const after = change(before);
     if (after === before) return;
     this.runs.set(runId, after);
-    const justFinished = !isTerminal(before.status) && isTerminal(after.status);
+    const justFinished = !isSettled(before.status) && isSettled(after.status);
     if (justFinished) {
       this.stops.get(runId)?.();
       this.stops.delete(runId);

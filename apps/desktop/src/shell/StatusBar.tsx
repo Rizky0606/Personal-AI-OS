@@ -1,6 +1,7 @@
 import { useConnection, useOnline } from '../app/hooks';
+import { useUiStore } from '../state/uiStore';
+import { useProjects, useWorker } from '../worker/hooks';
 import { workerIndicator } from '../worker/status';
-import { useWorker } from '../worker/hooks';
 import { copy } from '../copy';
 import { cn } from '../lib/cn';
 import type { ConnectionState } from '../realtime/client';
@@ -37,10 +38,17 @@ export function StatusBar() {
   const online = useOnline();
   const view = connectionView(connection, online);
   const worker = workerIndicator(useWorker());
+  const activeProjectId = useUiStore((s) => s.activeProjectId);
+  const runBranch = useUiStore((s) => s.activeRunBranch);
+  const project = useProjects().data?.find((p) => p.id === activeProjectId);
+  // Selama run coding berjalan: branch kerja agent; selain itu branch bawaan project.
+  const projectLabel = project
+    ? `${project.name} · ${runBranch ?? project.defaultBranch}`
+    : copy.status.project;
   return (
     <footer className="flex h-(--aios-statusbar-height) shrink-0 items-center justify-between border-t border-border bg-surface px-3 font-mono text-caption text-text-2">
       <div className="flex items-center gap-4">
-        <span>{copy.status.project}</span>
+        <span>{projectLabel}</span>
         <span>{copy.status.role}</span>
         <span>{copy.status.model}</span>
       </div>

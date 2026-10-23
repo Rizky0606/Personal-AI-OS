@@ -1,5 +1,6 @@
 import type { ModelInfoSchema, RoleInfoSchema } from '@aios/contracts';
 import {
+  ApprovalSchema,
   ConversationSchema,
   IdSchema,
   LoginResponseSchema,
@@ -47,6 +48,7 @@ const ScheduleListSchema = items(ScheduleSchema);
 const ProjectListSchema = items(ProjectSchema);
 
 export type RoleInfo = z.infer<typeof RoleInfoSchema>;
+export type Approval = z.infer<typeof ApprovalSchema>;
 export type ModelInfo = z.infer<typeof ModelInfoSchema>;
 export type ConversationPage = z.infer<typeof ConversationPageSchema>;
 export type MessagePage = z.infer<typeof MessagePageSchema>;
@@ -90,10 +92,16 @@ export function createGatewayApi(call: Call) {
     listModels: async () => (await get('/models', ModelListSchema)).items,
     listRoles: async () => (await get('/roles', RoleListSchema)).items,
 
-    listConversations: (before?: string) =>
-      get(`/conversations${query({ before, limit: PAGE_SIZE })}`, ConversationPageSchema),
-    createConversation: (surface: Surface = 'windows') =>
-      get('/conversations', ConversationSchema, { method: 'POST', body: { surface } }),
+    listConversations: (before?: string, projectId?: string) =>
+      get(
+        `/conversations${query({ before, limit: PAGE_SIZE, projectId })}`,
+        ConversationPageSchema,
+      ),
+    createConversation: (surface: Surface = 'windows', projectId?: string) =>
+      get('/conversations', ConversationSchema, {
+        method: 'POST',
+        body: { surface, ...(projectId ? { projectId } : {}) },
+      }),
     updateConversation: (id: string, patch: { title?: string; pinned?: boolean }) =>
       get(`/conversations/${id}`, ConversationSchema, { method: 'PATCH', body: patch }),
     archiveConversation: async (id: string) => {
@@ -124,6 +132,16 @@ export function createGatewayApi(call: Call) {
       }),
 
     getRun: (id: string) => get(`/runs/${id}`, RunSchema),
+    /** Keputusan atas permintaan izin agent; `remember` = selalu izinkan untuk project ini. */
+    resolveApproval: (
+      runId: string,
+      approvalId: string,
+      input: { decision: 'allow' | 'deny'; remember: boolean },
+    ) =>
+      get(`/runs/${runId}/approvals/${approvalId}`, ApprovalSchema, {
+        method: 'POST',
+        body: input,
+      }),
     cancelRun: (id: string) => get(`/runs/${id}/cancel`, RunSchema, { method: 'POST' }),
 
     listSchedules: async () => (await get('/schedules', ScheduleListSchema)).items,

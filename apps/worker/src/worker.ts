@@ -73,7 +73,10 @@ export async function startWorker(options: WorkerOptions): Promise<RunningWorker
   const worktrees = new WorktreeManager({ processes, allowed, dataDir: options.dataDir });
   holder.worktrees = worktrees;
 
-  const link: GatewayLink = new GatewayLink({ onCommand: (command) => dispatch(command) });
+  const link: GatewayLink = new GatewayLink({
+    onCommand: (command) => dispatch(command),
+    onRunRejected: (runId) => coordinator.cancel(runId),
+  });
   const proxy = new LlmProxy({
     serverUrl: () => link.serverUrl,
     token: (opts) => link.freshAccessToken(opts),

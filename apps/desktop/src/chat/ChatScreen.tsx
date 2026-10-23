@@ -47,6 +47,9 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
             failure={chat.failure}
             rerunnableId={chat.rerunnableId}
             onReroute={chat.reroute}
+            approvals={chat.approvals}
+            resolvingApprovals={chat.resolvingApprovals}
+            onResolveApproval={chat.resolveApproval}
             hasMore={chat.hasMore}
             loadingOlder={chat.loadingOlder}
             onLoadOlder={chat.loadOlder}

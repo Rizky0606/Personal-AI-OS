@@ -19,6 +19,8 @@ export interface GatewaySession {
 
 export interface GatewayLinkDeps {
   onCommand: (command: WorkerCommand) => void;
+  /** Gateway menolak event satu run (tidak aktif / bukan miliknya): worker menghentikan run itu. */
+  onRunRejected?: (runId: string) => void;
   fetch?: typeof fetch;
   now?: () => number;
   /** Jeda sebelum percobaan ke-`attempt` (mulai 1). Default 1, 2, 4, 8, 16, 30 detik. */
@@ -233,7 +235,12 @@ export class GatewayLink {
         this.startHeartbeat(socket, generation);
       } else if (value.type === 'pong') {
         clearTimeout(this.deadline);
-      } else if (value.type !== 'error') {
+      } else if (value.type === 'error') {
+        // Run yang tidak lagi dikenal gateway (mis. gateway dimulai ulang) tidak boleh terus memakai LLM.
+        if ((value.code === 'run_not_active' || value.code === 'run_not_owned') && value.runId) {
+          this.deps.onRunRejected?.(value.runId);
+        }
+      } else {
         this.deps.onCommand(value);
       }
     });

@@ -2,6 +2,7 @@ import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { PanelLeftOpen, PanelRight, Plus } from 'lucide-react';
 import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { ConversationList } from '../chat/ConversationList';
+import { ProjectSwitcher } from '../chat/ProjectSwitcher';
 import { copy } from '../copy';
 import { ProjectList } from '../projects/ProjectList';
 import { ResearchList } from '../research/ResearchList';
@@ -43,7 +44,12 @@ function sectionFor(pathname: string): Section {
     return { title: copy.nav.catalog, list: <EmptyState message={copy.nav.catalog} /> };
   return {
     title: copy.nav.chat,
-    list: <ConversationList />,
+    list: (
+      <>
+        <ProjectSwitcher />
+        <ConversationList />
+      </>
+    ),
     action: { label: copy.chat.newChat, to: '/' },
   };
 }

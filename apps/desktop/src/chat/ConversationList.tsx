@@ -4,6 +4,7 @@ import { apiErrorMessage } from '../api/errors';
 import { useConversations } from '../api/queries';
 import { useOnline } from '../app/hooks';
 import { copy } from '../copy';
+import { useUiStore } from '../state/uiStore';
 import { Button } from '../ui/Button';
 import { StateView, type ViewState } from '../ui/StateView';
 import { ConversationRow } from './ConversationRow';
@@ -11,16 +12,20 @@ import { useConversationActions } from './useConversationActions';
 
 /** Daftar percakapan di sidebar: yang disematkan di atas, lalu menurut urutan server (terbaru dulu). */
 export function ConversationList() {
-  const query = useConversations();
+  const activeProjectId = useUiStore((s) => s.activeProjectId);
+  const query = useConversations(activeProjectId);
   const online = useOnline();
   const params = useParams({ strict: false });
   const activeId = params.conversationId;
   const actions = useConversationActions(activeId);
 
   const items = useMemo(() => {
-    const all = query.data?.pages.flatMap((page) => page.items) ?? [];
+    // Server mengembalikan semua percakapan bila tanpa project; chat umum menyaring yang tidak terikat project.
+    const all = (query.data?.pages.flatMap((page) => page.items) ?? []).filter((c) =>
+      activeProjectId === null ? c.projectId === null : c.projectId === activeProjectId,
+    );
     return [...all.filter((c) => c.pinned), ...all.filter((c) => !c.pinned)];
-  }, [query.data]);
+  }, [query.data, activeProjectId]);
 
   const view: ViewState = query.isPending
     ? 'loading'

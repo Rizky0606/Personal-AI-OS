@@ -14,10 +14,11 @@ export const useModels = () =>
 export const useRoles = () =>
   useQuery({ queryKey: ['roles'], queryFn: api.listRoles, staleTime: 5 * MINUTES });
 
-export const useConversations = () =>
+/** Percakapan satu project; `null` = chat umum (server mengembalikan semua, jadi disaring di layar). */
+export const useConversations = (projectId: string | null) =>
   useInfiniteQuery({
-    queryKey: ['conversations'],
-    queryFn: ({ pageParam }) => api.listConversations(pageParam),
+    queryKey: ['conversations', projectId ?? 'umum'],
+    queryFn: ({ pageParam }) => api.listConversations(pageParam, projectId ?? undefined),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: cursor,
   });

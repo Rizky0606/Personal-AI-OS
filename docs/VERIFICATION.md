@@ -225,6 +225,18 @@ Rekomendasi untuk worker: tulis `models.yml` ke direktori agent milik worker (bu
 - **Temuan:** omp otomatis memuat skill dari provider lain di mesin pengguna (di uji ini daftar skill dari `~/.claude` ikut muncul; system prompt naik dari 10.444 ke 17.013 karakter bersama skill tambahan). Untuk run yang dikendalikan aplikasi, gunakan `PI_CODING_AGENT_DIR`/`--profile` terisolasi dan filter skill (`skills.includeSkills`, `--skills <glob>`, atau `--no-skills` lalu hanya `customDirectories`). Ini sengaja tidak diuji lebih jauh; perlu dikunci saat membuat adapter.
 - Jalur fallback di ARCHITECTURE.md ("role sebagai pesan sistem pertama lewat RPC") **tidak diperlukan**: `--append-system-prompt` sudah cukup. Tidak ada command RPC untuk mengganti system prompt saat berjalan (tidak ada `set_system_prompt`); prompt tetap selama proses hidup, jadi ganti role = jalankan proses baru atau tambahkan lewat pesan.
 
+### Temuan tambahan saat membangun adapter (Fase 18, omp 18.12.6, Windows)
+
+Direkam ulang dengan omp sungguhan dan server OpenAI-compatible tiruan; transkripnya ada di `packages/adapters/src/__fixtures__/omp/` dan dipakai sebagai fixture tes adapter.
+
+- **`set_event_filter` dengan `messageUpdates:"delta"` ditolak**: `{"success":false,"error":"events must be null or an array of non-empty event type strings"}`. `message_update` tetap membawa objek `partial` berisi seluruh pesan di setiap delta (muatan membengkak seiring panjang jawaban; batas frame 1 MiB tanpa protokol v2). Adapter hanya membaca `assistantMessageEvent.delta`.
+- **Percobaan ulang model tidak bisa dimatikan.** Tanpa `set_auto_retry enabled:false` omp mengirim `auto_retry_start` (hingga 10 kali). Dengan itu dimatikan, atau dengan overlay `--config` berisi `retry.enabled:false, retry.maxRetries:0`, omp **tetap mengirim ±12 permintaan ke LLM selama ±40 detik** untuk satu galat HTTP 500 (percobaan ulang di lapisan SDK provider), baru kemudian `prompt_result` `status:"error"` dengan `error:{message,provider,model,retryable,httpStatus}`. Adapter tetap mengirim `set_auto_retry` dan menunggu balasannya sebelum `prompt`.
+- **`steer` diantrekan**: omp membalas `response success` dan `queue_update {steering:[...]}`, tetapi teks baru diproses setelah pesan asisten yang sedang mengalir selesai (tidak memotong stream); `prompt_result` hanya satu untuk seluruh rangkaian.
+- **`abort`**: `message_end` dengan `stopReason:"aborted"`, `agent_end`, lalu `response` untuk `abort`, lalu `prompt_result status:"aborted"`.
+- **Format approval**: `title` = `Allow tool: <nama>\n<detail>` dengan detail `Command: <perintah>` (bash) atau `Path: <path>\nContent:\n<isi>` (write); opsi `["Approve","Approve <tool> for this session","Deny"]`. `tool_execution_start` mendahului `select`. Setelah "Approve bash for this session", panggilan bash berikutnya tidak lagi meminta izin (tanpa `extension_ui_request`). Jawaban Deny menghasilkan `tool_execution_end isError:true` dengan teks "Tool call denied by user".
+- `tool_execution_update.partialResult.content` berisi teks **kumulatif** (bukan potongan baru); adapter mengirim hanya tambahannya sebagai `tool.output`.
+- **Peluncuran**: `omp.exe` ada di `~/.bun/bin`; pembungkus `.cmd` tidak bisa dijalankan tanpa shell. Worker mencari `omp.exe` di PATH (atau `AIOS_OMP_PATH`). Flag yang terbukti jalan bersama: `--mode rpc --approval-mode always-ask --cwd <dir> --no-session --no-skills --no-extensions --no-lsp --no-title --append-system-prompt <berkas> --model aios/<id>` dengan `PI_CODING_AGENT_DIR` terisolasi berisi `models.yml`. Tidak ada berkas `.omp` yang muncul di repo kerja maupun worktree.
+
 ### Yang TIDAK didukung / tidak ada
 
 - Tidak ada command RPC `set_system_prompt`.

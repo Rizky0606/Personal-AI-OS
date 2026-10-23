@@ -1,3 +1,4 @@
+import { workerBranchFor } from '@aios/contracts';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -6,7 +7,7 @@ import { useMessages, useModels, useRoles } from '../api/queries';
 import { useLiveRun, useOnline, useRunFailure } from '../app/hooks';
 import { api, runs } from '../app/services';
 import { copy } from '../copy';
-import { isTerminal } from '../realtime/liveRun';
+import { isSettled } from '../realtime/liveRun';
 import { useUiStore } from '../state/uiStore';
 import { useToastStore } from '../ui/Toaster';
 import { addMessageToCache, chronological, latestRunId, messageText } from './messageData';
@@ -24,6 +25,8 @@ export function useChatController(conversationId: string | undefined) {
   const online = useOnline();
   const push = useToastStore((s) => s.push);
   const newChatSignal = useUiStore((s) => s.newChatSignal);
+  const activeProjectId = useUiStore((s) => s.activeProjectId);
+  const setRunBranch = useUiStore((s) => s.setActiveRunBranch);
 
   const messagesQuery = useMessages(conversationId);
   const modelsQuery = useModels();
@@ -41,7 +44,27 @@ export function useChatController(conversationId: string | undefined) {
   const runId = activeRunId ?? latestRunId(messages);
   const live = useLiveRun(runId);
   const failure = useRunFailure(runId);
-  const streaming = live !== undefined && !isTerminal(live.status);
+  const streaming = live !== undefined && !isSettled(live.status);
+
+  // Chat umum hanya menawarkan role Umum; role coding (omp) butuh project, jadi hanya muncul di dalam project.
+  const roles = useMemo(
+    () => (rolesQuery.data ?? []).filter((r) => activeProjectId !== null || r.group === 'umum'),
+    [rolesQuery.data, activeProjectId],
+  );
+
+  // Status bar menampilkan branch kerja agent selama run coding berjalan.
+  const liveRunId = live?.runId;
+  const codingLive =
+    streaming &&
+    activeProjectId !== null &&
+    roles.find((r) => r.id === live?.role)?.group === 'coding';
+  useEffect(() => {
+    if (!codingLive || !liveRunId) return;
+    setRunBranch(workerBranchFor(liveRunId));
+    return () => setRunBranch(null);
+  }, [codingLive, liveRunId, setRunBranch]);
+
+  const [resolving, setResolving] = useState<ReadonlySet<string>>(new Set());
 
   // Chat baru (Ctrl+N saat sudah di layar ini): kosongkan isian dan fokus.
   const [seenSignal, setSeenSignal] = useState(newChatSignal);
@@ -62,7 +85,7 @@ export function useChatController(conversationId: string | undefined) {
     api
       .getRun(resumeId)
       .then((run) => {
-        if (!isTerminal(run.status)) runs.track(resumeId);
+        if (!isSettled(run.status)) runs.track(resumeId);
       })
       .catch(() => checkedRuns.delete(resumeId));
   }, [resumeId]);
@@ -83,7 +106,9 @@ export function useChatController(conversationId: string | undefined) {
     setPending(text);
     setDraft('');
     try {
-      const id = conversationId ?? (await api.createConversation()).id;
+      const id =
+        conversationId ??
+        (await api.createConversation('windows', activeProjectId ?? undefined)).id;
       const response = await api.sendMessage(id, {
         text,
         role: role ?? undefined,
@@ -115,6 +140,7 @@ export function useChatController(conversationId: string | undefined) {
     online,
     push,
     conversationId,
+    activeProjectId,
     role,
     model,
     queryClient,
@@ -148,6 +174,26 @@ export function useChatController(conversationId: string | undefined) {
     [lastAssistant, streaming, fail, online],
   );
 
+  /** Keputusan atas permintaan izin agent; status run berubah lewat event, bukan dari sini. */
+  const resolveApproval = useCallback(
+    async (approvalId: string, decision: 'allow' | 'deny', remember: boolean) => {
+      if (!live) return;
+      setResolving((current) => new Set(current).add(approvalId));
+      try {
+        await api.resolveApproval(live.runId, approvalId, { decision, remember });
+      } catch (error) {
+        fail(error, `${copy.approval.failed} ${apiErrorMessage(error, online)}`);
+      } finally {
+        setResolving((current) => {
+          const next = new Set(current);
+          next.delete(approvalId);
+          return next;
+        });
+      }
+    },
+    [live, fail, online],
+  );
+
   /** API tidak punya edit di tempat: teks pesan terakhir dimasukkan ke kolom pesan lalu dikirim sebagai pesan baru. */
   const editLast = useCallback(() => {
     if (!lastUser || sending || streaming) return;
@@ -169,7 +215,11 @@ export function useChatController(conversationId: string | undefined) {
     model,
     setModel,
     models: modelsQuery.data ?? [],
-    roles: rolesQuery.data ?? [],
+    roles,
+    approvals: live?.approvals ?? [],
+    resolvingApprovals: resolving,
+    resolveApproval: (approvalId: string, decision: 'allow' | 'deny', remember: boolean) =>
+      void resolveApproval(approvalId, decision, remember),
     sending,
     streaming,
     send: () => void send(),

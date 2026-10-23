@@ -23,6 +23,12 @@ interface UiState {
   paletteOpen: boolean;
   /** Naik tiap Ctrl+N; layar chat memakainya untuk memulai percakapan baru. */
   newChatSignal: number;
+  /** Project yang sedang dikerjakan (chat per folder); null = chat umum. */
+  activeProjectId: string | null;
+  /** Branch kerja agent dari run coding yang sedang berjalan, untuk status bar; tidak disimpan. */
+  activeRunBranch: string | null;
+  setActiveProject: (id: string | null) => void;
+  setActiveRunBranch: (branch: string | null) => void;
   toggleSidebar: () => void;
   toggleRightPanel: () => void;
   setRightPanelWidth: (width: number) => void;
@@ -43,6 +49,10 @@ export const useUiStore = create<UiState>()(
       theme: 'system',
       paletteOpen: false,
       newChatSignal: 0,
+      activeProjectId: null,
+      activeRunBranch: null,
+      setActiveProject: (activeProjectId) => set({ activeProjectId, activeRunBranch: null }),
+      setActiveRunBranch: (activeRunBranch) => set({ activeRunBranch }),
       toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
       toggleRightPanel: () => set((s) => ({ rightPanelOpen: !s.rightPanelOpen })),
       setRightPanelWidth: (width) => set({ rightPanelWidth: clampPanelWidth(width) }),
@@ -59,6 +69,7 @@ export const useUiStore = create<UiState>()(
         rightPanelOpen: s.rightPanelOpen,
         rightPanelWidth: s.rightPanelWidth,
         rightPanelTab: s.rightPanelTab,
+        activeProjectId: s.activeProjectId,
         theme: s.theme,
       }),
       // Nilai tersimpan yang rusak atau di luar batas dikembalikan ke aman.

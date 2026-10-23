@@ -56,6 +56,16 @@ export const roles = [
     skills: [],
   },
   {
+    id: 'frontend',
+    name: 'Frontend',
+    group: 'coding' as const,
+    engine: 'omp' as const,
+    model: 'combo/code',
+    fallbackModel: null,
+    approval: 'ask' as const,
+    skills: [],
+  },
+  {
     id: 'writer',
     name: 'Penulis',
     group: 'umum' as const,

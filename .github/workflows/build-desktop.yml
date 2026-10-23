@@ -37,8 +37,10 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
       # Paket workspace dipakai lewat dist/; bangun dulu supaya tes dan bundel Bun menemukannya.
-      - name: Bangun paket kontrak
-        run: pnpm --filter @aios/contracts build
+      - name: Bangun paket kontrak dan adapter
+        run: |
+          pnpm --filter @aios/contracts build
+          pnpm --filter @aios/adapters build
       - name: Tes UI desktop
         run: pnpm --filter @aios/desktop test
       # tauri-build mewajibkan sidecar (externalBin) ada saat kompilasi, jadi worker dibangun lebih dulu.
