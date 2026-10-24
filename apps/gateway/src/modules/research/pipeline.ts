@@ -27,12 +27,25 @@ export interface DepthConfig {
   /** Kandidat yang disiapkan (lebih banyak dari target karena sebagian gagal diambil). */
   pool: number;
   perDomain: number;
-  /** Batas total waktu satu job. */
+  /** Batas waktu mencari dan membaca sumber (pembacaan berhenti di 70%-nya). */
   totalMs: number;
+  /**
+   * Cadangan waktu menyusun laporan di atas [totalMs]. Laporan ditulis tanpa streaming oleh model yang bisa
+   * lambat; tanpa cadangan ini job sering habis waktu tepat di tahap menulis.
+   */
+  writeMs?: number;
 }
 
 export const DEPTHS: Record<ResearchDepth, DepthConfig> = {
-  quick: { target: 5, subQuestions: 3, perQuery: 6, pool: 12, perDomain: 2, totalMs: 4 * 60_000 },
+  quick: {
+    target: 5,
+    subQuestions: 3,
+    perQuery: 6,
+    pool: 12,
+    perDomain: 2,
+    totalMs: 4 * 60_000,
+    writeMs: 3 * 60_000,
+  },
   standard: {
     target: 12,
     subQuestions: 5,
@@ -40,8 +53,17 @@ export const DEPTHS: Record<ResearchDepth, DepthConfig> = {
     pool: 30,
     perDomain: 2,
     totalMs: 10 * 60_000,
+    writeMs: 4 * 60_000,
   },
-  deep: { target: 25, subQuestions: 7, perQuery: 10, pool: 60, perDomain: 3, totalMs: 25 * 60_000 },
+  deep: {
+    target: 25,
+    subQuestions: 7,
+    perQuery: 10,
+    pool: 60,
+    perDomain: 3,
+    totalMs: 25 * 60_000,
+    writeMs: 6 * 60_000,
+  },
 };
 
 const DEPTH_LABEL: Record<ResearchDepth, string> = {
@@ -52,6 +74,8 @@ const DEPTH_LABEL: Record<ResearchDepth, string> = {
 
 /** Bagian dari batas waktu setelah itu pembacaan sumber dihentikan agar masih sempat menulis laporan. */
 const READ_PHASE_SHARE = 0.7;
+/** Satu panggilan model untuk menulis laporan (non-streaming: jawaban baru datang setelah selesai ditulis). */
+const WRITE_CALL_TIMEOUT_MS = 5 * 60_000;
 const SEARCH_CONCURRENCY = 3;
 const FETCH_CONCURRENCY = 4;
 const MIN_SUBQUESTIONS = 3;
@@ -426,6 +450,7 @@ async function executePipeline(
       user: `${synthesisInstruction}\n\nPertanyaan: ${question}\n\nSub-pertanyaan:\n${planText}\n\nSumber:\n${numbered}${extra}`,
       maxTokens: 4000,
       temperature: 0.2,
+      timeoutMs: WRITE_CALL_TIMEOUT_MS,
       signal,
     });
   const unwrap = (text: string) =>
@@ -449,17 +474,26 @@ async function executePipeline(
     ]
       .filter(Boolean)
       .join('\n');
-    const fixed = unwrap(
-      await deps.llm.chat({
-        model: deps.models.main,
-        system: deps.systemPrompt,
-        user:
-          `Perbaiki laporan berikut. ${issues}\nTambahkan rujukan [n] yang benar dari sumber di bawah, atau hapus klaim yang tidak didukung sumber. Jangan mengubah bagian lain. Balas dengan laporan lengkap.\n\n` +
-          `Sumber:\n${numbered}\n\nLaporan:\n${body}`,
-        maxTokens: 4000,
-        signal,
-      }),
-    );
+    // Perbaikan bersifat tambahan: bila gagal (mis. model lambat), laporan pertama tetap dipakai dan rujukan
+    // yang salah dirapikan oleh kode di bawah. Hanya pembatalan yang menghentikan riset.
+    let fixed = '';
+    try {
+      fixed = unwrap(
+        await deps.llm.chat({
+          model: deps.models.main,
+          system: deps.systemPrompt,
+          user:
+            `Perbaiki laporan berikut. ${issues}\nTambahkan rujukan [n] yang benar dari sumber di bawah, atau hapus klaim yang tidak didukung sumber. Jangan mengubah bagian lain. Balas dengan laporan lengkap.\n\n` +
+            `Sumber:\n${numbered}\n\nLaporan:\n${body}`,
+          maxTokens: 4000,
+          timeoutMs: WRITE_CALL_TIMEOUT_MS,
+          signal,
+        }),
+      );
+    } catch (err) {
+      check();
+      deps.log?.warn({ err }, 'perbaikan rujukan gagal; laporan pertama dipakai');
+    }
     check();
     if (fixed) body = fixed;
   }

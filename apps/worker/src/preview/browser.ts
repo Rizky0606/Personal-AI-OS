@@ -1,6 +1,8 @@
 import { existsSync } from 'node:fs';
 import { LAYOUT_SCRIPT, describeLayout, type LayoutReport } from './layout.js';
-import { chromium, type Browser, type BrowserContext, type Page } from 'playwright-core';
+// Hanya tipe: playwright-core dimuat malas di launch(). Di .exe hasil `bun --compile` modul ini gagal dimuat
+// (mencari package.json-nya saat runtime); impor statis membuat seluruh worker mati saat start.
+import type { Browser, BrowserContext, Page } from 'playwright-core';
 
 export class BrowserError extends Error {
   constructor(
@@ -72,8 +74,12 @@ export class BrowserHost {
         ),
       );
     }
-    this.browser ??= chromium
-      .launch({ executablePath: this.executablePath, headless: true })
+    const executablePath = this.executablePath;
+    this.browser ??= import('playwright-core')
+      .catch(() => {
+        throw new Error('modul browser (playwright-core) tidak bisa dimuat di versi terpasang ini');
+      })
+      .then(({ chromium }) => chromium.launch({ executablePath, headless: true }))
       .catch((error: unknown) => {
         this.browser = undefined;
         throw new BrowserError(

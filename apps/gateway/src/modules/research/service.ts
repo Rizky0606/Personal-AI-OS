@@ -89,6 +89,8 @@ interface Active {
   abort: AbortController;
   cancelled: boolean;
   timedOut: boolean;
+  /** Tahap terakhir yang dilaporkan; membedakan pesan batas waktu saat membaca atau menulis. */
+  stage?: ResearchStage;
   done: Promise<void>;
 }
 
@@ -173,10 +175,13 @@ export function createResearchService(deps: ResearchServiceDeps): ResearchServic
     const runId = job.runId;
     const config = depthOf(job.depth);
     const startedAt = now();
-    const timer = setTimeout(() => {
-      ctl.timedOut = true;
-      ctl.abort.abort();
-    }, config.totalMs);
+    const timer = setTimeout(
+      () => {
+        ctl.timedOut = true;
+        ctl.abort.abort();
+      },
+      config.totalMs + (config.writeMs ?? 0),
+    );
     timer.unref();
 
     let status: RunStatus = 'queued';
@@ -194,6 +199,7 @@ export function createResearchService(deps: ResearchServiceDeps): ResearchServic
 
       const hooks: PipelineHooks = {
         progress: async (stage: ResearchStage, progress: number, message?: string) => {
+          ctl.stage = stage;
           lastProgress = Math.max(lastProgress, Math.min(1, progress));
           await store.append(runId, {
             type: 'research.progress',
@@ -270,7 +276,7 @@ export function createResearchService(deps: ResearchServiceDeps): ResearchServic
         if (canTransition(current, 'cancelled')) await advance(runId, current, 'cancelled');
         return;
       }
-      const error = toRunError(err, reason === 'timeout');
+      const error = toRunError(err, reason === 'timeout', ctl.stage);
       if (error.code === 'internal_error')
         log?.error({ err, researchId: jobId }, 'riset gagal tak terduga');
       await db.update(researchJobs).set({ status: 'failed' }).where(eq(researchJobs.id, jobId));
@@ -284,7 +290,15 @@ export function createResearchService(deps: ResearchServiceDeps): ResearchServic
     }
   }
 
-  function toRunError(err: unknown, timedOut: boolean): RunError {
+  function toRunError(err: unknown, timedOut: boolean, stage?: ResearchStage): RunError {
+    if (timedOut && stage === 'writing') {
+      return {
+        code: 'research_timeout',
+        message:
+          'Riset melewati batas waktu saat menyusun laporan (model lambat). Coba lagi, atau pilih model riset yang lebih cepat.',
+        retryable: true,
+      };
+    }
     if (timedOut) {
       return {
         code: 'research_timeout',
