@@ -82,7 +82,9 @@ ${spaceLines}
     const val FastMs = ${m.duration.fast}
     const val BaseMs = ${m.duration.base}
     const val SlowMs = ${m.duration.slow}
+    const val EmphasisMs = ${m.duration.emphasis}
     val Easing = CubicBezierEasing(${m.easing.map(float).join(', ')})
+    val Spring = CubicBezierEasing(${m.spring.map(float).join(', ')})
   }
 
   object Focus {

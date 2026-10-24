@@ -22,7 +22,10 @@ describe('tokens.json', () => {
   it('radius desktop 4/6/10 dan Android 8/12/16; gerak 120/180/240 ms', () => {
     expect(tokens.radius.desktop).toEqual({ sm: 4, md: 6, lg: 10 });
     expect(tokens.radius.android).toEqual({ sm: 8, md: 12, lg: 16 });
-    expect(tokens.motion.duration).toEqual({ fast: 120, base: 180, slow: 240 });
+    expect(tokens.motion.duration).toEqual({ fast: 120, base: 180, slow: 240, emphasis: 320 });
+    // Pegas ringan: overshoot kecil (y1 sedikit di atas 1), bukan pantulan.
+    expect(tokens.motion.spring[1]).toBeGreaterThan(1);
+    expect(tokens.motion.spring[1]).toBeLessThan(1.5);
     expect(tokens.motion.easing).toEqual([0.2, 0, 0, 1]);
   });
 

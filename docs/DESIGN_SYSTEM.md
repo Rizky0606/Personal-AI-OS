@@ -1,6 +1,6 @@
 # Design System — Personal AI OS
 
-Arah visualnya: alat kerja yang tenang, padat informasi, dan presisi, seperti editor kode yang rapi, bukan halaman pemasaran. Netral hangat sebagai dasar, satu aksen oranye bara yang dipakai hemat, tipografi IBM Plex, dan batas tipis sebagai pengganti bayangan.
+Arah visualnya: alat kerja yang hidup tapi tetap rapi, padat informasi, dan presisi, seperti editor kode yang rapi, bukan halaman pemasaran. Netral hangat sebagai dasar, satu aksen oranye bara, tipografi IBM Plex, dan batas tipis sebagai pengganti bayangan. Sejak pembaruan tampilan pasca 1.0.1 (pilihan pemilik: "hidup tapi tetap rapi"), aksen boleh bercahaya dan bergradien satu warna di titik-titik penting, dan gerak boleh sedikit memegas; lihat bagian Efek.
 
 ## Prinsip
 
@@ -14,13 +14,13 @@ Arah visualnya: alat kerja yang tenang, padat informasi, dan presisi, seperti ed
 
 | Jangan | Gantinya |
 | --- | --- |
-| Gradien ungu-biru, teks bergradien, latar blob | Latar netral polos, aksen solid |
+| Gradien ungu-biru, gradien multiwarna, teks bergradien, latar blob | Latar netral polos; gradien hanya satu warna aksen (oranye) di tombol primer, item aktif, dan cahaya layar sambutan |
 | Glassmorphism dan blur dekoratif | Permukaan solid dengan border tipis |
-| Kartu membulat besar dengan bayangan di mana-mana | Daftar dan panel bergaris, radius kecil |
+| Kartu membulat besar dengan bayangan di mana-mana | Daftar dan panel bergaris, radius kecil; bayangan lembut hanya saat kartu interaktif di-hover (terangkat 1–2px) |
 | Ikon kilau dan emoji di UI | Ikon Lucide garis 1.5, hanya bila memperjelas |
-| Hero di tengah dengan sapaan besar "Halo, apa yang bisa saya bantu?" | Composer langsung siap ketik, saran singkat di bawahnya |
+| Hero besar yang mendorong composer keluar layar, sapaan berlebihan | Layar sambutan ringkas di chat kosong (cahaya aksen kecil, satu kalimat kerja, kartu saran); composer tetap terlihat dan langsung fokus |
 | Semua tombol primer | Satu tombol primer per area, sisanya sekunder atau ghost |
-| Animasi pantul dan stagger panjang | Transisi 120–240 ms ease-out, tanpa pantulan |
+| Animasi pantul berulang dan stagger panjang | Transisi 120–320 ms; pegas ringan (overshoot kecil, sekali) untuk elemen yang muncul; stagger maksimal 4 elemen × 40 ms |
 | Copy generik ("Lepaskan potensimu") | Kalimat kerja yang spesifik, kata kerja di depan |
 | Font default sistem campur-aduk | IBM Plex Sans dan IBM Plex Mono saja |
 | Spinner di tengah layar kosong | Skeleton sesuai bentuk konten |
@@ -69,7 +69,8 @@ Tema mengikuti sistem secara default, dengan pilihan manual terang atau gelap. A
 - **Spasi:** kelipatan 4: 4, 8, 12, 16, 20, 24, 32, 40, 48.
 - **Radius:** 4 (badge, chip), 6 (tombol, input), 10 (panel, dialog). Bulat penuh hanya untuk avatar dan titik status. Android: 8, 12, 16 dp.
 - **Elevasi:** satu token bayangan untuk menu, popover, dialog, toast. Panel tidak berbayang.
-- **Gerak:** 120 ms untuk hover dan tekan, 180 ms untuk panel, 240 ms untuk dialog dan sheet. Kurva `cubic-bezier(0.2, 0, 0, 1)`. Saat `prefers-reduced-motion`, hanya fade.
+- **Gerak:** 120 ms untuk hover dan tekan, 180 ms untuk panel, 240 ms untuk dialog dan sheet, 320 ms (`emphasis`) untuk animasi masuk yang menonjol. Kurva `cubic-bezier(0.2, 0, 0, 1)`; pegas ringan `cubic-bezier(0.34, 1.32, 0.64, 1)` untuk elemen yang muncul. Saat `prefers-reduced-motion`, hanya fade.
+- **Efek:** cahaya aksen (`glow`, bayangan berwarna aksen transparan) untuk tombol primer saat hover, item aktif, indikator sedang menulis, dan cahaya layar sambutan; gradien satu warna aksen; kartu interaktif terangkat dengan bayangan lembut saat hover. Tetap dilarang: blur kaca, gradien multiwarna, partikel, dan efek yang terus bergerak di area kerja selain indikator status.
 - **Pola gerak yang dipakai** (desktop: utilitas `animate-aios-*` di `styles.css`; Android: `Tokens.Motion`): pesan baru muncul naik 4px sambil memudar (180 ms); jawaban yang sedang ditulis menampilkan tiga titik yang memudar bergiliran dan titik chip role beraksen yang berdenyut; menu dan tooltip muncul dari skala 0,98; dialog turun 6px (240 ms); toast naik 8px; pindah bagian memudar; penanda aktif rail dan percakapan berupa garis aksen 2px yang tumbuh dari tengah; tombol mengecil 2% saat ditekan; titik status yang sedang menyambung ulang berdenyut. Tanpa pantulan, tanpa stagger panjang.
 - **Fokus:** ring 2px warna `accent` dengan offset 2px, selalu terlihat saat navigasi keyboard.
 

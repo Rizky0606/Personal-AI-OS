@@ -108,7 +108,9 @@ object Tokens {
     const val FastMs = 120
     const val BaseMs = 180
     const val SlowMs = 240
+    const val EmphasisMs = 320
     val Easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)
+    val Spring = CubicBezierEasing(0.34f, 1.32f, 0.64f, 1f)
   }
 
   object Focus {

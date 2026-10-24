@@ -37,7 +37,7 @@ function themeInlineDeclarations(tokens: Tokens): string[] {
 }
 
 function plainDeclarations(tokens: Tokens): string[] {
-  const { duration, easing } = tokens.motion;
+  const { duration, easing, spring } = tokens.motion;
   const l = tokens.layout.desktop;
   return [
     ...tokens.space.map((s) => `--aios-space-${s}: ${px(s)};`),
@@ -45,7 +45,9 @@ function plainDeclarations(tokens: Tokens): string[] {
     `--aios-duration-fast: ${ms(duration.fast)};`,
     `--aios-duration-base: ${ms(duration.base)};`,
     `--aios-duration-slow: ${ms(duration.slow)};`,
+    `--aios-duration-emphasis: ${ms(duration.emphasis)};`,
     `--aios-easing: cubic-bezier(${easing.join(', ')});`,
+    `--aios-easing-spring: cubic-bezier(${spring.join(', ')});`,
     `--aios-focus-width: ${px(tokens.focus.width)};`,
     `--aios-focus-offset: ${px(tokens.focus.offset)};`,
     `--aios-rail-width: ${px(l.rail)};`,
