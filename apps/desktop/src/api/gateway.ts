@@ -2,6 +2,7 @@ import type { ModelInfoSchema, RoleInfoSchema } from '@aios/contracts';
 import {
   ApprovalSchema,
   ConversationSchema,
+  FileRecordSchema,
   IdSchema,
   LoginResponseSchema,
   MessageSchema,
@@ -78,6 +79,34 @@ export type WorkerRegistration = z.infer<typeof LoginResponseSchema>;
 
 export const PAGE_SIZE = 50;
 
+export type FileRecord = z.infer<typeof FileRecordSchema>;
+/** Lampiran yang sudah diunggah, siap dirujuk dari pesan. */
+export interface FilePart {
+  type: 'file';
+  fileId: string;
+  name: string;
+  mime: string;
+}
+
+export interface MessageInput {
+  text: string;
+  files?: readonly FilePart[] | undefined;
+  role?: string | undefined;
+  model?: string | undefined;
+}
+
+/** Teks (bila ada) lalu lampiran; server menolak pesan tanpa keduanya. */
+function messageBody(input: MessageInput) {
+  return {
+    parts: [
+      ...(input.text ? [{ type: 'text' as const, text: input.text }] : []),
+      ...(input.files ?? []),
+    ],
+    ...(input.role ? { role: input.role } : {}),
+    ...(input.model ? { model: input.model } : {}),
+  };
+}
+
 function query(params: Record<string, string | number | undefined>): string {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
@@ -129,30 +158,22 @@ export function createGatewayApi(call: Call) {
         `/conversations/${conversationId}/messages${query({ before, limit: PAGE_SIZE })}`,
         MessagePageSchema,
       ),
-    sendMessage: (
-      conversationId: string,
-      input: { text: string; role?: string | undefined; model?: string | undefined },
-    ) =>
+    sendMessage: (conversationId: string, input: MessageInput) =>
       get(`/conversations/${conversationId}/messages`, SendMessageResponseSchema, {
         method: 'POST',
-        body: {
-          parts: [{ type: 'text', text: input.text }],
-          ...(input.role ? { role: input.role } : {}),
-          ...(input.model ? { model: input.model } : {}),
-        },
+        body: messageBody(input),
       }),
+    /** Unggah satu lampiran (multipart, field "file"); dirujuk lewat part file saat mengirim pesan. */
+    uploadFile: (file: File) => {
+      const form = new FormData();
+      form.append('file', file, file.name);
+      return get('/files', FileRecordSchema, { method: 'POST', body: form });
+    },
     /** Memotong percakapan dari pesan ini lalu mengirim teks baru (agent memulai sesi dengan riwayat sisanya). */
-    editMessage: (
-      messageId: string,
-      input: { text: string; role?: string | undefined; model?: string | undefined },
-    ) =>
+    editMessage: (messageId: string, input: MessageInput) =>
       get(`/messages/${messageId}/edit`, SendMessageResponseSchema, {
         method: 'POST',
-        body: {
-          parts: [{ type: 'text', text: input.text }],
-          ...(input.role ? { role: input.role } : {}),
-          ...(input.model ? { model: input.model } : {}),
-        },
+        body: messageBody(input),
       }),
     /** Menghapus pesan ini beserta semua pesan sesudahnya. */
     deleteMessage: async (messageId: string) => {

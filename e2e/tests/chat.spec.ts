@@ -21,10 +21,11 @@ test('chat: jawaban mengalir bertahap, role terlihat, judul otomatis, dan riwaya
   await expect(log.getByText('Umum').first()).toBeVisible();
 
   // Judul otomatis di sidebar.
-  await expect(page.getByRole('complementary').getByText('Judul uji')).toBeVisible();
+  await expect(page.getByRole('complementary').getByText('Judul uji').first()).toBeVisible();
 
   // Muat ulang: percakapan dan jawabannya tetap ada.
   await page.reload();
-  await page.getByRole('complementary').getByText('Judul uji').click();
+  // Daftar terbaru dulu: percakapan tes ini yang paling atas.
+  await page.getByRole('complementary').getByText('Judul uji').first().click();
   await expect(page.getByRole('main').getByText(config.hermesAnswer)).toBeVisible();
 });

@@ -1,3 +1,4 @@
+import { useState, type DragEvent } from 'react';
 import { apiErrorMessage } from '../api/errors';
 import { copy } from '../copy';
 import { ErrorBanner } from '../ui/ErrorBanner';
@@ -9,6 +10,7 @@ import { useChatController } from './useChatController';
 
 function ChatView({ conversationId }: { conversationId: string | undefined }) {
   const chat = useChatController(conversationId);
+  const [dragging, setDragging] = useState(false);
   const { status } = chat;
 
   const hasContent = chat.messages.length > 0 || chat.pending !== null || chat.live !== undefined;
@@ -25,8 +27,35 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
             ? 'content'
             : 'empty';
 
+  const hasFiles = (event: DragEvent) => event.dataTransfer.types.includes('Files');
+
   return (
-    <div className="flex h-full flex-col">
+    <div
+      className="relative flex h-full flex-col"
+      onDragOver={(event) => {
+        if (!hasFiles(event)) return;
+        event.preventDefault();
+        setDragging(true);
+      }}
+      onDragLeave={(event) => {
+        if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+        setDragging(false);
+      }}
+      onDrop={(event) => {
+        if (!hasFiles(event)) return;
+        event.preventDefault();
+        setDragging(false);
+        chat.addFiles([...event.dataTransfer.files]);
+      }}
+    >
+      {dragging ? (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-3 z-10 flex items-center justify-center rounded-panel border-2 border-dashed border-accent bg-bg/80 text-ui text-text"
+        >
+          {copy.chat.files.drop}
+        </div>
+      ) : null}
       {chat.online ? null : (
         <ErrorBanner tone="warning" message={copy.states.offline} className="m-3 mb-0" />
       )}
@@ -82,6 +111,9 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
         suggestions={view === 'empty' ? copy.chat.suggestions : undefined}
         attachments={chat.attachments}
         onRemoveAttachment={chat.removeAttachment}
+        files={chat.files}
+        onAddFiles={chat.addFiles}
+        onRemoveFile={chat.removeFile}
       />
     </div>
   );

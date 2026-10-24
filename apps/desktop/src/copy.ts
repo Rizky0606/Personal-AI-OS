@@ -367,6 +367,15 @@ export const copy = {
     editLast: 'Ubah pesan terakhir',
     edit: 'Ubah',
     resend: 'Kirim ulang',
+    files: {
+      group: 'Lampiran',
+      attach: 'Lampirkan berkas',
+      attachHint: 'Gambar, PDF, DOCX, atau berkas teks; maks 25 MB. Bisa juga seret atau tempel.',
+      remove: (name: string) => `Hapus lampiran ${name}`,
+      uploading: 'Mengunggah…',
+      tooLarge: 'Berkas melebihi 25 MB.',
+      drop: 'Lepaskan untuk melampirkan',
+    },
     editLabel: 'Ubah pesan',
     editSubmit: 'Kirim',
     editNote:
