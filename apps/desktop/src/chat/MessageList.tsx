@@ -21,6 +21,10 @@ export interface MessageListProps {
   /** Jawaban asisten terakhir: satu-satunya yang chip rolenya bisa diganti. */
   rerunnableId: string | null;
   onReroute: (role: string) => void;
+  /** Pesan pengguna terakhir yang boleh diubah atau dikirim ulang (null saat jawaban berjalan). */
+  editableUserId?: string | null;
+  onEditLast?: () => void;
+  onResendLast?: () => void;
   /** Permintaan izin agent yang menunggu jawaban pengguna. */
   approvals: PendingApproval[];
   resolvingApprovals: ReadonlySet<string>;
@@ -67,6 +71,9 @@ export function MessageList({
   failure,
   rerunnableId,
   onReroute,
+  editableUserId = null,
+  onEditLast,
+  onResendLast,
   approvals,
   resolvingApprovals,
   onResolveApproval,
@@ -113,7 +120,12 @@ export function MessageList({
         ) : null}
         {shown.map((message) =>
           message.author === 'user' ? (
-            <UserMessage key={message.id} text={messageText(message)} />
+            <UserMessage
+              key={message.id}
+              text={messageText(message)}
+              onEdit={message.id === editableUserId ? onEditLast : undefined}
+              onResend={message.id === editableUserId ? onResendLast : undefined}
+            />
           ) : message.author === 'assistant' ? (
             <AssistantMessage
               key={message.id}

@@ -111,62 +111,66 @@ export function useChatController(conversationId: string | undefined) {
     [push, online],
   );
 
-  const send = useCallback(async () => {
-    const text = draft.trim();
-    if (!text || sending || streaming) return;
-    if (!online) {
-      push(copy.chat.offlineSend, 'danger');
-      return;
-    }
-    // Konteks dari preview (elemen terpilih) dikirim bersama pesan ini.
-    const sentAttachments = attachments;
-    const body = withAttachments(text, sentAttachments);
-    setSending(true);
-    setPending(body);
-    setDraft('');
-    try {
-      const id =
-        conversationId ??
-        (await api.createConversation('windows', activeProjectId ?? undefined)).id;
-      const response = await api.sendMessage(id, {
-        text: body,
-        role: role ?? undefined,
-        model: model ?? undefined,
-      });
-      addMessageToCache(queryClient, id, response.message);
-      clearAttachments();
-      runs.track(response.run.id);
-      setActiveRunId(response.run.id);
-      setRole(null);
-      void queryClient.invalidateQueries({ queryKey: ['conversations'] });
-      if (conversationId === undefined) {
-        void navigate({
-          to: '/chat/$conversationId',
-          params: { conversationId: id },
-          replace: true,
-        });
+  /** Mengirim isi kolom pesan, atau `override` (kirim ulang) tanpa menyentuh draf yang sedang diketik. */
+  const send = useCallback(
+    async (override?: string) => {
+      const text = (override ?? draft).trim();
+      if (!text || sending || streaming) return;
+      if (!online) {
+        push(copy.chat.offlineSend, 'danger');
+        return;
       }
-    } catch (error) {
-      setDraft((current) => current || text);
-      fail(error, `${copy.chat.sendFailed} ${apiErrorMessage(error, online)}`);
-    } finally {
-      setPending(null);
-      setSending(false);
-    }
-  }, [
-    draft,
-    sending,
-    streaming,
-    online,
-    push,
-    conversationId,
-    activeProjectId,
-    role,
-    model,
-    queryClient,
-    navigate,
-    fail,
-  ]);
+      // Konteks dari preview (elemen terpilih) dikirim bersama pesan ini.
+      const sentAttachments = attachments;
+      const body = withAttachments(text, sentAttachments);
+      setSending(true);
+      setPending(body);
+      if (override === undefined) setDraft('');
+      try {
+        const id =
+          conversationId ??
+          (await api.createConversation('windows', activeProjectId ?? undefined)).id;
+        const response = await api.sendMessage(id, {
+          text: body,
+          role: role ?? undefined,
+          model: model ?? undefined,
+        });
+        addMessageToCache(queryClient, id, response.message);
+        clearAttachments();
+        runs.track(response.run.id);
+        setActiveRunId(response.run.id);
+        setRole(null);
+        void queryClient.invalidateQueries({ queryKey: ['conversations'] });
+        if (conversationId === undefined) {
+          void navigate({
+            to: '/chat/$conversationId',
+            params: { conversationId: id },
+            replace: true,
+          });
+        }
+      } catch (error) {
+        if (override === undefined) setDraft((current) => current || text);
+        fail(error, `${copy.chat.sendFailed} ${apiErrorMessage(error, online)}`);
+      } finally {
+        setPending(null);
+        setSending(false);
+      }
+    },
+    [
+      draft,
+      sending,
+      streaming,
+      online,
+      push,
+      conversationId,
+      activeProjectId,
+      role,
+      model,
+      queryClient,
+      navigate,
+      fail,
+    ],
+  );
 
   const stop = useCallback(async () => {
     if (!live) return;
@@ -221,6 +225,12 @@ export function useChatController(conversationId: string | undefined) {
     setFocusNonce((n) => n + 1);
   }, [lastUser, sending, streaming]);
 
+  /** Mengirim ulang teks pesan terakhir sebagai pesan baru (sama seperti Android). */
+  const resendLast = useCallback(() => {
+    if (!lastUser || sending || streaming) return;
+    void send(messageText(lastUser));
+  }, [lastUser, sending, streaming, send]);
+
   const loadOlder = useCallback(() => void messagesQuery.fetchNextPage(), [messagesQuery]);
 
   return {
@@ -249,7 +259,10 @@ export function useChatController(conversationId: string | undefined) {
     stop: () => void stop(),
     reroute: (nextRole: string) => void reroute(nextRole),
     editLast,
+    resendLast,
     canEditLast: lastUser !== undefined && !sending && !streaming,
+    /** Pesan pengguna terakhir: satu-satunya yang punya tombol Ubah dan Kirim ulang. */
+    editableUserId: lastUser && !sending && !streaming ? lastUser.id : null,
     rerunnableId: lastAssistant && !streaming ? lastAssistant.id : null,
     focusNonce,
     loadOlder,

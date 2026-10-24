@@ -4,13 +4,16 @@ import type { MessagePage } from '../api/gateway';
 
 type MessagePages = InfiniteData<MessagePage, string | undefined>;
 
-/** Halaman dari server terbaru dulu; untuk tampilan dibalik menjadi urutan waktu. */
+/**
+ * Halaman pertama berisi pesan terbaru, halaman berikutnya (`before`) lebih lama; isi tiap halaman sudah
+ * kronologis (lama ke baru). Jadi urutan halaman dibalik, isi halaman dibiarkan.
+ */
 export function chronological(data: { pages: MessagePage[] } | undefined): Message[] {
   if (!data) return [];
   return data.pages
-    .flatMap((page) => page.items)
     .slice()
-    .reverse();
+    .reverse()
+    .flatMap((page) => page.items);
 }
 
 /** Teks pesan: gabungan semua bagian `text`. */
@@ -37,7 +40,8 @@ export function addMessageToCache(
     if (old.pages.some((page) => page.items.some((m) => m.id === message.id))) return old;
     const [first, ...rest] = old.pages;
     if (!first) return old;
-    return { ...old, pages: [{ ...first, items: [message, ...first.items] }, ...rest] };
+    // Halaman pertama = terbaru, isinya kronologis: pesan baru masuk di ujungnya.
+    return { ...old, pages: [{ ...first, items: [...first.items, message] }, ...rest] };
   });
 }
 

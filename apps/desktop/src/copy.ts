@@ -365,6 +365,8 @@ export const copy = {
     send: 'Kirim',
     stop: 'Hentikan',
     editLast: 'Ubah pesan terakhir',
+    edit: 'Ubah',
+    resend: 'Kirim ulang',
     editLastHint: 'Pesan baru dikirim dari teks ini; jawaban lama tetap ada di riwayat.',
     offlineSend: 'Tidak ada koneksi. Pesan belum terkirim; sambungkan lalu kirim lagi.',
     sendFailed: 'Pesan belum terkirim. Teks dikembalikan ke kolom pesan.',
