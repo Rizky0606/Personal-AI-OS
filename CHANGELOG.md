@@ -2,6 +2,14 @@
 
 Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/); versi mengikuti [SemVer](https://semver.org/lang/id/).
 
+## [1.0.2] - belum dirilis
+
+### Diubah
+
+- Tampilan lebih hidup tapi tetap rapi (desktop dan Android): layar sambutan di chat kosong dengan cahaya aksen dan kartu saran yang muncul bertahap; tombol utama bergradien oranye dan bercahaya; pesan muncul dengan pegas ringan; indikator sedang menulis bercahaya; item aktif dengan sapuan aksen; kartu kanban terangkat saat hover.
+- Chat project menampilkan saran pekerjaan coding (struktur project, perbaiki bug, tambah fitur, tulis tes).
+- Design system: token gerak baru (emphasis 320 ms, kurva pegas ringan); gradien satu warna aksen dan cahaya aksen kini diizinkan di titik-titik penting.
+
 ## [1.0.1] - 2026-10-24
 
 Rilis stabil pertama yang diterbitkan lewat tag (build `1.0.0` sebelumnya hanya artefak CI dari `main`). Mulai rilis ini versi naik di setiap tag, sehingga installer Windows dan APK Android terpasang menimpa versi sebelumnya, dan aplikasi Windows memperbarui diri lewat bagian Pembaruan di Pengaturan.
