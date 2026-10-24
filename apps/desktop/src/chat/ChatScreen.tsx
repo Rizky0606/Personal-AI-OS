@@ -3,6 +3,7 @@ import { apiErrorMessage } from '../api/errors';
 import { copy } from '../copy';
 import { ErrorBanner } from '../ui/ErrorBanner';
 import { StateView, type ViewState } from '../ui/StateView';
+import { ChatWelcome } from './ChatWelcome';
 import { Composer } from './Composer';
 import { MessageList } from './MessageList';
 import { ReviewBanner } from './ReviewBanner';
@@ -60,36 +61,40 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
         <ErrorBanner tone="warning" message={copy.states.offline} className="m-3 mb-0" />
       )}
       <div className="flex min-h-0 flex-1 flex-col">
-        <StateView
-          state={view}
-          loadingLabel={copy.chat.loadingMessages}
-          emptyMessage={copy.chat.emptyThread}
-          errorMessage={status.isError ? apiErrorMessage(status.error, chat.online) : ''}
-          offlineMessage={copy.states.offline}
-          retryLabel={copy.states.retry}
-          onRetry={() => void status.refetch()}
-        >
-          <MessageList
-            messages={chat.messages}
-            roles={chat.roles}
-            pending={chat.pending}
-            live={chat.live}
-            failure={chat.failure}
-            rerunnableId={chat.rerunnableId}
-            onReroute={chat.reroute}
-            editableUserId={chat.editableUserId}
-            onResendLast={chat.resendLast}
-            canModify={chat.canModify}
-            onEditMessage={chat.editMessage}
-            onDeleteMessage={chat.deleteMessage}
-            approvals={chat.approvals}
-            resolvingApprovals={chat.resolvingApprovals}
-            onResolveApproval={chat.resolveApproval}
-            hasMore={chat.hasMore}
-            loadingOlder={chat.loadingOlder}
-            onLoadOlder={chat.loadOlder}
-          />
-        </StateView>
+        {conversationId === undefined && !hasContent ? (
+          <ChatWelcome inProject={chat.inProject} onPick={chat.prefill} />
+        ) : (
+          <StateView
+            state={view}
+            loadingLabel={copy.chat.loadingMessages}
+            emptyMessage={copy.chat.emptyThread}
+            errorMessage={status.isError ? apiErrorMessage(status.error, chat.online) : ''}
+            offlineMessage={copy.states.offline}
+            retryLabel={copy.states.retry}
+            onRetry={() => void status.refetch()}
+          >
+            <MessageList
+              messages={chat.messages}
+              roles={chat.roles}
+              pending={chat.pending}
+              live={chat.live}
+              failure={chat.failure}
+              rerunnableId={chat.rerunnableId}
+              onReroute={chat.reroute}
+              editableUserId={chat.editableUserId}
+              onResendLast={chat.resendLast}
+              canModify={chat.canModify}
+              onEditMessage={chat.editMessage}
+              onDeleteMessage={chat.deleteMessage}
+              approvals={chat.approvals}
+              resolvingApprovals={chat.resolvingApprovals}
+              onResolveApproval={chat.resolveApproval}
+              hasMore={chat.hasMore}
+              loadingOlder={chat.loadingOlder}
+              onLoadOlder={chat.loadOlder}
+            />
+          </StateView>
+        )}
       </div>
       {chat.reviewRunId ? <ReviewBanner runId={chat.reviewRunId} /> : null}
       <Composer
@@ -105,7 +110,6 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
         canEditLast={chat.canEditLast}
         onEditLast={chat.editLast}
         focusNonce={chat.focusNonce}
-        suggestions={view === 'empty' ? copy.chat.suggestions : undefined}
         attachments={chat.attachments}
         onRemoveAttachment={chat.removeAttachment}
         files={chat.files}

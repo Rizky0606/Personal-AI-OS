@@ -48,6 +48,8 @@ import app.aios.android.R
 import app.aios.android.ui.components.AiosChip
 import app.aios.android.ui.components.AiosIcon
 import app.aios.android.ui.components.Hairline
+import app.aios.android.ui.components.accentGlow
+import app.aios.android.ui.components.accentGradient
 import app.aios.android.ui.components.focusRing
 import app.aios.android.ui.theme.AiosTheme
 import app.aios.ui.tokens.Tokens
@@ -259,8 +261,9 @@ private fun ActionButton(icon: Int, description: String, primary: Boolean, enabl
             .size(Tokens.touchTarget)
             .alpha(alpha)
             .focusRing(focused, colors.accent, Tokens.Radius.md)
+            .accentGlow(shape, enabled = primary && enabled)
             .clip(shape)
-            .background(if (primary) colors.accent else colors.surface2)
+            .let { if (primary) it.background(accentGradient()) else it.background(colors.surface2) }
             .clickable(
                 interactionSource = source,
                 indication = null,

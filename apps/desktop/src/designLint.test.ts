@@ -52,14 +52,21 @@ describe('lint desain', () => {
     ).toEqual([]);
   });
 
-  it('tanpa gradien, glassmorphism, blur dekoratif, dan animasi pantul', () => {
+  it('tanpa gradien bebas, glassmorphism, blur dekoratif, dan animasi pantul', () => {
     expect(
       hits(
         /\b(?:bg-gradient|bg-linear|bg-radial|from-|via-|backdrop-blur|blur-|animate-bounce|animate-ping)/,
         /\.tsx$/,
       ),
     ).toEqual([]);
-    expect(hits(/linear-gradient|radial-gradient|backdrop-filter/, /\.(tsx|css)$/)).toEqual([]);
+    // Gradien hanya lewat kelas efek di styles.css, dan hanya dari warna aksen (DESIGN_SYSTEM.md: Efek).
+    expect(hits(/linear-gradient|radial-gradient|backdrop-filter/, /\.tsx$/)).toEqual([]);
+    expect(hits(/backdrop-filter/, /\.css$/)).toEqual([]);
+    const gradients = hits(/(?:linear|radial)-gradient\(/, /\.css$/);
+    expect(gradients.length).toBeGreaterThan(0);
+    expect(gradients.filter((g) => /var\(--aios-(?!accent|on-accent)[a-z0-9-]+\)/.test(g))).toEqual(
+      [],
+    );
   });
 
   it('tanpa emoji di UI (ikon hanya Lucide)', () => {
@@ -76,19 +83,19 @@ describe('lint desain', () => {
     expect(hits(/\brounded(?:-(?:sm|md|lg|xl|2xl|3xl))\b|\brounded-\[/, /\.tsx$/)).toEqual([]);
   });
 
-  it('bayangan hanya token shadow-float (menu, popover, dialog, toast)', () => {
-    const bad = hits(/\bshadow-(?!float\b)[a-z0-9]+/, /\.tsx$/).concat(
+  it('bayangan hanya token shadow-float (menu, popover, dialog, toast) dan efek glow/lift', () => {
+    const bad = hits(/\bshadow-(?!(?:float|glow|lift)\b)[a-z0-9]+/, /\.tsx$/).concat(
       hits(/\bshadow(?![-\w])/, /\.tsx$/),
     );
     expect(bad).toEqual([]);
   });
 
-  it('durasi transisi hanya 120/180/240 ms dengan kurva token (ease-aios)', () => {
+  it('durasi transisi hanya 120/180/240/320 ms dengan kurva token (ease-aios, ease-spring)', () => {
     const durations = sources.flatMap(({ file, text }) =>
       [...text.matchAll(/duration-\[(\d+)ms\]/g)].map((m) => ({ file, ms: Number(m[1]) })),
     );
     expect(durations.length).toBeGreaterThan(0);
-    expect(durations.filter((d) => ![120, 180, 240].includes(d.ms))).toEqual([]);
+    expect(durations.filter((d) => ![120, 180, 240, 320].includes(d.ms))).toEqual([]);
     expect(hits(/\bduration-(?:\d+)\b|\bease-(?:in|out|in-out|linear)\b/, /\.tsx$/)).toEqual([]);
   });
 

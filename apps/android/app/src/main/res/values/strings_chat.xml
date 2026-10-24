@@ -24,7 +24,6 @@
     <string name="chat_delete_cancel">Batal</string>
 
     <!-- Layar chat -->
-    <string name="chat_empty_new">Tulis pesan di bawah untuk memulai. Role dipilih otomatis; ketuk chip role pada jawaban untuk menggantinya.</string>
     <string name="chat_load_error">Percakapan belum bisa dimuat. Periksa koneksi lalu coba lagi.</string>
     <string name="chat_loading_older">Memuat pesan lama</string>
     <string name="chat_reconnecting">Menyambung ulang…</string>
@@ -44,6 +43,20 @@
     <string name="chat_edit_last">Edit</string>
     <string name="chat_resend_last">Kirim ulang</string>
     <string name="chat_message_menu">Menu pesan</string>
+    <string name="chat_welcome_title">Mau mengerjakan apa hari ini?</string>
+    <string name="chat_welcome_subtitle">Tulis di bawah atau mulai dari salah satu saran. Role dipilih otomatis.</string>
+    <string name="chat_welcome_summary">Ringkas teks</string>
+    <string name="chat_welcome_summary_hint">Tempel teks panjang, dapatkan intinya</string>
+    <string name="chat_welcome_summary_prompt">Ringkas teks yang saya tempel: </string>
+    <string name="chat_welcome_error">Jelaskan error</string>
+    <string name="chat_welcome_error_hint">Tempel pesan error atau stack trace</string>
+    <string name="chat_welcome_error_prompt">Jelaskan pesan error ini dan cara memperbaikinya: </string>
+    <string name="chat_welcome_email">Tulis draf email</string>
+    <string name="chat_welcome_email_hint">Singkat, sopan, langsung bisa dipakai</string>
+    <string name="chat_welcome_email_prompt">Tulis draf email singkat tentang </string>
+    <string name="chat_welcome_code">Buatkan kode</string>
+    <string name="chat_welcome_code_hint">Template, skrip, atau fungsi siap pakai</string>
+    <string name="chat_welcome_code_prompt">Buatkan kode untuk </string>
     <string name="chat_attach">Lampirkan berkas</string>
     <string name="chat_attachments">Lampiran</string>
     <string name="chat_attach_uploading">Mengunggah…</string>

@@ -46,6 +46,7 @@ import app.aios.android.ui.components.AiosIcon
 import app.aios.android.ui.components.ButtonKind
 import app.aios.android.ui.components.ErrorBanner
 import app.aios.android.ui.components.SkeletonBlock
+import app.aios.android.ui.components.accentGlow
 import app.aios.android.ui.theme.AiosTheme
 import app.aios.android.ui.theme.PlexMono
 import app.aios.ui.tokens.Tokens
@@ -131,7 +132,8 @@ private fun TypingDots() {
                 Modifier
                     .size(Tokens.Space.s8 * 3 / 4)
                     .alpha(alpha)
-                    .background(AiosTheme.colors.text3, CircleShape)
+                    .accentGlow(CircleShape)
+                    .background(AiosTheme.colors.accent, CircleShape)
             )
         }
     }

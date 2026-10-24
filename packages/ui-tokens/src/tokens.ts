@@ -70,8 +70,12 @@ export const TokensSchema = z.object({
       fast: z.number().int().positive(),
       base: z.number().int().positive(),
       slow: z.number().int().positive(),
+      /** Animasi masuk yang menonjol (layar sambutan, pesan baru). */
+      emphasis: z.number().int().positive(),
     }),
     easing: z.tuple([z.number(), z.number(), z.number(), z.number()]),
+    /** Pegas ringan: sedikit melewati target lalu kembali (bukan pantulan berulang). */
+    spring: z.tuple([z.number(), z.number(), z.number(), z.number()]),
   }),
   focus: z.object({ width: z.number().positive(), offset: z.number().nonnegative() }),
   layout: z.object({

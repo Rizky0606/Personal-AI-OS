@@ -26,9 +26,9 @@ export interface AssistantMessageProps {
 function TypingDots() {
   return (
     <span aria-hidden="true" className="aios-dots inline-flex h-4 items-center gap-1">
-      <span className="size-1.5 rounded-full bg-text-3" />
-      <span className="size-1.5 rounded-full bg-text-3" />
-      <span className="size-1.5 rounded-full bg-text-3" />
+      <span className="size-1.5 rounded-full bg-accent shadow-glow" />
+      <span className="size-1.5 rounded-full bg-accent shadow-glow" />
+      <span className="size-1.5 rounded-full bg-accent shadow-glow" />
     </span>
   );
 }
@@ -45,7 +45,7 @@ export function AssistantMessage({
   onDelete,
 }: AssistantMessageProps) {
   return (
-    <article aria-busy={streaming} className="group flex animate-aios-enter flex-col gap-2">
+    <article aria-busy={streaming} className="group flex animate-aios-rise flex-col gap-2">
       <header className="flex items-center gap-2">
         <RoleChip
           role={role}

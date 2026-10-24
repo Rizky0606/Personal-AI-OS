@@ -35,7 +35,6 @@ import app.aios.android.R
 import app.aios.android.data.realtime.ConnectionState
 import app.aios.android.ui.components.AiosButton
 import app.aios.android.ui.components.ButtonKind
-import app.aios.android.ui.components.EmptyState
 import app.aios.android.ui.components.ErrorBanner
 import app.aios.android.ui.components.OfflineBanner
 import app.aios.android.ui.components.SkeletonBlock
@@ -116,7 +115,7 @@ fun ChatScreen(viewModel: ChatViewModel, snackbar: SnackbarHostState) {
                     onRetry = viewModel::retryLoad,
                     modifier = Modifier.padding(Tokens.Space.s16)
                 )
-                items.isEmpty() -> EmptyState(stringResource(R.string.chat_empty_new))
+                items.isEmpty() -> ChatWelcome(onPick = viewModel::onDraft)
                 else -> MessageList(
                     items = items,
                     loadingOlder = ui.loadingOlder,
@@ -215,8 +214,8 @@ private fun MessageList(
             // Pesan baru memudar masuk dan pesan lain bergeser halus (bukan melompat) saat daftar berubah.
             Box(
                 Modifier.animateItem(
-                    fadeInSpec = tween(Tokens.Motion.BaseMs, easing = Tokens.Motion.Easing),
-                    placementSpec = tween(Tokens.Motion.BaseMs, easing = Tokens.Motion.Easing),
+                    fadeInSpec = tween(Tokens.Motion.EmphasisMs, easing = Tokens.Motion.Easing),
+                    placementSpec = tween(Tokens.Motion.EmphasisMs, easing = Tokens.Motion.Spring),
                     fadeOutSpec = tween(Tokens.Motion.FastMs, easing = Tokens.Motion.Easing)
                 )
             ) {

@@ -97,15 +97,23 @@ describe('ChatScreen: memuat riwayat', () => {
     expect(await screen.findByText('Halo')).toBeInTheDocument();
   });
 
-  it('percakapan baru: composer siap, saran tampil, tanpa sapaan besar', async () => {
+  it('percakapan baru: sambutan ringkas dengan kartu saran; composer tetap siap dan fokus', async () => {
+    const user = userEvent.setup();
     await renderScreen(<ChatScreen />);
 
     expect(field()).toHaveFocus();
-    expect(screen.getByText(copy.chat.emptyThread)).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: copy.chat.suggestions[0] as string }),
-    ).toBeInTheDocument();
+    const welcome = copy.chat.welcome.general;
+    expect(screen.getByRole('heading', { name: welcome.title })).toBeInTheDocument();
+    const cards = within(screen.getByRole('list', { name: copy.chat.suggestionsLabel }));
+    expect(cards.getAllByRole('button')).toHaveLength(welcome.cards.length);
     expect(screen.getByRole('button', { name: copy.chat.send })).toBeDisabled();
+
+    // Kartu hanya mengisi kolom pesan (belum mengirim) lalu memindahkan fokus ke sana.
+    const first = welcome.cards[0];
+    await user.click(cards.getByRole('button', { name: new RegExp(first.title) }));
+    expect(field()).toHaveValue(first.prompt);
+    expect(field()).toHaveFocus();
+    expect(api.sendMessage).not.toHaveBeenCalled();
   });
 });
 

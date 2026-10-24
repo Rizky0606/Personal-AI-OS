@@ -60,6 +60,10 @@ describe('chat per project', () => {
     expect(
       screen.queryByRole('button', { name: new RegExp(`^${copy.chat.role.label}:`) }),
     ).not.toBeInTheDocument();
+    // Sambutan chat project mengarah ke pekerjaan coding.
+    expect(
+      screen.getByRole('heading', { name: copy.chat.welcome.project.title }),
+    ).toBeInTheDocument();
   });
 
   it('pesan pertama di project membuat percakapan terikat project', async () => {
