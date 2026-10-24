@@ -29,7 +29,8 @@ HERMES_DATA_DIR="${HERMES_DATA_DIR:-}"   # folder data Hermes (memori, skill); k
 PG_SERVICE="${PG_SERVICE:-postgres}"
 PG_USER="${PG_USER:-aios}"
 PG_DB="${PG_DB:-aios}"
-KEEP_DAILY="${KEEP_DAILY:-7}"; KEEP_WEEKLY="${KEEP_WEEKLY:-4}"; KEEP_MONTHLY="${KEEP_MONTHLY:-6}"
+# Retensi: semua backup dalam rentang ini disimpan, yang lebih tua dihapus (durasi restic, mis. 31d = sebulan).
+KEEP_WITHIN="${KEEP_WITHIN:-31d}"
 
 for tool in restic docker; do command -v "$tool" >/dev/null || die "$tool tidak terpasang"; done
 
@@ -43,8 +44,18 @@ trap 'rm -rf "$STAGE"' EXIT
 # ProtectHome (systemd) membuat /root read-only, termasuk cache default restic (~/.cache/restic).
 export RESTIC_CACHE_DIR="$STAGE/restic-cache"
 
+# Kompresi zstd tingkat max. Hanya repo format v2 yang mendukung kompresi; repo v1 tetap dicadangkan apa adanya.
+repo_version="$(restic cat config --quiet 2>/dev/null | grep -o '"version": *[0-9]*' | grep -o '[0-9]*$' || true)"
+if [[ "${repo_version:-0}" -ge 2 ]]; then
+  export RESTIC_COMPRESSION="${RESTIC_COMPRESSION:-max}"
+else
+  log "peringatan: repo restic format v${repo_version:-?} tanpa kompresi; upgrade sekali: restic migrate upgrade_repo_v2"
+fi
+
 log "dump database $PG_DB"
-( cd "$COMPOSE_DIR" && docker compose exec -T "$PG_SERVICE" pg_dump -U "$PG_USER" -d "$PG_DB" -Fc --no-owner ) > "$STAGE/aios.dump" \
+# Format custom TANPA kompresi internal (-Z0): dump terkompresi berubah total setiap hari sehingga restic tidak bisa
+# menyimpan hanya bagian yang berubah. Tanpa kompresi, restic mendeduplikasi lalu mengompresnya sendiri (zstd).
+( cd "$COMPOSE_DIR" && docker compose exec -T "$PG_SERVICE" pg_dump -U "$PG_USER" -d "$PG_DB" -Fc -Z0 --no-owner ) > "$STAGE/aios.dump" \
   || die "pg_dump gagal"
 [[ -s "$STAGE/aios.dump" ]] || die "hasil pg_dump kosong"
 
@@ -69,9 +80,9 @@ done
 log "restic backup (${#PATHS[@]} sumber)"
 restic backup --tag aios --host "${BACKUP_HOST:-$(hostname)}" --quiet "${RESTIC_EXTRA_ARGS[@]}" "${PATHS[@]}" || die "restic backup gagal"
 
-log "menerapkan retensi: $KEEP_DAILY harian, $KEEP_WEEKLY mingguan, $KEEP_MONTHLY bulanan"
-restic forget --tag aios --prune --quiet \
-  --keep-daily "$KEEP_DAILY" --keep-weekly "$KEEP_WEEKLY" --keep-monthly "$KEEP_MONTHLY" \
+log "menerapkan retensi: simpan backup dalam $KEEP_WITHIN terakhir, hapus yang lebih tua"
+# --keep-last 1: backup terbaru tidak pernah ikut terhapus, walau backup sempat berhenti lebih lama dari retensi.
+restic forget --tag aios --prune --quiet --keep-within "$KEEP_WITHIN" --keep-last 1 \
   || die "restic forget gagal"
 
 # Cek integritas ringan tiap hari (struktur + 2% data); cek penuh dilakukan restore.sh.

@@ -36,7 +36,7 @@ Hasil audit terakhir dan temuannya ada di `docs/SECURITY_AUDIT.md`; tes `securit
 
 | Apa | Cara | Frekuensi | Retensi |
 | --- | --- | --- | --- |
-| Database | `pg_dump` lalu restic ke Oracle Object Storage | Harian | 7 harian, 4 mingguan, 6 bulanan |
+| Database | `pg_dump -Fc -Z0` lalu restic (dedup + zstd max) ke Oracle Object Storage | Harian | Semua backup 31 hari terakhir; lebih tua dihapus otomatis |
 | Data Hermes (memori, skill) | restic folder data Hermes | Harian | Sama |
 | Role, skill, konfigurasi | Git (repo privat) | Setiap perubahan | Riwayat git |
 | `.env` dan secrets | restic terenkripsi | Setiap perubahan | Sama |

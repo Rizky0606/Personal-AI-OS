@@ -38,8 +38,9 @@ exit 0
 EOS
 cat > "$STUBS/restic" <<'EOS'
 #!/usr/bin/env bash
-echo "restic $*" >> "$STUB_LOG"
+echo "restic $* [kompresi=${RESTIC_COMPRESSION:-tidak}]" >> "$STUB_LOG"
 case "$1" in
+  cat) [[ "${STUB_REPO_V1:-0}" == 1 ]] && echo '{"version": 1}' || echo '{"version": 2, "id": "x"}' ;;
   restore)
     target=""; while [[ $# -gt 0 ]]; do [[ "$1" == "--target" ]] && target="$2"; shift; done
     mkdir -p "$target/stage" "$target/hermes"
@@ -102,18 +103,25 @@ run() {
 echo "backup.sh"
 run "$HERE/backup.sh"; code=$?
 [[ $code -eq 0 ]] && pass "berhasil (kode 0)" || { fail "kode keluar $code"; cat "$ROOT/out.txt"; }
-expect_log 'docker compose exec -T postgres pg_dump -U aios -d aios -Fc' "pg_dump format custom"
+expect_log 'docker compose exec -T postgres pg_dump -U aios -d aios -Fc -Z0' "pg_dump format custom tanpa kompresi internal"
+expect_log 'restic backup .*[kompresi=max]' "restic mengompres dengan zstd max (repo v2)"
 expect_log 'restic backup --tag aios' "restic backup bertag"
 expect_log 'restic backup .*aios\.dump' "dump ikut dicadangkan"
 expect_log "restic backup .*$ROOT/hermes" "data Hermes ikut"
 expect_log 'restic backup .*compose/\.env' ".env ikut"
 expect_log 'restic backup .*compose/gateway\.env' "gateway.env ikut"
 expect_log 'restic backup .*compose/secrets' "secrets ikut"
-expect_log 'restic forget --tag aios --prune --quiet --keep-daily 7 --keep-weekly 4 --keep-monthly 6' "retensi 7/4/6"
+expect_log 'restic forget --tag aios --prune --quiet --keep-within 31d --keep-last 1' "retensi 31 hari, backup terakhir selalu ada"
 expect_log 'restic check' "cek integritas"
 expect_log 'curl .*api/push/abc\?status=up' "ping Kuma berhasil"
 grep -q "RAHASIA" "$ROOT/out.txt" && fail "keluaran memuat rahasia" || pass "keluaran bebas rahasia"
 [[ -z "$(ls "$ROOT" | grep aios-backup)" ]] && pass "folder sementara dibersihkan" || fail "folder sementara tersisa"
+
+echo "backup.sh: repo restic v1 (tanpa kompresi)"
+STUB_REPO_V1=1 run "$HERE/backup.sh"; code=$?
+[[ $code -eq 0 ]] && pass "tetap berhasil" || fail "kode keluar $code"
+expect_log 'restic backup .*[kompresi=tidak]' "tanpa kompresi di repo v1"
+grep -q 'upgrade_repo_v2' "$ROOT/out.txt" && pass "menyarankan upgrade repo" || fail "tidak ada saran upgrade"
 
 echo "backup.sh: dump kosong"
 STUB_EMPTY_DUMP=1 run "$HERE/backup.sh"; code=$?

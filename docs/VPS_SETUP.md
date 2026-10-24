@@ -94,7 +94,7 @@ Semua skrip ada di `infra/scripts`; unit systemd di `infra/systemd`. Skrip diuji
 4. `sudo -E restic init` (sekali; dengan variabel dari `backup.env`), lalu uji manual: `sudo infra/scripts/backup.sh`.
 5. Pasang timer: `sudo cp infra/systemd/aios-*.{service,timer} /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable --now aios-backup.timer aios-restore-test.timer`. Sesuaikan `ExecStart` bila repo tidak di `/srv/personal-ai-os`.
 
-Yang dicadangkan: dump `pg_dump -Fc` database, folder data Hermes, `.env`, `gateway.env`, dan `secrets/` (restic mengenkripsi seluruh repositori). Retensi 7 harian, 4 mingguan, 6 bulanan; cek integritas ringan tiap hari.
+Yang dicadangkan: dump `pg_dump -Fc` database, folder data Hermes, `.env`, `gateway.env`, dan `secrets/` (restic mengenkripsi seluruh repositori). Retensi: semua backup dalam 31 hari terakhir (`KEEP_WITHIN`), yang lebih tua dihapus otomatis, backup terakhir selalu disimpan. Dump database tanpa kompresi internal (`pg_dump -Fc -Z0`) supaya restic hanya menyimpan bagian yang berubah lalu mengompresnya dengan zstd `max` (repo format v2; repo v1 di-upgrade sekali dengan `restic migrate upgrade_repo_v2`). Cek integritas ringan tiap hari.
 
 ### Uji restore
 
