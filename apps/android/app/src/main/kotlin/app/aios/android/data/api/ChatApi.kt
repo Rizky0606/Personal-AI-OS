@@ -37,6 +37,14 @@ interface ChatApi {
     @POST("conversations/{id}/messages")
     suspend fun sendMessage(@Path("id") id: String, @Body body: SendMessageRequest): SendMessageResponse
 
+    /** Memotong percakapan dari pesan ini lalu mengirim teks baru; agent memulai sesi dengan riwayat sisanya. */
+    @POST("messages/{id}/edit")
+    suspend fun editMessage(@Path("id") messageId: String, @Body body: SendMessageRequest): SendMessageResponse
+
+    /** Menghapus pesan ini beserta semua pesan sesudahnya. */
+    @DELETE("messages/{id}")
+    suspend fun deleteMessage(@Path("id") messageId: String): Response<Unit>
+
     @POST("messages/{id}/reroute")
     suspend fun reroute(@Path("id") messageId: String, @Body body: RerouteRequest): RerouteResponse
 

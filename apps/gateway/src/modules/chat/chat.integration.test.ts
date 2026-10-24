@@ -383,6 +383,141 @@ describe('kirim pesan dan run', () => {
   });
 });
 
+describe('ubah dan hapus pesan', () => {
+  const listed = async (conversationId: string) =>
+    (await env.get(`/conversations/${conversationId}/messages`, token))
+      .json<{ items: unknown[] }>()
+      .items.map((m) => MessageSchema.parse(m));
+  const textOf = (m: { parts: { type: string; text?: string }[] }) =>
+    m.parts.map((p) => p.text ?? '').join('');
+  const del = (path: string, auth: string) =>
+    env.app.inject({
+      method: 'DELETE',
+      url: `/v1${path}`,
+      headers: { authorization: `Bearer ${auth}` },
+    });
+  const sessionOf = (i: number) => hermes.requests[i]!.headers['x-hermes-session-id'];
+
+  it('ubah pesan tengah: pesan itu dan sesudahnya dibuang; sesi baru membawa riwayat yang tersisa', async () => {
+    answer('jawab');
+    const conv = await createConversation();
+    await finalRun((await send(conv.id, 'satu')).run.id);
+    const second = await send(conv.id, 'dua');
+    await finalRun(second.run.id);
+    await finalRun((await send(conv.id, 'tiga')).run.id);
+
+    const res = await env.post(
+      `/messages/${second.message.id}/edit`,
+      { parts: [{ type: 'text', text: 'dua revisi' }] },
+      token,
+    );
+    expect(res.statusCode, res.body).toBe(201);
+    const edited = SendMessageResponseSchema.parse(res.json());
+    await finalRun(edited.run.id);
+
+    expect((await listed(conv.id)).map((m) => [m.author, textOf(m)])).toEqual([
+      ['user', 'satu'],
+      ['assistant', 'jawab'],
+      ['user', 'dua revisi'],
+      ['assistant', 'jawab'],
+    ]);
+    // Sesi baru (bukan sesi lama yang masih ingat "dua" dan "tiga"), dengan riwayat sebelum titik potong.
+    expect(sessionOf(3)).not.toBe(`aios-${conv.id}`);
+    expect(hermes.requests[3]!.body.messages.filter((m) => m.role !== 'system')).toEqual([
+      { role: 'user', content: 'satu' },
+      { role: 'assistant', content: 'jawab' },
+      { role: 'user', content: 'dua revisi' },
+    ]);
+
+    // Giliran berikutnya memakai sesi baru itu tanpa mengirim ulang riwayat.
+    await finalRun((await send(conv.id, 'empat')).run.id);
+    expect(sessionOf(4)).toBe(sessionOf(3));
+    expect(hermes.requests[4]!.body.messages.filter((m) => m.role !== 'system')).toEqual([
+      { role: 'user', content: 'empat' },
+    ]);
+  });
+
+  it('hapus jawaban: pesan itu dan sesudahnya hilang; pesan berikutnya membawa riwayat', async () => {
+    answer('jawab');
+    const conv = await createConversation();
+    const first = await send(conv.id, 'satu');
+    await finalRun(first.run.id);
+    await finalRun((await send(conv.id, 'dua')).run.id);
+    const answerTwo = (await listed(conv.id)).at(-1)!;
+
+    const res = await del(`/messages/${answerTwo.id}`, token);
+    expect(res.statusCode, res.body).toBe(204);
+    expect((await listed(conv.id)).map(textOf)).toEqual(['satu', 'jawab', 'dua']);
+
+    await finalRun((await send(conv.id, 'tiga')).run.id);
+    expect(hermes.requests[2]!.body.messages.filter((m) => m.role !== 'system')).toEqual([
+      { role: 'user', content: 'satu' },
+      { role: 'assistant', content: 'jawab' },
+      { role: 'user', content: 'dua' },
+      { role: 'user', content: 'tiga' },
+    ]);
+  });
+
+  it('hapus pesan pertama mengosongkan percakapan; sesi lama tidak dipakai lagi', async () => {
+    answer('jawab');
+    const conv = await createConversation();
+    const first = await send(conv.id, 'satu');
+    await finalRun(first.run.id);
+
+    expect((await del(`/messages/${first.message.id}`, token)).statusCode).toBe(204);
+    expect(await listed(conv.id)).toEqual([]);
+
+    await finalRun((await send(conv.id, 'baru')).run.id);
+    expect(sessionOf(1)).not.toBe(sessionOf(0));
+    expect(hermes.requests[1]!.body.messages.filter((m) => m.role !== 'system')).toEqual([
+      { role: 'user', content: 'baru' },
+    ]);
+  });
+
+  it('validasi: jawaban asisten tidak bisa diubah, pesan kosong ditolak tanpa memotong, 404, dan 409 saat run berjalan', async () => {
+    answer('jawab');
+    const conv = await createConversation();
+    const first = await send(conv.id, 'satu');
+    await finalRun(first.run.id);
+    const reply = (await listed(conv.id)).at(-1)!;
+
+    const notUser = await env.post(
+      `/messages/${reply.id}/edit`,
+      { parts: [{ type: 'text', text: 'x' }] },
+      token,
+    );
+    expect(notUser.statusCode).toBe(400);
+    expect(problem(notUser).code).toBe('message_not_editable');
+
+    const empty = await env.post(
+      `/messages/${first.message.id}/edit`,
+      { parts: [{ type: 'text', text: '   ' }] },
+      token,
+    );
+    expect(empty.statusCode).toBe(400);
+    expect(await listed(conv.id)).toHaveLength(2);
+
+    const missing = '0192f0c4-7a1b-7c2d-8e3f-000000000000';
+    expect((await del(`/messages/${missing}`, token)).statusCode).toBe(404);
+
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    hermes.onRequest(async (s) => {
+      s.delta('x');
+      await gate;
+      s.finish();
+      s.done();
+    });
+    const running = await send(conv.id, 'dua');
+    const busy = await del(`/messages/${first.message.id}`, token);
+    expect(busy.statusCode).toBe(409);
+    expect(problem(busy).code).toBe('run_in_progress');
+    release();
+    await finalRun(running.run.id);
+    expect(await listed(conv.id)).toHaveLength(4);
+  });
+});
+
 describe('cancel', () => {
   it('cancel di tengah stream: Hermes diputus, teks sebagian tersimpan, status akhir cancelled tanpa error', async () => {
     let closed!: Promise<void>;

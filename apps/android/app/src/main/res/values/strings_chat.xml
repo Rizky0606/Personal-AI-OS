@@ -43,6 +43,13 @@
     <string name="chat_role_label">Role %1$s. Ketuk untuk memilih role lain.</string>
     <string name="chat_edit_last">Edit</string>
     <string name="chat_resend_last">Kirim ulang</string>
+    <string name="chat_message_menu">Menu pesan</string>
+    <string name="chat_message_edit">Ubah</string>
+    <string name="chat_message_delete">Hapus</string>
+    <string name="chat_message_delete_title">Hapus pesan ini?</string>
+    <string name="chat_message_delete_body">Pesan ini dan semua pesan sesudahnya dihapus permanen. AI tidak akan mengingatnya lagi.</string>
+    <string name="chat_editing_banner">Mengubah pesan. Pesan itu dan semua sesudahnya akan diganti.</string>
+    <string name="chat_editing_cancel">Batal</string>
 
     <!-- Composer -->
     <string name="chat_composer_label">Pesan</string>

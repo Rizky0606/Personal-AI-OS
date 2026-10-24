@@ -141,6 +141,23 @@ export function createGatewayApi(call: Call) {
           ...(input.model ? { model: input.model } : {}),
         },
       }),
+    /** Memotong percakapan dari pesan ini lalu mengirim teks baru (agent memulai sesi dengan riwayat sisanya). */
+    editMessage: (
+      messageId: string,
+      input: { text: string; role?: string | undefined; model?: string | undefined },
+    ) =>
+      get(`/messages/${messageId}/edit`, SendMessageResponseSchema, {
+        method: 'POST',
+        body: {
+          parts: [{ type: 'text', text: input.text }],
+          ...(input.role ? { role: input.role } : {}),
+          ...(input.model ? { model: input.model } : {}),
+        },
+      }),
+    /** Menghapus pesan ini beserta semua pesan sesudahnya. */
+    deleteMessage: async (messageId: string) => {
+      await call(`/messages/${messageId}`, { method: 'DELETE' });
+    },
     rerouteMessage: (messageId: string, role: string) =>
       get(`/messages/${messageId}/reroute`, RerouteResponseSchema, {
         method: 'POST',

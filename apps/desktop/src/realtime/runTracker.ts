@@ -66,6 +66,12 @@ export class RunTracker {
     if (this.runs.delete(runId)) this.notify(runId);
   }
 
+  /** Pesan run ini dihapus pemilik: lepas tampilannya dan lupakan galatnya. */
+  forget(runId: string): void {
+    this.failures.delete(runId);
+    this.release(runId);
+  }
+
   private async poll(runId: string): Promise<void> {
     const current = this.runs.get(runId);
     if (!current || isSettled(current.status)) return;

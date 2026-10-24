@@ -1,4 +1,10 @@
-import { AdapterError, normalizeEvents, type AgentAdapter, type RunHandle } from '@aios/adapters';
+import {
+  AdapterError,
+  normalizeEvents,
+  type AgentAdapter,
+  type RunHandle,
+  type StartRunInput,
+} from '@aios/adapters';
 import {
   TERMINAL_RUN_STATUSES,
   canTransition,
@@ -31,6 +37,8 @@ export interface LaunchInput {
   assistantMessageId: string;
   prompt: string;
   sessionId: string;
+  /** Riwayat untuk sesi Hermes yang baru dibuat setelah percakapan dipotong (lihat StartRunInput.history). */
+  history?: StartRunInput['history'];
   /** Project percakapan ini; wajib untuk role yang berjalan di worker (omp). */
   projectId: string | null;
   /** Revisi setelah komentar review: melanjutkan worktree dan branch run ini. */
@@ -250,6 +258,7 @@ export function createRunner(deps: RunnerDeps): Runner {
             // Dihitung per run: perubahan role di mode dev berlaku pada run berikutnya.
             systemPrompt: deps.roles.bundle(chosenRole).systemPrompt,
             sessionId: input.sessionId,
+            ...(input.history?.length ? { history: input.history } : {}),
             ...(coding && input.projectId ? { projectId: input.projectId, role: chosenRole } : {}),
             ...(coding && input.continueFromRunId
               ? { continueFromRunId: input.continueFromRunId }

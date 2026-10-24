@@ -1,9 +1,10 @@
 import type { Message } from '@aios/contracts';
 import type { RoleInfo } from '../api/gateway';
-import { useLayoutEffect, useRef } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { copy } from '../copy';
 import { isSettled, type LiveRun, type PendingApproval } from '../realtime/liveRun';
 import { Button } from '../ui/Button';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { ErrorBanner } from '../ui/ErrorBanner';
 import { ApprovalPanel } from './ApprovalPanel';
 import { AssistantMessage, type AssistantPart } from './AssistantMessage';
@@ -21,6 +22,13 @@ export interface MessageListProps {
   /** Jawaban asisten terakhir: satu-satunya yang chip rolenya bisa diganti. */
   rerunnableId: string | null;
   onReroute: (role: string) => void;
+  /** Pesan pengguna terakhir yang boleh dikirim ulang (null saat jawaban berjalan). */
+  editableUserId?: string | null;
+  onResendLast?: () => void;
+  /** Ubah dan hapus pesan hanya saat tidak ada jawaban yang berjalan. */
+  canModify?: boolean;
+  onEditMessage?: (messageId: string, text: string) => Promise<boolean>;
+  onDeleteMessage?: (messageId: string) => Promise<boolean>;
   /** Permintaan izin agent yang menunggu jawaban pengguna. */
   approvals: PendingApproval[];
   resolvingApprovals: ReadonlySet<string>;
@@ -67,6 +75,11 @@ export function MessageList({
   failure,
   rerunnableId,
   onReroute,
+  editableUserId = null,
+  onResendLast,
+  canModify = false,
+  onEditMessage,
+  onDeleteMessage,
   approvals,
   resolvingApprovals,
   onResolveApproval,
@@ -75,6 +88,9 @@ export function MessageList({
   onLoadOlder,
 }: MessageListProps) {
   const scroller = useRef<HTMLDivElement>(null);
+  const [toDelete, setToDelete] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const modifiable = canModify && !!onDeleteMessage;
   const stick = useRef(true);
 
   useLayoutEffect(() => {
@@ -113,7 +129,17 @@ export function MessageList({
         ) : null}
         {shown.map((message) =>
           message.author === 'user' ? (
-            <UserMessage key={message.id} text={messageText(message)} />
+            <UserMessage
+              key={message.id}
+              text={messageText(message)}
+              onEdit={
+                canModify && onEditMessage
+                  ? (text: string) => onEditMessage(message.id, text)
+                  : undefined
+              }
+              onResend={message.id === editableUserId ? onResendLast : undefined}
+              onDelete={modifiable ? () => setToDelete(message.id) : undefined}
+            />
           ) : message.author === 'assistant' ? (
             <AssistantMessage
               key={message.id}
@@ -122,6 +148,7 @@ export function MessageList({
               model={message.model}
               roles={roles}
               onChangeRole={message.id === rerunnableId ? onReroute : undefined}
+              onDelete={modifiable ? () => setToDelete(message.id) : undefined}
             />
           ) : null,
         )}
@@ -159,6 +186,26 @@ export function MessageList({
           />
         ) : null}
       </div>
+      <ConfirmDialog
+        open={toDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setToDelete(null);
+        }}
+        title={copy.chat.deleteMessageTitle}
+        body={copy.chat.deleteMessageBody}
+        confirmLabel={copy.chat.deleteMessageConfirm}
+        cancelLabel={copy.chat.cancel}
+        destructive
+        busy={deleting}
+        onConfirm={() => {
+          if (!toDelete || !onDeleteMessage) return;
+          setDeleting(true);
+          void onDeleteMessage(toDelete).finally(() => {
+            setDeleting(false);
+            setToDelete(null);
+          });
+        }}
+      />
     </div>
   );
 }

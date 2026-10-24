@@ -102,6 +102,14 @@ interface ChatDao {
     @Upsert
     suspend fun upsertMessages(items: List<MessageEntity>)
 
+    /** ID UUIDv7 urut waktu: `id >= fromId` = pesan itu dan semua sesudahnya. */
+    @Query("DELETE FROM message WHERE conversationId = :conversationId AND id >= :fromId")
+    suspend fun deleteMessagesFrom(conversationId: String, fromId: String)
+
+    /** Pesan cache sejak [fromId] yang tidak ada lagi di server (dipotong dari perangkat lain). */
+    @Query("DELETE FROM message WHERE conversationId = :conversationId AND id >= :fromId AND id NOT IN (:keep)")
+    suspend fun deleteMissingFrom(conversationId: String, fromId: String, keep: List<String>)
+
     @Query("SELECT MIN(id) FROM message WHERE conversationId = :conversationId")
     suspend fun oldestMessageId(conversationId: String): String?
 

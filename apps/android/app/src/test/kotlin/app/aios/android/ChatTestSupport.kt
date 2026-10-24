@@ -195,6 +195,31 @@ class FakeChatRepo : ChatRepository {
         return SendMessageResponse(user, runs.getValue(runId))
     }
 
+    val editCalls = mutableListOf<Pair<String, String>>()
+    val deleteCalls = mutableListOf<String>()
+
+    override suspend fun edit(
+        conversationId: String,
+        messageId: String,
+        text: String,
+        model: String?
+    ): SendMessageResponse {
+        editCalls += messageId to text
+        truncate(conversationId, messageId)
+        return send(conversationId, text, model).also { sendCalls.removeAt(sendCalls.lastIndex) }
+    }
+
+    override suspend fun deleteMessage(conversationId: String, messageId: String) {
+        deleteCalls += messageId
+        truncate(conversationId, messageId)
+    }
+
+    private fun truncate(conversationId: String, fromId: String) {
+        val list = stored.value[conversationId].orEmpty()
+        val index = list.indexOfFirst { it.id == fromId }
+        if (index >= 0) stored.value = stored.value + (conversationId to list.take(index))
+    }
+
     override suspend fun reroute(messageId: String, role: String): Run {
         rerouteCalls += messageId to role
         runs["r2"] = run("r2", "queued")

@@ -9,7 +9,7 @@ import type {
   UpdateConversationRequestSchema,
 } from '@aios/contracts';
 import { TERMINAL_RUN_STATUSES } from '@aios/contracts';
-import { and, desc, eq, isNotNull, isNull, lt, notInArray, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, isNotNull, isNull, lt, notInArray, sql } from 'drizzle-orm';
 import type { z } from 'zod';
 import type { Database } from '../../db/client.js';
 import { conversations, messages, projects, runs } from '../../db/schema/index.js';
@@ -52,13 +52,26 @@ export interface ChatService {
     messageId: string,
     input: z.infer<typeof RerouteRequestSchema>,
   ): Promise<z.infer<typeof RerouteResponseSchema>>;
+  /**
+   * Mengubah pesan pengguna: pesan itu dan semua sesudahnya dibuang, lalu teks baru dikirim. Agent memulai
+   * sesi baru dengan riwayat yang tersisa, jadi bagian yang dibuang tidak lagi diingat.
+   */
+  editMessage(
+    messageId: string,
+    input: z.infer<typeof SendMessageRequestSchema>,
+  ): Promise<{ message: Message; run: Run }>;
+  /** Menghapus pesan beserta semua pesan sesudahnya (memotong percakapan dari titik itu). */
+  deleteMessage(messageId: string): Promise<void>;
   exists(id: string): Promise<boolean>;
   /** Menunggu pekerjaan latar belakang (judul) selesai; untuk shutdown dan tes. */
   idle(): Promise<void>;
 }
 
 const notFound = () => new AppError(404, 'conversation_not_found', 'Percakapan tidak ditemukan.');
+const messageNotFound = () => new AppError(404, 'message_not_found', 'Pesan tidak ditemukan.');
 const MAX_TITLE_CHARS = 200;
+/** Batas riwayat yang dikirim ulang ke sesi baru setelah percakapan dipotong. */
+const MAX_HISTORY_MESSAGES = 100;
 
 export function createChatService(deps: {
   db: Database;
@@ -138,6 +151,70 @@ export function createChatService(deps: {
   }
 
   /**
+   * Sesi Hermes untuk giliran berikutnya. Percakapan yang dipotong (edit/hapus pesan) tidak punya sesi:
+   * dibuat sesi baru, dan riwayat yang tersisa (sebelum `beforeId`) dikirim karena sesi lama masih memuat
+   * bagian yang dibuang. Percakapan yang belum pernah punya run memakai sesi bawaan `aios-<id>`.
+   */
+  async function sessionFor(
+    conversation: typeof conversations.$inferSelect,
+    beforeId?: string,
+  ): Promise<{ sessionId: string; history: NonNullable<LaunchInput['history']> }> {
+    if (conversation.hermesSessionId)
+      return { sessionId: conversation.hermesSessionId, history: [] };
+    const [anyRun] = await db
+      .select({ id: runs.id })
+      .from(runs)
+      .where(eq(runs.conversationId, conversation.id))
+      .limit(1);
+    if (!anyRun) return { sessionId: `aios-${conversation.id}`, history: [] };
+
+    const rows = await db
+      .select({ author: messages.author, parts: messages.parts })
+      .from(messages)
+      .where(
+        and(
+          eq(messages.conversationId, conversation.id),
+          beforeId ? lt(messages.id, beforeId) : undefined,
+        ),
+      )
+      .orderBy(desc(messages.id))
+      .limit(MAX_HISTORY_MESSAGES);
+    const history = rows.reverse().flatMap((row): NonNullable<LaunchInput['history']> => {
+      const content = textOf(row.parts);
+      if (!content || (row.author !== 'user' && row.author !== 'assistant')) return [];
+      return [{ role: row.author, content }];
+    });
+    return { sessionId: `aios-${conversation.id}-${uuidv7()}`, history };
+  }
+
+  /** Pesan dan percakapannya; percakapan yang diarsipkan tidak bisa diubah. */
+  async function editableMessage(messageId: string) {
+    const [found] = await db.select().from(messages).where(eq(messages.id, messageId));
+    if (!found) throw messageNotFound();
+    const conversation = await getConversation(found.conversationId);
+    if (conversation.archivedAt) {
+      throw new AppError(409, 'conversation_archived', 'Percakapan sudah diarsipkan.');
+    }
+    return { message: found, conversation };
+  }
+
+  /** Membuang pesan ini dan semua sesudahnya, lalu melepas sesi Hermes (dibuat ulang di giliran berikutnya). */
+  async function truncateFrom(message: typeof messages.$inferSelect) {
+    await assertNoActiveRun(message.conversationId);
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(messages)
+        .where(
+          and(eq(messages.conversationId, message.conversationId), gte(messages.id, message.id)),
+        );
+      await tx
+        .update(conversations)
+        .set({ hermesSessionId: null, updatedAt: new Date(now()) })
+        .where(eq(conversations.id, message.conversationId));
+    });
+  }
+
+  /**
    * Fungsi yang dijalankan runner pada status `routing`: memutuskan role (router atau pilihan manual),
    * menyimpannya ke routing_decisions, lalu menetapkan role pada run dan pesan asisten.
    */
@@ -175,7 +252,7 @@ export function createChatService(deps: {
     };
   }
 
-  return {
+  const service: ChatService = {
     async listConversations(q) {
       const rows = await db
         .select()
@@ -281,7 +358,7 @@ export function createChatService(deps: {
       await assertNoActiveRun(conversationId);
 
       const previousRole = await previousRoleOf(conversationId);
-      const sessionId = conversation.hermesSessionId ?? `aios-${conversation.id}`;
+      const { sessionId, history } = await sessionFor(conversation);
       const model = input.model ?? null;
 
       const { run, userMessage, assistantMessageId } = await db.transaction(async (tx) => {
@@ -332,6 +409,7 @@ export function createChatService(deps: {
         assistantMessageId,
         prompt,
         sessionId,
+        ...(history.length ? { history } : {}),
         projectId: conversation.projectId,
         ...(options?.continueFromRunId ? { continueFromRunId: options.continueFromRunId } : {}),
         resolveRole: makeResolver({
@@ -433,7 +511,7 @@ export function createChatService(deps: {
         messageText: prompt,
       });
 
-      const sessionId = conversation.hermesSessionId ?? `aios-${conversation.id}`;
+      const { sessionId, history } = await sessionFor(conversation, userMessage.id);
       const { run, assistantMessageId } = await db.transaction(async (tx) => {
         const [runRow] = await tx
           .insert(runs)
@@ -455,7 +533,7 @@ export function createChatService(deps: {
         });
         await tx
           .update(conversations)
-          .set({ updatedAt: new Date(now()) })
+          .set({ hermesSessionId: sessionId, updatedAt: new Date(now()) })
           .where(eq(conversations.id, conversation.id));
         return { run: runRow!, assistantMessageId };
       });
@@ -466,6 +544,7 @@ export function createChatService(deps: {
         assistantMessageId,
         prompt,
         sessionId,
+        ...(history.length ? { history } : {}),
         projectId: conversation.projectId,
         resolveRole: makeResolver({
           conversation,
@@ -481,6 +560,31 @@ export function createChatService(deps: {
       return { run: toRunDto(run), correction: toCorrectionDto(correction) };
     },
 
+    async editMessage(messageId, input) {
+      const { message, conversation } = await editableMessage(messageId);
+      if (message.author !== 'user') {
+        throw new AppError(400, 'message_not_editable', 'Hanya pesan pengguna yang bisa diubah.');
+      }
+      // Pesan baru diperiksa dulu agar percakapan tidak terpotong lalu gagal terkirim.
+      if (input.parts.some((p) => p.type === 'file')) {
+        throw new AppError(
+          400,
+          'files_not_supported',
+          'Lampiran belum didukung untuk chat umum (Hermes tidak menerima berkas).',
+        );
+      }
+      if (!textOf(input.parts))
+        throw new AppError(400, 'empty_message', 'Pesan tidak boleh kosong.');
+      if (input.role) routing.assertRoleAllowed(input.role, conversation);
+      await truncateFrom(message);
+      return service.sendMessage(conversation.id, input);
+    },
+
+    async deleteMessage(messageId) {
+      const { message } = await editableMessage(messageId);
+      await truncateFrom(message);
+    },
+
     async exists(id) {
       const [row] = await db
         .select({ id: conversations.id })
@@ -493,4 +597,5 @@ export function createChatService(deps: {
       await Promise.all([...background]);
     },
   };
+  return service;
 }

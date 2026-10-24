@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
+import retrofit2.HttpException
 
 /**
  * Percakapan dan pesan. Room adalah cache: layar membaca dari Room (instan, tersedia offline) dan
@@ -51,6 +52,12 @@ interface ChatRepository {
     suspend fun delete(id: String)
 
     suspend fun send(conversationId: String, text: String, model: String?): SendMessageResponse
+
+    /** Mengubah pesan pengguna: pesan itu dan semua sesudahnya dibuang, lalu teks baru dikirim. */
+    suspend fun edit(conversationId: String, messageId: String, text: String, model: String?): SendMessageResponse
+
+    /** Menghapus pesan beserta semua pesan sesudahnya. */
+    suspend fun deleteMessage(conversationId: String, messageId: String)
 
     suspend fun reroute(messageId: String, role: String): Run
 
@@ -96,6 +103,13 @@ class RoomChatRepository(
     override suspend fun refreshMessages(conversationId: String): Boolean {
         val page = api.listMessages(conversationId)
         dao.upsertMessages(page.items.map { it.toEntity() })
+        // Halaman terbaru adalah kebenaran untuk rentangnya: pesan yang sudah dihapus di server ikut dibuang.
+        val oldest = page.items.firstOrNull()?.id
+        if (oldest == null) {
+            dao.deleteMessages(conversationId)
+        } else {
+            dao.deleteMissingFrom(conversationId, oldest, page.items.map { it.id })
+        }
         return page.nextBefore != null
     }
 
@@ -134,6 +148,27 @@ class RoomChatRepository(
         )
         dao.upsertMessages(listOf(response.message.toEntity()))
         return response
+    }
+
+    override suspend fun edit(
+        conversationId: String,
+        messageId: String,
+        text: String,
+        model: String?
+    ): SendMessageResponse {
+        val response = api.editMessage(
+            messageId,
+            SendMessageRequest(parts = listOf(InputPart.text(text)), model = model)
+        )
+        dao.deleteMessagesFrom(conversationId, messageId)
+        dao.upsertMessages(listOf(response.message.toEntity()))
+        return response
+    }
+
+    override suspend fun deleteMessage(conversationId: String, messageId: String) {
+        val response = api.deleteMessage(messageId)
+        if (!response.isSuccessful) throw HttpException(response)
+        dao.deleteMessagesFrom(conversationId, messageId)
     }
 
     override suspend fun reroute(messageId: String, role: String): Run =

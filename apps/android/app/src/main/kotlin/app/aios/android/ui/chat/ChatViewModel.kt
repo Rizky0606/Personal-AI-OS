@@ -56,6 +56,8 @@ data class ChatUiState(
     /** Error run terakhir (gagal di server); hilang saat pesan baru dikirim. */
     val runError: RunError? = null,
     val draft: String = "",
+    /** Pesan yang sedang diubah lewat composer; Kirim memotong percakapan dari pesan ini. */
+    val editingId: String? = null,
     val sending: Boolean = false,
     val models: List<ModelInfo> = emptyList(),
     /** Null = otomatis (default sesuai role). */
@@ -186,8 +188,36 @@ class ChatViewModel @Inject constructor(
     fun selectModel(id: String?) = state.update { it.copy(selectedModel = id) }
 
     fun editLast() {
-        val text = state.value.lastUserMessage?.text ?: return
-        if (!state.value.busy) state.update { it.copy(draft = text) }
+        state.value.lastUserMessage?.let { startEdit(it.id) }
+    }
+
+    /** Mengisi composer dengan teks pesan [messageId]; Kirim akan mengganti pesan itu dan semua sesudahnya. */
+    fun startEdit(messageId: String) {
+        val message = state.value.messages.firstOrNull { it.id == messageId && it.author == AUTHOR_USER } ?: return
+        if (!state.value.busy) state.update { it.copy(draft = message.text, editingId = message.id) }
+    }
+
+    fun cancelEdit() = state.update { it.copy(draft = "", editingId = null) }
+
+    /** Menghapus pesan beserta semua sesudahnya; agent tidak lagi mengingatnya. */
+    fun deleteMessage(messageId: String) {
+        val conversationId = state.value.conversationId ?: return
+        if (state.value.busy) return
+        viewModelScope.launch {
+            try {
+                repo.deleteMessage(conversationId, messageId)
+                state.update {
+                    it.copy(
+                        runError = null,
+                        editingId = if (it.editingId != null && it.editingId >= messageId) null else it.editingId
+                    )
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                notices.trySend(ChatEvent.Notice(e.toApiError(connectivity.isConnected()).messageRes))
+            }
+        }
     }
 
     /** Mengirim ulang teks pesan terakhir sebagai pesan baru (API tidak punya edit di tempat). */
@@ -206,8 +236,16 @@ class ChatViewModel @Inject constructor(
             notices.trySend(ChatEvent.Notice(R.string.chat_error_offline_send))
             return
         }
+        val editingId = snapshot.editingId
         state.update {
-            it.copy(sending = true, pending = PendingMessage(text), draft = "", runError = null, loadError = null)
+            it.copy(
+                sending = true,
+                pending = PendingMessage(text),
+                draft = "",
+                editingId = null,
+                runError = null,
+                loadError = null
+            )
         }
         viewModelScope.launch {
             try {
@@ -215,14 +253,23 @@ class ChatViewModel @Inject constructor(
                     state.update { it.copy(conversationId = newId) }
                     attach(newId)
                 }
-                val response = repo.send(conversationId, text, snapshot.selectedModel)
+                val response = if (editingId != null) {
+                    repo.edit(conversationId, editingId, text, snapshot.selectedModel)
+                } else {
+                    repo.send(conversationId, text, snapshot.selectedModel)
+                }
                 state.update { it.copy(sending = false, pending = null) }
                 observeRun(response.run.id)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 state.update {
-                    it.copy(sending = false, pending = null, draft = it.draft.ifEmpty { text })
+                    it.copy(
+                        sending = false,
+                        pending = null,
+                        draft = it.draft.ifEmpty { text },
+                        editingId = it.editingId ?: editingId
+                    )
                 }
                 notices.trySend(ChatEvent.Notice(e.toApiError(connectivity.isConnected()).messageRes))
             }

@@ -22,6 +22,7 @@ Semua klien memakai satu REST API `/v1` dan satu WebSocket `/v1/ws`. Skema didef
 | Percakapan | `GET/POST /conversations`, `PATCH/DELETE /conversations/:id` | Daftar, buat, ubah judul, arsipkan |
 | Pesan | `GET /conversations/:id/messages`, `POST /conversations/:id/messages` | Riwayat; kirim pesan sekaligus memulai run |
 | Pesan | `POST /messages/:id/reroute` | Ganti role lalu jalankan ulang, dicatat sebagai koreksi |
+| Pesan | `POST /messages/:id/edit`, `DELETE /messages/:id` | Potong percakapan dari pesan itu (pesan itu dan semua sesudahnya dibuang). `edit` (hanya pesan pengguna) lalu mengirim teks baru seperti `POST /conversations/:id/messages`. Sesi Hermes diganti; giliran berikutnya mengirim riwayat yang tersisa sebagai konteks, sehingga agent tidak mengingat bagian yang dibuang. `409 run_in_progress` bila jawaban masih berjalan |
 | Run | `GET /runs/:id`, `GET /runs/:id/events?afterSeq=` | Status dan putar ulang event |
 | Run | `POST /runs/:id/steer`, `POST /runs/:id/cancel` | Arahkan atau hentikan agent |
 | Run | `POST /runs/:id/approvals/:approvalId` | `{ decision: allow \| deny, remember }` |
