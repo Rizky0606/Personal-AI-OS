@@ -450,6 +450,13 @@ Isi ditulis sendiri sebagai ringkasan prinsip, bukan salinan; dibaca dari halama
 - **Deploy**: `infra/scripts/deploy.sh` diuji dengan perintah palsu di `selftest.sh` (urutan, rollback, dry-run); **belum pernah dijalankan** dengan Docker dan VPS nyata. Rollback hanya mengembalikan image, bukan migrasi.
 - **Belum dibuat**: tag `v1.0.0` (menunggu verifikasi di VPS dan perangkat nyata; tag memicu build rilis).
 
+## Ubah dan hapus pesan (setelah Fase 24)
+
+- **Perlu verifikasi di VPS**: setelah percakapan dipotong, gateway membuka sesi Hermes baru (`aios-<percakapan>-<uuid>`) dan mengirim riwayat yang tersisa sebagai `messages` di `/v1/chat/completions`. Diuji dengan Hermes tiruan, belum dengan Hermes 0.22.5 sungguhan. Cara cek: kirim "Nama saya Budi", ubah pesan itu menjadi "Nama saya Andi", lalu tanya "Siapa nama saya?"; jawabannya harus Andi, bukan Budi.
+- **Sinkron antarperangkat**: perangkat lain yang sedang membuka percakapan yang sama baru melihat potongan setelah menyegarkan (buka ulang percakapan atau run berikutnya selesai). Belum ada event realtime `conversation.truncated`.
+- **Riwayat dibatasi 100 pesan terakhir** saat dikirim ulang ke sesi baru; percakapan yang lebih panjang kehilangan konteks paling awal setelah diedit.
+- Run coding (omp) tidak memakai riwayat: omp berjalan `--no-session`, jadi edit/hapus hanya memengaruhi tampilan dan konteks Hermes.
+
 ## Ide di luar scope
 
-(kosong)
+- **Lampiran dokumen dan gambar di chat** (PRD W1/A1, P0): kontrak sudah punya part `file` dan `POST /files`, tetapi gateway menolak lampiran di chat umum (`files_not_supported`) karena Hermes tidak menerima berkas (VERIFICATION: hanya gambar inline). Butuh: unggah dari desktop/Android, gambar sebagai `image_url` inline ke Hermes (model 9Router harus mendukung vision), dan dokumen diekstrak menjadi teks oleh gateway sebelum dikirim.
