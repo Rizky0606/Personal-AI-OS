@@ -2,6 +2,7 @@ package app.aios.android.ui.chat
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -211,27 +212,27 @@ private fun MessageList(
         verticalArrangement = Arrangement.spacedBy(Tokens.Space.s16)
     ) {
         items(items, key = { it.key }) { item ->
-            when (item) {
-                is ChatItem.User -> UserMessageRow(
-                    item,
+            // Pesan baru memudar masuk dan pesan lain bergeser halus (bukan melompat) saat daftar berubah.
+            Box(
+                Modifier.animateItem(
+                    fadeInSpec = tween(Tokens.Motion.BaseMs, easing = Tokens.Motion.Easing),
+                    placementSpec = tween(Tokens.Motion.BaseMs, easing = Tokens.Motion.Easing),
+                    fadeOutSpec = tween(Tokens.Motion.FastMs, easing = Tokens.Motion.Easing)
+                )
+            ) {
+                ChatRow(
+                    item = item,
+                    roleName = roleName,
                     onEdit = onEdit,
                     onResend = onResend,
                     onStartEdit = onStartEdit,
-                    onDelete = onDelete
-                )
-                is ChatItem.PendingUser -> PendingUserRow(item)
-                is ChatItem.Assistant -> AssistantMessageRow(
-                    item = item,
-                    roleName = roleName,
+                    onDelete = onDelete,
                     onRoleClick = onRoleClick,
                     onCopied = {
                         copiedTick++
                         onCopied()
-                    },
-                    onDelete = onDelete
+                    }
                 )
-                is ChatItem.System -> SystemNoteRow(item.message.text)
-                is ChatItem.Failure -> FailureRow(item, onResend = onResend)
             }
         }
         if (loadingOlder) {
@@ -245,6 +246,39 @@ private fun MessageList(
                 }
             }
         }
+    }
+}
+
+@Suppress("LongParameterList") // Meneruskan aksi baris pesan dari daftar ke komponen tiap jenis pesan.
+@Composable
+private fun ChatRow(
+    item: ChatItem,
+    roleName: (String) -> String,
+    onEdit: () -> Unit,
+    onResend: () -> Unit,
+    onStartEdit: (String) -> Unit,
+    onDelete: (String) -> Unit,
+    onRoleClick: () -> Unit,
+    onCopied: () -> Unit
+) {
+    when (item) {
+        is ChatItem.User -> UserMessageRow(
+            item,
+            onEdit = onEdit,
+            onResend = onResend,
+            onStartEdit = onStartEdit,
+            onDelete = onDelete
+        )
+        is ChatItem.PendingUser -> PendingUserRow(item)
+        is ChatItem.Assistant -> AssistantMessageRow(
+            item = item,
+            roleName = roleName,
+            onRoleClick = onRoleClick,
+            onCopied = onCopied,
+            onDelete = onDelete
+        )
+        is ChatItem.System -> SystemNoteRow(item.message.text)
+        is ChatItem.Failure -> FailureRow(item, onResend = onResend)
     }
 }
 

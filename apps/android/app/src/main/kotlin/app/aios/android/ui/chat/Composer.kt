@@ -1,5 +1,8 @@
 package app.aios.android.ui.chat
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -80,6 +83,11 @@ fun Composer(
     val hasFiles = attachments.any { it.part != null }
     val canSend = (draft.isNotBlank() || hasFiles) && !sending && !uploading
     val composerLabel = stringResource(R.string.chat_composer_label)
+    val borderColor by animateColorAsState(
+        if (focused) colors.borderStrong else colors.border,
+        tween(Tokens.Motion.BaseMs, easing = Tokens.Motion.Easing),
+        label = "composerBorder"
+    )
 
     Column(
         modifier = modifier
@@ -127,7 +135,7 @@ fun Composer(
                     .focusRing(focused, colors.accent, Tokens.Radius.md)
                     .defaultMinSize(minHeight = Tokens.touchTarget)
                     .background(colors.surface, shape)
-                    .border(Hairline, if (focused) colors.borderStrong else colors.border, shape)
+                    .border(Hairline, borderColor, shape)
                     .padding(horizontal = Tokens.Space.s12, vertical = Tokens.Space.s12),
                 contentAlignment = Alignment.CenterStart
             ) {
@@ -241,10 +249,15 @@ private fun ActionButton(icon: Int, description: String, primary: Boolean, enabl
     val shape = RoundedCornerShape(Tokens.Radius.md)
     val source = remember { MutableInteractionSource() }
     val focused by source.collectIsFocusedAsState()
+    val alpha by animateFloatAsState(
+        if (enabled) 1f else DISABLED_ALPHA,
+        tween(Tokens.Motion.FastMs, easing = Tokens.Motion.Easing),
+        label = "actionAlpha"
+    )
     Box(
         modifier = Modifier
             .size(Tokens.touchTarget)
-            .alpha(if (enabled) 1f else DISABLED_ALPHA)
+            .alpha(alpha)
             .focusRing(focused, colors.accent, Tokens.Radius.md)
             .clip(shape)
             .background(if (primary) colors.accent else colors.surface2)
