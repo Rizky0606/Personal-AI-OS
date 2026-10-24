@@ -242,7 +242,12 @@ export async function startStack(): Promise<Stack> {
         pg.stdin?.end();
         await new Promise((r) => setTimeout(r, 500));
       }
-      rmSync(base, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+      try {
+        rmSync(base, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+      } catch (err) {
+        // Windows kadang masih mengunci berkas Postgres; folder sementara tidak boleh menggagalkan hasil tes.
+        console.warn(`[e2e] folder sementara tidak terhapus: ${base} (${String(err)})`);
+      }
     },
   };
 }

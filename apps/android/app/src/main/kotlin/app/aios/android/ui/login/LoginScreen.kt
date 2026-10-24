@@ -32,7 +32,7 @@ import app.aios.android.ui.components.OfflineBanner
 import app.aios.android.ui.theme.AiosTheme
 import app.aios.ui.tokens.Tokens
 
-/** Satu layar: alamat server, password, TOTP. Tanpa langkah tambahan. */
+/** Satu layar: alamat server (kecuali tertanam saat build), password, TOTP. Tanpa langkah tambahan. */
 @Composable
 fun LoginScreen(online: Boolean, viewModel: LoginViewModel = hiltViewModel()) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
@@ -85,15 +85,17 @@ fun LoginContent(
             val bannerRes = ui.formError ?: R.string.login_session_expired.takeIf { sessionExpired }
             if (bannerRes != null) ErrorBanner(message = stringResource(bannerRes))
 
-            AiosTextField(
-                value = ui.serverUrl,
-                onValueChange = onServerUrl,
-                label = stringResource(R.string.login_server_label),
-                placeholder = stringResource(R.string.login_server_hint),
-                errorText = ui.serverError?.let { stringResource(it) },
-                enabled = !ui.submitting,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next)
-            )
+            if (!ui.fixedServer) {
+                AiosTextField(
+                    value = ui.serverUrl,
+                    onValueChange = onServerUrl,
+                    label = stringResource(R.string.login_server_label),
+                    placeholder = stringResource(R.string.login_server_hint),
+                    errorText = ui.serverError?.let { stringResource(it) },
+                    enabled = !ui.submitting,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next)
+                )
+            }
             AiosTextField(
                 value = ui.password,
                 onValueChange = onPassword,

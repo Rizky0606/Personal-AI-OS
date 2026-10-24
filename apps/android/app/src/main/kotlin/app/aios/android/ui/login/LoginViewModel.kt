@@ -21,6 +21,8 @@ private const val TOTP_LENGTH = 6
 
 data class LoginUiState(
     val serverUrl: String = "",
+    /** Alamat tertanam saat build: isian alamat disembunyikan. */
+    val fixedServer: Boolean = false,
     val password: String = "",
     val totp: String = "",
     val showPassword: Boolean = false,
@@ -36,7 +38,9 @@ class LoginViewModel @Inject constructor(
     private val auth: AuthRepository,
     events: SessionEvents
 ) : ViewModel() {
-    private val state = MutableStateFlow(LoginUiState())
+    private val state = MutableStateFlow(
+        auth.fixedServerUrl?.let { LoginUiState(serverUrl = it, fixedServer = true) } ?: LoginUiState()
+    )
     val ui: StateFlow<LoginUiState> = state.asStateFlow()
 
     /** True bila pengguna kembali ke layar ini karena refresh token ditolak, bukan karena logout. */
@@ -45,6 +49,7 @@ class LoginViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             val last = auth.lastServerUrl.first()
+            // Alamat tertanam sudah mengisi serverUrl, jadi alamat terakhir tidak menimpanya.
             if (last != null) state.update { if (it.serverUrl.isEmpty()) it.copy(serverUrl = last) else it }
         }
     }

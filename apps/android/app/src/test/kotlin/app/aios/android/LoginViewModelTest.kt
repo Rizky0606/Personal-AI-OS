@@ -47,7 +47,7 @@ class LoginViewModelTest {
     @After
     fun tearDown() = Dispatchers.resetMain()
 
-    private fun viewModel(lastUrl: String? = null): LoginViewModel {
+    private fun viewModel(lastUrl: String? = null, fixedUrl: String? = null): LoginViewModel {
         val events = SessionEvents()
         val repo = AuthRepository(
             store = FakeTokenStore(null, lastUrl),
@@ -57,7 +57,8 @@ class LoginViewModelTest {
             events = events,
             deviceName = "Pixel 8",
             allowCleartextLocal = false,
-            isConnected = { true }
+            isConnected = { true },
+            fixedServerUrl = fixedUrl
         )
         return LoginViewModel(repo, events)
     }
@@ -67,6 +68,14 @@ class LoginViewModelTest {
         val vm = viewModel(lastUrl = "https://aios.contoh.com")
         advanceUntilIdle()
         assertEquals("https://aios.contoh.com", vm.ui.value.serverUrl)
+    }
+
+    @Test
+    fun `alamat tertanam menang atas alamat terakhir dan isian alamat disembunyikan`() = runTest {
+        val vm = viewModel(lastUrl = "https://lama.contoh.com", fixedUrl = "https://ai.contoh.com")
+        advanceUntilIdle()
+        assertEquals("https://ai.contoh.com", vm.ui.value.serverUrl)
+        assertEquals(true, vm.ui.value.fixedServer)
     }
 
     @Test

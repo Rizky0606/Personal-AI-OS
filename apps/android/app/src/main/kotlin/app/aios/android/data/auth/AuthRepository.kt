@@ -37,7 +37,9 @@ class AuthRepository(
     /** Token FCM perangkat ini (null bila push tidak tersedia); ikut dikirim saat login. */
     private val pushToken: suspend () -> String? = { null },
     /** Dipanggil setelah login sukses yang membawa token, agar tidak didaftarkan dua kali. */
-    private val onPushRegistered: suspend (deviceId: String, token: String) -> Unit = { _, _ -> }
+    private val onPushRegistered: suspend (deviceId: String, token: String) -> Unit = { _, _ -> },
+    /** Alamat gateway tertanam saat build; null berarti alamat diketik di layar login. */
+    val fixedServerUrl: String? = null
 ) {
     val session: Flow<StoredSession?> = store.session
     val lastServerUrl: Flow<String?> = store.lastServerUrl

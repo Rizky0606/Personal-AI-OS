@@ -12,6 +12,8 @@ const here = (p: string) => fileURLToPath(new URL(p, import.meta.url));
 export default defineConfig({
   root: here('../apps/desktop'),
   plugins: [react(), tailwindcss()],
+  // Alamat gateway E2E berubah tiap jalan, jadi selalu diketik di layar login (abaikan .env lokal).
+  define: { 'import.meta.env.VITE_GATEWAY_URL': '""' },
   resolve: {
     alias: [
       { find: /^@tauri-apps\/api\/core$/, replacement: here('shims/core.ts') },

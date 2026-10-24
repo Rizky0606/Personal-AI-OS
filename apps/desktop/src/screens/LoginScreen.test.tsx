@@ -76,6 +76,20 @@ describe('LoginScreen', () => {
     await waitFor(() => expect(fields().password).toHaveValue(''));
   });
 
+  it('alamat tertanam saat build: isian alamat disembunyikan dan login memakai alamat itu', async () => {
+    const user = userEvent.setup();
+    render(
+      <LoginScreen initialServer="https://lama.contoh.com" fixedServer="https://ai.contoh.com" />,
+    );
+
+    expect(screen.queryByLabelText(copy.login.server)).not.toBeInTheDocument();
+    await user.type(screen.getByLabelText(copy.login.password), 'rahasia-panjang');
+    await user.type(screen.getByLabelText(copy.login.totp), '123456');
+    await user.click(screen.getByRole('button', { name: copy.login.submit }));
+
+    expect(login).toHaveBeenCalledWith('https://ai.contoh.com', 'rahasia-panjang', '123456');
+  });
+
   it('kredensial salah menampilkan pesan dengan langkah berikutnya dan form tetap bisa dipakai', async () => {
     impl.run = () => Promise.reject(new ApiProblem(401, 'invalid_credentials', 'x'));
     const user = userEvent.setup();
