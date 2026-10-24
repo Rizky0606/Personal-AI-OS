@@ -50,7 +50,7 @@ log "versi: $VERSION"
 # 1. Backup sebelum menyentuh apa pun.
 if [[ $BACKUP -eq 1 ]]; then
   log "backup database"
-  run "$HERE/backup.sh" || { log "GAGAL: backup gagal; deploy dibatalkan (pakai --no-backup bila sengaja)"; exit 1; }
+  run bash "$HERE/backup.sh" || { log "GAGAL: backup gagal; deploy dibatalkan (pakai --no-backup bila sengaja)"; exit 1; }
 fi
 
 # 2. Simpan image yang sedang berjalan untuk rollback.

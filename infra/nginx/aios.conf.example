@@ -18,8 +18,8 @@ server {
 }
 
 server {
-    listen 443 ssl;
-    http2 on;
+    # nginx 1.24 (Ubuntu 24.04) belum mengenal "http2 on;"; sintaks ini jalan di 1.24 dan masih diterima (deprecated) di 1.25+.
+    listen 443 ssl http2;
     server_name aios.contoh.com;
 
     ssl_certificate     /etc/letsencrypt/live/aios.contoh.com/fullchain.pem;
