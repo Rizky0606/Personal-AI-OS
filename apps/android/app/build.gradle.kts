@@ -29,6 +29,12 @@ android {
         versionCode = 100
         versionName = "1.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Alamat gateway tertanam: layar login tidak meminta alamat. Kosongkan (-PaiosGatewayUrl=) agar alamat
+        // diketik saat login, mis. untuk E2E atau gateway lokal.
+        val gatewayUrl = providers.gradleProperty("aiosGatewayUrl")
+            .orElse(providers.environmentVariable("AIOS_GATEWAY_URL"))
+            .getOrElse("https://ai.ojixx.my.id")
+        buildConfigField("String", "GATEWAY_URL", "\"$gatewayUrl\"")
     }
 
     // Penandatanganan rilis opsional: aktif hanya bila keystore diberikan lewat variabel lingkungan (CI memasangnya

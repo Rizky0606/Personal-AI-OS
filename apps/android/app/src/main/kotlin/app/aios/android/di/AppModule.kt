@@ -170,7 +170,8 @@ object AppModule {
         isConnected = connectivity::isConnected,
         resetUserData = chat::clearCache,
         pushToken = pushSource::token,
-        onPushRegistered = push::markRegistered
+        onPushRegistered = push::markRegistered,
+        fixedServerUrl = BuildConfig.GATEWAY_URL.ifBlank { null }
     )
 
     @Provides

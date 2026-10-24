@@ -28,6 +28,8 @@ try {
     gradle,
     [
       'connectedDebugAndroidTest',
+      // Tanpa alamat tertanam: tes mengetik alamat gateway E2E di layar login.
+      '-PaiosGatewayUrl=',
       arg('gatewayUrl', gatewayUrl),
       arg('password', config.password),
       arg('totp', code),

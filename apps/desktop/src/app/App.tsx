@@ -13,6 +13,9 @@ import { router } from './router';
 import { auth } from './services';
 
 const LAST_SERVER_KEY = 'aios.lastServer';
+/** Alamat gateway tertanam saat build (VITE_GATEWAY_URL); kosong berarti alamat diketik di layar login. */
+const builtInServer = (import.meta.env.VITE_GATEWAY_URL as string | undefined)?.trim();
+const BUILT_IN_SERVER = builtInServer?.length ? builtInServer : undefined;
 
 function readLastServer(): string {
   try {
@@ -50,7 +53,7 @@ export function App() {
         {state.status === 'loading' ? (
           <div className="h-full bg-bg" />
         ) : state.status === 'signedOut' ? (
-          <LoginScreen initialServer={readLastServer()} />
+          <LoginScreen initialServer={readLastServer()} fixedServer={BUILT_IN_SERVER} />
         ) : (
           <RouterProvider router={router} />
         )}

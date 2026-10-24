@@ -14,8 +14,17 @@ interface FieldErrors {
   totp?: string;
 }
 
-/** Satu layar: alamat server, password, TOTP. Tanpa langkah "Hubungkan" terpisah. */
-export function LoginScreen({ initialServer = '' }: { initialServer?: string }) {
+/**
+ * Satu layar: alamat server, password, TOTP. Tanpa langkah "Hubungkan" terpisah.
+ * `fixedServer` (alamat tertanam saat build) menyembunyikan isian alamat.
+ */
+export function LoginScreen({
+  initialServer = '',
+  fixedServer,
+}: {
+  initialServer?: string;
+  fixedServer?: string;
+}) {
   const state = useAuthState();
   const online = useOnline();
   const [server, setServer] = useState(initialServer);
@@ -46,7 +55,7 @@ export function LoginScreen({ initialServer = '' }: { initialServer?: string }) 
     inFlight.current = true;
     setSubmitting(true);
     try {
-      await auth.login(server, password, totp);
+      await auth.login(fixedServer ?? server, password, totp);
       // Sesi tersimpan; App yang memindahkan layar. Rahasia dibuang dari memori UI.
       setPassword('');
       setTotp('');
@@ -67,15 +76,17 @@ export function LoginScreen({ initialServer = '' }: { initialServer?: string }) 
       >
         <h1 className="text-page font-semibold text-text">{copy.login.title}</h1>
         {formError || expired ? <ErrorBanner message={formError ?? copy.login.expired} /> : null}
-        <TextField
-          label={copy.login.server}
-          placeholder={copy.login.serverHint}
-          value={server}
-          onChange={(e) => setServer(e.target.value)}
-          disabled={submitting}
-          autoComplete="url"
-          spellCheck={false}
-        />
+        {fixedServer ? null : (
+          <TextField
+            label={copy.login.server}
+            placeholder={copy.login.serverHint}
+            value={server}
+            onChange={(e) => setServer(e.target.value)}
+            disabled={submitting}
+            autoComplete="url"
+            spellCheck={false}
+          />
+        )}
         <div className="flex items-end gap-2">
           <TextField
             label={copy.login.password}
