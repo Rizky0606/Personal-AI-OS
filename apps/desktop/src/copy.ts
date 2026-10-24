@@ -367,6 +367,17 @@ export const copy = {
     editLast: 'Ubah pesan terakhir',
     edit: 'Ubah',
     resend: 'Kirim ulang',
+    editLabel: 'Ubah pesan',
+    editSubmit: 'Kirim',
+    editNote:
+      'Pesan ini dan semua pesan sesudahnya diganti; AI tidak mengingat bagian yang dibuang.',
+    editFailed: 'Pesan belum diubah.',
+    deleteMessage: 'Hapus',
+    deleteMessageTitle: 'Hapus pesan ini?',
+    deleteMessageBody:
+      'Pesan ini dan semua pesan sesudahnya dihapus permanen. AI tidak akan mengingatnya lagi.',
+    deleteMessageConfirm: 'Hapus',
+    deleteMessageFailed: 'Pesan belum terhapus.',
     editLastHint: 'Pesan baru dikirim dari teks ini; jawaban lama tetap ada di riwayat.',
     offlineSend: 'Tidak ada koneksi. Pesan belum terkirim; sambungkan lalu kirim lagi.',
     sendFailed: 'Pesan belum terkirim. Teks dikembalikan ke kolom pesan.',

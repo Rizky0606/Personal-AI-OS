@@ -12,7 +12,13 @@ import { isSettled } from '../realtime/liveRun';
 import { useUiStore } from '../state/uiStore';
 import { useToastStore } from '../ui/Toaster';
 import { useReviewTarget } from './useReviewTarget';
-import { addMessageToCache, chronological, latestRunId, messageText } from './messageData';
+import {
+  addMessageToCache,
+  chronological,
+  latestRunId,
+  messageText,
+  truncateCache,
+} from './messageData';
 
 /** Run yang statusnya sudah diperiksa saat membuka percakapan; mencegah getRun berulang per render. */
 const checkedRuns = new Set<string>();
@@ -231,6 +237,67 @@ export function useChatController(conversationId: string | undefined) {
     void send(messageText(lastUser));
   }, [lastUser, sending, streaming, send]);
 
+  /** Pesan yang dibuang server juga dibuang dari cache, dan tampilan run-nya dilupakan. */
+  const dropFrom = useCallback(
+    (conversation: string, messageId: string) => {
+      for (const runId of truncateCache(queryClient, conversation, messageId)) runs.forget(runId);
+      setActiveRunId(null);
+    },
+    [queryClient],
+  );
+
+  /**
+   * Mengubah pesan pengguna mana pun: pesan itu dan semua sesudahnya dibuang, lalu teks baru dikirim. Agent
+   * memulai sesi baru dengan riwayat sisanya, jadi bagian yang dibuang tidak diingat. true bila berhasil.
+   */
+  const editMessage = useCallback(
+    async (messageId: string, text: string): Promise<boolean> => {
+      const body = text.trim();
+      if (!conversationId || !body || sending || streaming) return false;
+      if (!online) {
+        push(copy.chat.offlineSend, 'danger');
+        return false;
+      }
+      setSending(true);
+      try {
+        const response = await api.editMessage(messageId, {
+          text: body,
+          role: role ?? undefined,
+          model: model ?? undefined,
+        });
+        dropFrom(conversationId, messageId);
+        addMessageToCache(queryClient, conversationId, response.message);
+        runs.track(response.run.id);
+        setActiveRunId(response.run.id);
+        setRole(null);
+        return true;
+      } catch (error) {
+        fail(error, `${copy.chat.editFailed} ${apiErrorMessage(error, online)}`);
+        return false;
+      } finally {
+        setSending(false);
+      }
+    },
+    [conversationId, sending, streaming, online, push, role, model, dropFrom, queryClient, fail],
+  );
+
+  /** Menghapus pesan beserta semua sesudahnya. true bila berhasil. */
+  const deleteMessage = useCallback(
+    async (messageId: string): Promise<boolean> => {
+      if (!conversationId || sending || streaming) return false;
+      try {
+        await api.deleteMessage(messageId);
+        dropFrom(conversationId, messageId);
+        void queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
+        return true;
+      } catch (error) {
+        fail(error, `${copy.chat.deleteMessageFailed} ${apiErrorMessage(error, online)}`);
+        return false;
+      }
+    },
+    [conversationId, sending, streaming, dropFrom, queryClient, fail, online],
+  );
+
   const loadOlder = useCallback(() => void messagesQuery.fetchNextPage(), [messagesQuery]);
 
   return {
@@ -261,8 +328,12 @@ export function useChatController(conversationId: string | undefined) {
     editLast,
     resendLast,
     canEditLast: lastUser !== undefined && !sending && !streaming,
-    /** Pesan pengguna terakhir: satu-satunya yang punya tombol Ubah dan Kirim ulang. */
+    /** Pesan pengguna terakhir: satu-satunya yang punya tombol Kirim ulang. */
     editableUserId: lastUser && !sending && !streaming ? lastUser.id : null,
+    /** Ubah dan hapus pesan hanya saat tidak ada jawaban yang berjalan. */
+    canModify: !sending && !streaming,
+    editMessage,
+    deleteMessage,
     rerunnableId: lastAssistant && !streaming ? lastAssistant.id : null,
     focusNonce,
     loadOlder,

@@ -51,6 +51,8 @@ export const api: FakeApi = {
   listMessages: fn<'listMessages'>(),
   sendMessage: fn<'sendMessage'>(),
   rerouteMessage: fn<'rerouteMessage'>(),
+  editMessage: fn<'editMessage'>(),
+  deleteMessage: fn<'deleteMessage'>(),
   getRun: fn<'getRun'>(),
   resolveApproval: fn<'resolveApproval'>(),
   reviewRun: fn<'reviewRun'>(),

@@ -49,8 +49,10 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
             rerunnableId={chat.rerunnableId}
             onReroute={chat.reroute}
             editableUserId={chat.editableUserId}
-            onEditLast={chat.editLast}
             onResendLast={chat.resendLast}
+            canModify={chat.canModify}
+            onEditMessage={chat.editMessage}
+            onDeleteMessage={chat.deleteMessage}
             approvals={chat.approvals}
             resolvingApprovals={chat.resolvingApprovals}
             onResolveApproval={chat.resolveApproval}

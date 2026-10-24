@@ -45,6 +45,31 @@ export function addMessageToCache(
   });
 }
 
+/**
+ * Membuang pesan `fromId` dan semua sesudahnya dari cache (ID UUIDv7 urut waktu), sama seperti server.
+ * Mengembalikan ID run dari pesan yang dibuang.
+ */
+export function truncateCache(
+  queryClient: QueryClient,
+  conversationId: string,
+  fromId: string,
+): string[] {
+  const dropped = new Set<string>();
+  queryClient.setQueryData<MessagePages>(['messages', conversationId], (old) => {
+    if (!old) return old;
+    const pages = old.pages.map((page) => ({
+      ...page,
+      items: page.items.filter((m) => {
+        if (m.id < fromId) return true;
+        if (m.runId) dropped.add(m.runId);
+        return false;
+      }),
+    }));
+    return { ...old, pages };
+  });
+  return [...dropped];
+}
+
 /** ID run dari pesan terbaru yang punya run; dipakai untuk melanjutkan jawaban yang belum selesai. */
 export function latestRunId(messages: Message[]): string | null {
   for (let i = messages.length - 1; i >= 0; i--) {

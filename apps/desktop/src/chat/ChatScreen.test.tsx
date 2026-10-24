@@ -249,16 +249,65 @@ describe('ChatScreen: ubah pesan terakhir dan jalankan ulang', () => {
     expect(field()).toHaveValue('draf');
   });
 
-  it('Ubah di bawah pesan terakhir memindahkan teksnya ke kolom pesan', async () => {
+  it('Ubah membuka editor di tempat; Kirim memotong dari pesan itu dan jawaban lama hilang', async () => {
+    const data = history();
+    api.listMessages.mockResolvedValue(data);
+    api.getRun.mockResolvedValue(run({ id: RUN_1, status: 'completed' }));
+    api.editMessage.mockResolvedValue({
+      message: message({ author: 'user', text: 'Pertanyaan baru', runId: RUN_2 }),
+      run: run({ id: RUN_2 }),
+    });
+    const user = userEvent.setup();
+    await renderScreen(<ChatScreen conversationId={CONV} />);
+
+    const mine = (await screen.findByText('Pertanyaan saya')).closest('article')!;
+    await user.click(within(mine).getByRole('button', { name: copy.chat.edit }));
+    const editor = screen.getByRole('textbox', { name: copy.chat.editLabel });
+    expect(editor).toHaveValue('Pertanyaan saya');
+    await user.clear(editor);
+    await user.type(editor, 'Pertanyaan baru{Enter}');
+
+    expect(api.editMessage).toHaveBeenCalledWith(
+      data.items[0]?.id,
+      expect.objectContaining({ text: 'Pertanyaan baru' }),
+    );
+    expect(await screen.findByText('Pertanyaan baru')).toBeInTheDocument();
+    expect(screen.queryByText('Pertanyaan saya')).not.toBeInTheDocument();
+    expect(screen.queryByText('Jawaban lama')).not.toBeInTheDocument();
+    runs.release(RUN_2);
+  });
+
+  it('Hapus meminta konfirmasi lalu membuang pesan itu dan sesudahnya', async () => {
+    const data = history();
+    api.listMessages.mockResolvedValueOnce(data).mockResolvedValue(page());
+    api.getRun.mockResolvedValue(run({ id: RUN_1, status: 'completed' }));
+    api.deleteMessage.mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    await renderScreen(<ChatScreen conversationId={CONV} />);
+
+    const mine = (await screen.findByText('Pertanyaan saya')).closest('article')!;
+    await user.click(within(mine).getByRole('button', { name: copy.chat.deleteMessage }));
+    const dialog = await screen.findByRole('dialog', { name: copy.chat.deleteMessageTitle });
+    await user.click(within(dialog).getByRole('button', { name: copy.chat.deleteMessageConfirm }));
+
+    expect(api.deleteMessage).toHaveBeenCalledWith(data.items[0]?.id);
+    await waitFor(() => expect(screen.queryByText('Jawaban lama')).not.toBeInTheDocument());
+    expect(screen.queryByText('Pertanyaan saya')).not.toBeInTheDocument();
+  });
+
+  it('Hapus dibatalkan: tidak ada yang dihapus', async () => {
     api.listMessages.mockResolvedValue(history());
     api.getRun.mockResolvedValue(run({ id: RUN_1, status: 'completed' }));
     const user = userEvent.setup();
     await renderScreen(<ChatScreen conversationId={CONV} />);
 
-    const last = (await screen.findByText('Pertanyaan saya')).closest('article')!;
-    await user.click(within(last).getByRole('button', { name: copy.chat.edit }));
+    const answer = (await screen.findByText('Jawaban lama')).closest('article')!;
+    await user.click(within(answer).getByRole('button', { name: copy.chat.deleteMessage }));
+    const dialog = await screen.findByRole('dialog', { name: copy.chat.deleteMessageTitle });
+    await user.click(within(dialog).getByRole('button', { name: copy.chat.cancel }));
 
-    expect(field()).toHaveValue('Pertanyaan saya');
+    expect(api.deleteMessage).not.toHaveBeenCalled();
+    expect(screen.getByText('Jawaban lama')).toBeInTheDocument();
   });
 
   it('chip role pada jawaban terakhir menjalankan ulang dengan role lain', async () => {
