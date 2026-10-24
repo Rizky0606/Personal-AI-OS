@@ -41,19 +41,36 @@ jobs:
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/release.jks"
           echo "ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
 
+      # Versi: versionCode naik di setiap run (Android hanya memasang menimpa bila kodenya lebih tinggi);
+      # versionName dari tag vX.Y.Z, atau <versi dasar>-dev.<run> untuk build main. Versi dasar satu sumber:
+      # apps/desktop/src-tauri/tauri.conf.json (dinaikkan oleh infra/scripts/release.mjs).
+      - name: Tentukan versi
+        shell: bash
+        run: |
+          code=$((1000 + GITHUB_RUN_NUMBER))
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            name="${GITHUB_REF_NAME#v}"
+          else
+            name="$(node -p "require('../desktop/src-tauri/tauri.conf.json').version")-dev.${GITHUB_RUN_NUMBER}"
+          fi
+          echo "VERSION_ARGS=-PaiosVersionCode=$code -PaiosVersionName=$name" >> "$GITHUB_ENV"
+          echo "Versi Android: $name ($code)"
+
       - name: Lint dan tes unit
         run: ./gradlew check
 
       - name: APK debug (selalu bisa dipasang)
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleDebug $VERSION_ARGS
 
+      # Kunci tetap dari secret: APK ini bisa dipasang menimpa versi sebelumnya tanpa uninstall. APK debug
+      # ditandatangani kunci acak per runner, jadi tidak bisa menimpa APK dari build lain.
       - name: APK release bertanda tangan
-        if: env.HAS_KEYSTORE == 'true' && startsWith(github.ref, 'refs/tags/v')
+        if: env.HAS_KEYSTORE == 'true'
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: ./gradlew assembleRelease
+        run: ./gradlew assembleRelease $VERSION_ARGS
 
       - uses: actions/upload-artifact@v4
         with:
