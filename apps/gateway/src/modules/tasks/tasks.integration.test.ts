@@ -399,6 +399,8 @@ describe('start ulang gateway', () => {
     const runId = await started(fake, projectId, card.id);
     await finish(fake, runId);
     await reach(projectId, card.id, 'review');
+    // Sinkronisasi latar belakang harus tuntas dulu, agar tidak menimpa kondisi buatan di bawah.
+    await env.tasks.idle();
 
     // Gateway mati sebelum kartu sempat pindah: kartu masih Running padahal run sudah menunggu tinjauan.
     await env.database.handle.db
