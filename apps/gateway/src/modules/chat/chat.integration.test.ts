@@ -308,7 +308,7 @@ describe('kirim pesan dan run', () => {
         },
       ],
     });
-    expect([file.statusCode, problem(file).code]).toEqual([400, 'files_not_supported']);
+    expect([file.statusCode, problem(file).code]).toEqual([400, 'file_not_found']);
     expect(problem(await post({ parts: [{ type: 'text', text: '   ' }] })).code).toBe(
       'empty_message',
     );

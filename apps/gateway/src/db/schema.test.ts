@@ -82,7 +82,7 @@ describe('skema Drizzle', () => {
     ['ScheduleRun', schema.scheduleRuns, ScheduleRunSchema, []],
     ['ResearchJob', schema.researchJobs, ResearchJobSchema, []],
     ['ResearchSource', schema.researchSources, ResearchSourceSchema, []],
-    ['FileRecord', schema.files, FileRecordSchema, ['storagePath']],
+    ['FileRecord', schema.files, FileRecordSchema, ['content']],
     ['RoutingDecision', schema.routingDecisions, RoutingDecisionSchema, []],
     ['RoutingCorrection', schema.routingCorrections, RoutingCorrectionSchema, []],
     ['AuditLog', schema.auditLog, AuditLogSchema, []],

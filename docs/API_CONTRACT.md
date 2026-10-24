@@ -124,7 +124,7 @@ stateDiagram-v2
 | `schedule_runs` | id, schedule_id, run_id, status, started_at, finished_at |
 | `research_jobs` | id, question, depth, status, plan (jsonb), report_md, run_id |
 | `research_sources` | id, job_id, url, title, fetched_at, used |
-| `files` | id, name, mime, size, storage_path, sha256 |
+| `files` | id, name, mime, size, content (bytea, isi berkas; ikut backup), sha256 |
 | `routing_decisions` | id, message_id, role, confidence, reason, latency_ms |
 | `routing_corrections` | id, decision_id, from_role, to_role, message_excerpt |
 | `audit_log` | id, actor_device_id, action, target, ts |

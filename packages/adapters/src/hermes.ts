@@ -87,11 +87,26 @@ export function createHermesAdapter(options: HermesAdapterOptions): AgentAdapter
 
       async function* events(): AsyncGenerator<AgentEvent> {
         if (reason) return;
-        const messages: { role: string; content: string }[] = [];
+        type Content =
+          | string
+          | ({ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } })[];
+        const messages: { role: string; content: Content }[] = [];
         if (input.systemPrompt) messages.push({ role: 'system', content: input.systemPrompt });
         // Sesi baru setelah percakapan dipotong: Hermes belum punya transkripnya, jadi riwayat dikirim di sini.
         for (const turn of input.history ?? []) messages.push({ ...turn });
-        messages.push({ role: 'user', content: input.prompt });
+        // Gambar dikirim inline sebagai data URL (Hermes menolak upload berkas, tetapi menerima gambar).
+        messages.push({
+          role: 'user',
+          content: input.images?.length
+            ? [
+                { type: 'text', text: input.prompt },
+                ...input.images.map((image) => ({
+                  type: 'image_url' as const,
+                  image_url: { url: `data:${image.mime};base64,${image.data}` },
+                })),
+              ]
+            : input.prompt,
+        });
 
         const connectTimer = setTimeout(() => stop('connect_timeout'), connectTimeoutMs);
         let res: Response;

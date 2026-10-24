@@ -14,7 +14,7 @@ import { RunStatusSchema } from './run-status.js';
 
 /*
  * Entitas "Model data inti" (API_CONTRACT.md) sebagai bentuk di API: camelCase.
- * Kolom internal tidak diekspos ke klien: token_hash, push_token, storage_path,
+ * Kolom internal tidak diekspos ke klien: token_hash, push_token, content (isi berkas),
  * hermes_session_id. Bentuk baris DB didefinisikan di gateway (Drizzle).
  * createdAt/updatedAt ditambahkan untuk pengurutan dan sinkronisasi.
  */

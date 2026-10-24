@@ -39,6 +39,8 @@ export interface LaunchInput {
   sessionId: string;
   /** Riwayat untuk sesi Hermes yang baru dibuat setelah percakapan dipotong (lihat StartRunInput.history). */
   history?: StartRunInput['history'];
+  /** Gambar lampiran pesan ini untuk model vision. */
+  images?: StartRunInput['images'];
   /** Project percakapan ini; wajib untuk role yang berjalan di worker (omp). */
   projectId: string | null;
   /** Revisi setelah komentar review: melanjutkan worktree dan branch run ini. */
@@ -259,6 +261,7 @@ export function createRunner(deps: RunnerDeps): Runner {
             systemPrompt: deps.roles.bundle(chosenRole).systemPrompt,
             sessionId: input.sessionId,
             ...(input.history?.length ? { history: input.history } : {}),
+            ...(input.images?.length ? { images: input.images } : {}),
             ...(coding && input.projectId ? { projectId: input.projectId, role: chosenRole } : {}),
             ...(coding && input.continueFromRunId
               ? { continueFromRunId: input.continueFromRunId }

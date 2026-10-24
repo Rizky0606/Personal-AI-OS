@@ -8,6 +8,8 @@ import { authenticateHook } from './modules/auth/guard.js';
 import { authRoutes, sessionRoutes } from './modules/auth/routes.js';
 import type { AuthService } from './modules/auth/service.js';
 import { chatRoutes } from './modules/chat/routes.js';
+import { fileRoutes } from './modules/files/routes.js';
+import type { FilesService } from './modules/files/service.js';
 import { statusRoutes } from './modules/status/routes.js';
 import type { StatusService } from './modules/status/service.js';
 import { compareRoutes } from './modules/compare/routes.js';
@@ -66,6 +68,7 @@ export interface AppDeps {
     streamIdleMs?: number;
   };
   chat: ChatService;
+  files: FilesService;
   runs: RunsService;
   roles: RolesService;
   routing: RoutingService;
@@ -91,6 +94,7 @@ export function buildApp({
   devices,
   llm,
   chat,
+  files,
   runs,
   roles,
   routing,
@@ -171,6 +175,7 @@ export function buildApp({
         await protectedScope.register(deviceRoutes, { devices });
         await protectedScope.register(catalogRoutes, { models: llm.models, quota: llm.quota });
         await protectedScope.register(chatRoutes, { chat, runs });
+        await protectedScope.register(fileRoutes, { files });
         await protectedScope.register(roleRoutes, { roles });
         await protectedScope.register(routerRoutes, { routing });
         await protectedScope.register(researchRoutes, { research });

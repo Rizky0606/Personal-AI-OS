@@ -4,6 +4,7 @@ import { buildApp } from './app.js';
 import { ConfigError, loadConfig } from './config.js';
 import { createDb } from './db/client.js';
 import { createChatService } from './modules/chat/service.js';
+import { createFilesService } from './modules/files/service.js';
 import { createTitleService } from './modules/chat/title.js';
 import { createAuthService } from './modules/auth/service.js';
 import { deriveAuthKeys } from './modules/auth/secrets.js';
@@ -83,9 +84,11 @@ async function main(): Promise<void> {
     complete: createRouterComplete(client, config.ROUTER_MODEL),
     log,
   });
+  const files = createFilesService({ db });
   const chat = createChatService({
     db,
     runner,
+    files,
     titles: createTitleService({ client, model: config.TITLE_MODEL, log }),
     routing,
     roles,
@@ -157,6 +160,7 @@ async function main(): Promise<void> {
       usage,
     },
     chat,
+    files,
     runs,
     roles,
     routing,

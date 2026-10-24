@@ -60,6 +60,11 @@ export const unusedChat: AppDeps['chat'] = {
   idle: unused('chat.idle'),
 };
 
+export const unusedFiles: AppDeps['files'] = {
+  save: unused('files.save'),
+  prepare: unused('files.prepare'),
+};
+
 export const unusedRuns: AppDeps['runs'] = {
   get: unused('runs.get'),
   events: unused('runs.events'),

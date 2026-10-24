@@ -11,7 +11,7 @@ Metode utamanya dibuat sebagai **tes yang berjalan di CI**, bukan pemeriksaan se
 | Tinggi | Tidak ada | - |
 | Sedang | S-1 Gateway bisa dijalankan dengan `HOST=0.0.0.0` di produksi (terbuka ke internet, melewati nginx dan TLS) | Diperbaiki |
 | Sedang | S-2 `pnpm audit` (dev): esbuild < 0.25 lewat `drizzle-kit` (CORS dev server) | Diterima, hanya devDependency |
-| Rendah | S-3 Kontrak memuat `POST /files` yang belum punya route | Diterima, ditunda (lampiran) |
+| Rendah | S-3 Kontrak memuat `POST /files` yang belum punya route | Diperbaiki (route dibuat bersama fitur lampiran) |
 | Rendah | S-4 Terminal desktop tidak dibatasi cwd setelah dibuka | Disengaja, didokumentasikan |
 | Rendah | S-5 Proxy preview worker tidak butuh token (loopback saja) | Diterima, didokumentasikan |
 | Info | S-6 Konfigurasi nginx, firewall, dan permission file di VPS tidak bisa diperiksa dari repo | Contoh disediakan, belum diverifikasi di VPS |
@@ -52,7 +52,7 @@ Sudah dicakup tes dari Fase 17-19 dan dipertahankan: path di luar folder izin, `
 
 **S-2 (diterima).** `esbuild` lewat `drizzle-kit` hanya dipakai saat pengembangan (generate migrasi); tidak ada di image produksi (`pnpm deploy --prod`). Naikkan saat `drizzle-kit` merilis versi yang memakai esbuild >= 0.25.
 
-**S-3 (diterima).** `POST /files` ada di kontrak tetapi belum dibuat (lampiran ditunda sejak Fase 16). Tes audit menandainya eksplisit (`DEFERRED`); menghapusnya dari daftar itu tanpa membuat route akan menggagalkan tes.
+**S-3 (diperbaiki).** `POST /files` kini ada (scope `app`, maks 25 MB, gambar maks 10 MB, hanya gambar/PDF/DOCX/teks, isi rusak ditolak saat unggah, nama dibersihkan dari path dan karakter kontrol). Isi berkas disimpan di Postgres (`files.content`, ikut `pg_dump`) dan tidak pernah dikembalikan ke klien. Daftar `DEFERRED` di tes audit sekarang kosong.
 
 **S-4 (disengaja).** Terminal adalah alat kerja pengguna: cwd awal hanya folder project atau worktree terikat, setelah itu pengguna bebas berpindah. Batas "worker tidak menulis di luar worktree" berlaku untuk agent. Akses terminal hanya lewat WebSocket lokal bertoken.
 

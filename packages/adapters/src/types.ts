@@ -24,6 +24,8 @@ export interface StartRunInput {
    * dipotong lewat edit/hapus pesan), karena sesi lama di mesin masih memuat bagian yang dibuang.
    */
   history?: readonly { role: 'user' | 'assistant'; content: string }[] | undefined;
+  /** Gambar lampiran pesan ini (base64). Hanya Hermes; omp mengabaikannya. */
+  images?: readonly { mime: string; data: string }[] | undefined;
   /** Pembatalan dari luar (selain `RunHandle.cancel`). */
   signal?: AbortSignal | undefined;
   /** Project yang dikerjakan (run coding lewat worker). */
