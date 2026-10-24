@@ -30,7 +30,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.Role
@@ -89,7 +88,8 @@ fun AiosListItem(
     val rowModifier = modifier
         .fillMaxWidth()
         .focusRing(focused, AiosTheme.colors.accent)
-        .background(if (selected) colors.accentSoft else Color.Transparent)
+        // Item aktif: sapuan aksen yang memudar ke kanan (DESIGN_SYSTEM: Efek).
+        .let { if (selected) it.background(activeWash()) else it }
         .let {
             if (onClick != null) {
                 it.clickable(interactionSource = source, indication = null, role = Role.Button, onClick = onClick)
