@@ -399,6 +399,8 @@ describe('start ulang gateway', () => {
     const runId = await started(fake, projectId, card.id);
     await finish(fake, runId);
     await reach(projectId, card.id, 'review');
+    // Sinkronisasi latar belakang harus tuntas dulu, agar tidak menimpa kondisi buatan di bawah.
+    await env.tasks.idle();
 
     // Gateway mati sebelum kartu sempat pindah: kartu masih Running padahal run sudah menunggu tinjauan.
     await env.database.handle.db
@@ -452,10 +454,11 @@ describe('batas run paralel', () => {
     await reach(projectId, a.id, 'review');
 
     // Kartu antrean bisa dibatalkan dengan memindahkannya keluar Running.
+    // Urutan di kolom mengikuti kedatangan, jadi B dan C diselesaikan satu per satu.
     await finish(fake, runB);
+    await reach(projectId, b.id, 'review');
     await finish(fake, runC);
     await reach(projectId, c.id, 'review');
-    await reach(projectId, b.id, 'review');
     expect(column(await board(projectId), 'review')).toEqual(['Kartu A', 'Kartu B', 'Kartu C']);
   });
 
