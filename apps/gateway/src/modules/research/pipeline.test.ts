@@ -496,6 +496,31 @@ describe('pemeriksaan rujukan pada laporan', () => {
     );
   });
 
+  it('panggilan perbaikan rujukan gagal (mis. model lambat): laporan pertama tetap jadi, riset tidak gagal', async () => {
+    const h = harness(makeSites(8), { llm: { mode: 'uncited', repairFixes: true } });
+    const inner = h.deps.llm;
+    const timeouts: (number | undefined)[] = [];
+    h.deps.llm = {
+      chat(request) {
+        const kind = classify(request);
+        if (kind === 'synthesis' || kind === 'repair') timeouts.push(request.timeoutMs);
+        if (kind === 'repair') {
+          return Promise.reject(
+            new ResearchError('llm_timeout', 'Model terlalu lama menjawab.', true),
+          );
+        }
+        return inner.chat(request);
+      },
+    };
+
+    const result = await run(h, 'quick', SMALL);
+
+    expect(result.stats.uncitedClaims).toBe(1);
+    expect(result.reportMd).toContain('_(tanpa rujukan)_');
+    // Menulis laporan memakai batas tunggu panjang, bukan bawaan 120 detik klien 9Router.
+    expect(timeouts).toEqual([5 * 60_000, 5 * 60_000]);
+  });
+
   it('nomor rujukan yang tidak ada ([99]) dibuang dari laporan akhir', async () => {
     const h = harness(makeSites(8), { llm: { mode: 'invalidRef', repairFixes: false } });
     const { reportMd, stats } = await run(h, 'quick', SMALL);

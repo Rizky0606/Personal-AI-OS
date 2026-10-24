@@ -1,5 +1,6 @@
 import type { NineRouterClient } from '../llm/client.js';
 import { usageFromPayload, type UsageRecorder } from '../llm/usage.js';
+import { AppError } from '../../errors.js';
 import { ResearchError } from './errors.js';
 
 export interface ResearchLlmRequest {
@@ -8,6 +9,8 @@ export interface ResearchLlmRequest {
   user: string;
   maxTokens: number;
   temperature?: number;
+  /** Batas menunggu jawaban (bawaan klien 9Router 120 detik); laporan panjang butuh lebih. */
+  timeoutMs?: number;
   signal?: AbortSignal | undefined;
 }
 
@@ -25,22 +28,38 @@ export function createResearchLlm(deps: {
 }): ResearchLlm {
   const { client, usage, log } = deps;
   return {
-    async chat({ model, system, user, maxTokens, temperature = 0, signal }) {
-      const res = await client.request('/chat/completions', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          model,
-          temperature,
-          max_tokens: maxTokens,
-          stream: false,
-          messages: [
-            ...(system ? [{ role: 'system', content: system }] : []),
-            { role: 'user', content: user },
-          ],
-        }),
-        ...(signal ? { signal } : {}),
-      });
+    async chat({ model, system, user, maxTokens, temperature = 0, timeoutMs, signal }) {
+      const res = await client
+        .request('/chat/completions', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            model,
+            temperature,
+            max_tokens: maxTokens,
+            stream: false,
+            messages: [
+              ...(system ? [{ role: 'system', content: system }] : []),
+              { role: 'user', content: user },
+            ],
+          }),
+          ...(signal ? { signal } : {}),
+          ...(timeoutMs ? { timeoutMs } : {}),
+        })
+        .catch((err: unknown) => {
+          // Galat klien 9Router (timeout, tak terjangkau) menjadi galat riset dengan pesan yang jelas.
+          if (err instanceof AppError && err.code === 'llm_upstream_timeout') {
+            throw new ResearchError(
+              'llm_timeout',
+              'Model terlalu lama menjawab. Coba lagi, atau pilih model yang lebih cepat untuk riset.',
+              true,
+            );
+          }
+          if (err instanceof AppError) {
+            throw new ResearchError('llm_unreachable', 'Layanan model tidak terjangkau.', true);
+          }
+          throw err;
+        });
       if (!res.ok) {
         await res.body?.cancel();
         throw new ResearchError(
@@ -50,11 +69,19 @@ export function createResearchLlm(deps: {
         );
       }
       const json = (await res.json().catch(() => null)) as {
-        choices?: { message?: { content?: unknown } }[];
+        choices?: { message?: { content?: unknown }; finish_reason?: unknown }[];
       } | null;
-      const content = json?.choices?.[0]?.message?.content;
+      const choice = json?.choices?.[0];
+      const content = choice?.message?.content;
       if (typeof content !== 'string' || !content.trim()) {
-        throw new ResearchError('llm_empty', 'Model tidak memberi jawaban.', true);
+        // Model penalaran bisa menghabiskan seluruh max_tokens untuk berpikir tanpa menulis jawaban.
+        throw new ResearchError(
+          'llm_empty',
+          choice?.finish_reason === 'length'
+            ? 'Model kehabisan token sebelum menulis jawaban. Pilih model riset tanpa mode penalaran panjang.'
+            : 'Model tidak memberi jawaban.',
+          true,
+        );
       }
       const runId = deps.runId?.();
       const used = usageFromPayload(json);
