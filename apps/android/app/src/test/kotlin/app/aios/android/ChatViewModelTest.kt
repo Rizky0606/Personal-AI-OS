@@ -1,6 +1,10 @@
 package app.aios.android
 
 import app.aios.android.data.api.AUTHOR_ASSISTANT
+import app.aios.android.data.api.MessagePart
+import app.aios.android.data.chat.AttachmentSource
+import app.aios.android.data.chat.AttachmentTooLargeException
+import app.aios.android.data.chat.PickedFile
 import app.aios.android.data.realtime.Backoff
 import app.aios.android.data.realtime.ConnectionState
 import app.aios.android.data.realtime.RealtimeClient
@@ -60,7 +64,14 @@ class ChatViewModelTest {
         val tokens = FakeTokens()
         val connectivity = FakeConnectivity()
         val realtime = RealtimeClient(scope.backgroundScope, ws, tokens, Backoff(), lingerMs = 60_000)
-        val vm = ChatViewModel(repo, realtime, connectivity)
+
+        /** Berkas "dibaca" dari URI: nama = segmen terakhir URI; "besar" melebihi batas. */
+        val source = AttachmentSource { uri ->
+            val name = uri.substringAfterLast('/')
+            if (name.startsWith("besar")) throw AttachmentTooLargeException(name)
+            PickedFile(name, "text/plain", "isi".toByteArray())
+        }
+        val vm = ChatViewModel(repo, realtime, connectivity, source)
         val notices = mutableListOf<Int>()
 
         init {
@@ -450,6 +461,46 @@ class ChatViewModelTest {
         r.vm.deleteMessage("m0")
         runCurrent()
         assertTrue(r.repo.deleteCalls.isEmpty())
+    }
+
+    @Test
+    fun `lampiran diunggah saat dipilih, pesan berisi lampiran saja terkirim lalu composer bersih`() = runVmTest { r ->
+        openC1(r)
+
+        r.vm.addAttachments(listOf("content://x/catatan.txt"))
+        runCurrent()
+        assertEquals(listOf("catatan.txt"), r.repo.uploads)
+        assertTrue(r.ui.canSend)
+
+        r.vm.send()
+        runCurrent()
+
+        assertEquals(listOf(MessagePart.File("f-1", "catatan.txt", "text/plain")), r.repo.sentFiles.single())
+        assertEquals("", r.repo.sendCalls.single().second)
+        assertTrue(r.ui.attachments.isEmpty())
+    }
+
+    @Test
+    fun `lampiran terlalu besar atau ditolak server menampilkan alasan dan tidak ikut terkirim`() = runVmTest { r ->
+        openC1(r)
+        r.repo.failUpload = HttpException(
+            Response.error<Unit>(
+                400,
+                """{"type":"t","title":"t","status":400,"detail":"d","code":"unsupported_file_type"}"""
+                    .toResponseBody("application/problem+json".toMediaType())
+            )
+        )
+
+        r.vm.addAttachments(listOf("content://x/besar.bin", "content://x/setup.exe"))
+        runCurrent()
+
+        assertEquals(
+            listOf(R.string.chat_attach_too_large, R.string.chat_attach_unsupported),
+            r.ui.attachments.map { it.error }
+        )
+        assertFalse(r.ui.canSend)
+        r.vm.removeAttachment(r.ui.attachments.first().id)
+        assertEquals(listOf("setup.exe"), r.ui.attachments.map { it.name })
     }
 
     @Test

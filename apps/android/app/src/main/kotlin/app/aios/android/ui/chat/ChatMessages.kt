@@ -31,6 +31,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import app.aios.android.R
+import app.aios.android.data.api.MessagePart
 import app.aios.android.ui.chat.markdown.MarkdownText
 import app.aios.android.ui.components.AiosButton
 import app.aios.android.ui.components.AiosChip
@@ -58,16 +59,20 @@ fun UserMessageRow(
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     val menuLabel = stringResource(R.string.chat_message_menu)
+    val files = item.message.parts.filterIsInstance<MessagePart.File>()
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.End) {
-        Box {
-            UserBubble(
-                text = item.message.text,
-                modifier = if (item.canModify) {
-                    Modifier.combinedClickable(onLongClickLabel = menuLabel, onLongClick = { menuOpen = true }) {}
-                } else {
-                    Modifier
-                }
-            )
+        // Tekan lama di teks maupun lampiran membuka menu; pesan berisi lampiran saja tetap bisa diubah/dihapus.
+        Box(
+            modifier = if (item.canModify) {
+                Modifier.combinedClickable(onLongClickLabel = menuLabel, onLongClick = { menuOpen = true }) {}
+            } else {
+                Modifier
+            }
+        ) {
+            Column(horizontalAlignment = Alignment.End) {
+                if (item.message.text.isNotEmpty() || files.isEmpty()) UserBubble(text = item.message.text)
+                if (files.isNotEmpty()) FileChips(files)
+            }
             MessageMenu(
                 expanded = menuOpen,
                 onDismiss = { menuOpen = false },
@@ -88,6 +93,38 @@ fun UserMessageRow(
 fun PendingUserRow(item: ChatItem.PendingUser) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
         UserBubble(text = item.text, dimmed = true)
+    }
+}
+
+/** Lampiran pesan pengguna: chip nama berkas di bawah teks. */
+@Composable
+private fun FileChips(files: List<MessagePart.File>) {
+    val colors = AiosTheme.colors
+    val label = stringResource(R.string.chat_attachments)
+    Column(
+        modifier = Modifier.padding(top = Tokens.Space.s4).semantics { contentDescription = label },
+        horizontalAlignment = Alignment.End,
+        verticalArrangement = Arrangement.spacedBy(Tokens.Space.s4)
+    ) {
+        files.forEach { file ->
+            Row(
+                modifier = Modifier
+                    .background(colors.surface2, RoundedCornerShape(Tokens.Radius.md))
+                    .padding(horizontal = Tokens.Space.s8, vertical = Tokens.Space.s4),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Tokens.Space.s4)
+            ) {
+                AiosIcon(R.drawable.ic_attach, contentDescription = null, tint = colors.text2)
+                Text(
+                    text = file.name,
+                    style = AiosTheme.type.meta,
+                    color = colors.text,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.widthIn(max = Tokens.Space.s48 * 5)
+                )
+            }
+        }
     }
 }
 

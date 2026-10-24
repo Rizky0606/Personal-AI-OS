@@ -13,6 +13,11 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
@@ -62,13 +67,18 @@ fun Composer(
     onStop: () -> Unit,
     onPickModel: () -> Unit,
     voice: VoiceInputState,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    attachments: List<PendingAttachment> = emptyList(),
+    onAttach: (() -> Unit)? = null,
+    onRemoveAttachment: (String) -> Unit = {}
 ) {
     val colors = AiosTheme.colors
     val source = remember { MutableInteractionSource() }
     val focused by source.collectIsFocusedAsState()
     val shape = RoundedCornerShape(Tokens.Radius.md)
-    val canSend = draft.isNotBlank() && !sending
+    val uploading = attachments.any { it.uploading }
+    val hasFiles = attachments.any { it.part != null }
+    val canSend = (draft.isNotBlank() || hasFiles) && !sending && !uploading
     val composerLabel = stringResource(R.string.chat_composer_label)
 
     Column(
@@ -86,11 +96,26 @@ fun Composer(
             .padding(horizontal = Tokens.Space.s12, vertical = Tokens.Space.s8),
         verticalArrangement = Arrangement.spacedBy(Tokens.Space.s8)
     ) {
-        AiosChip(
-            text = modelLabel,
-            onClick = onPickModel,
-            modifier = Modifier.semantics { contentDescription = modelLabel }
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            AiosChip(
+                text = modelLabel,
+                onClick = onPickModel,
+                modifier = Modifier.semantics { contentDescription = modelLabel }
+            )
+            Spacer(Modifier.weight(1f))
+            if (onAttach != null) {
+                val attachLabel = stringResource(R.string.chat_attach)
+                Box(
+                    modifier = Modifier
+                        .size(Tokens.touchTarget)
+                        .clip(RoundedCornerShape(Tokens.Radius.md))
+                        .clickable(role = Role.Button, onClick = onAttach)
+                        .semantics { contentDescription = attachLabel },
+                    contentAlignment = Alignment.Center
+                ) { AiosIcon(R.drawable.ic_attach, contentDescription = null) }
+            }
+        }
+        if (attachments.isNotEmpty()) AttachmentRow(attachments, onRemoveAttachment)
         Row(
             horizontalArrangement = Arrangement.spacedBy(Tokens.Space.s8),
             verticalAlignment = Alignment.Bottom
@@ -150,6 +175,60 @@ fun Composer(
                     enabled = canSend,
                     onClick = onSend
                 )
+            }
+        }
+    }
+}
+
+/** Chip lampiran di composer: nama, status unggah atau alasan gagal, dan tombol hapus. */
+@Composable
+private fun AttachmentRow(attachments: List<PendingAttachment>, onRemove: (String) -> Unit) {
+    val colors = AiosTheme.colors
+    val groupLabel = stringResource(R.string.chat_attachments)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .semantics { contentDescription = groupLabel },
+        horizontalArrangement = Arrangement.spacedBy(Tokens.Space.s8)
+    ) {
+        attachments.forEach { item ->
+            val failed = item.error != null
+            val tone = if (failed) colors.danger else colors.text2
+            val shape = RoundedCornerShape(Tokens.Radius.md)
+            val removeLabel = stringResource(R.string.chat_attach_remove, item.name)
+            Row(
+                modifier = Modifier
+                    .background(colors.surface2, RoundedCornerShape(Tokens.Radius.md))
+                    .border(Hairline, if (failed) colors.danger else colors.border, shape)
+                    .padding(start = Tokens.Space.s8),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Tokens.Space.s4)
+            ) {
+                AiosIcon(R.drawable.ic_attach, contentDescription = null, tint = tone)
+                Text(
+                    text = item.name,
+                    style = AiosTheme.type.meta,
+                    color = if (failed) colors.danger else colors.text,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.widthIn(max = Tokens.Space.s48 * 3)
+                )
+                val status = when {
+                    item.uploading -> stringResource(R.string.chat_attach_uploading)
+                    item.error != null -> stringResource(item.error)
+                    else -> null
+                }
+                if (status != null) {
+                    Text(text = status, style = AiosTheme.type.meta, color = tone)
+                }
+                Box(
+                    modifier = Modifier
+                        .size(Tokens.touchTarget)
+                        .clickable(role = Role.Button) { onRemove(item.id) }
+                        .semantics { contentDescription = removeLabel },
+                    contentAlignment = Alignment.Center
+                ) { AiosIcon(R.drawable.ic_close, contentDescription = null) }
             }
         }
     }

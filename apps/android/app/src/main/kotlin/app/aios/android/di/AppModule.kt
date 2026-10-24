@@ -21,7 +21,9 @@ import app.aios.android.push.PushTokenSource
 import app.aios.android.data.api.ResearchApi
 import app.aios.android.data.research.RemoteResearchRepository
 import app.aios.android.data.research.ResearchRepository
+import app.aios.android.data.chat.AttachmentSource
 import app.aios.android.data.chat.ChatRepository
+import app.aios.android.data.chat.ContentResolverAttachmentSource
 import app.aios.android.data.chat.RoomChatRepository
 import app.aios.android.data.db.ChatDao
 import app.aios.android.data.realtime.Backoff
@@ -173,6 +175,10 @@ object AppModule {
         onPushRegistered = push::markRegistered,
         fixedServerUrl = BuildConfig.GATEWAY_URL.ifBlank { null }
     )
+
+    @Provides
+    fun attachmentSource(@ApplicationContext context: Context): AttachmentSource =
+        ContentResolverAttachmentSource(context.contentResolver)
 
     @Provides
     @Singleton

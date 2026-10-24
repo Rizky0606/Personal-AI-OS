@@ -44,6 +44,14 @@
     <string name="chat_edit_last">Edit</string>
     <string name="chat_resend_last">Kirim ulang</string>
     <string name="chat_message_menu">Menu pesan</string>
+    <string name="chat_attach">Lampirkan berkas</string>
+    <string name="chat_attachments">Lampiran</string>
+    <string name="chat_attach_uploading">Mengunggah…</string>
+    <string name="chat_attach_remove">Hapus lampiran %1$s</string>
+    <string name="chat_attach_too_large">Melebihi 25 MB</string>
+    <string name="chat_attach_unsupported">Jenis berkas belum didukung</string>
+    <string name="chat_attach_unreadable">Isi berkas tidak bisa dibaca</string>
+    <string name="chat_attach_failed">Gagal mengunggah</string>
     <string name="chat_message_edit">Ubah</string>
     <string name="chat_message_delete">Hapus</string>
     <string name="chat_message_delete_title">Hapus pesan ini?</string>

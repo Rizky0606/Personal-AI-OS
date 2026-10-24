@@ -119,13 +119,30 @@ data class Run(
     val updatedAt: String
 )
 
-/** Bagian yang dikirim pengguna; saat ini hanya teks (lampiran ditunda sampai /files ada). */
+/** Bagian yang dikirim pengguna: teks, atau lampiran yang sudah diunggah ke `/files`. */
 @Serializable
-data class InputPart(val type: String, val text: String? = null) {
+data class InputPart(
+    val type: String,
+    val text: String? = null,
+    val fileId: String? = null,
+    val name: String? = null,
+    val mime: String? = null
+) {
     companion object {
         fun text(value: String) = InputPart(type = "text", text = value)
+
+        fun file(part: MessagePart.File) =
+            InputPart(type = "file", fileId = part.fileId, name = part.name, mime = part.mime)
+
+        /** Teks (bila ada) lalu lampiran; server menolak pesan tanpa keduanya. */
+        fun of(text: String, files: List<MessagePart.File>) =
+            (if (text.isNotBlank()) listOf(text(text)) else emptyList()) + files.map(::file)
     }
 }
+
+/** Hasil `POST /files`. */
+@Serializable
+data class FileRecord(val id: String, val name: String, val mime: String, val size: Long)
 
 @Serializable
 data class SendMessageRequest(
