@@ -1,6 +1,6 @@
 [package]
 name = "aios-desktop"
-version = "1.0.1"
+version = "1.0.2"
 description = "Personal AI OS untuk Windows"
 edition = "2021"
 rust-version = "1.77"

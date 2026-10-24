@@ -29,7 +29,7 @@ android {
         // CI mengisi keduanya: versionCode naik di setiap build (Android hanya memasang menimpa bila kodenya lebih
         // tinggi), versionName dari tag rilis. Build lokal memakai nilai bawaan.
         versionCode = providers.gradleProperty("aiosVersionCode").orNull?.toInt() ?: 100
-        versionName = providers.gradleProperty("aiosVersionName").getOrElse("1.0.1")
+        versionName = providers.gradleProperty("aiosVersionName").getOrElse("1.0.2")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Alamat gateway tertanam: layar login tidak meminta alamat. Kosongkan (-PaiosGatewayUrl=) agar alamat
         // diketik saat login, mis. untuk E2E atau gateway lokal.
