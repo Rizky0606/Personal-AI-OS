@@ -10,6 +10,6 @@ User=root
 Nice=15
 IOSchedulingClass=idle
 PrivateTmp=true
-ProtectHome=true
+ProtectHome=read-only
 NoNewPrivileges=true
 TimeoutStartSec=2h

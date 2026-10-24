@@ -10,7 +10,7 @@ jobs:
         image: postgres:16
         env:
           POSTGRES_USER: aios
-          POSTGRES_PASSWORD: aios-ci
+          POSTGRES_PASSWORD: ${{ secrets.CI_POSTGRES_PASSWORD }}
           POSTGRES_DB: postgres
         ports:
           - 5432:5432
@@ -21,7 +21,7 @@ jobs:
           --health-retries 10
     env:
       # Tes integrasi gateway memakai Postgres nyata; di CI tidak boleh dilewati.
-      TEST_DATABASE_URL: postgres://aios:aios-ci@127.0.0.1:5432/postgres
+      TEST_DATABASE_URL: postgres://aios:${{ secrets.CI_POSTGRES_PASSWORD }}@127.0.0.1:5432/postgres
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -30,18 +30,39 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # lint bukan task turbo (tidak otomatis ^build seperti typecheck/test); packages/roles dkk.
+      # impor dari @aios/contracts yang perlu dist/ ter-build dulu, kalau tidak type resolution
+      # eslint rusak (ribuan "Unsafe ..." palsu).
+      - run: pnpm build
       - name: Uji mandiri skrip backup, restore, dan cek versi (perintah palsu)
         run: bash infra/scripts/selftest.sh
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
 
-  # E2E desktop (UI asli + gateway, worker, Postgres tertanam; layanan eksternal palsu). Uji run coding
+  # E2E desktop (UI asli + gateway, worker, Postgres nyata; layanan eksternal palsu). Uji run coding
   # dilewati bila omp tidak terpasang di runner.
   e2e-desktop:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: aios
+          POSTGRES_PASSWORD: ${{ secrets.CI_POSTGRES_PASSWORD }}
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U aios"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     env:
       E2E_BROWSER: chrome
+      # Binary Postgres tertanam butuh ICU lama yang tidak ada di runner (lihat e2e/harness/stack.ts);
+      # pakai servis Postgres nyata, sama seperti job "check".
+      TEST_DATABASE_URL: postgres://aios:${{ secrets.CI_POSTGRES_PASSWORD }}@127.0.0.1:5432/postgres
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -54,6 +75,7 @@ jobs:
         run: |
           pnpm --filter @aios/contracts build
           pnpm --filter @aios/adapters build
+          pnpm --filter @aios/roles build
       - run: pnpm --filter @aios/e2e e2e
       - uses: actions/upload-artifact@v4
         if: failure()

@@ -56,7 +56,7 @@ case "$args" in
   *"image inspect"*) [[ "${STUB_NO_IMAGE:-0}" == 1 ]] && exit 1 ;;
   *"compose build"*) [[ "${STUB_BUILD_FAIL:-0}" == 1 ]] && exit 1 ;;
   *"postgres --version"*) echo "postgres (PostgreSQL) 16.4" ;;
-  *"images searxng"*) echo "2026.10.1-abc" ;;
+  *"images searxng"*) echo '[{"Tag":"2026.10.1-abc"}]' ;;
   *pg_dump*) [[ "${STUB_EMPTY_DUMP:-0}" == 1 ]] || echo "PGDMP-isi" ;;
   *pg_restore*) cat >/dev/null ;;
   *__drizzle_migrations*) echo "${STUB_MIGRATIONS:-3}" ;;

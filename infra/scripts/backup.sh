@@ -40,6 +40,8 @@ flock -n 9 || die "backup lain masih berjalan"
 STAGE="$(mktemp -d -p "${TMPDIR:-/var/tmp}" aios-backup.XXXXXX)"
 chmod 700 "$STAGE"
 trap 'rm -rf "$STAGE"' EXIT
+# ProtectHome (systemd) membuat /root read-only, termasuk cache default restic (~/.cache/restic).
+export RESTIC_CACHE_DIR="$STAGE/restic-cache"
 
 log "dump database $PG_DB"
 ( cd "$COMPOSE_DIR" && docker compose exec -T "$PG_SERVICE" pg_dump -U "$PG_USER" -d "$PG_DB" -Fc --no-owner ) > "$STAGE/aios.dump" \
@@ -47,8 +49,15 @@ log "dump database $PG_DB"
 [[ -s "$STAGE/aios.dump" ]] || die "hasil pg_dump kosong"
 
 PATHS=("$STAGE/aios.dump")
+RESTIC_EXTRA_ARGS=()
 if [[ -n "$HERMES_DATA_DIR" && -d "$HERMES_DATA_DIR" ]]; then
   PATHS+=("$HERMES_DATA_DIR")
+  # Kecualikan instalasi (source code, runtime bundel, cache, dump sesi) -- bukan data,
+  # dan reproducible lewat `hermes update`/reinstall. Tanpa ini backup ~7x lebih besar
+  # (data sungguhan: memori, skill, profil, db state, config).
+  for d in hermes-agent tools cache node lsp bin installs natives puppeteer sessions logs; do
+    RESTIC_EXTRA_ARGS+=(--exclude "$HERMES_DATA_DIR/$d")
+  done
 else
   log "peringatan: HERMES_DATA_DIR tidak diisi atau tidak ada; data Hermes tidak ikut"
 fi
@@ -58,7 +67,7 @@ for f in .env gateway.env secrets; do
 done
 
 log "restic backup (${#PATHS[@]} sumber)"
-restic backup --tag aios --host "${BACKUP_HOST:-$(hostname)}" --quiet "${PATHS[@]}" || die "restic backup gagal"
+restic backup --tag aios --host "${BACKUP_HOST:-$(hostname)}" --quiet "${RESTIC_EXTRA_ARGS[@]}" "${PATHS[@]}" || die "restic backup gagal"
 
 log "menerapkan retensi: $KEEP_DAILY harian, $KEEP_WEEKLY mingguan, $KEEP_MONTHLY bulanan"
 restic forget --tag aios --prune --quiet \

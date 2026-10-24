@@ -28,6 +28,25 @@ export async function linkNodeModules(
   });
   if (ignored.code !== 0) return;
   await fs.symlink(source, link, 'junction');
+  // Pola berakhiran "/" di .gitignore cuma cocok dengan direktori sungguhan, bukan symlink (perilaku
+  // baku git) -- tautan yang baru dibuat tetap muncul sebagai "??" di git status walau node_modules/
+  // sudah diabaikan proyek. Tambahkan pengecualian khusus symlink (tanpa "/") di exclude lokal milik
+  // repo (tidak ikut commit) supaya status tetap bersih untuk diff review.
+  await excludeSymlinkFromStatus(processes, cwd);
+}
+
+async function excludeSymlinkFromStatus(processes: ProcessManager, cwd: string): Promise<void> {
+  const common = await processes.run('git', ['rev-parse', '--git-common-dir'], {
+    cwd,
+    timeoutMs: 10_000,
+  });
+  if (common.code !== 0) return;
+  const excludeFile = nodePath.resolve(cwd, common.stdout.trim(), 'info', 'exclude');
+  await fs.mkdir(nodePath.dirname(excludeFile), { recursive: true }).catch(() => undefined);
+  const current = await fs.readFile(excludeFile, 'utf8').catch(() => '');
+  if (current.split('\n').some((line) => line.trim() === 'node_modules')) return;
+  const prefix = current === '' || current.endsWith('\n') ? '' : '\n';
+  await fs.appendFile(excludeFile, `${prefix}node_modules\n`).catch(() => undefined);
 }
 
 /**

@@ -8,7 +8,7 @@ set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VERSIONS_FILE="${VERSIONS_FILE:-$HERE/../VERSIONS.md}"
-COMPOSE_DIR="${COMPOSE_DIR:-/srv/personal-ai-os}"
+COMPOSE_DIR="${COMPOSE_DIR:-/srv/personal-ai-os/infra/compose}"
 LENIENT=0; [[ "${1:-}" == "--lenient" ]] && LENIENT=1
 
 [[ -f "$VERSIONS_FILE" ]] || { echo "GAGAL: $VERSIONS_FILE tidak ada" >&2; exit 2; }
@@ -19,11 +19,19 @@ first_version() { grep -oE '[0-9]+(\.[0-9]+)+' | head -n1; }
 installed() {
   case "$1" in
     omp)      command -v omp >/dev/null && omp --version 2>/dev/null | first_version ;;
-    9router)  command -v 9router >/dev/null && 9router --version 2>/dev/null | first_version ;;
+    9router)
+      router_url="${NINEROUTER_URL:-}"
+      case "$router_url" in
+        http://127.0.0.1:*|https://127.0.0.1:*|http://localhost:*|https://localhost:*)
+          command -v 9router >/dev/null && 9router --version 2>/dev/null | first_version
+          ;;
+        *) printf '%s' 'remote' ;;
+      esac
+      ;;
     hermes)   command -v hermes >/dev/null && hermes --version 2>/dev/null | first_version ;;
     node)     command -v node >/dev/null && node --version 2>/dev/null | first_version ;;
     postgres) command -v docker >/dev/null && (cd "$COMPOSE_DIR" 2>/dev/null && docker compose exec -T postgres postgres --version 2>/dev/null) | first_version ;;
-    searxng)  command -v docker >/dev/null && (cd "$COMPOSE_DIR" 2>/dev/null && docker compose images searxng --format '{{.Tag}}' 2>/dev/null) | head -n1 ;;
+    searxng)  command -v docker >/dev/null && command -v jq >/dev/null && (cd "$COMPOSE_DIR" 2>/dev/null && docker compose images searxng --format json 2>/dev/null) | jq -r '.[0].Tag // empty' ;;
   esac
 }
 
@@ -34,7 +42,8 @@ printf '%-10s %-14s %-14s %s\n' TOOL TERKUNCI TERPASANG STATUS
 bad=0
 for tool in omp 9router hermes searxng postgres node; do
   want="$(lock "$tool")"; have="$(installed "$tool" || true)"
-  if [[ -z "$have" ]]; then status="TIDAK TERPASANG"; [[ -n "$want" ]] && bad=1
+  if [[ "$have" == "remote" ]]; then status="JARAK JAUH (tidak dibandingkan)"
+  elif [[ -z "$have" ]]; then status="TIDAK TERPASANG"; [[ -n "$want" ]] && bad=1
   elif [[ -z "$want" ]]; then status="BELUM DIKUNCI (catat $have di VERSIONS.md)"
   elif matches "$want" "$have"; then status="OK"
   else status="BERBEDA"; bad=1; fi
