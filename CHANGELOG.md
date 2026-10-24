@@ -2,7 +2,7 @@
 
 Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/); versi mengikuti [SemVer](https://semver.org/lang/id/).
 
-## [1.0.0] - belum dirilis
+## [1.0.1] - 2026-10-24
 
 Rilis stabil pertama yang diterbitkan lewat tag (build `1.0.0` sebelumnya hanya artefak CI dari `main`). Mulai rilis ini versi naik di setiap tag, sehingga installer Windows dan APK Android terpasang menimpa versi sebelumnya, dan aplikasi Windows memperbarui diri lewat bagian Pembaruan di Pengaturan.
 
