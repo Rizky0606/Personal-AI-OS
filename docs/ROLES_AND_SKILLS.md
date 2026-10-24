@@ -6,7 +6,7 @@ Setiap pesan diarahkan otomatis ke satu agent role. Role menentukan mesin, model
 
 | Role | Grup | Mesin | Dipakai untuk | Bukan untuk (serahkan ke) | Skill khusus |
 | --- | --- | --- | --- | --- | --- |
-| `general` | Umum | Hermes | Pertanyaan umum, percakapan, fallback | Kode project (frontend/backend), riset bersitasi (researcher) | answer-first, clarify-once |
+| `general` | Umum | Hermes | Pertanyaan apa pun, percakapan, menulis dan menjelaskan kode di chat (template, contoh, skrip), fallback | Mengubah berkas di folder project (frontend/backend/debugger), riset bersitasi (researcher) | answer-first, clarify-once |
 | `researcher` | Umum | Research engine + Hermes | Riset bersitasi, perbandingan, fakta terkini | Menulis kode (coding), naskah (writer) | source-verification, citation, fact-vs-opinion |
 | `writer` | Umum | Hermes | Ide konten, script video, naskah, caption, email | Fakta yang belum diverifikasi (researcher) | stop-slop, script-structure, audience-voice |
 | `frontend` | Coding | omp | UI, komponen, styling, aksesibilitas, state klien | API, database, auth (backend) | ui-baseline, a11y-check, ui-states, react-practices |
