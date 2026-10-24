@@ -1,7 +1,15 @@
 package app.aios.android.ui.chat
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.runtime.remember
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -35,11 +43,38 @@ import app.aios.android.ui.theme.PlexMono
 import app.aios.ui.tokens.Tokens
 import java.util.Locale
 
-/** Pesan pengguna: blok `surface-2` rata kanan, radius 12 (token md Android). */
+/**
+ * Pesan pengguna: blok `surface-2` rata kanan, radius 12 (token md Android). Tekan lama membuka menu Ubah dan
+ * Hapus saat tidak ada jawaban yang berjalan.
+ */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun UserMessageRow(item: ChatItem.User, onEdit: () -> Unit, onResend: () -> Unit) {
+fun UserMessageRow(
+    item: ChatItem.User,
+    onEdit: () -> Unit,
+    onResend: () -> Unit,
+    onStartEdit: (String) -> Unit,
+    onDelete: (String) -> Unit
+) {
+    var menuOpen by remember { mutableStateOf(false) }
+    val menuLabel = stringResource(R.string.chat_message_menu)
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.End) {
-        UserBubble(text = item.message.text)
+        Box {
+            UserBubble(
+                text = item.message.text,
+                modifier = if (item.canModify) {
+                    Modifier.combinedClickable(onLongClickLabel = menuLabel, onLongClick = { menuOpen = true }) {}
+                } else {
+                    Modifier
+                }
+            )
+            MessageMenu(
+                expanded = menuOpen,
+                onDismiss = { menuOpen = false },
+                onEdit = { onStartEdit(item.message.id) },
+                onDelete = { onDelete(item.message.id) }
+            )
+        }
         if (item.canEdit) {
             Row(horizontalArrangement = Arrangement.spacedBy(Tokens.Space.s4)) {
                 AiosButton(stringResource(R.string.chat_edit_last), onEdit, kind = ButtonKind.Ghost)
@@ -56,14 +91,45 @@ fun PendingUserRow(item: ChatItem.PendingUser) {
     }
 }
 
+/** Menu pesan: Ubah (hanya pesan pengguna) dan Hapus. */
 @Composable
-private fun UserBubble(text: String, dimmed: Boolean = false) {
+private fun MessageMenu(expanded: Boolean, onDismiss: () -> Unit, onEdit: (() -> Unit)?, onDelete: () -> Unit) {
+    DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
+        if (onEdit != null) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.chat_message_edit), style = AiosTheme.type.ui) },
+                leadingIcon = { AiosIcon(R.drawable.ic_pencil, contentDescription = null) },
+                onClick = {
+                    onDismiss()
+                    onEdit()
+                }
+            )
+        }
+        DropdownMenuItem(
+            text = {
+                Text(
+                    stringResource(R.string.chat_message_delete),
+                    style = AiosTheme.type.ui,
+                    color = AiosTheme.colors.danger
+                )
+            },
+            leadingIcon = { AiosIcon(R.drawable.ic_trash, contentDescription = null, tint = AiosTheme.colors.danger) },
+            onClick = {
+                onDismiss()
+                onDelete()
+            }
+        )
+    }
+}
+
+@Composable
+private fun UserBubble(text: String, dimmed: Boolean = false, modifier: Modifier = Modifier) {
     val colors = AiosTheme.colors
     Text(
         text = text,
         style = AiosTheme.type.chat,
         color = if (dimmed) colors.text2 else colors.text,
-        modifier = Modifier
+        modifier = modifier
             .widthIn(max = Tokens.Space.s48 * 7)
             .background(colors.surface2, RoundedCornerShape(Tokens.Radius.md))
             .padding(horizontal = Tokens.Space.s12, vertical = Tokens.Space.s8)
@@ -76,12 +142,15 @@ fun AssistantMessageRow(
     item: ChatItem.Assistant,
     roleName: (String) -> String,
     onRoleClick: () -> Unit,
-    onCopied: () -> Unit
+    onCopied: () -> Unit,
+    onDelete: (String) -> Unit = {}
 ) {
     val colors = AiosTheme.colors
+    var menuOpen by remember { mutableStateOf(false) }
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Tokens.Space.s8)) {
-        if (item.role != null || item.model != null) {
+        if (item.role != null || item.model != null || item.canModify) {
             Row(
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(Tokens.Space.s8),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -101,8 +170,31 @@ fun AssistantMessageRow(
                         style = AiosTheme.type.caption.copy(fontFamily = PlexMono),
                         color = colors.text3,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
+                }
+                if (item.canModify) {
+                    Spacer(Modifier.weight(1f))
+                    Box {
+                        Box(
+                            modifier = Modifier
+                                .size(Tokens.touchTarget)
+                                .clickable(role = Role.Button) { menuOpen = true },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            AiosIcon(
+                                R.drawable.ic_more,
+                                contentDescription = stringResource(R.string.chat_message_menu)
+                            )
+                        }
+                        MessageMenu(
+                            expanded = menuOpen,
+                            onDismiss = { menuOpen = false },
+                            onEdit = null,
+                            onDelete = { onDelete(item.id) }
+                        )
+                    }
                 }
             }
         }

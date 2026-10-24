@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,6 +30,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.aios.android.R
 import app.aios.android.data.realtime.ConnectionState
+import app.aios.android.ui.components.AiosButton
+import app.aios.android.ui.components.ButtonKind
 import app.aios.android.ui.components.EmptyState
 import app.aios.android.ui.components.ErrorBanner
 import app.aios.android.ui.components.OfflineBanner
@@ -51,6 +54,7 @@ fun ChatScreen(viewModel: ChatViewModel, snackbar: SnackbarHostState) {
     val copiedText = stringResource(R.string.chat_copied)
     var modelSheet by remember { mutableStateOf(false) }
     var roleSheet by remember { mutableStateOf(false) }
+    var toDelete by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
@@ -105,6 +109,8 @@ fun ChatScreen(viewModel: ChatViewModel, snackbar: SnackbarHostState) {
                     roleName = { roleNames[it] ?: it },
                     onEdit = viewModel::editLast,
                     onResend = viewModel::resendLast,
+                    onStartEdit = viewModel::startEdit,
+                    onDelete = { toDelete = it },
                     onRoleClick = { roleSheet = true },
                     onCopied = { /* umpan balik lewat snackbar di bawah */ },
                     copiedText = copiedText,
@@ -112,6 +118,8 @@ fun ChatScreen(viewModel: ChatViewModel, snackbar: SnackbarHostState) {
                 )
             }
         }
+
+        if (ui.editingId != null) EditingStrip(onCancel = viewModel::cancelEdit)
 
         Composer(
             draft = ui.draft,
@@ -137,6 +145,15 @@ fun ChatScreen(viewModel: ChatViewModel, snackbar: SnackbarHostState) {
             onDismiss = { modelSheet = false }
         )
     }
+    toDelete?.let { target ->
+        DeleteMessageDialog(
+            onConfirm = {
+                viewModel.deleteMessage(target)
+                toDelete = null
+            },
+            onDismiss = { toDelete = null }
+        )
+    }
     if (roleSheet) {
         RoleSheet(
             roles = ui.roles,
@@ -158,6 +175,8 @@ private fun MessageList(
     roleName: (String) -> String,
     onEdit: () -> Unit,
     onResend: () -> Unit,
+    onStartEdit: (String) -> Unit,
+    onDelete: (String) -> Unit,
     onRoleClick: () -> Unit,
     onCopied: () -> Unit,
     copiedText: String,
@@ -176,7 +195,13 @@ private fun MessageList(
     ) {
         items(items, key = { it.key }) { item ->
             when (item) {
-                is ChatItem.User -> UserMessageRow(item, onEdit = onEdit, onResend = onResend)
+                is ChatItem.User -> UserMessageRow(
+                    item,
+                    onEdit = onEdit,
+                    onResend = onResend,
+                    onStartEdit = onStartEdit,
+                    onDelete = onDelete
+                )
                 is ChatItem.PendingUser -> PendingUserRow(item)
                 is ChatItem.Assistant -> AssistantMessageRow(
                     item = item,
@@ -185,7 +210,8 @@ private fun MessageList(
                     onCopied = {
                         copiedTick++
                         onCopied()
-                    }
+                    },
+                    onDelete = onDelete
                 )
                 is ChatItem.System -> SystemNoteRow(item.message.text)
                 is ChatItem.Failure -> FailureRow(item, onResend = onResend)
@@ -203,6 +229,53 @@ private fun MessageList(
             }
         }
     }
+}
+
+/** Baris di atas composer selama pesan sedang diubah. */
+@Composable
+private fun EditingStrip(onCancel: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = Tokens.Space.s16, vertical = Tokens.Space.s4),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Tokens.Space.s8)
+    ) {
+        Text(
+            text = stringResource(R.string.chat_editing_banner),
+            style = AiosTheme.type.caption,
+            color = AiosTheme.colors.text2,
+            modifier = Modifier.weight(1f)
+        )
+        AiosButton(stringResource(R.string.chat_editing_cancel), onCancel, kind = ButtonKind.Ghost)
+    }
+}
+
+@Composable
+private fun DeleteMessageDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    val colors = AiosTheme.colors
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = colors.surface,
+        title = {
+            Text(
+                stringResource(R.string.chat_message_delete_title),
+                style = AiosTheme.type.section,
+                color = colors.text
+            )
+        },
+        text = {
+            Text(
+                stringResource(R.string.chat_message_delete_body),
+                style = AiosTheme.type.ui,
+                color = colors.text2
+            )
+        },
+        confirmButton = {
+            AiosButton(stringResource(R.string.chat_message_delete), onClick = onConfirm, kind = ButtonKind.Danger)
+        },
+        dismissButton = {
+            AiosButton(stringResource(R.string.chat_delete_cancel), onClick = onDismiss, kind = ButtonKind.Ghost)
+        }
+    )
 }
 
 /** Indikator kecil saat soket menyambung ulang: satu baris teks, tanpa dialog. */

@@ -397,6 +397,62 @@ class ChatViewModelTest {
     }
 
     @Test
+    fun `ubah pesan lewat composer memanggil edit, memotong percakapan, lalu mengikuti run baru`() = runVmTest { r ->
+        openC1(r)
+
+        r.vm.startEdit("m0")
+        assertEquals("pertanyaan lama", r.ui.draft)
+        assertEquals("m0", r.ui.editingId)
+        type(r, "pertanyaan baru")
+
+        assertEquals(listOf("m0" to "pertanyaan baru"), r.repo.editCalls)
+        assertTrue(r.repo.sendCalls.isEmpty())
+        assertNull(r.ui.editingId)
+        assertEquals(listOf("pertanyaan baru"), r.ui.messages.map { it.text })
+        assertNotNull(r.ui.live)
+    }
+
+    @Test
+    fun `batal ubah mengosongkan composer dan kirim berikutnya adalah pesan biasa`() = runVmTest { r ->
+        openC1(r)
+
+        r.vm.startEdit("m0")
+        r.vm.cancelEdit()
+        assertNull(r.ui.editingId)
+        assertEquals("", r.ui.draft)
+        type(r, "lanjut")
+
+        assertTrue(r.repo.editCalls.isEmpty())
+        assertEquals(1, r.repo.sendCalls.size)
+    }
+
+    @Test
+    fun `hapus jawaban membuang pesan itu dan sesudahnya`() = runVmTest { r ->
+        openC1(r)
+
+        r.vm.deleteMessage("m0a")
+        runCurrent()
+
+        assertEquals(listOf("m0a"), r.repo.deleteCalls)
+        assertEquals(listOf("m0"), r.ui.messages.map { it.id })
+    }
+
+    @Test
+    fun `menu ubah dan hapus hanya tersedia saat tidak ada jawaban berjalan`() = runVmTest { r ->
+        openC1(r)
+        val idle = buildChatItems(r.ui)
+        assertTrue(idle.filterIsInstance<ChatItem.User>().all { it.canModify })
+        assertTrue(idle.filterIsInstance<ChatItem.Assistant>().all { it.canModify })
+
+        type(r, "baru")
+        val busy = buildChatItems(r.ui)
+        assertFalse(busy.filterIsInstance<ChatItem.User>().any { it.canModify })
+        r.vm.deleteMessage("m0")
+        runCurrent()
+        assertTrue(r.repo.deleteCalls.isEmpty())
+    }
+
+    @Test
     fun `draft tersimpan per percakapan`() = runVmTest { r ->
         openC1(r)
         r.vm.onDraft("setengah ketik")

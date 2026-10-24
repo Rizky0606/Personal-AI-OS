@@ -12,7 +12,11 @@ import app.aios.android.data.api.MessagePart
 sealed interface ChatItem {
     val key: String
 
-    data class User(val message: Message, val canEdit: Boolean) : ChatItem {
+    /**
+     * [canEdit]: tombol Edit dan Kirim ulang (pesan terakhir).
+     * [canModify]: menu Ubah/Hapus (tidak ada run berjalan).
+     */
+    data class User(val message: Message, val canEdit: Boolean, val canModify: Boolean = false) : ChatItem {
         override val key get() = message.id
     }
 
@@ -29,7 +33,9 @@ sealed interface ChatItem {
         val model: String?,
         val streaming: Boolean,
         /** Chip role bisa diketuk (reroute) hanya pada jawaban terakhir yang sudah selesai. */
-        val canReroute: Boolean
+        val canReroute: Boolean,
+        /** Menu Hapus tersedia (jawaban tersimpan dan tidak ada run berjalan). */
+        val canModify: Boolean = false
     ) : ChatItem {
         override val key get() = id
     }
@@ -57,7 +63,11 @@ fun buildChatItems(state: ChatUiState): List<ChatItem> {
 
     for (message in state.messages) {
         when (message.author) {
-            AUTHOR_USER -> items += ChatItem.User(message, canEdit = message.id == lastUserId && !state.busy)
+            AUTHOR_USER -> items += ChatItem.User(
+                message,
+                canEdit = message.id == lastUserId && !state.busy,
+                canModify = !state.busy
+            )
             AUTHOR_SYSTEM -> items += ChatItem.System(message)
             AUTHOR_ASSISTANT -> {
                 if (live != null && message.runId == live.runId) {
@@ -72,7 +82,8 @@ fun buildChatItems(state: ChatUiState): List<ChatItem> {
                         role = message.agentRole,
                         model = message.model,
                         streaming = false,
-                        canReroute = message.id == lastAssistantId && !state.busy
+                        canReroute = message.id == lastAssistantId && !state.busy,
+                        canModify = !state.busy
                     )
                 }
             }
