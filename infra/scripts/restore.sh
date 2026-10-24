@@ -39,6 +39,8 @@ for tool in restic docker; do command -v "$tool" >/dev/null || die "$tool tidak 
 WORK="$(mktemp -d -p "${TMPDIR:-/var/tmp}" aios-restore.XXXXXX)"
 chmod 700 "$WORK"
 TMP_DB="aios_restore_$(date -u +%Y%m%d%H%M%S)"
+# ProtectHome (systemd) membuat /root read-only, termasuk cache default restic (~/.cache/restic).
+export RESTIC_CACHE_DIR="$WORK/restic-cache"
 [[ "$TMP_DB" != "$PG_DB" ]] || die "nama database sementara bentrok dengan produksi"
 
 psql_exec() { ( cd "$COMPOSE_DIR" && docker compose exec -T "$PG_SERVICE" psql -v ON_ERROR_STOP=1 -U "$PG_USER" "$@" ); }

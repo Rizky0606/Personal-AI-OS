@@ -90,21 +90,29 @@ const readBody = (req: IncomingMessage) =>
  */
 export async function startStack(): Promise<Stack> {
   const base = realpathSync(mkdtempSync(path.join(tmpdir(), 'aios-e2e-')));
-  const pgPort = await freePort();
-  const pg = await startPostgres(path.join(base, 'pg'), pgPort);
+  // CI dan beberapa mesin lokal tidak punya ICU lama yang dibutuhkan binary Postgres tertanam
+  // (lihat docs/BACKLOG.md); TEST_DATABASE_URL (sama seperti job "check") melewati itu memakai
+  // Postgres nyata.
+  const externalDbUrl = process.env.TEST_DATABASE_URL;
+  let pg: ChildProcess | undefined;
+  let databaseUrl: string;
+  if (externalDbUrl) {
+    databaseUrl = externalDbUrl;
+  } else {
+    const pgPort = await freePort();
+    pg = await startPostgres(path.join(base, 'pg'), pgPort);
+    databaseUrl = `postgres://aios:aios-test@127.0.0.1:${pgPort}/postgres`;
+  }
   const fakes = await startFakes();
 
-  const env: AuthEnv = await createAuthEnv(
-    `postgres://aios:aios-test@127.0.0.1:${pgPort}/postgres`,
-    {
-      ninerouterUrl: `${fakes.ninerouterUrl}/v1`,
-      hermesUrl: fakes.hermesUrl,
-      research: { searxngUrl: fakes.searxngUrl },
-      schedules: { pollMs: 200 },
-      taskMaxParallel: 2,
-      rateLimits: { login: 1000 },
-    },
-  );
+  const env: AuthEnv = await createAuthEnv(databaseUrl, {
+    ninerouterUrl: `${fakes.ninerouterUrl}/v1`,
+    hermesUrl: fakes.hermesUrl,
+    research: { searxngUrl: fakes.searxngUrl },
+    schedules: { pollMs: 200 },
+    taskMaxParallel: 2,
+    rateLimits: { login: 1000 },
+  });
   await env.app.listen({ port: 0, host: '127.0.0.1' });
   const gatewayUrl = `http://127.0.0.1:${(env.app.server.address() as AddressInfo).port}`;
 
@@ -230,8 +238,10 @@ export async function startStack(): Promise<Stack> {
       http.close();
       await env.close().catch(() => undefined);
       await fakes.close();
-      pg.stdin?.end();
-      await new Promise((r) => setTimeout(r, 500));
+      if (pg) {
+        pg.stdin?.end();
+        await new Promise((r) => setTimeout(r, 500));
+      }
       rmSync(base, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
     },
   };

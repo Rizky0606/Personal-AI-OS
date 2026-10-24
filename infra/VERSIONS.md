@@ -7,7 +7,7 @@ Upgrade satu komponen per waktu: baca changelog, jalankan tes adapter, baru naik
 
 omp=18.12.6
 9router=0.5.59
-hermes=
+hermes=0.22.5
 searxng=
 postgres=16
 node=22
@@ -15,16 +15,16 @@ node=22
 
 Blok di atas dibaca `infra/scripts/check-versions.sh` (kunci kosong = belum dikunci; awalan seperti `16` cocok dengan `16.4`). Ubah blok dan tabel bersamaan.
 
-| Tool         | Versi terkunci  | Lokasi              | Status                                                                                                   |
-| ------------ | --------------- | ------------------- | -------------------------------------------------------------------------------------------------------- |
-| omp          | 18.12.6         | PC Windows          | Terverifikasi (RPC diuji langsung)                                                                       |
-| 9Router      | 0.5.59          | Diuji di PC Windows | VPS belum dicek. Rilis npm terbaru 0.5.104. Jalankan dengan `--skip-update` dan `-H 127.0.0.1`           |
-| Hermes Agent | belum diketahui | VPS                 | Tidak terverifikasi. Rilis terbaru di GitHub v0.22.4 (2026-10-21). Isi setelah `hermes --version` di VPS |
-| SearXNG      | belum dikunci   | VPS (Docker)        | Kunci ke tag versi saat setup (lihat `docs/VPS_SETUP.md`)                                                |
-| PostgreSQL   | 16              | VPS (Docker)        | Sesuai `docs/ARCHITECTURE.md`                                                                            |
-| restic       | belum dikunci   | VPS                 | Backup harian (`infra/scripts/backup.sh`). Catat hasil `restic version` saat pasang                      |
-| Uptime Kuma  | belum dikunci   | VPS (Docker)        | Profil compose `monitoring`; isi `KUMA_TAG`. Telegram diatur di UI                                       |
-| nginx        | bawaan distro   | VPS                 | Contoh vhost di `infra/nginx/aios.conf.example`                                                          |
+| Tool         | Versi terkunci | Lokasi       | Status                                                                                                                                                            |
+| ------------ | -------------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| omp          | 18.12.6        | PC Windows   | Terverifikasi (RPC diuji langsung)                                                                                                                                |
+| 9Router      | 0.5.59         | VPS          | Terverifikasi: `npm install -g 9router@0.5.59`, systemd user service (`~/.config/systemd/user/9router.service`), `9router --skip-update -H 127.0.0.1` di `:20128` |
+| Hermes Agent | 0.22.5         | VPS          | Terverifikasi (`hermes --version`): `Hermes Agent v0.22.5+224.g73ce028`                                                                                           |
+| SearXNG      | belum dikunci  | VPS (Docker) | Kunci ke tag versi saat setup (lihat `docs/VPS_SETUP.md`)                                                                                                         |
+| PostgreSQL   | 16             | VPS (Docker) | Sesuai `docs/ARCHITECTURE.md`                                                                                                                                     |
+| restic       | belum dikunci  | VPS          | Backup harian (`infra/scripts/backup.sh`). Catat hasil `restic version` saat pasang                                                                               |
+| Uptime Kuma  | belum dikunci  | VPS (Docker) | Profil compose `monitoring`; isi `KUMA_TAG`. Telegram diatur di UI                                                                                                |
+| nginx        | bawaan distro  | VPS          | Contoh vhost di `infra/nginx/aios.conf.example`                                                                                                                   |
 
 ## Toolchain repo
 
