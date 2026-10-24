@@ -181,7 +181,7 @@ describe('ChatScreen: kirim dan alirkan jawaban', () => {
     expect(await screen.findByText(copy.chat.offlineSend)).toBeInTheDocument();
   });
 
-  it('role dan model yang dipilih ikut terkirim, lalu role kembali otomatis', async () => {
+  it('tidak ada pemilih role (router yang memutuskan); model yang dipilih ikut terkirim', async () => {
     api.listMessages.mockResolvedValue(page());
     api.sendMessage.mockResolvedValue({
       message: message({ author: 'user', text: 'x', runId: RUN_1 }),
@@ -190,22 +190,16 @@ describe('ChatScreen: kirim dan alirkan jawaban', () => {
     const user = userEvent.setup();
     await renderScreen(<ChatScreen conversationId={CONV} />);
 
+    expect(
+      screen.queryByRole('button', { name: new RegExp(`^${copy.chat.role.label}:`) }),
+    ).not.toBeInTheDocument();
     await user.click(
-      await screen.findByRole('button', { name: new RegExp(`${copy.chat.role.label}:`) }),
+      await screen.findByRole('button', { name: new RegExp(`${copy.chat.model.label}:`) }),
     );
-    await user.click(await screen.findByRole('menuitemradio', { name: 'Penulis' }));
-    await user.click(screen.getByRole('button', { name: new RegExp(`${copy.chat.model.label}:`) }));
     await user.click(await screen.findByRole('menuitemradio', { name: /^Cepat/ }));
     await user.type(field(), 'x{Enter}');
 
-    expect(api.sendMessage).toHaveBeenCalledWith(CONV, {
-      text: 'x',
-      role: 'writer',
-      model: 'combo/fast',
-    });
-    expect(
-      screen.getByRole('button', { name: `${copy.chat.role.label}: ${copy.chat.role.auto}` }),
-    ).toBeInTheDocument();
+    expect(api.sendMessage).toHaveBeenCalledWith(CONV, { text: 'x', model: 'combo/fast' });
   });
 });
 

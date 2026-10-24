@@ -46,23 +46,20 @@ beforeEach(() => {
 afterEach(() => runs.release(RUN_X));
 
 describe('chat per project', () => {
-  it('di dalam project role coding ditawarkan; di chat umum hanya role Umum', async () => {
-    const user = userEvent.setup();
+  it('chat umum maupun project tidak menawarkan pilihan role: router yang memutuskan', async () => {
     const view = await renderScreen(<ChatScreen />);
-    await user.click(
-      await screen.findByRole('button', { name: new RegExp(`${copy.chat.role.label}:`) }),
-    );
-    const general = (await screen.findAllByRole('menuitemradio')).map((i) => i.textContent);
-    expect(general).toEqual([copy.chat.role.auto, 'Umum', 'Penulis']);
+    await screen.findByRole('button', { name: new RegExp(`${copy.chat.model.label}:`) });
+    expect(
+      screen.queryByRole('button', { name: new RegExp(`^${copy.chat.role.label}:`) }),
+    ).not.toBeInTheDocument();
     view.unmount();
 
     useUiStore.getState().setActiveProject(PROJECT);
     await renderScreen(<ChatScreen />);
-    await user.click(
-      await screen.findByRole('button', { name: new RegExp(`${copy.chat.role.label}:`) }),
-    );
-    const inProject = (await screen.findAllByRole('menuitemradio')).map((i) => i.textContent);
-    expect(inProject).toContain('Frontend');
+    await screen.findByRole('button', { name: new RegExp(`${copy.chat.model.label}:`) });
+    expect(
+      screen.queryByRole('button', { name: new RegExp(`^${copy.chat.role.label}:`) }),
+    ).not.toBeInTheDocument();
   });
 
   it('pesan pertama di project membuat percakapan terikat project', async () => {

@@ -45,7 +45,6 @@ export function useChatController(conversationId: string | undefined) {
   const rolesQuery = useRoles();
 
   const [draft, setDraft] = useState('');
-  const [role, setRole] = useState<string | null>(null);
   const model = useUiStore((s) => s.model);
   const setModel = useUiStore((s) => s.setModel);
   const setActiveRole = useUiStore((s) => s.setActiveRole);
@@ -81,8 +80,8 @@ export function useChatController(conversationId: string | undefined) {
     return () => setRunBranch(null);
   }, [codingLive, liveRunId, setRunBranch]);
 
-  // Status bar menampilkan role yang dipakai: keputusan router untuk jawaban ini, atau pilihan manual.
-  const shownRole = live?.role ?? role;
+  // Status bar menampilkan role yang dipakai: keputusan router untuk jawaban ini.
+  const shownRole = live?.role ?? null;
   useEffect(() => {
     setActiveRole(shownRole);
     return () => setActiveRole(null);
@@ -143,7 +142,6 @@ export function useChatController(conversationId: string | undefined) {
         const response = await api.sendMessage(id, {
           text: body,
           files: files.length ? files : undefined,
-          role: role ?? undefined,
           model: model ?? undefined,
         });
         addMessageToCache(queryClient, id, response.message);
@@ -151,7 +149,6 @@ export function useChatController(conversationId: string | undefined) {
         if (override === undefined) attach.clear();
         runs.track(response.run.id);
         setActiveRunId(response.run.id);
-        setRole(null);
         void queryClient.invalidateQueries({ queryKey: ['conversations'] });
         if (conversationId === undefined) {
           void navigate({
@@ -177,7 +174,6 @@ export function useChatController(conversationId: string | undefined) {
       push,
       conversationId,
       activeProjectId,
-      role,
       model,
       queryClient,
       navigate,
@@ -272,14 +268,12 @@ export function useChatController(conversationId: string | undefined) {
         const response = await api.editMessage(messageId, {
           text: body,
           files: original?.parts.flatMap((part) => (part.type === 'file' ? [part] : [])),
-          role: role ?? undefined,
           model: model ?? undefined,
         });
         dropFrom(conversationId, messageId);
         addMessageToCache(queryClient, conversationId, response.message);
         runs.track(response.run.id);
         setActiveRunId(response.run.id);
-        setRole(null);
         return true;
       } catch (error) {
         fail(error, `${copy.chat.editFailed} ${apiErrorMessage(error, online)}`);
@@ -295,7 +289,6 @@ export function useChatController(conversationId: string | undefined) {
       streaming,
       online,
       push,
-      role,
       model,
       dropFrom,
       queryClient,
@@ -329,8 +322,6 @@ export function useChatController(conversationId: string | undefined) {
     pending,
     draft,
     setDraft,
-    role,
-    setRole,
     model,
     setModel,
     models: modelsQuery.data ?? [],
