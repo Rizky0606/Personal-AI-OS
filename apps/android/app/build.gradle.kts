@@ -26,8 +26,10 @@ android {
         applicationId = "app.aios.android"
         minSdk = 26
         targetSdk = 36
-        versionCode = 100
-        versionName = "1.0.0"
+        // CI mengisi keduanya: versionCode naik di setiap build (Android hanya memasang menimpa bila kodenya lebih
+        // tinggi), versionName dari tag rilis. Build lokal memakai nilai bawaan.
+        versionCode = providers.gradleProperty("aiosVersionCode").orNull?.toInt() ?: 100
+        versionName = providers.gradleProperty("aiosVersionName").getOrElse("1.0.0")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Alamat gateway tertanam: layar login tidak meminta alamat. Kosongkan (-PaiosGatewayUrl=) agar alamat
         // diketik saat login, mis. untuk E2E atau gateway lokal.

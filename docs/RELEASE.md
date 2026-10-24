@@ -14,17 +14,20 @@ Panduan membuat rilis 1.0.0 dan seterusnya. Tidak ada rahasia di repo: semua kun
 
 Kunci privat updater yang hilang berarti semua klien terpasang tidak bisa menerima pembaruan lagi (harus pasang ulang manual). Cadangkan di tempat terpisah dari repo.
 
+Kunci bisa dibuat sekali di PC pengembang ke `secrets/release/` (di-ignore git): keystore Android (`aios-release.jks`), kunci updater Tauri (`tauri-updater.key` dan `.pub`), dan `GITHUB-SECRETS.txt` berisi nilai ketujuh secret di atas (kecuali Firebase) untuk ditempel ke GitHub. Simpan folder itu di password manager atau drive terenkripsi.
+
 ## 2. Windows: installer dan auto-update
 
 - Tag `v*` memicu `.github/workflows/build-desktop.yml`: menyuntikkan kunci publik dan versi lewat `tauri.release.conf.json` (tidak di-commit), membangun installer NSIS berisi sidecar worker, menandatanganinya, menyusun `latest.json`, dan membuat rilis **draf**.
 - `tauri.conf.json` berisi placeholder `GANTI-DENGAN-KUNCI-PUBLIK-UPDATER`; build lokal tanpa overlay tidak bisa memeriksa pembaruan (hanya menampilkan galat), dan itu disengaja.
 - Pengaturan, bagian Pembaruan aplikasi: tombol Periksa pembaruan, lalu Pasang dan mulai ulang.
-- **Repo privat:** updater mengunduh `latest.json` dan installer tanpa kredensial, jadi rilis di repo privat tidak bisa dibaca klien. Pilihan: (a) terbitkan hanya artefak rilis (installer bertanda tangan, tanpa kode atau rahasia) ke repo publik terpisah dan ganti `endpoints` di overlay; atau (b) host `latest.json` dan installer di server sendiri. Belum diputuskan; lihat `docs/BACKLOG.md`.
+- **Repo publik (saat ini):** updater mengunduh `latest.json` dan installer dari `releases/latest` tanpa kredensial. Bila repo dijadikan privat, klien tidak bisa lagi membacanya: terbitkan artefak rilis ke repo publik terpisah atau host sendiri, lalu ganti `endpoints` di overlay.
 - omp tidak dibundel di installer. omp dipasang terpisah dan ditemukan lewat PATH atau `AIOS_OMP_PATH`; versi terkunci di `infra/VERSIONS.md`.
 
 ## 3. Android
 
-- `build-android.yml` membangun APK debug di setiap push dan `assembleRelease` bertanda tangan bila secret keystore ada. Pasang APK lewat `adb install` atau unduh artefak.
+- `build-android.yml` membangun APK debug dan, bila secret keystore ada, APK release bertanda tangan di setiap push ke `main` dan setiap tag. Pasang **APK release**: kuncinya tetap, jadi terpasang menimpa versi sebelumnya. APK debug ditandatangani kunci acak per runner CI dan tidak bisa menimpa APK dari build lain (harus uninstall).
+- `versionCode` = 1000 + nomor run workflow (selalu naik); `versionName` = versi tag, atau `<versi>-dev.<run>` untuk build `main`.
 
 ## 4. Gateway di VPS
 
@@ -44,7 +47,9 @@ pnpm --filter @aios/e2e android    # Android: butuh emulator/perangkat (adb devi
 
 ## 6. Urutan rilis
 
-1. Semua centang `docs/ACCEPTANCE.md` yang bisa diverifikasi sudah dicentang, sisanya tertulis alasannya.
-2. Versi 1.0.0 sudah diset di `tauri.conf.json`, `Cargo.toml`, dan `build.gradle.kts` (naikkan `versionCode` Android setiap rilis); pindahkan isi CHANGELOG dari "belum dirilis" ke tanggal rilis.
-3. `git tag v1.0.0 && git push --tags`; periksa rilis draf, pasang installer di PC bersih, lalu terbitkan.
-4. `infra/scripts/deploy.sh --ref v1.0.0` di VPS.
+1. Semua secret di bagian 1 sudah diisi di GitHub (tanpa secret Tauri, build desktop pada tag gagal dengan pesan jelas).
+2. `node infra/scripts/release.mjs X.Y.Z --push` di branch `main` yang bersih: menaikkan versi di `tauri.conf.json`, `Cargo.toml`, dan `build.gradle.kts`, memberi tanggal di CHANGELOG, commit `chore(release): vX.Y.Z`, lalu push commit dan tag. Versi harus lebih tinggi dari tag sebelumnya. `--dry-run` untuk melihat dulu.
+3. Tunggu GitHub Actions, buka rilis **draf** `vX.Y.Z`, periksa berkasnya (installer `.exe`, `.sig`, `latest.json`, APK), lalu **Publish**. Auto-update membaca `releases/latest`, jadi rilis draf belum terlihat oleh aplikasi.
+4. `infra/scripts/deploy.sh --ref vX.Y.Z` di VPS.
+
+Aplikasi Windows yang dipasang dari build `main` (bukan tag) tidak membawa kunci publik updater: pasang installer rilis sekali secara manual, setelah itu pembaruan berikutnya lewat Pengaturan, Pembaruan aplikasi.
