@@ -21,6 +21,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import retrofit2.HttpException
 
 /**
@@ -51,10 +54,24 @@ interface ChatRepository {
 
     suspend fun delete(id: String)
 
-    suspend fun send(conversationId: String, text: String, model: String?): SendMessageResponse
+    suspend fun send(
+        conversationId: String,
+        text: String,
+        model: String?,
+        files: List<MessagePart.File> = emptyList()
+    ): SendMessageResponse
+
+    /** Mengunggah lampiran; hasilnya dirujuk dari pesan lewat part `file`. */
+    suspend fun upload(file: PickedFile): MessagePart.File
 
     /** Mengubah pesan pengguna: pesan itu dan semua sesudahnya dibuang, lalu teks baru dikirim. */
-    suspend fun edit(conversationId: String, messageId: String, text: String, model: String?): SendMessageResponse
+    suspend fun edit(
+        conversationId: String,
+        messageId: String,
+        text: String,
+        model: String?,
+        files: List<MessagePart.File> = emptyList()
+    ): SendMessageResponse
 
     /** Menghapus pesan beserta semua pesan sesudahnya. */
     suspend fun deleteMessage(conversationId: String, messageId: String)
@@ -141,10 +158,15 @@ class RoomChatRepository(
         dao.deleteConversation(id)
     }
 
-    override suspend fun send(conversationId: String, text: String, model: String?): SendMessageResponse {
+    override suspend fun send(
+        conversationId: String,
+        text: String,
+        model: String?,
+        files: List<MessagePart.File>
+    ): SendMessageResponse {
         val response = api.sendMessage(
             conversationId,
-            SendMessageRequest(parts = listOf(InputPart.text(text)), model = model)
+            SendMessageRequest(parts = InputPart.of(text, files), model = model)
         )
         dao.upsertMessages(listOf(response.message.toEntity()))
         return response
@@ -154,15 +176,22 @@ class RoomChatRepository(
         conversationId: String,
         messageId: String,
         text: String,
-        model: String?
+        model: String?,
+        files: List<MessagePart.File>
     ): SendMessageResponse {
         val response = api.editMessage(
             messageId,
-            SendMessageRequest(parts = listOf(InputPart.text(text)), model = model)
+            SendMessageRequest(parts = InputPart.of(text, files), model = model)
         )
         dao.deleteMessagesFrom(conversationId, messageId)
         dao.upsertMessages(listOf(response.message.toEntity()))
         return response
+    }
+
+    override suspend fun upload(file: PickedFile): MessagePart.File {
+        val body = file.bytes.toRequestBody(file.mime.toMediaTypeOrNull())
+        val record = api.uploadFile(MultipartBody.Part.createFormData("file", file.name, body))
+        return MessagePart.File(fileId = record.id, name = record.name, mime = record.mime)
     }
 
     override suspend fun deleteMessage(conversationId: String, messageId: String) {

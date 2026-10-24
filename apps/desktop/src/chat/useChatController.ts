@@ -11,6 +11,7 @@ import { copy } from '../copy';
 import { isSettled } from '../realtime/liveRun';
 import { useUiStore } from '../state/uiStore';
 import { useToastStore } from '../ui/Toaster';
+import { useFileAttachments } from './useFileAttachments';
 import { useReviewTarget } from './useReviewTarget';
 import {
   addMessageToCache,
@@ -52,6 +53,7 @@ export function useChatController(conversationId: string | undefined) {
   const [sending, setSending] = useState(false);
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
   const [focusNonce, setFocusNonce] = useState(0);
+  const attach = useFileAttachments(online);
 
   const messages = useMemo(() => chronological(messagesQuery.data), [messagesQuery.data]);
   const runId = activeRunId ?? latestRunId(messages);
@@ -121,7 +123,9 @@ export function useChatController(conversationId: string | undefined) {
   const send = useCallback(
     async (override?: string) => {
       const text = (override ?? draft).trim();
-      if (!text || sending || streaming) return;
+      // Kirim ulang hanya teks; lampiran di composer ikut pada kiriman biasa.
+      const files = override === undefined ? attach.parts : [];
+      if ((!text && files.length === 0) || sending || streaming || attach.uploading) return;
       if (!online) {
         push(copy.chat.offlineSend, 'danger');
         return;
@@ -130,7 +134,7 @@ export function useChatController(conversationId: string | undefined) {
       const sentAttachments = attachments;
       const body = withAttachments(text, sentAttachments);
       setSending(true);
-      setPending(body);
+      setPending(body || files.map((f) => f.name).join(', '));
       if (override === undefined) setDraft('');
       try {
         const id =
@@ -138,11 +142,13 @@ export function useChatController(conversationId: string | undefined) {
           (await api.createConversation('windows', activeProjectId ?? undefined)).id;
         const response = await api.sendMessage(id, {
           text: body,
+          files: files.length ? files : undefined,
           role: role ?? undefined,
           model: model ?? undefined,
         });
         addMessageToCache(queryClient, id, response.message);
         clearAttachments();
+        if (override === undefined) attach.clear();
         runs.track(response.run.id);
         setActiveRunId(response.run.id);
         setRole(null);
@@ -164,6 +170,7 @@ export function useChatController(conversationId: string | undefined) {
     },
     [
       draft,
+      attach,
       sending,
       streaming,
       online,
@@ -260,8 +267,11 @@ export function useChatController(conversationId: string | undefined) {
       }
       setSending(true);
       try {
+        // Lampiran pesan asli ikut terkirim lagi; yang diubah hanya teksnya.
+        const original = messages.find((m) => m.id === messageId);
         const response = await api.editMessage(messageId, {
           text: body,
+          files: original?.parts.flatMap((part) => (part.type === 'file' ? [part] : [])),
           role: role ?? undefined,
           model: model ?? undefined,
         });
@@ -278,7 +288,19 @@ export function useChatController(conversationId: string | undefined) {
         setSending(false);
       }
     },
-    [conversationId, sending, streaming, online, push, role, model, dropFrom, queryClient, fail],
+    [
+      conversationId,
+      messages,
+      sending,
+      streaming,
+      online,
+      push,
+      role,
+      model,
+      dropFrom,
+      queryClient,
+      fail,
+    ],
   );
 
   /** Menghapus pesan beserta semua sesudahnya. true bila berhasil. */
@@ -317,6 +339,11 @@ export function useChatController(conversationId: string | undefined) {
     reviewRunId,
     attachments,
     removeAttachment,
+    files: attach.files,
+    addFiles: attach.add,
+    removeFile: attach.remove,
+    uploading: attach.uploading,
+    hasReadyFiles: attach.parts.length > 0,
     resolvingApprovals: resolving,
     resolveApproval: (approvalId: string, decision: 'allow' | 'deny', remember: boolean) =>
       void resolveApproval(approvalId, decision, remember),

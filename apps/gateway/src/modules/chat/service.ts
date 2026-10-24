@@ -15,6 +15,7 @@ import type { Database } from '../../db/client.js';
 import { conversations, messages, projects, runs } from '../../db/schema/index.js';
 import { AppError } from '../../errors.js';
 import { uuidv7 } from '../../lib/uuidv7.js';
+import type { FilesService } from '../files/service.js';
 import { describeDecision, type RoutingService } from '../router/service.js';
 import type { LaunchInput, Runner } from '../runs/runner.js';
 import { toConversationDto, toCorrectionDto, toMessageDto, toRunDto } from './dto.js';
@@ -76,13 +77,14 @@ const MAX_HISTORY_MESSAGES = 100;
 export function createChatService(deps: {
   db: Database;
   runner: Runner;
+  files: FilesService;
   titles: TitleService;
   routing: RoutingService;
   /** Untuk menentukan mesin dari role. */
   roles: { get(roleId: string): { engine: string } | undefined };
   now?: () => number;
 }): ChatService {
-  const { db, runner, titles, routing, roles, now = Date.now } = deps;
+  const { db, runner, files, titles, routing, roles, now = Date.now } = deps;
   const background = new Set<Promise<unknown>>();
 
   async function getConversation(id: string) {
@@ -185,6 +187,32 @@ export function createChatService(deps: {
       return [{ role: row.author, content }];
     });
     return { sessionId: `aios-${conversation.id}-${uuidv7()}`, history };
+  }
+
+  /**
+   * Isi pesan pengguna untuk agent: teks pengguna, dokumen lampiran sebagai teks, dan gambar. Router dan
+   * judul memakai teks pengguna saja (plus nama lampiran), bukan isi dokumen yang bisa sangat panjang.
+   */
+  async function composeInput(input: z.infer<typeof SendMessageRequestSchema>) {
+    const attachments = await files.prepare(input.parts);
+    const text = textOf(input.parts);
+    if (!text && attachments.parts.length === 0) {
+      throw new AppError(400, 'empty_message', 'Pesan tidak boleh kosong.');
+    }
+    const names = attachments.parts.map((p) => p.name);
+    const label = names.length ? `[Lampiran: ${names.join(', ')}]` : '';
+    const userText = text || (attachments.images.length ? 'Lihat gambar terlampir.' : '');
+    const prompt = [userText, attachments.documents].filter(Boolean).join('\n\n');
+    return {
+      // Part file disimpan dengan nama dan MIME dari database, bukan dari klien.
+      parts: [
+        ...input.parts.filter((p) => p.type !== 'file'),
+        ...attachments.parts,
+      ] as Message['parts'],
+      prompt,
+      routingText: [text, label].filter(Boolean).join(' '),
+      images: attachments.images,
+    };
   }
 
   /** Pesan dan percakapannya; percakapan yang diarsipkan tidak bisa diubah. */
@@ -344,15 +372,7 @@ export function createChatService(deps: {
       if (conversation.archivedAt) {
         throw new AppError(409, 'conversation_archived', 'Percakapan sudah diarsipkan.');
       }
-      if (input.parts.some((p) => p.type === 'file')) {
-        throw new AppError(
-          400,
-          'files_not_supported',
-          'Lampiran belum didukung untuk chat umum (Hermes tidak menerima berkas).',
-        );
-      }
-      const prompt = textOf(input.parts);
-      if (!prompt) throw new AppError(400, 'empty_message', 'Pesan tidak boleh kosong.');
+      const { parts, prompt, routingText, images } = await composeInput(input);
       // Pilihan manual diperiksa sekarang (400) agar tidak baru gagal setelah run dimulai.
       if (input.role) routing.assertRoleAllowed(input.role, conversation);
       await assertNoActiveRun(conversationId);
@@ -378,7 +398,7 @@ export function createChatService(deps: {
           .values({
             conversationId,
             author: 'user',
-            parts: input.parts,
+            parts,
             model,
             runId: runRow!.id,
           })
@@ -410,6 +430,7 @@ export function createChatService(deps: {
         prompt,
         sessionId,
         ...(history.length ? { history } : {}),
+        ...(images.length ? { images } : {}),
         projectId: conversation.projectId,
         ...(options?.continueFromRunId ? { continueFromRunId: options.continueFromRunId } : {}),
         resolveRole: makeResolver({
@@ -417,14 +438,14 @@ export function createChatService(deps: {
           runId: run.id,
           userMessageId: userMessage.id,
           assistantMessageId,
-          prompt,
+          prompt: routingText,
           previousRole,
           ...(input.role ? { manualRole: input.role } : {}),
         }),
       });
 
       if (conversation.title === '') {
-        const job = autoTitle(conversationId, prompt).catch(() => undefined);
+        const job = autoTitle(conversationId, routingText).catch(() => undefined);
         background.add(job);
         void job.finally(() => background.delete(job));
       }
@@ -566,15 +587,7 @@ export function createChatService(deps: {
         throw new AppError(400, 'message_not_editable', 'Hanya pesan pengguna yang bisa diubah.');
       }
       // Pesan baru diperiksa dulu agar percakapan tidak terpotong lalu gagal terkirim.
-      if (input.parts.some((p) => p.type === 'file')) {
-        throw new AppError(
-          400,
-          'files_not_supported',
-          'Lampiran belum didukung untuk chat umum (Hermes tidak menerima berkas).',
-        );
-      }
-      if (!textOf(input.parts))
-        throw new AppError(400, 'empty_message', 'Pesan tidak boleh kosong.');
+      await composeInput(input);
       if (input.role) routing.assertRoleAllowed(input.role, conversation);
       await truncateFrom(message);
       return service.sendMessage(conversation.id, input);

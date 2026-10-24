@@ -12,11 +12,15 @@ import {
   uuid,
   jsonb,
   uniqueIndex,
+  customType,
 } from 'drizzle-orm/pg-core';
 import type { z } from 'zod';
 import { uuidv7 } from '../../lib/uuidv7.js';
 import { conversations, devices, messages, runs } from './core.js';
 import { researchDepth, researchStatus, scheduleRunStatus, scheduleTarget } from './enums.js';
+
+/** Kolom biner Postgres (`bytea`) sebagai Buffer Node. */
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => 'bytea' });
 
 /* Jadwal, riset, berkas, routing, dan audit. Bergantung pada tabel inti, tidak sebaliknya. */
 
@@ -101,8 +105,8 @@ export const files = pgTable('files', {
   name: text('name').notNull(),
   mime: text('mime').notNull(),
   size: bigint('size', { mode: 'number' }).notNull(),
-  /** Lokasi di disk gateway; tidak pernah diekspos ke klien. */
-  storagePath: text('storage_path').notNull(),
+  /** Isi berkas di database (ikut backup pg_dump); tidak pernah diekspos ke klien. */
+  content: bytea('content').notNull(),
   sha256: text('sha256').notNull(),
   createdAt: createdAt(),
 });

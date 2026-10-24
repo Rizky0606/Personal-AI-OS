@@ -9,7 +9,7 @@ import { createAuthEnv, type AuthEnv } from './testing/auth-env.js';
  */
 
 /** Ada di kontrak tetapi sengaja belum dibuat (lampiran berkas ditunda; lihat docs/BACKLOG.md). */
-const DEFERRED = ['POST /v1/files'];
+const DEFERRED: string[] = [];
 
 type Expected = 'public' | 'any' | 'app' | 'worker' | 'llm';
 

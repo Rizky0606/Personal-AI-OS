@@ -7,6 +7,7 @@ import { deriveAuthKeys } from '../modules/auth/secrets.js';
 import { createAuthService } from '../modules/auth/service.js';
 import { generateTotpSecret, timeStep, totpCode } from '../modules/auth/totp.js';
 import { createChatService, type ChatService } from '../modules/chat/service.js';
+import { createFilesService } from '../modules/files/service.js';
 import { createTitleService } from '../modules/chat/title.js';
 import { createDevicesService } from '../modules/devices/service.js';
 import { createNineRouterClient } from '../modules/llm/client.js';
@@ -208,9 +209,11 @@ export async function createAuthEnv(
         })
       : unusedResearch;
   if (options.research) await research.start();
+  const files = createFilesService({ db });
   const chat = createChatService({
     db,
     runner,
+    files,
     titles: createTitleService({ client, model: 'router-fast' }),
     routing,
     roles,
@@ -289,6 +292,7 @@ export async function createAuthEnv(
       ...(options.streamIdleMs ? { streamIdleMs: options.streamIdleMs } : {}),
     },
     chat,
+    files,
     runs,
     roles,
     routing,

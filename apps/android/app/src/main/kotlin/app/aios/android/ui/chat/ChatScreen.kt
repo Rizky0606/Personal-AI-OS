@@ -1,5 +1,7 @@
 package app.aios.android.ui.chat
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,6 +46,15 @@ import kotlinx.coroutines.flow.filter
 
 private const val PREFETCH_DISTANCE = 4
 
+/** Jenis yang diterima gateway: gambar, PDF, DOCX, dan teks. */
+private val ATTACH_MIME_TYPES = arrayOf(
+    "image/*",
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "text/*",
+    "application/json"
+)
+
 /** Layar chat: daftar pesan (jangkar di bawah), indikator sambungan, dan composer. */
 @Composable
 fun ChatScreen(viewModel: ChatViewModel, snackbar: SnackbarHostState) {
@@ -55,6 +66,9 @@ fun ChatScreen(viewModel: ChatViewModel, snackbar: SnackbarHostState) {
     var modelSheet by remember { mutableStateOf(false) }
     var roleSheet by remember { mutableStateOf(false) }
     var toDelete by remember { mutableStateOf<String?>(null) }
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        if (uris.isNotEmpty()) viewModel.addAttachments(uris.map { it.toString() })
+    }
 
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
@@ -130,7 +144,10 @@ fun ChatScreen(viewModel: ChatViewModel, snackbar: SnackbarHostState) {
             onSend = viewModel::send,
             onStop = viewModel::stop,
             onPickModel = { modelSheet = true },
-            voice = voice
+            voice = voice,
+            attachments = ui.attachments,
+            onAttach = { picker.launch(ATTACH_MIME_TYPES) },
+            onRemoveAttachment = viewModel::removeAttachment
         )
     }
 

@@ -209,6 +209,97 @@ describe('ChatScreen: kirim dan alirkan jawaban', () => {
   });
 });
 
+describe('ChatScreen: lampiran', () => {
+  const FILE_ID = '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e01';
+  const record = (name: string, mime: string) => ({
+    id: FILE_ID,
+    name,
+    mime,
+    size: 4,
+    sha256: 'a'.repeat(64),
+    createdAt: '2026-10-24T00:00:00.000Z',
+  });
+  const picker = () => document.querySelector<HTMLInputElement>('input[type="file"]')!;
+
+  it('berkas dipilih langsung diunggah; pesan berisi lampiran saja bisa dikirim', async () => {
+    api.listMessages.mockResolvedValue(page());
+    api.uploadFile.mockResolvedValue(record('catatan.txt', 'text/plain'));
+    api.sendMessage.mockResolvedValue({
+      message: message({ author: 'user', runId: RUN_1 }),
+      run: run({ id: RUN_1 }),
+    });
+    const user = userEvent.setup();
+    await renderScreen(<ChatScreen conversationId={CONV} />);
+
+    expect(screen.getByRole('button', { name: copy.chat.files.attach })).toBeInTheDocument();
+    await user.upload(picker(), new File(['isi'], 'catatan.txt', { type: 'text/plain' }));
+    const group = await screen.findByRole('list', { name: copy.chat.files.group });
+    expect(within(group).getByText('catatan.txt')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('button', { name: copy.chat.send })).toBeEnabled());
+    await user.click(screen.getByRole('button', { name: copy.chat.send }));
+
+    expect(api.sendMessage).toHaveBeenCalledWith(
+      CONV,
+      expect.objectContaining({
+        text: '',
+        files: [{ type: 'file', fileId: FILE_ID, name: 'catatan.txt', mime: 'text/plain' }],
+      }),
+    );
+    await waitFor(() =>
+      expect(screen.queryByRole('list', { name: copy.chat.files.group })).not.toBeInTheDocument(),
+    );
+  });
+
+  it('unggahan gagal menampilkan alasannya dan tidak ikut terkirim', async () => {
+    api.listMessages.mockResolvedValue(page());
+    api.uploadFile.mockRejectedValue(
+      new ApiProblem(400, 'unsupported_file_type', 'Jenis berkas belum didukung.'),
+    );
+    const user = userEvent.setup();
+    await renderScreen(<ChatScreen conversationId={CONV} />);
+
+    await user.upload(picker(), new File(['MZ'], 'setup.exe'));
+
+    expect(await screen.findByText(/Jenis berkas belum didukung/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: copy.chat.send })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: copy.chat.files.remove('setup.exe') }));
+    expect(screen.queryByText('setup.exe')).not.toBeInTheDocument();
+  });
+
+  it('gambar yang ditempel ke kolom pesan menjadi lampiran', async () => {
+    api.listMessages.mockResolvedValue(page());
+    api.uploadFile.mockResolvedValue(record('layar.png', 'image/png'));
+    const user = userEvent.setup();
+    await renderScreen(<ChatScreen conversationId={CONV} />);
+
+    await user.click(field());
+    await user.paste({
+      files: [new File(['png'], 'layar.png', { type: 'image/png' })],
+    } as unknown as DataTransfer);
+
+    expect(api.uploadFile).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText('layar.png')).toBeInTheDocument();
+  });
+
+  it('riwayat menampilkan lampiran pesan sebagai chip', async () => {
+    api.listMessages.mockResolvedValue(
+      page(
+        message({
+          author: 'user',
+          parts: [
+            { type: 'text', text: 'Ringkas ini' },
+            { type: 'file', fileId: FILE_ID, name: 'laporan.pdf', mime: 'application/pdf' },
+          ],
+        }),
+      ),
+    );
+    await renderScreen(<ChatScreen conversationId={CONV} />);
+
+    const mine = (await screen.findByText('Ringkas ini')).closest('article')!;
+    expect(within(mine).getByText('laporan.pdf')).toBeInTheDocument();
+  });
+});
+
 describe('ChatScreen: ubah pesan terakhir dan jalankan ulang', () => {
   const history = () =>
     page(

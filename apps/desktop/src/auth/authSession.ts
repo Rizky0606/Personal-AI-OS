@@ -255,10 +255,17 @@ export class AuthSession {
       response = await this.deps.fetcher(`${base}/v1${path}`, {
         method: options.method ?? 'GET',
         headers: {
-          ...(options.body === undefined ? {} : { 'content-type': 'application/json' }),
+          // FormData (unggah berkas): fetch sendiri yang mengisi content-type beserta boundary.
+          ...(options.body === undefined || options.body instanceof FormData
+            ? {}
+            : { 'content-type': 'application/json' }),
           ...(options.token ? { authorization: `Bearer ${options.token}` } : {}),
         },
-        ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
+        ...(options.body === undefined
+          ? {}
+          : {
+              body: options.body instanceof FormData ? options.body : JSON.stringify(options.body),
+            }),
       });
     } catch (error) {
       throw new ApiProblem(

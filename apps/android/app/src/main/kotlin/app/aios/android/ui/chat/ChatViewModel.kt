@@ -14,6 +14,9 @@ import app.aios.android.data.api.RoleInfo
 import app.aios.android.data.api.RunError
 import app.aios.android.data.api.TERMINAL_RUN_STATUSES
 import app.aios.android.data.api.toApiError
+import app.aios.android.data.api.MessagePart
+import app.aios.android.data.chat.AttachmentSource
+import app.aios.android.data.chat.AttachmentTooLargeException
 import app.aios.android.data.chat.ChatRepository
 import app.aios.android.data.realtime.ConnectionState
 import app.aios.android.data.realtime.RealtimeClient
@@ -42,6 +45,16 @@ import javax.inject.Inject
 /** Pesan pengguna yang sudah tampil tetapi belum dikonfirmasi server. */
 data class PendingMessage(val text: String)
 
+/** Lampiran di composer: diunggah begitu dipilih; [part] terisi saat siap, [error] bila gagal. */
+data class PendingAttachment(
+    val id: String,
+    val name: String,
+    val part: MessagePart.File? = null,
+    @StringRes val error: Int? = null
+) {
+    val uploading: Boolean get() = part == null && error == null
+}
+
 data class ChatUiState(
     val conversationId: String? = null,
     val title: String = "",
@@ -62,8 +75,16 @@ data class ChatUiState(
     val models: List<ModelInfo> = emptyList(),
     /** Null = otomatis (default sesuai role). */
     val selectedModel: String? = null,
-    val roles: List<RoleInfo> = emptyList()
+    val roles: List<RoleInfo> = emptyList(),
+    val attachments: List<PendingAttachment> = emptyList()
 ) {
+    val uploading: Boolean get() = attachments.any { it.uploading }
+
+    /** Lampiran siap kirim (yang gagal tidak ikut). */
+    val readyFiles: List<MessagePart.File> get() = attachments.mapNotNull { it.part }
+
+    val canSend: Boolean get() = (draft.isNotBlank() || readyFiles.isNotEmpty()) && !busy && !uploading
+
     /** Jawaban sedang mengalir: tombol kirim berubah menjadi hentikan. */
     val streaming: Boolean get() = live != null && !live.finished
 
@@ -91,7 +112,8 @@ private const val FINISH_RETRY_MS = 1_000L
 class ChatViewModel @Inject constructor(
     private val repo: ChatRepository,
     private val realtime: RealtimeClient,
-    private val connectivity: Connectivity
+    private val connectivity: Connectivity,
+    private val attachmentSource: AttachmentSource
 ) : ViewModel() {
     private val state = MutableStateFlow(ChatUiState())
     val ui: StateFlow<ChatUiState> = state.asStateFlow()
@@ -106,6 +128,7 @@ class ChatViewModel @Inject constructor(
     private var observeJob: Job? = null
     private var runJob: Job? = null
     private val drafts = HashMap<String?, String>()
+    private var attachmentCounter = 0
 
     init {
         loadCatalog()
@@ -228,19 +251,69 @@ class ChatViewModel @Inject constructor(
         send()
     }
 
+    /** Membaca lalu mengunggah berkas pilihan pengguna (URI `content://`); masing-masing berjalan sendiri. */
+    fun addAttachments(uris: List<String>) {
+        for (uri in uris) {
+            val id = "att-${++attachmentCounter}"
+            val fallbackName = uri.substringAfterLast('/').ifBlank { "lampiran" }
+            state.update { it.copy(attachments = it.attachments + PendingAttachment(id, fallbackName)) }
+            viewModelScope.launch {
+                val result = try {
+                    val file = attachmentSource.read(uri)
+                    updateAttachment(id) { it.copy(name = file.name) }
+                    val part = repo.upload(file)
+                    updateAttachment(id) { it.copy(name = part.name, part = part) }
+                    null
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: AttachmentTooLargeException) {
+                    R.string.chat_attach_too_large
+                } catch (e: Exception) {
+                    attachmentError(e.toApiError(connectivity.isConnected()))
+                }
+                if (result != null) updateAttachment(id) { it.copy(error = result) }
+            }
+        }
+    }
+
+    fun removeAttachment(id: String) = state.update { s ->
+        s.copy(attachments = s.attachments.filterNot { it.id == id })
+    }
+
+    private fun updateAttachment(id: String, change: (PendingAttachment) -> PendingAttachment) = state.update { s ->
+        s.copy(attachments = s.attachments.map { if (it.id == id) change(it) else it })
+    }
+
+    @StringRes
+    private fun attachmentError(error: ApiError): Int = when (error.code) {
+        "unsupported_file_type" -> R.string.chat_attach_unsupported
+        "file_unreadable", "file_empty" -> R.string.chat_attach_unreadable
+        "file_too_large", "image_too_large" -> R.string.chat_attach_too_large
+        else -> if (error.kind == ApiError.Kind.Offline) error.messageRes else R.string.chat_attach_failed
+    }
+
     fun send() {
         val snapshot = state.value
         val text = snapshot.draft.trim()
-        if (text.isEmpty() || snapshot.busy) return
+        if (!snapshot.canSend) return
+        val editingId = snapshot.editingId
+        // Ubah pesan: lampiran pesan asli ikut lagi. Kirim biasa: lampiran yang siap di composer.
+        val files = if (editingId != null) {
+            snapshot.messages.firstOrNull { it.id == editingId }?.parts.orEmpty().filterIsInstance<MessagePart.File>()
+        } else {
+            snapshot.readyFiles
+        }
+        if (text.isEmpty() && files.isEmpty()) return
         if (!connectivity.isConnected()) {
             notices.trySend(ChatEvent.Notice(R.string.chat_error_offline_send))
             return
         }
-        val editingId = snapshot.editingId
+        val sentAttachments = if (editingId == null) snapshot.attachments.filter { it.part != null } else emptyList()
         state.update {
             it.copy(
                 sending = true,
-                pending = PendingMessage(text),
+                pending = PendingMessage(text.ifEmpty { files.joinToString(", ") { f -> f.name } }),
+                attachments = it.attachments - sentAttachments.toSet(),
                 draft = "",
                 editingId = null,
                 runError = null,
@@ -254,9 +327,9 @@ class ChatViewModel @Inject constructor(
                     attach(newId)
                 }
                 val response = if (editingId != null) {
-                    repo.edit(conversationId, editingId, text, snapshot.selectedModel)
+                    repo.edit(conversationId, editingId, text, snapshot.selectedModel, files)
                 } else {
-                    repo.send(conversationId, text, snapshot.selectedModel)
+                    repo.send(conversationId, text, snapshot.selectedModel, files)
                 }
                 state.update { it.copy(sending = false, pending = null) }
                 observeRun(response.run.id)
@@ -268,7 +341,9 @@ class ChatViewModel @Inject constructor(
                         sending = false,
                         pending = null,
                         draft = it.draft.ifEmpty { text },
-                        editingId = it.editingId ?: editingId
+                        editingId = it.editingId ?: editingId,
+                        // Lampiran yang gagal terkirim kembali ke composer.
+                        attachments = sentAttachments + it.attachments
                     )
                 }
                 notices.trySend(ChatEvent.Notice(e.toApiError(connectivity.isConnected()).messageRes))

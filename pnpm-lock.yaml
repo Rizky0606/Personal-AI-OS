@@ -189,6 +189,9 @@ catalogs:
     typescript-eslint:
       specifier: ^8.72.0
       version: 8.72.0
+    unpdf:
+      specifier: 1.8.1
+      version: 1.8.1
     vite:
       specifier: ^8.3.5
       version: 8.3.5
@@ -399,6 +402,9 @@ importers:
       qrcode:
         specifier: 'catalog:'
         version: 1.5.4
+      unpdf:
+        specifier: 'catalog:'
+        version: 1.8.1
       zod:
         specifier: 'catalog:'
         version: 4.6.7
@@ -3556,6 +3562,15 @@ packages:
   unicode-trie@2.0.0:
     resolution: {integrity: sha512-x7bc76x0bm4prf1VLg79uhAzKw8DVboClSN5VxJuQ+LKDOVEW9CdH+VY7SP+vX7xCYQqzzgQpFqz15zeLvAtZQ==}
 
+  unpdf@1.8.1:
+    resolution: {integrity: sha512-xkURhy2SoGpOIH0a1gLHNkASPIQYonadDJs2AQwPEfUakafeD9EA1WTWWsaR++gfTCXJpV27W7tU1nXuk82UKQ==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      '@napi-rs/canvas': ^0.1.69 || ^1.0.0
+    peerDependenciesMeta:
+      '@napi-rs/canvas':
+        optional: true
+
   uri-js@4.4.1:
     resolution: {integrity: sha512-7rKUyy33Q1yc98pQ1DAmLtwX109F7TIfWlW1Ydo8Wl1ii1SeHieeh0HHfPeL2fMXK6z0s8ecKs9frCuLJvndBg==}
 
@@ -6262,6 +6277,8 @@ snapshots:
     dependencies:
       pako: 0.2.9
       tiny-inflate: 1.0.3
+
+  unpdf@1.8.1: {}
 
   uri-js@4.4.1:
     dependencies:

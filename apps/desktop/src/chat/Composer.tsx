@@ -1,7 +1,9 @@
 import type { ModelInfo, RoleInfo } from '../api/gateway';
-import { ArrowUp, ChevronDown, Pencil, Square, X } from 'lucide-react';
+import { ArrowUp, ChevronDown, Paperclip, Pencil, Square, X } from 'lucide-react';
 import { useEffect, useId, useRef, type KeyboardEvent } from 'react';
 import { copy } from '../copy';
+import { cn } from '../lib/cn';
+import type { PendingFile } from './useFileAttachments';
 import type { ContextAttachment } from '../state/uiStore';
 import { Button } from '../ui/Button';
 import { Chip } from '../ui/Chip';
@@ -34,6 +36,10 @@ export interface ComposerProps {
   /** Konteks dari preview yang ikut terkirim bersama pesan ini. */
   attachments?: readonly ContextAttachment[];
   onRemoveAttachment?: (id: string) => void;
+  /** Berkas lampiran (diunggah ke /files). Tanpa onAddFiles tombol lampiran tidak tampil. */
+  files?: readonly PendingFile[];
+  onAddFiles?: (files: File[]) => void;
+  onRemoveFile?: (id: string) => void;
 }
 
 const MAX_HEIGHT_PX = 192;
@@ -58,8 +64,12 @@ export function Composer({
   suggestions,
   attachments = [],
   onRemoveAttachment,
+  files = [],
+  onAddFiles,
+  onRemoveFile,
 }: ComposerProps) {
   const field = useRef<HTMLTextAreaElement>(null);
+  const picker = useRef<HTMLInputElement>(null);
   const labelId = useId();
 
   useEffect(() => {
@@ -76,14 +86,16 @@ export function Composer({
   function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) return;
     event.preventDefault();
-    if (!streaming && !sending) onSend();
+    if (!streaming && canSend) onSend();
   }
 
   const roleName = role ? (roles.find((r) => r.id === role)?.name ?? role) : copy.chat.role.auto;
   const modelName = model
     ? (models.find((m) => m.id === model)?.label ?? model)
     : copy.chat.model.auto;
-  const canSend = draft.trim().length > 0 && !sending;
+  const uploading = files.some((f) => f.status === 'uploading');
+  const hasFiles = files.some((f) => f.status === 'ready');
+  const canSend = (draft.trim().length > 0 || hasFiles) && !sending && !uploading;
 
   return (
     <div className="shrink-0 border-t border-border bg-bg px-8 pt-3 pb-3">
@@ -127,6 +139,34 @@ export function Composer({
               ))}
             </ul>
           ) : null}
+          {files.length > 0 ? (
+            <ul aria-label={copy.chat.files.group} className="flex flex-wrap gap-2">
+              {files.map((f) => (
+                <li
+                  key={f.id}
+                  className={cn(
+                    'inline-flex h-8 max-w-full items-center gap-2 rounded-control border bg-surface-2 pr-1 pl-2 text-meta',
+                    f.status === 'error' ? 'border-danger text-danger' : 'border-border text-text',
+                  )}
+                >
+                  <Paperclip size={14} strokeWidth={1.5} aria-hidden="true" className="shrink-0" />
+                  <span className="max-w-56 truncate">{f.name}</span>
+                  {f.status === 'uploading' ? (
+                    <span role="status" className="text-text-2">
+                      {copy.chat.files.uploading}
+                    </span>
+                  ) : null}
+                  {f.status === 'error' ? <span className="truncate">{f.error}</span> : null}
+                  <IconButton
+                    label={copy.chat.files.remove(f.name)}
+                    onClick={() => onRemoveFile?.(f.id)}
+                  >
+                    <X size={14} strokeWidth={1.5} aria-hidden="true" />
+                  </IconButton>
+                </li>
+              ))}
+            </ul>
+          ) : null}
           <label id={labelId} htmlFor={`${labelId}-field`} className="sr-only">
             {copy.chat.composerLabel}
           </label>
@@ -138,6 +178,13 @@ export function Composer({
             placeholder={copy.chat.placeholder}
             onChange={(event) => onDraft(event.target.value)}
             onKeyDown={onKeyDown}
+            onPaste={(event) => {
+              // Tempel gambar (tangkapan layar) langsung menjadi lampiran.
+              const pasted = [...event.clipboardData.files];
+              if (pasted.length === 0 || !onAddFiles) return;
+              event.preventDefault();
+              onAddFiles(pasted);
+            }}
             className="max-h-48 w-full resize-none bg-transparent px-1 py-1 text-chat text-text outline-none placeholder:text-text-3"
           />
           <div className="flex items-center gap-2">
@@ -175,6 +222,29 @@ export function Composer({
               }
             />
             <span className="ml-auto flex items-center gap-1">
+              {onAddFiles ? (
+                <>
+                  <input
+                    ref={picker}
+                    type="file"
+                    multiple
+                    hidden
+                    tabIndex={-1}
+                    onChange={(event) => {
+                      const picked = [...(event.target.files ?? [])];
+                      event.target.value = '';
+                      if (picked.length > 0) onAddFiles(picked);
+                    }}
+                  />
+                  <IconButton
+                    label={copy.chat.files.attach}
+                    title={copy.chat.files.attachHint}
+                    onClick={() => picker.current?.click()}
+                  >
+                    <Paperclip size={16} strokeWidth={1.5} aria-hidden="true" />
+                  </IconButton>
+                </>
+              ) : null}
               {canEditLast ? (
                 <IconButton
                   label={copy.chat.editLast}

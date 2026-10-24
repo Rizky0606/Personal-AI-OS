@@ -178,6 +178,7 @@ export async function startStack(): Promise<Stack> {
             url: string;
             method: string;
             headers: [string, string][];
+            /** Base64: body bisa biner (unggah berkas multipart). */
             body: string | null;
           };
           const upstream = await fetch(body.url, {
@@ -185,7 +186,7 @@ export async function startStack(): Promise<Stack> {
             headers: body.headers.filter(
               ([k]) => !['host', 'origin', 'referer'].includes(k.toLowerCase()),
             ),
-            ...(body.body === null ? {} : { body: body.body }),
+            ...(body.body === null ? {} : { body: Buffer.from(body.body, 'base64') }),
           });
           return send({
             status: upstream.status,

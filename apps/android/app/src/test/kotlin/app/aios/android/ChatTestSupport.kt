@@ -11,6 +11,7 @@ import app.aios.android.data.api.RoleInfo
 import app.aios.android.data.api.Run
 import app.aios.android.data.api.SendMessageResponse
 import app.aios.android.data.chat.ChatRepository
+import app.aios.android.data.chat.PickedFile
 import app.aios.android.data.realtime.TokenSource
 import app.aios.android.data.realtime.WsHandle
 import app.aios.android.data.realtime.WsListener
@@ -185,8 +186,24 @@ class FakeChatRepo : ChatRepository {
         convos.value = convos.value.filterNot { it.id == id }
     }
 
-    override suspend fun send(conversationId: String, text: String, model: String?): SendMessageResponse {
+    val sentFiles = mutableListOf<List<MessagePart.File>>()
+    val uploads = mutableListOf<String>()
+    var failUpload: Exception? = null
+
+    override suspend fun upload(file: PickedFile): MessagePart.File {
+        uploads += file.name
+        failUpload?.let { throw it }
+        return MessagePart.File("f-${uploads.size}", file.name, file.mime)
+    }
+
+    override suspend fun send(
+        conversationId: String,
+        text: String,
+        model: String?,
+        files: List<MessagePart.File>
+    ): SendMessageResponse {
         sendCalls += Triple(conversationId, text, model)
+        sentFiles += files
         failSend?.let { throw it }
         val runId = nextRunId
         val user = message("u-$runId", AUTHOR_USER, text, runId, conversationId = conversationId)
@@ -202,11 +219,12 @@ class FakeChatRepo : ChatRepository {
         conversationId: String,
         messageId: String,
         text: String,
-        model: String?
+        model: String?,
+        files: List<MessagePart.File>
     ): SendMessageResponse {
         editCalls += messageId to text
         truncate(conversationId, messageId)
-        return send(conversationId, text, model).also { sendCalls.removeAt(sendCalls.lastIndex) }
+        return send(conversationId, text, model, files).also { sendCalls.removeAt(sendCalls.lastIndex) }
     }
 
     override suspend fun deleteMessage(conversationId: String, messageId: String) {

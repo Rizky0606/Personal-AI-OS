@@ -35,6 +35,7 @@
     "pg-boss": "catalog:",
     "playwright-core": "catalog:",
     "qrcode": "catalog:",
+    "unpdf": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

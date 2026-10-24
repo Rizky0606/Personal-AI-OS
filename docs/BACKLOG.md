@@ -457,6 +457,14 @@ Isi ditulis sendiri sebagai ringkasan prinsip, bukan salinan; dibaca dari halama
 - **Riwayat dibatasi 100 pesan terakhir** saat dikirim ulang ke sesi baru; percakapan yang lebih panjang kehilangan konteks paling awal setelah diedit.
 - Run coding (omp) tidak memakai riwayat: omp berjalan `--no-session`, jadi edit/hapus hanya memengaruhi tampilan dan konteks Hermes.
 
+## Lampiran chat (setelah Fase 24)
+
+- **Cara kerja**: klien mengunggah ke `POST /files` (multipart) lalu merujuknya lewat part `file`. Gateway mengubah dokumen (PDF lewat `unpdf`, DOCX lewat pembaca ZIP kecil tanpa dependensi, berkas teks) menjadi teks yang ditambahkan ke prompt (maks 60.000 karakter per dokumen), dan meneruskan gambar inline (`image_url` data URL) ke Hermes. Router dan judul hanya melihat teks pengguna plus nama lampiran.
+- **Perlu verifikasi di VPS**: (1) gambar sampai ke model dan dijawab; model Hermes/9Router harus mendukung vision, bila tidak run gagal dengan galat dari provider. (2) Ukuran request ke Hermes dengan gambar sampai 10 MB (base64 ~13 MB) diterima Hermes dan nginx tidak terkait (gateway ke Hermes lewat localhost). (3) Unggah dari aplikasi desktop asli (Tauri plugin-http dengan FormData) belum pernah dicoba di cangkang Rust; E2E memakai shim.
+- **nginx**: contoh vhost sudah `client_max_body_size 26m;` (cukup untuk 25 MB + multipart). Pastikan vhost di VPS sama; bawaan nginx 1 MB membuat unggahan besar ditolak 413 oleh nginx.
+- **Belum ada**: pratinjau gambar di riwayat (hanya chip nama), unduh ulang lampiran (`GET /files/:id` tidak ada di kontrak), pembersihan berkas yang diunggah tetapi tidak pernah dikirim, lampiran pada run coding (omp mengabaikan gambar; dokumen tetap masuk sebagai teks), dan riwayat yang dikirim ulang setelah edit/hapus pesan hanya membawa teks (isi lampiran lama tidak ikut).
+- **Android**: pemilih dokumen sistem (gambar, PDF, DOCX, teks); kamera langsung belum ada.
+
 ## Ide di luar scope
 
-- **Lampiran dokumen dan gambar di chat** (PRD W1/A1, P0): kontrak sudah punya part `file` dan `POST /files`, tetapi gateway menolak lampiran di chat umum (`files_not_supported`) karena Hermes tidak menerima berkas (VERIFICATION: hanya gambar inline). Butuh: unggah dari desktop/Android, gambar sebagai `image_url` inline ke Hermes (model 9Router harus mendukung vision), dan dokumen diekstrak menjadi teks oleh gateway sebelum dikirim.
+(kosong)

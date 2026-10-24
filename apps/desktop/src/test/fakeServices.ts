@@ -50,6 +50,7 @@ export const api: FakeApi = {
   archiveConversation: fn<'archiveConversation'>(),
   listMessages: fn<'listMessages'>(),
   sendMessage: fn<'sendMessage'>(),
+  uploadFile: fn<'uploadFile'>(),
   rerouteMessage: fn<'rerouteMessage'>(),
   editMessage: fn<'editMessage'>(),
   deleteMessage: fn<'deleteMessage'>(),
