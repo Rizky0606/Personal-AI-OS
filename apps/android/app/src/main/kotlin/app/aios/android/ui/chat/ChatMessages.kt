@@ -1,6 +1,13 @@
 package app.aios.android.ui.chat
 
+import androidx.compose.animation.core.StartOffset
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.keyframes
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -93,6 +100,40 @@ fun UserMessageRow(
 fun PendingUserRow(item: ChatItem.PendingUser) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
         UserBubble(text = item.text, dimmed = true)
+    }
+}
+
+private const val DOT_CYCLE_MS = 1200
+private const val DOT_STEP_MS = 150
+private const val DOT_LOW_ALPHA = 0.25f
+
+/** Tiga titik yang memudar bergiliran selama jawaban masih ditulis. */
+@Composable
+private fun TypingDots() {
+    val transition = rememberInfiniteTransition(label = "typing")
+    Row(horizontalArrangement = Arrangement.spacedBy(Tokens.Space.s4)) {
+        repeat(3) { index ->
+            val alpha by transition.animateFloat(
+                initialValue = DOT_LOW_ALPHA,
+                targetValue = DOT_LOW_ALPHA,
+                animationSpec = infiniteRepeatable(
+                    keyframes {
+                        durationMillis = DOT_CYCLE_MS
+                        DOT_LOW_ALPHA at 0
+                        1f at DOT_CYCLE_MS / 3
+                        DOT_LOW_ALPHA at DOT_CYCLE_MS * 2 / 3
+                    },
+                    initialStartOffset = StartOffset(index * DOT_STEP_MS)
+                ),
+                label = "dot$index"
+            )
+            Box(
+                Modifier
+                    .size(Tokens.Space.s8 * 3 / 4)
+                    .alpha(alpha)
+                    .background(AiosTheme.colors.text3, CircleShape)
+            )
+        }
     }
 }
 
@@ -244,6 +285,7 @@ fun AssistantMessageRow(
                 SkeletonBlock(height = Tokens.Space.s12, width = Tokens.Space.s48 * 4)
             }
         }
+        if (item.streaming && item.text.isNotEmpty()) TypingDots()
     }
 }
 

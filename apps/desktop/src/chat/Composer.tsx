@@ -1,4 +1,4 @@
-import type { ModelInfo, RoleInfo } from '../api/gateway';
+import type { ModelInfo } from '../api/gateway';
 import { ArrowUp, ChevronDown, Paperclip, Pencil, Square, X } from 'lucide-react';
 import { useEffect, useId, useRef, type KeyboardEvent } from 'react';
 import { copy } from '../copy';
@@ -21,10 +21,6 @@ export interface ComposerProps {
   streaming: boolean;
   /** Mengirim sedang berlangsung (belum dikonfirmasi server). */
   sending: boolean;
-  roles: RoleInfo[];
-  /** Null = otomatis oleh router. */
-  role: string | null;
-  onRole: (role: string | null) => void;
   models: ModelInfo[];
   model: string | null;
   onModel: (model: string | null) => void;
@@ -44,7 +40,10 @@ export interface ComposerProps {
 
 const MAX_HEIGHT_PX = 192;
 
-/** Composer langsung siap ketik. Satu tombol primer: Kirim, atau Hentikan saat menjawab. */
+/**
+ * Composer langsung siap ketik. Satu tombol primer: Kirim, atau Hentikan saat menjawab. Role tidak dipilih
+ * di sini: router yang memutuskan dari isi pesan dan konteks (chat umum atau project).
+ */
 export function Composer({
   draft,
   onDraft,
@@ -52,9 +51,6 @@ export function Composer({
   onStop,
   streaming,
   sending,
-  roles,
-  role,
-  onRole,
   models,
   model,
   onModel,
@@ -89,7 +85,6 @@ export function Composer({
     if (!streaming && canSend) onSend();
   }
 
-  const roleName = role ? (roles.find((r) => r.id === role)?.name ?? role) : copy.chat.role.auto;
   const modelName = model
     ? (models.find((m) => m.id === model)?.label ?? model)
     : copy.chat.model.auto;
@@ -113,7 +108,7 @@ export function Composer({
             ))}
           </div>
         ) : null}
-        <div className="flex flex-col gap-2 rounded-panel border border-border bg-surface p-2 focus-within:border-border-strong">
+        <div className="flex flex-col gap-2 rounded-panel border border-border bg-surface p-2 transition duration-[180ms] ease-aios focus-within:border-border-strong focus-within:ring-[3px] focus-within:ring-accent-soft has-[[data-composer-field]:focus-visible]:border-accent">
           {attachments.length > 0 ? (
             <ul aria-label={copy.preview.attachment.group} className="flex flex-wrap gap-2">
               {attachments.map((a) => (
@@ -172,6 +167,7 @@ export function Composer({
           </label>
           <textarea
             id={`${labelId}-field`}
+            data-composer-field=""
             ref={field}
             rows={1}
             value={draft}
@@ -188,21 +184,6 @@ export function Composer({
             className="max-h-48 w-full resize-none bg-transparent px-1 py-1 text-chat text-text outline-none placeholder:text-text-3"
           />
           <div className="flex items-center gap-2">
-            <RadioMenu
-              label={copy.chat.role.pick}
-              value={role ?? AUTO}
-              onValueChange={(value) => onRole(value === AUTO ? null : value)}
-              options={[
-                { value: AUTO, label: copy.chat.role.auto },
-                ...roles.map((r) => ({ value: r.id, label: r.name })),
-              ]}
-              trigger={
-                <Chip aria-label={`${copy.chat.role.label}: ${roleName}`} selected={role !== null}>
-                  {roleName}
-                  <ChevronDown size={12} strokeWidth={1.5} aria-hidden="true" className="ml-1" />
-                </Chip>
-              }
-            />
             <RadioMenu
               label={copy.chat.model.pick}
               value={model ?? AUTO}

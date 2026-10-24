@@ -60,6 +60,11 @@ export function buildRouterMessages(input: RouterInput, candidates: Role[]): Cha
     'Aturan:',
     '- Pilih role yang scope-nya paling cocok dengan HASIL yang diminta, bukan kata yang muncul.',
     '- Pesan lanjutan mengikuti role_sebelumnya kecuali jelas pindah topik.',
+    ...(input.project
+      ? [
+          '- Chat ini milik project di atas: tetap serbabisa, tetapi coding yang paling sering. Utamakan role grup coding untuk pekerjaan pada kode project (fitur, tampilan, error, review, berkas; termasuk "buatkan", "tambahkan", "perbaiki" tanpa menyebut project). Pertanyaan umum, menulis naskah, atau riset tetap ke role grup umum yang cocok. Bila ragu antara coding dan umum untuk pesan tentang kode, pilih coding.',
+        ]
+      : []),
     '- needs_split=true hanya jika ada 2+ hasil berbeda yang butuh role berbeda; isi subtasks (minimal 2, tiap subtask punya role dan title). Selain itu needs_split=false dan subtasks=[].',
     '- Ragu: role "general" dengan confidence rendah.',
     `- Hanya pilih dari role ini: ${ids}.`,

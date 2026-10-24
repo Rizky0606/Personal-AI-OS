@@ -99,9 +99,6 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
         onStop={chat.stop}
         streaming={chat.streaming}
         sending={chat.sending}
-        roles={chat.roles}
-        role={chat.role}
-        onRole={chat.setRole}
         models={chat.models}
         model={chat.model}
         onModel={chat.setModel}

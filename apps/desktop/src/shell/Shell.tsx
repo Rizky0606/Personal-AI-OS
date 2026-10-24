@@ -111,6 +111,8 @@ export function Shell() {
   );
   useShortcuts(actions);
   const section = sectionFor(pathname);
+  // Isi area utama memudar masuk saat berpindah bagian; berpindah percakapan di dalam Chat tidak dihitung.
+  const sectionKey = pathname === '/' ? 'chat' : (pathname.split('/')[1] ?? '');
 
   return (
     <div className="flex h-full flex-col bg-bg text-text">
@@ -155,7 +157,7 @@ export function Shell() {
               <PanelRight size={16} strokeWidth={1.5} aria-hidden="true" />
             </IconButton>
           </div>
-          <div className="min-h-0 flex-1 overflow-auto">
+          <div key={sectionKey} className="min-h-0 flex-1 animate-aios-fade overflow-auto">
             <Outlet />
           </div>
         </main>

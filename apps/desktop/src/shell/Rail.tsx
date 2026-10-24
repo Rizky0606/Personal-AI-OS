@@ -43,8 +43,10 @@ function RailLink({ item }: { item: RailItem }) {
         aria-label={item.label}
         aria-current={active ? 'page' : undefined}
         className={cn(
-          'inline-flex size-10 items-center justify-center rounded-control text-text-2 transition-colors duration-[120ms] ease-aios hover:bg-surface-2 hover:text-text',
-          active && 'bg-accent-soft text-text',
+          'relative inline-flex size-10 items-center justify-center rounded-control text-text-2 transition-colors duration-[120ms] ease-aios hover:bg-surface-2 hover:text-text',
+          // Penanda aktif: garis aksen 2px di tepi rail, tumbuh dari tengah saat berpindah bagian.
+          'before:absolute before:top-2 before:bottom-2 before:-left-2 before:w-0.5 before:rounded-full before:bg-accent before:transition-transform before:duration-[180ms] before:ease-aios',
+          active ? 'bg-accent-soft text-text before:scale-y-100' : 'before:scale-y-0',
         )}
       >
         {item.icon}

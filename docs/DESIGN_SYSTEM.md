@@ -70,6 +70,7 @@ Tema mengikuti sistem secara default, dengan pilihan manual terang atau gelap. A
 - **Radius:** 4 (badge, chip), 6 (tombol, input), 10 (panel, dialog). Bulat penuh hanya untuk avatar dan titik status. Android: 8, 12, 16 dp.
 - **Elevasi:** satu token bayangan untuk menu, popover, dialog, toast. Panel tidak berbayang.
 - **Gerak:** 120 ms untuk hover dan tekan, 180 ms untuk panel, 240 ms untuk dialog dan sheet. Kurva `cubic-bezier(0.2, 0, 0, 1)`. Saat `prefers-reduced-motion`, hanya fade.
+- **Pola gerak yang dipakai** (desktop: utilitas `animate-aios-*` di `styles.css`; Android: `Tokens.Motion`): pesan baru muncul naik 4px sambil memudar (180 ms); jawaban yang sedang ditulis menampilkan tiga titik yang memudar bergiliran dan titik chip role beraksen yang berdenyut; menu dan tooltip muncul dari skala 0,98; dialog turun 6px (240 ms); toast naik 8px; pindah bagian memudar; penanda aktif rail dan percakapan berupa garis aksen 2px yang tumbuh dari tengah; tombol mengecil 2% saat ditekan; titik status yang sedang menyambung ulang berdenyut. Tanpa pantulan, tanpa stagger panjang.
 - **Fokus:** ring 2px warna `accent` dengan offset 2px, selalu terlihat saat navigasi keyboard.
 
 ## Layout Windows

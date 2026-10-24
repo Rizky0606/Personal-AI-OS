@@ -41,7 +41,7 @@ export function Toaster() {
             if (!open) dismiss(toast.id);
           }}
           className={cn(
-            'flex items-start gap-3 rounded-control border bg-surface-2 p-3 shadow-float',
+            'flex animate-aios-toast items-start gap-3 rounded-control border bg-surface-2 p-3 shadow-float',
             toast.tone === 'danger' ? 'border-danger' : 'border-border',
           )}
         >

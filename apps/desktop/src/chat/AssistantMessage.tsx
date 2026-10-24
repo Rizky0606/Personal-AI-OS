@@ -22,6 +22,17 @@ export interface AssistantMessageProps {
   onDelete?: (() => void) | undefined;
 }
 
+/** Tiga titik yang memudar bergiliran selama jawaban masih ditulis. */
+function TypingDots() {
+  return (
+    <span aria-hidden="true" className="aios-dots inline-flex h-4 items-center gap-1">
+      <span className="size-1.5 rounded-full bg-text-3" />
+      <span className="size-1.5 rounded-full bg-text-3" />
+      <span className="size-1.5 rounded-full bg-text-3" />
+    </span>
+  );
+}
+
 /** Tanpa gelembung: chip role dan model kecil di atas, lalu teks penuh lebar sampai 72 karakter. */
 export function AssistantMessage({
   parts,
@@ -34,9 +45,14 @@ export function AssistantMessage({
   onDelete,
 }: AssistantMessageProps) {
   return (
-    <article aria-busy={streaming} className="group flex flex-col gap-2">
+    <article aria-busy={streaming} className="group flex animate-aios-enter flex-col gap-2">
       <header className="flex items-center gap-2">
-        <RoleChip role={role} roles={roles} {...(onChangeRole ? { onChange: onChangeRole } : {})} />
+        <RoleChip
+          role={role}
+          roles={roles}
+          active={streaming}
+          {...(onChangeRole ? { onChange: onChangeRole } : {})}
+        />
         {model ? <span className="font-mono text-caption text-text-3">{model}</span> : null}
         {onDelete ? (
           <Button
@@ -56,6 +72,7 @@ export function AssistantMessage({
           <Markdown key={i} source={part.text} />
         ) : null,
       )}
+      {streaming ? <TypingDots /> : null}
     </article>
   );
 }
