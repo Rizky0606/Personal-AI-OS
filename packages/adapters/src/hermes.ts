@@ -89,6 +89,8 @@ export function createHermesAdapter(options: HermesAdapterOptions): AgentAdapter
         if (reason) return;
         const messages: { role: string; content: string }[] = [];
         if (input.systemPrompt) messages.push({ role: 'system', content: input.systemPrompt });
+        // Sesi baru setelah percakapan dipotong: Hermes belum punya transkripnya, jadi riwayat dikirim di sini.
+        for (const turn of input.history ?? []) messages.push({ ...turn });
         messages.push({ role: 'user', content: input.prompt });
 
         const connectTimer = setTimeout(() => stop('connect_timeout'), connectTimeoutMs);

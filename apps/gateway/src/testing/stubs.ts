@@ -54,6 +54,8 @@ export const unusedChat: AppDeps['chat'] = {
   listMessages: unused('chat.listMessages'),
   sendMessage: unused('chat.sendMessage'),
   reroute: unused('chat.reroute'),
+  editMessage: unused('chat.editMessage'),
+  deleteMessage: unused('chat.deleteMessage'),
   exists: unused('chat.exists'),
   idle: unused('chat.idle'),
 };

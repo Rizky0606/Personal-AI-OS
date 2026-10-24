@@ -19,6 +19,11 @@ export interface StartRunInput {
   model?: string | undefined;
   /** ID sesi di mesin agar percakapan berlanjut; gateway menyimpannya per percakapan. */
   sessionId?: string | undefined;
+  /**
+   * Riwayat sebelum `prompt`, kronologis. Hanya diisi pada giliran pertama sesi baru (setelah percakapan
+   * dipotong lewat edit/hapus pesan), karena sesi lama di mesin masih memuat bagian yang dibuang.
+   */
+  history?: readonly { role: 'user' | 'assistant'; content: string }[] | undefined;
   /** Pembatalan dari luar (selain `RunHandle.cancel`). */
   signal?: AbortSignal | undefined;
   /** Project yang dikerjakan (run coding lewat worker). */

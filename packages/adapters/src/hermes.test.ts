@@ -102,6 +102,32 @@ describe('adapter Hermes: permintaan', () => {
     });
   });
 
+  it('riwayat (sesi baru setelah percakapan dipotong) dikirim di antara system prompt dan pesan baru', async () => {
+    const hermes = await mockHermes((_req, res) => {
+      sseHead(res);
+      res.end(`${chunk({ content: 'x' }, 'stop')}data: [DONE]\n\n`);
+    });
+    await collect(
+      { baseUrl: hermes.url },
+      {
+        systemPrompt: 'Kamu asisten.',
+        history: [
+          { role: 'user', content: 'Nama saya Budi.' },
+          { role: 'assistant', content: 'Halo Budi.' },
+        ],
+        prompt: 'Siapa nama saya?',
+      },
+    );
+    expect(hermes.seen[0]!.body).toMatchObject({
+      messages: [
+        { role: 'system', content: 'Kamu asisten.' },
+        { role: 'user', content: 'Nama saya Budi.' },
+        { role: 'assistant', content: 'Halo Budi.' },
+        { role: 'user', content: 'Siapa nama saya?' },
+      ],
+    });
+  });
+
   it('tanpa sessionId dan apiKey, header itu tidak dikirim', async () => {
     const hermes = await mockHermes((_req, res) => {
       sseHead(res);

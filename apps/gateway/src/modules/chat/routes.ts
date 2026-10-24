@@ -75,6 +75,22 @@ export const chatRoutes: FastifyPluginCallback<{ chat: ChatService; runs: RunsSe
       ),
   );
 
+  app.post('/messages/:id/edit', guard, async (req, reply) =>
+    reply
+      .code(201)
+      .send(
+        await chat.editMessage(
+          IdParamsSchema.parse(req.params).id,
+          SendMessageRequestSchema.parse(req.body),
+        ),
+      ),
+  );
+
+  app.delete('/messages/:id', guard, async (req, reply) => {
+    await chat.deleteMessage(IdParamsSchema.parse(req.params).id);
+    return reply.code(204).send();
+  });
+
   app.get('/runs/:id', guard, (req) => runs.get(IdParamsSchema.parse(req.params).id));
 
   app.get('/runs/:id/events', guard, (req) => {
