@@ -85,7 +85,7 @@ export function StatusBar() {
               worker === 'connected'
                 ? 'bg-success'
                 : worker === 'reconnecting'
-                  ? 'bg-warning'
+                  ? 'animate-aios-breathe bg-warning'
                   : 'bg-text-3',
             )}
           />
@@ -99,7 +99,14 @@ export function StatusBar() {
           {quotaLabel}
         </Link>
         <span role="status" className="flex items-center gap-2">
-          <span aria-hidden="true" className={cn('size-2 rounded-full', dotTone[view.tone])} />
+          <span
+            aria-hidden="true"
+            className={cn(
+              'size-2 rounded-full',
+              dotTone[view.tone],
+              view.tone === 'warning' && 'animate-aios-breathe',
+            )}
+          />
           {view.label}
         </span>
       </div>

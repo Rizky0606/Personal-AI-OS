@@ -57,8 +57,9 @@ export function ConversationRow({
   return (
     <div
       className={cn(
-        'group flex min-h-8 items-center border-b border-border',
-        active ? 'bg-accent-soft' : 'hover:bg-surface-2',
+        'group relative flex min-h-8 items-center border-b border-border transition-colors duration-[120ms] ease-aios',
+        'before:absolute before:top-1.5 before:bottom-1.5 before:left-0 before:w-0.5 before:rounded-full before:bg-accent before:transition-transform before:duration-[180ms] before:ease-aios',
+        active ? 'bg-accent-soft before:scale-y-100' : 'before:scale-y-0 hover:bg-surface-2',
       )}
     >
       <Link

@@ -108,7 +108,7 @@ export function Composer({
             ))}
           </div>
         ) : null}
-        <div className="flex flex-col gap-2 rounded-panel border border-border bg-surface p-2 focus-within:border-border-strong">
+        <div className="flex flex-col gap-2 rounded-panel border border-border bg-surface p-2 transition duration-[180ms] ease-aios focus-within:border-border-strong focus-within:ring-[3px] focus-within:ring-accent-soft has-[[data-composer-field]:focus-visible]:border-accent">
           {attachments.length > 0 ? (
             <ul aria-label={copy.preview.attachment.group} className="flex flex-wrap gap-2">
               {attachments.map((a) => (
@@ -167,6 +167,7 @@ export function Composer({
           </label>
           <textarea
             id={`${labelId}-field`}
+            data-composer-field=""
             ref={field}
             rows={1}
             value={draft}

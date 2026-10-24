@@ -29,8 +29,8 @@ export function ConfirmDialog({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-40 bg-bg/60" />
-        <Dialog.Content className="fixed top-24 left-1/2 z-50 flex w-[min(440px,calc(100vw-2rem))] -translate-x-1/2 flex-col gap-3 rounded-panel border border-border bg-surface p-4 shadow-float">
+        <Dialog.Overlay className="fixed inset-0 z-40 animate-aios-fade bg-bg/60" />
+        <Dialog.Content className="fixed top-24 left-1/2 z-50 flex animate-aios-dialog w-[min(440px,calc(100vw-2rem))] -translate-x-1/2 flex-col gap-3 rounded-panel border border-border bg-surface p-4 shadow-float">
           <Dialog.Title className="text-section font-semibold text-text">{title}</Dialog.Title>
           <Dialog.Description className="text-ui text-text-2">{body}</Dialog.Description>
           <div className="flex justify-end gap-2">

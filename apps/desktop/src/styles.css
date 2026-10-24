@@ -78,6 +78,98 @@
 
   --shadow-float: var(--aios-shadow-float);
   --ease-aios: var(--aios-easing);
+
+  /* Gerak (DESIGN_SYSTEM.md): 180 ms panel/konten, 240 ms dialog, kurva token, tanpa pantulan. */
+  --animate-aios-enter: aios-enter var(--aios-duration-base) var(--aios-easing) both;
+  --animate-aios-fade: aios-fade var(--aios-duration-base) var(--aios-easing) both;
+  --animate-aios-pop: aios-pop var(--aios-duration-base) var(--aios-easing) both;
+  --animate-aios-dialog: aios-dialog var(--aios-duration-slow) var(--aios-easing) both;
+  --animate-aios-toast: aios-toast var(--aios-duration-slow) var(--aios-easing) both;
+  --animate-aios-caret: aios-caret 1s steps(1, end) infinite;
+  --animate-aios-breathe: aios-pulse 1.6s var(--aios-easing) infinite;
+}
+
+/* Konten baru (pesan, layar) naik 4px sambil muncul. */
+@keyframes aios-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes aios-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+/* Menu, tooltip, popover: muncul dari skala 0,98 (tanpa pantulan). */
+@keyframes aios-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* Dialog: turun 6px ke posisinya. Pemusatan -translate-x-1/2 memakai properti `translate` (Tailwind v4),
+   terpisah dari `transform`, jadi tidak ikut tertimpa di sini. */
+@keyframes aios-dialog {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes aios-toast {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* Kursor tulis di ujung jawaban yang sedang mengalir. */
+@keyframes aios-caret {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+/* Tiga titik "sedang berpikir": tiap titik memudar bergiliran (jeda pendek, bukan stagger panjang). */
+@keyframes aios-dot {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+.aios-dots > span {
+  animation: aios-dot 1.2s var(--aios-easing) infinite;
+}
+.aios-dots > span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.aios-dots > span:nth-child(3) {
+  animation-delay: 0.3s;
 }
 
 html,
@@ -170,4 +262,10 @@ body {
 }
 .hljs-deletion {
   color: var(--aios-danger);
+}
+
+/* Kolom pesan: penanda fokus dipindah ke wadah composer (border aksen saat navigasi keyboard), supaya tidak
+   ada dua cincin bertumpuk. */
+[data-composer-field]:focus-visible {
+  outline: none;
 }

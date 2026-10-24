@@ -72,7 +72,10 @@ export function UserMessage({ text, files = [], onEdit, onDelete, onResend }: Us
 
   const hasActions = Boolean(onEdit ?? onDelete ?? onResend);
   return (
-    <article aria-label={copy.chat.you} className="group flex flex-col items-end gap-1">
+    <article
+      aria-label={copy.chat.you}
+      className="group flex animate-aios-enter flex-col items-end gap-1"
+    >
       {text ? (
         <p className="max-w-[72ch] rounded-panel bg-surface-2 px-3 py-2 text-chat whitespace-pre-wrap text-text">
           {text}

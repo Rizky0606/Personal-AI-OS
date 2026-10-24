@@ -30,7 +30,7 @@ export function Button({
       type={type}
       className={cn(
         'inline-flex h-8 items-center justify-center gap-2 rounded-control px-3 text-ui font-medium',
-        'transition-[background-color,opacity] duration-[120ms] ease-aios',
+        'transition-[background-color,opacity,transform] duration-[120ms] ease-aios active:scale-[0.98] disabled:active:scale-100',
         'disabled:cursor-not-allowed disabled:opacity-50',
         variants[variant],
         className,
