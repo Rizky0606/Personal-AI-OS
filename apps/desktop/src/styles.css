@@ -87,6 +87,81 @@
   --animate-aios-toast: aios-toast var(--aios-duration-slow) var(--aios-easing) both;
   --animate-aios-caret: aios-caret 1s steps(1, end) infinite;
   --animate-aios-breathe: aios-pulse 1.6s var(--aios-easing) infinite;
+
+  /* Efek (DESIGN_SYSTEM.md: Efek): pegas ringan, cahaya aksen, dan kartu terangkat. */
+  --ease-spring: var(--aios-easing-spring);
+  --animate-aios-rise: aios-rise var(--aios-duration-emphasis) var(--aios-easing-spring) both;
+  --animate-aios-orb: aios-orb 3.6s var(--aios-easing) infinite;
+  --shadow-glow: var(--aios-glow);
+  --shadow-lift: var(--aios-lift);
+}
+
+/* Cahaya aksen dan bayangan kartu terangkat; versi gelap lebih pekat agar tetap terlihat. */
+:root {
+  --aios-glow:
+    0 0 0 1px color-mix(in oklch, var(--aios-accent) 30%, transparent),
+    0 6px 20px -6px color-mix(in oklch, var(--aios-accent) 55%, transparent);
+  --aios-lift: 0 8px 24px -12px oklch(0 0 0 / 0.28);
+  /* Ujung gradien tombol primer: lebih gelap di tema terang (teks putih), lebih terang di tema gelap
+     (teks gelap), supaya kontras teks tidak turun di bawah AA. */
+  --aios-accent-2: color-mix(in oklch, var(--aios-accent), black 14%);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --aios-lift: 0 10px 28px -12px oklch(0 0 0 / 0.7);
+    --aios-accent-2: color-mix(in oklch, var(--aios-accent), white 12%);
+  }
+}
+:root[data-theme='dark'] {
+  --aios-lift: 0 10px 28px -12px oklch(0 0 0 / 0.7);
+  --aios-accent-2: color-mix(in oklch, var(--aios-accent), white 12%);
+}
+
+/* Tombol primer: gradien satu warna aksen. */
+.aios-primary {
+  background-color: var(--aios-accent);
+  background-image: linear-gradient(135deg, var(--aios-accent), var(--aios-accent-2));
+}
+/* Item aktif (percakapan, kartu terpilih): sapuan aksen yang memudar ke kanan. */
+.aios-active-wash {
+  background-image: linear-gradient(
+    90deg,
+    color-mix(in oklch, var(--aios-accent) 22%, transparent),
+    transparent 85%
+  );
+}
+/* Cahaya layar sambutan chat kosong. */
+.aios-orb {
+  background-image: radial-gradient(
+    circle,
+    color-mix(in oklch, var(--aios-accent) 60%, transparent) 0%,
+    color-mix(in oklch, var(--aios-accent) 18%, transparent) 45%,
+    transparent 70%
+  );
+}
+
+/* Muncul naik 8px dengan pegas ringan (sekali, tanpa pantulan berulang). */
+@keyframes aios-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* Cahaya sambutan "bernapas": membesar dan meredup pelan. */
+@keyframes aios-orb {
+  0%,
+  100% {
+    opacity: 0.75;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
 }
 
 /* Konten baru (pesan, layar) naik 4px sambil muncul. */

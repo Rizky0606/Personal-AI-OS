@@ -129,8 +129,8 @@ export function TaskCard({
       onDragEnd={onDragEnd}
       aria-label={task.title}
       className={cn(
-        'flex flex-col gap-2 rounded-control border border-border bg-surface p-2 transition-colors duration-[120ms] ease-aios',
-        'focus-within:border-border-strong hover:border-border-strong',
+        'flex flex-col gap-2 rounded-control border border-border bg-surface p-2 transition duration-[180ms] ease-spring',
+        'focus-within:border-border-strong hover:-translate-y-0.5 hover:border-border-strong hover:shadow-lift',
         !locked && 'cursor-grab',
         dragging && 'opacity-50',
       )}

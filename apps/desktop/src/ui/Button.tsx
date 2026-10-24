@@ -10,7 +10,8 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variants: Record<ButtonVariant, string> = {
-  primary: 'bg-accent text-on-accent hover:opacity-90 active:opacity-80',
+  // Gradien satu warna aksen dan cahaya saat hover (DESIGN_SYSTEM: Efek).
+  primary: 'aios-primary text-on-accent enabled:hover:shadow-glow active:opacity-90',
   secondary:
     'border border-border-strong bg-surface text-text hover:bg-surface-2 active:bg-surface-2',
   ghost: 'text-text hover:bg-surface-2 active:bg-surface-2',
@@ -30,7 +31,7 @@ export function Button({
       type={type}
       className={cn(
         'inline-flex h-8 items-center justify-center gap-2 rounded-control px-3 text-ui font-medium',
-        'transition-[background-color,opacity,transform] duration-[120ms] ease-aios active:scale-[0.98] disabled:active:scale-100',
+        'transition duration-[120ms] ease-aios active:scale-[0.98] disabled:active:scale-100',
         'disabled:cursor-not-allowed disabled:opacity-50',
         variants[variant],
         className,

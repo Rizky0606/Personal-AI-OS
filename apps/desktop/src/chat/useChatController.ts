@@ -354,6 +354,13 @@ export function useChatController(conversationId: string | undefined) {
     deleteMessage,
     rerunnableId: lastAssistant && !streaming ? lastAssistant.id : null,
     focusNonce,
+    /** Chat di dalam project (sambutan dan saran mengarah ke coding). */
+    inProject: activeProjectId !== null,
+    /** Mengisi kolom pesan dari kartu saran lalu memindahkan fokus ke sana (belum dikirim). */
+    prefill: (text: string) => {
+      setDraft(text);
+      setFocusNonce((n) => n + 1);
+    },
     loadOlder,
     hasMore: messagesQuery.hasNextPage,
     loadingOlder: messagesQuery.isFetchingNextPage,

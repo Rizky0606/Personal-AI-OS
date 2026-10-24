@@ -399,6 +399,61 @@ export const copy = {
       'Jelaskan pesan error ini',
       'Tulis draf email singkat',
     ],
+    welcome: {
+      general: {
+        title: 'Mau mengerjakan apa hari ini?',
+        subtitle: 'Tulis di bawah atau mulai dari salah satu saran. Role dipilih otomatis.',
+        cards: [
+          {
+            title: 'Ringkas teks',
+            hint: 'Tempel teks panjang, dapatkan intinya',
+            prompt: 'Ringkas teks yang saya tempel: ',
+          },
+          {
+            title: 'Jelaskan error',
+            hint: 'Tempel pesan error atau stack trace',
+            prompt: 'Jelaskan pesan error ini dan cara memperbaikinya: ',
+          },
+          {
+            title: 'Tulis draf email',
+            hint: 'Singkat, sopan, langsung bisa dipakai',
+            prompt: 'Tulis draf email singkat tentang ',
+          },
+          {
+            title: 'Buatkan kode',
+            hint: 'Template, skrip, atau fungsi siap pakai',
+            prompt: 'Buatkan kode untuk ',
+          },
+        ],
+      },
+      project: {
+        title: 'Mau mengerjakan apa di project ini?',
+        subtitle:
+          'Agent coding membaca dan mengubah berkas di folder project; hasilnya ditinjau dulu sebelum diterima.',
+        cards: [
+          {
+            title: 'Jelaskan struktur project',
+            hint: 'Folder, alur data, dan titik masuk',
+            prompt: 'Jelaskan struktur project ini dan alur utamanya.',
+          },
+          {
+            title: 'Cari dan perbaiki bug',
+            hint: 'Ceritakan gejalanya atau tempel error',
+            prompt: 'Cari dan perbaiki bug ini: ',
+          },
+          {
+            title: 'Tambahkan fitur',
+            hint: 'Jelaskan perilaku yang diinginkan',
+            prompt: 'Tambahkan fitur: ',
+          },
+          {
+            title: 'Tulis tes',
+            hint: 'Untuk modul atau fungsi tertentu',
+            prompt: 'Tulis tes untuk ',
+          },
+        ],
+      },
+    },
     role: {
       auto: 'Role otomatis',
       label: 'Role',
