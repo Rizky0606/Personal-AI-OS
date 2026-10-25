@@ -25,7 +25,7 @@ export function ScheduleDetailScreen({ scheduleId }: { scheduleId: string }) {
   const online = useOnline();
   const schedulesQuery = useSchedules();
   const runsQuery = useScheduleRuns(scheduleId);
-  const { busy, setEnabled, runNow, remove } = useScheduleActions();
+  const { busy, setEnabled, setNotify, runNow, remove } = useScheduleActions();
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const schedule = schedulesQuery.data?.find((s) => s.id === scheduleId);
@@ -94,6 +94,19 @@ export function ScheduleDetailScreen({ scheduleId }: { scheduleId: string }) {
               <span className="text-ui text-text-2">
                 {schedule.enabled ? copy.schedules.enabled : copy.schedules.disabled}
               </span>
+              {schedule.target !== 'research' ? (
+                <>
+                  <Switch
+                    checked={schedule.notify === 'on_change'}
+                    disabled={busy === `notify:${schedule.id}`}
+                    label={copy.schedules.notify.label}
+                    onChange={(on) => void setNotify(schedule.id, on ? 'on_change' : 'always')}
+                  />
+                  <span className="text-ui text-text-2" title={copy.schedules.notify.hint}>
+                    {copy.schedules.notify.label}
+                  </span>
+                </>
+              ) : null}
               <Button
                 variant="secondary"
                 disabled={busy === `run:${schedule.id}`}
@@ -181,10 +194,12 @@ export function ScheduleDetailScreen({ scheduleId }: { scheduleId: string }) {
                         <td
                           className={cn(
                             'border-b border-border px-3 py-1 text-ui',
-                            statusTone[run.status],
+                            run.changed === false ? 'text-text-2' : statusTone[run.status],
                           )}
                         >
-                          {copy.schedules.runStatus[run.status]}
+                          {run.changed === false
+                            ? copy.schedules.unchanged
+                            : copy.schedules.runStatus[run.status]}
                         </td>
                       </tr>
                     ))}

@@ -9,6 +9,7 @@ import { formatDateTime } from '../lib/time';
 import { Button } from '../ui/Button';
 import { ErrorBanner } from '../ui/ErrorBanner';
 import { IconButton } from '../ui/IconButton';
+import { Switch } from '../ui/Switch';
 import { TextArea } from '../ui/TextArea';
 import { TextField } from '../ui/TextField';
 import type { ScheduleParse } from '../api/gateway';
@@ -39,6 +40,7 @@ export function NewScheduleDialog({ open, onOpenChange, onCreated }: NewSchedule
   const [text, setText] = useState('');
   const [parsed, setParsed] = useState<ScheduleParse | null>(null);
   const [name, setName] = useState('');
+  const [notify, setNotify] = useState<'always' | 'on_change'>('always');
   const [fieldError, setFieldError] = useState<string | undefined>();
   const [error, setError] = useState<string | null>(null);
   const [working, setWorking] = useState<'parse' | 'save' | null>(null);
@@ -71,6 +73,7 @@ export function NewScheduleDialog({ open, onOpenChange, onCreated }: NewSchedule
       const result = await api.parseSchedule(text.trim());
       setParsed(result);
       setName(result.name);
+      setNotify(result.notify);
     } catch (e) {
       setError(apiErrorMessage(e, online));
     } finally {
@@ -91,6 +94,7 @@ export function NewScheduleDialog({ open, onOpenChange, onCreated }: NewSchedule
         target: parsed.target,
         agentRole: parsed.agentRole,
         enabled: true,
+        notify: parsed.target === 'research' ? 'always' : notify,
       });
       change(false);
       onCreated(schedule.id);
@@ -135,6 +139,23 @@ export function NewScheduleDialog({ open, onOpenChange, onCreated }: NewSchedule
                 <Row label={d.target}>
                   {copy.schedules.targets[parsed.target]}
                   {parsed.agentRole ? ` · ${parsed.agentRole}` : ''}
+                </Row>
+                <Row label={d.notify}>
+                  <span className="flex items-center gap-2">
+                    <Switch
+                      checked={parsed.target !== 'research' && notify === 'on_change'}
+                      disabled={parsed.target === 'research'}
+                      label={copy.schedules.notify.label}
+                      onChange={(on) => setNotify(on ? 'on_change' : 'always')}
+                    />
+                    <span>
+                      {parsed.target === 'research'
+                        ? copy.schedules.notify.researchHint
+                        : notify === 'on_change'
+                          ? copy.schedules.notify.on
+                          : copy.schedules.notify.off}
+                    </span>
+                  </span>
                 </Row>
                 <Row label={d.prompt}>{parsed.prompt}</Row>
                 <Row label={d.nextRuns}>

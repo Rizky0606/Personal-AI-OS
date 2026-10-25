@@ -244,8 +244,10 @@ export function createGatewayApi(call: Call) {
     listSchedules: async () => (await get('/schedules', ScheduleListSchema)).items,
     createSchedule: (input: CreateScheduleInput) =>
       get('/schedules', ScheduleSchema, { method: 'POST', body: input }),
-    updateSchedule: (id: string, patch: { enabled?: boolean; name?: string }) =>
-      get(`/schedules/${id}`, ScheduleSchema, { method: 'PATCH', body: patch }),
+    updateSchedule: (
+      id: string,
+      patch: { enabled?: boolean; name?: string; notify?: 'always' | 'on_change' },
+    ) => get(`/schedules/${id}`, ScheduleSchema, { method: 'PATCH', body: patch }),
     deleteSchedule: async (id: string) => {
       await call(`/schedules/${id}`, { method: 'DELETE' });
     },

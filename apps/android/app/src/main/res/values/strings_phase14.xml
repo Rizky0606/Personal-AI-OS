@@ -54,6 +54,10 @@
     <string name="schedule_target_chat">Chat</string>
     <string name="schedule_target_research">Riset</string>
     <string name="schedule_target_role">Role</string>
+    <string name="schedule_target_briefing">Briefing</string>
+    <string name="schedule_notify_label">Kabari hanya bila berubah</string>
+    <string name="schedule_notify_hint">Hasil run sebelumnya ikut dikirim ke AI; notifikasi hanya bila ada yang berubah.</string>
+    <string name="schedule_run_unchanged">Tidak berubah</string>
 
     <string name="schedule_run_now">Jalankan sekarang</string>
     <string name="schedule_running_now">Memulai…</string>

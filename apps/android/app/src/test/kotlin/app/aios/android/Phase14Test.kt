@@ -4,6 +4,9 @@ import android.speech.SpeechRecognizer
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.aios.android.data.api.NOTIFY_ALWAYS
+import app.aios.android.data.api.NOTIFY_ON_CHANGE
+import app.aios.android.data.api.TARGET_RESEARCH
 import app.aios.android.data.api.CreateScheduleRequest
 import app.aios.android.data.api.DevicesApi
 import app.aios.android.data.api.Page
@@ -356,19 +359,35 @@ private class FakeScheduleRepo : ScheduleRepository {
         return parseResult ?: throw httpError(422, "schedule_unparseable", "Itu jadwal sekali jalan.")
     }
 
-    override suspend fun create(draft: ScheduleParse, name: String, prompt: String): Schedule {
-        created += CreateScheduleRequest(name.trim(), draft.cron, draft.timezone, prompt.trim(), draft.target)
+    override suspend fun create(draft: ScheduleParse, name: String, prompt: String, notify: String): Schedule {
+        created += CreateScheduleRequest(
+            name.trim(),
+            draft.cron,
+            draft.timezone,
+            prompt.trim(),
+            draft.target,
+            notify = notify
+        )
         return schedule(id = "baru", name = name.trim(), prompt = prompt.trim()).also { items += it }
     }
 
-    override suspend fun update(id: String, name: String?, prompt: String?, enabled: Boolean?): Schedule {
+    val notifyUpdates = mutableListOf<String>()
+
+    override suspend fun update(
+        id: String,
+        name: String?,
+        prompt: String?,
+        enabled: Boolean?,
+        notify: String?
+    ): Schedule {
         updateFailure?.let { throw it }
-        updates += Triple(name, prompt, enabled)
+        if (notify != null) notifyUpdates += notify else updates += Triple(name, prompt, enabled)
         val current = items.first { it.id == id }
         val next = current.copy(
             name = name?.trim() ?: current.name,
             prompt = prompt?.trim() ?: current.prompt,
-            enabled = enabled ?: current.enabled
+            enabled = enabled ?: current.enabled,
+            notify = notify ?: current.notify
         )
         items[items.indexOf(current)] = next
         return next
@@ -563,6 +582,41 @@ class ScheduleViewModelsTest {
         assertEquals(ScheduleEvent.Created("baru"), r.events.single())
         assertNull(vm.ui.value.draft)
         assertEquals("", vm.ui.value.text)
+    }
+
+    @Test
+    fun `notify dari hasil baca bisa diubah sebelum disimpan, dan riset selalu always`() = rigTest { r ->
+        r.repo.parseResult = parsed().copy(notify = NOTIFY_ON_CHANGE)
+        val vm = createVm(r)
+        vm.onText("tiap jam cek harga laptop, kabari kalau turun")
+        vm.parse()
+        runCurrent()
+        assertEquals(NOTIFY_ON_CHANGE, vm.ui.value.notify)
+        vm.onNotifyOnChange(false)
+        vm.save()
+        runCurrent()
+        assertEquals(NOTIFY_ALWAYS, r.repo.created.single().notify)
+
+        r.repo.parseResult = parsed().copy(target = TARGET_RESEARCH, notify = NOTIFY_ALWAYS)
+        val research = createVm(r)
+        research.onText("riset tiap Senin")
+        research.parse()
+        runCurrent()
+        research.onNotifyOnChange(true)
+        research.save()
+        runCurrent()
+        assertEquals(NOTIFY_ALWAYS, r.repo.created.last().notify)
+    }
+
+    @Test
+    fun `detail - toggle hanya bila berubah dikirim ke server`() = rigTest { r ->
+        r.repo.items += schedule("s1")
+        val vm = detailVm(r)
+        runCurrent()
+        vm.setNotifyOnChange(true)
+        runCurrent()
+        assertEquals(listOf(NOTIFY_ON_CHANGE), r.repo.notifyUpdates)
+        assertEquals(NOTIFY_ON_CHANGE, vm.ui.value.schedule?.notify)
     }
 
     @Test

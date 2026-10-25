@@ -34,6 +34,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.aios.android.R
 import app.aios.android.data.api.Schedule
 import app.aios.android.data.api.ScheduleRun
+import app.aios.android.data.api.NOTIFY_ON_CHANGE
+import app.aios.android.data.api.TARGET_BRIEFING
 import app.aios.android.data.api.TARGET_CHAT
 import app.aios.android.data.api.TARGET_RESEARCH
 import app.aios.android.ui.components.AiosButton
@@ -216,6 +218,9 @@ fun ScheduleCreateScreen(
                     AiosChip(targetLabel(draft.target))
                     draft.agentRole?.let { AiosChip(it) }
                 }
+                if (draft.target != TARGET_RESEARCH) {
+                    NotifyRow(onChange = ui.notify == NOTIFY_ON_CHANGE, onToggle = viewModel::onNotifyOnChange)
+                }
                 AiosTextField(
                     value = ui.name,
                     onValueChange = viewModel::onName,
@@ -245,11 +250,37 @@ fun ScheduleCreateScreen(
     }
 }
 
+/** Sakelar "kabari hanya bila berubah" beserta penjelasannya. */
+@Composable
+private fun NotifyRow(onChange: Boolean, onToggle: (Boolean) -> Unit) {
+    val colors = AiosTheme.colors
+    val label = stringResource(R.string.schedule_notify_label)
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(label, style = AiosTheme.type.ui, color = colors.text)
+            Text(stringResource(R.string.schedule_notify_hint), style = AiosTheme.type.meta, color = colors.text2)
+        }
+        Switch(
+            checked = onChange,
+            onCheckedChange = onToggle,
+            colors = SwitchDefaults.colors(
+                checkedTrackColor = colors.accent,
+                checkedThumbColor = AiosTheme.onAccent,
+                uncheckedTrackColor = colors.surface2,
+                uncheckedThumbColor = colors.text3,
+                uncheckedBorderColor = colors.borderStrong
+            ),
+            modifier = Modifier.semantics { contentDescription = label }
+        )
+    }
+}
+
 @Composable
 private fun targetLabel(target: String): String = stringResource(
     when (target) {
         TARGET_RESEARCH -> R.string.schedule_target_research
         TARGET_CHAT -> R.string.schedule_target_chat
+        TARGET_BRIEFING -> R.string.schedule_target_briefing
         else -> R.string.schedule_target_role
     }
 )
@@ -363,6 +394,9 @@ private fun DetailBody(
                 modifier = Modifier.semantics { contentDescription = schedule.name }
             )
         }
+        if (schedule.target != TARGET_RESEARCH) {
+            NotifyRow(onChange = schedule.notify == NOTIFY_ON_CHANGE, onToggle = viewModel::setNotifyOnChange)
+        }
 
         Row(horizontalArrangement = Arrangement.spacedBy(Tokens.Space.s8)) {
             AiosButton(
@@ -408,7 +442,11 @@ private fun DetailBody(
             Column {
                 ui.runs.forEach { run ->
                     AiosListItem(
-                        title = runStatusLabel(run.status),
+                        title = if (run.changed == false) {
+                            stringResource(R.string.schedule_run_unchanged)
+                        } else {
+                            runStatusLabel(run.status)
+                        },
                         supporting = ScheduleFormat.instant(run.startedAt, schedule.timezone) ?: run.startedAt
                     )
                 }

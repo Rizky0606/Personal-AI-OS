@@ -480,6 +480,13 @@ Isi ditulis sendiri sebagai ringkasan prinsip, bukan salinan; dibaca dari halama
 - Batas 200 memori × 500 karakter menjaga pesan sistem tetap pendek; belum ada penghitungan token.
 - Riset (pipeline terpisah) belum memakai memori.
 
+## Temuan Fase 27–28 (briefing pagi, jadwal yang ingat)
+
+- Dikerjakan bersama karena sama-sama mengubah scheduler. Konteks tambahan (data briefing, hasil run sebelumnya) dikirim lewat opsi baru `ChatService.sendMessage(..., { context })`: ikut ke agent tetapi tidak disimpan di pesan pengguna. Konteks tetap masuk transkrip sesi Hermes.
+- Briefing memakai data gateway saja (riset, kanban, hasil jadwal 24 jam terakhir); topik tambahan dicari agent sendiri dengan tool Hermes. Belum ada data kalender atau email (butuh konektor, lihat bagian ditunda).
+- "Hanya bila berubah" mengandalkan agent menulis penanda `[TIDAK ADA PERUBAHAN]` di awal jawaban; bila agent lupa, hasil dianggap berubah (notifikasi tetap terkirim, lebih aman daripada diam). Penanda diganti kalimat biasa di pesan tersimpan.
+- Migrasi 0006 memakai `ALTER TYPE ... ADD VALUE` (aman di Postgres 12+ selama nilai baru tidak dipakai di transaksi yang sama).
+
 ## Rencana fitur lanjutan (Fase 25–34)
 
 Disusun 2026-10-25 dari perbandingan dengan ChatGPT, Claude, Gemini/NotebookLM, Perplexity, Cursor, Codex, Raycast, dan asisten self-hosted (Open WebUI, LibreChat, LobeChat, Khoj). Dikerjakan berurutan; setiap fase satu branch `feat/<fase>-<ringkas>`, merge ke `main` (rilis otomatis), dan gateway di VPS diperbarui bila fase menyentuh server. ID fitur baru dicatat di PRD.md.

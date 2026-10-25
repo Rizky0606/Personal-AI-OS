@@ -18,9 +18,9 @@ interface ScheduleRepository {
 
     suspend fun parse(text: String, timezone: String): ScheduleParse
 
-    suspend fun create(draft: ScheduleParse, name: String, prompt: String): Schedule
+    suspend fun create(draft: ScheduleParse, name: String, prompt: String, notify: String = draft.notify): Schedule
 
-    suspend fun update(id: String, name: String?, prompt: String?, enabled: Boolean?): Schedule
+    suspend fun update(id: String, name: String?, prompt: String?, enabled: Boolean?, notify: String? = null): Schedule
 
     suspend fun delete(id: String)
 
@@ -37,19 +37,20 @@ class RemoteScheduleRepository(private val api: ScheduleApi) : ScheduleRepositor
 
     override suspend fun parse(text: String, timezone: String) = api.parse(ScheduleParseRequest(text.trim(), timezone))
 
-    override suspend fun create(draft: ScheduleParse, name: String, prompt: String) = api.create(
+    override suspend fun create(draft: ScheduleParse, name: String, prompt: String, notify: String) = api.create(
         CreateScheduleRequest(
             name = name.trim(),
             cron = draft.cron,
             timezone = draft.timezone,
             prompt = prompt.trim(),
             target = draft.target,
-            agentRole = draft.agentRole
+            agentRole = draft.agentRole,
+            notify = notify
         )
     )
 
-    override suspend fun update(id: String, name: String?, prompt: String?, enabled: Boolean?) =
-        api.update(id, UpdateScheduleRequest(name?.trim(), prompt?.trim(), enabled))
+    override suspend fun update(id: String, name: String?, prompt: String?, enabled: Boolean?, notify: String?) =
+        api.update(id, UpdateScheduleRequest(name?.trim(), prompt?.trim(), enabled, notify))
 
     override suspend fun delete(id: String) {
         api.delete(id)

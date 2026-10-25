@@ -7,6 +7,11 @@ import kotlinx.serialization.Serializable
 const val TARGET_CHAT = "chat"
 const val TARGET_RESEARCH = "research"
 const val TARGET_ROLE = "role"
+const val TARGET_BRIEFING = "briefing"
+const val NOTIFY_ALWAYS = "always"
+
+/** Push hanya bila agent menyatakan hasilnya berubah dari run sebelumnya (tidak untuk riset). */
+const val NOTIFY_ON_CHANGE = "on_change"
 const val DEFAULT_TIMEZONE = "Asia/Jakarta"
 
 @Serializable
@@ -22,7 +27,8 @@ data class Schedule(
     val nextRunAt: String? = null,
     val conversationId: String? = null,
     val createdAt: String,
-    val updatedAt: String
+    val updatedAt: String,
+    val notify: String = NOTIFY_ALWAYS
 )
 
 @Serializable
@@ -36,7 +42,9 @@ data class ScheduleRun(
     /** running, succeeded, failed, missed. */
     val status: String,
     val startedAt: String,
-    val finishedAt: String? = null
+    val finishedAt: String? = null,
+    /** Jadwal on_change: false bila hasil sama dengan run sebelumnya (tanpa notifikasi). */
+    val changed: Boolean? = null
 )
 
 @Serializable
@@ -47,14 +55,16 @@ data class CreateScheduleRequest(
     val prompt: String,
     val target: String,
     val agentRole: String? = null,
-    val enabled: Boolean = true
+    val enabled: Boolean = true,
+    val notify: String = NOTIFY_ALWAYS
 )
 
 @Serializable
 data class UpdateScheduleRequest(
     val name: String? = null,
     val prompt: String? = null,
-    val enabled: Boolean? = null
+    val enabled: Boolean? = null,
+    val notify: String? = null
 )
 
 @Serializable
@@ -70,5 +80,6 @@ data class ScheduleParse(
     val target: String,
     val agentRole: String? = null,
     val description: String,
-    val nextRuns: List<String>
+    val nextRuns: List<String>,
+    val notify: String = NOTIFY_ALWAYS
 )
