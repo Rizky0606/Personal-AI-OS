@@ -68,8 +68,13 @@ interface ChatApi {
     @GET("roles")
     suspend fun listRoles(): RoleList
 
+    @GET("search")
+    suspend fun search(@Query("q") q: String, @Query("limit") limit: Int = SEARCH_LIMIT): SearchResponse
+
     companion object {
         const val PAGE_SIZE = 50
         const val MESSAGE_PAGE_SIZE = 50
     }
 }
+
+const val SEARCH_LIMIT = 20

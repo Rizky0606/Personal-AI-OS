@@ -35,6 +35,21 @@ data class Conversation(
     val spaceId: String? = null
 )
 
+/** Hasil pencarian riwayat (W22/A14): `kind` message membawa conversationId, research membawa researchId. */
+@Serializable
+data class SearchHit(
+    val kind: String,
+    val title: String = "",
+    val snippet: String = "",
+    val createdAt: String,
+    val messageId: String? = null,
+    val conversationId: String? = null,
+    val researchId: String? = null
+)
+
+@Serializable
+data class SearchResponse(val items: List<SearchHit>)
+
 @Serializable
 data class CreateConversationRequest(val surface: String, val title: String? = null, val spaceId: String? = null)
 

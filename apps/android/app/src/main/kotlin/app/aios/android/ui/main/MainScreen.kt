@@ -168,6 +168,11 @@ fun MainScreen(online: Boolean, sessionKey: String, link: AppLink?, onLinkConsum
                     chatVm.open(it.id)
                     scope.launch { drawerState.close() }
                 },
+                onHistory = { hit ->
+                    hit.conversationId?.let(chatVm::open)
+                    hit.researchId?.let { nav.navigate("research/$it") }
+                    scope.launch { drawerState.close() }
+                },
                 onNew = {
                     chatVm.open(null)
                     scope.launch { drawerState.close() }

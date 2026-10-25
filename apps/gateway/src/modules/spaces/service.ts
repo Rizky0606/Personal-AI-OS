@@ -76,16 +76,21 @@ const STOPWORDS = new Set(
   ).split(' '),
 );
 
-/** Kata kunci pertanyaan sebagai tsquery OR (tanda baca dibuang supaya aman untuk to_tsquery). */
-export function keywordQuery(question: string): string | null {
-  const words = question
+/** Kata kunci teks: huruf kecil, tanpa aksen dan tanda baca, tanpa kata umum, unik, maks 20. */
+export function keywords(text: string): string[] {
+  const words = text
     .toLowerCase()
     .normalize('NFKD')
     .replace(/\p{M}/gu, '')
     .split(/[^a-z0-9]+/)
     .filter((w) => w.length >= 3 && !STOPWORDS.has(w));
-  const unique = [...new Set(words)].slice(0, 20);
-  return unique.length ? unique.map((w) => `${w}:*`).join(' | ') : null;
+  return [...new Set(words)].slice(0, 20);
+}
+
+/** Kata kunci pertanyaan sebagai tsquery OR dengan pencocokan awalan (aman untuk to_tsquery). */
+export function keywordQuery(question: string): string | null {
+  const words = keywords(question);
+  return words.length ? words.map((w) => `${w}:*`).join(' | ') : null;
 }
 
 export function createSpacesService(deps: { db: Database }): SpacesService {

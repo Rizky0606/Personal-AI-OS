@@ -28,6 +28,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import app.aios.android.R
 import app.aios.android.data.api.Conversation
+import app.aios.android.data.api.SearchHit
 import app.aios.android.ui.components.AiosButton
 import app.aios.android.ui.components.AiosChip
 import app.aios.android.ui.components.AiosIcon
@@ -48,6 +49,7 @@ fun ConversationDrawer(
     onQuery: (String) -> Unit,
     onArchivedMode: (Boolean) -> Unit,
     onSelect: (Conversation) -> Unit,
+    onHistory: (SearchHit) -> Unit,
     onNew: () -> Unit,
     onRetry: () -> Unit,
     onTogglePinned: (Conversation) -> Unit,
@@ -108,7 +110,7 @@ fun ConversationDrawer(
             val state = when {
                 ui.loading -> ScreenState.Loading
                 ui.error != null -> ScreenState.Error(stringResource(ui.error.messageRes))
-                ui.items.isEmpty() -> ScreenState.Empty
+                ui.items.isEmpty() && ui.history.isEmpty() -> ScreenState.Empty
                 else -> ScreenState.Content
             }
             val emptyRes = when {
@@ -132,6 +134,32 @@ fun ConversationDrawer(
                             onSetArchived = { onSetArchived(conversation, it) },
                             onDelete = { toDelete = conversation }
                         )
+                    }
+                    if (ui.history.isNotEmpty()) {
+                        item(key = "history-header") {
+                            Text(
+                                text = stringResource(R.string.chat_history_title),
+                                style = AiosTheme.type.uiStrong,
+                                color = colors.text2,
+                                modifier = Modifier.padding(
+                                    start = Tokens.Space.s16,
+                                    end = Tokens.Space.s16,
+                                    top = Tokens.Space.s16,
+                                    bottom = Tokens.Space.s4
+                                )
+                            )
+                        }
+                        items(ui.history, key = { "h-" + (it.messageId ?: it.researchId ?: it.createdAt) }) { hit ->
+                            AiosListItem(
+                                title = hit.snippet.ifBlank { hit.title },
+                                supporting = if (hit.kind == "research") {
+                                    stringResource(R.string.chat_history_research, hit.title)
+                                } else {
+                                    hit.title.ifBlank { stringResource(R.string.chat_untitled) }
+                                },
+                                onClick = { onHistory(hit) }
+                            )
+                        }
                     }
                 }
             }

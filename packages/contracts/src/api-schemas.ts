@@ -386,6 +386,36 @@ export const AddSpaceDocumentRequestSchema = z
   .meta({ id: 'AddSpaceDocumentRequest' });
 export const SpaceDocumentParamsSchema = z.object({ id: IdSchema, documentId: IdSchema });
 
+/* Pencarian riwayat (W22) */
+
+export const SearchQuerySchema = z.object({
+  q: z.string().trim().min(2).max(200),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+});
+export const SearchResultSchema = z
+  .discriminatedUnion('kind', [
+    z.object({
+      kind: z.literal('message'),
+      messageId: IdSchema,
+      conversationId: IdSchema,
+      /** Judul percakapan (bisa kosong bila judul otomatis belum dibuat). */
+      title: z.string(),
+      /** Potongan teks di sekitar kata yang cocok. */
+      snippet: z.string(),
+      createdAt: TimestampSchema,
+    }),
+    z.object({
+      kind: z.literal('research'),
+      researchId: IdSchema,
+      title: z.string(),
+      snippet: z.string(),
+      createdAt: TimestampSchema,
+    }),
+  ])
+  .meta({ id: 'SearchResult' });
+export type SearchResult = z.infer<typeof SearchResultSchema>;
+export const SearchResponseSchema = itemsOf(SearchResultSchema).meta({ id: 'SearchResponse' });
+
 export const MemoryListSchema = itemsOf(MemorySchema).meta({ id: 'MemoryList' });
 const MemoryTextSchema = z.string().trim().min(1).max(MEMORY_TEXT_MAX);
 export const CreateMemoryRequestSchema = z

@@ -1,5 +1,14 @@
 export type PaletteGroup =
-  'action' | 'go' | 'conversation' | 'project' | 'task' | 'schedule' | 'model' | 'theme' | 'panel';
+  | 'action'
+  | 'go'
+  | 'conversation'
+  | 'project'
+  | 'task'
+  | 'schedule'
+  | 'model'
+  | 'theme'
+  | 'panel'
+  | 'history';
 
 export interface PaletteItem {
   id: string;
@@ -23,6 +32,7 @@ export const GROUP_ORDER: PaletteGroup[] = [
   'project',
   'model',
   'theme',
+  'history',
 ];
 
 const normalize = (text: string) => text.toLowerCase().normalize('NFKD').replace(/\p{M}/gu, '');

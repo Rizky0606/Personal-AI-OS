@@ -3,6 +3,7 @@ package app.aios.android.data.chat
 import app.aios.android.data.api.ChatApi
 import app.aios.android.data.api.Conversation
 import app.aios.android.data.api.CreateConversationRequest
+import app.aios.android.data.api.SearchHit
 import app.aios.android.data.api.InputPart
 import app.aios.android.data.api.Message
 import app.aios.android.data.api.MessagePart
@@ -63,6 +64,9 @@ interface ChatRepository {
 
     /** Mengunggah lampiran; hasilnya dirujuk dari pesan lewat part `file`. */
     suspend fun upload(file: PickedFile): MessagePart.File
+
+    /** Pencarian isi pesan dan laporan riset di server (tanpa cache). */
+    suspend fun search(query: String): List<SearchHit>
 
     /** Mengubah pesan pengguna: pesan itu dan semua sesudahnya dibuang, lalu teks baru dikirim. */
     suspend fun edit(
@@ -189,6 +193,8 @@ class RoomChatRepository(
         dao.upsertMessages(listOf(response.message.toEntity()))
         return response
     }
+
+    override suspend fun search(query: String) = api.search(query).items
 
     override suspend fun upload(file: PickedFile): MessagePart.File {
         val body = file.bytes.toRequestBody(file.mime.toMediaTypeOrNull())

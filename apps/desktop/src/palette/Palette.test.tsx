@@ -106,6 +106,30 @@ describe('Palet perintah', () => {
     expect(useUiStore.getState().paletteOpen).toBe(false);
   });
 
+  it('riwayat dari server: isi pesan lama ditemukan dan membuka percakapannya', async () => {
+    const user = userEvent.setup();
+    const OLD = '0192f0c4-7a1b-7c2d-a009-4a5b6c7d8e99';
+    api.search.mockResolvedValue([
+      {
+        kind: 'message',
+        messageId: '0192f0c4-7a1b-7c2d-a010-4a5b6c7d8e9a',
+        conversationId: OLD,
+        title: 'Backup VPS',
+        snippet: 'menjadwalkan backup database Postgres setiap malam',
+        createdAt: TS,
+      },
+    ]);
+    const { router } = await renderScreen(<CommandPalette />);
+    await input();
+
+    await user.keyboard('backup database');
+    const found = await option(/menjadwalkan backup database/);
+    expect(api.search).toHaveBeenCalledWith('backup database');
+    expect(screen.getByText(copy.palette.groups.history)).toBeInTheDocument();
+    await user.click(found);
+    await waitFor(() => expect(router.state.location.pathname).toBe(`/chat/${OLD}`));
+  });
+
   it('kartu project aktif ditemukan dan membuka Kanban; jadwal membuka detailnya', async () => {
     const user = userEvent.setup();
     const { router } = await renderScreen(<CommandPalette />);

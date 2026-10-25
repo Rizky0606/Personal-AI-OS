@@ -7,6 +7,7 @@ import {
   LoginResponseSchema,
   MemoryListSchema,
   MemorySchema,
+  SearchResponseSchema,
   SpaceDocumentListSchema,
   SpaceDocumentSchema,
   SpaceListSchema,
@@ -237,6 +238,9 @@ export function createGatewayApi(call: Call) {
         })
       ).items,
     cancelRun: (id: string) => get(`/runs/${id}/cancel`, RunSchema, { method: 'POST' }),
+
+    search: async (q: string) =>
+      (await get(`/search${query({ q, limit: 20 })}`, SearchResponseSchema)).items,
 
     listSpaces: async () => (await get('/spaces', SpaceListSchema)).items,
     createSpace: (name: string, description: string) =>
