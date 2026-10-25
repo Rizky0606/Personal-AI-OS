@@ -27,7 +27,11 @@ import app.aios.android.ui.theme.AiosTheme
 import app.aios.ui.tokens.Tokens
 
 @Composable
-fun SettingsScreen(onOpenCatalog: () -> Unit, viewModel: SettingsViewModel = hiltViewModel()) {
+fun SettingsScreen(
+    onOpenCatalog: () -> Unit,
+    onOpenMemory: () -> Unit,
+    viewModel: SettingsViewModel = hiltViewModel()
+) {
     val session by viewModel.session.collectAsStateWithLifecycle()
     val theme by viewModel.theme.collectAsStateWithLifecycle()
     val loggingOut by viewModel.loggingOut.collectAsStateWithLifecycle()
@@ -49,6 +53,13 @@ fun SettingsScreen(onOpenCatalog: () -> Unit, viewModel: SettingsViewModel = hil
         AiosListItem(
             title = stringResource(R.string.settings_app_version),
             trailing = BuildConfig.VERSION_NAME
+        )
+
+        Section(R.string.memory_title)
+        AiosListItem(
+            title = stringResource(R.string.memory_settings_item),
+            supporting = stringResource(R.string.memory_settings_supporting),
+            onClick = onOpenMemory
         )
 
         Section(R.string.settings_theme_section)

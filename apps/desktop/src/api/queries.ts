@@ -48,6 +48,8 @@ export const useQuota = () =>
 export const useSystemStatus = () =>
   useQuery({ queryKey: ['status'], queryFn: api.getStatus, refetchInterval: 15_000 });
 
+export const useMemories = () => useQuery({ queryKey: ['memories'], queryFn: api.listMemories });
+
 export const useSchedules = () => useQuery({ queryKey: ['schedules'], queryFn: api.listSchedules });
 
 export const useScheduleRuns = (scheduleId: string) =>

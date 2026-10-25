@@ -29,6 +29,14 @@ export const unusedCompare: AppDeps['compare'] = { run: unused('compare.run') };
 
 export const unusedStatus: AppDeps['status'] = { get: unused('status.get') };
 
+export const unusedMemory: AppDeps['memory'] = {
+  list: unused('memory.list'),
+  create: unused('memory.create'),
+  update: unused('memory.update'),
+  remove: unused('memory.remove'),
+  promptSection: unused('memory.promptSection'),
+};
+
 export const unusedTasks: AppDeps['tasks'] = {
   list: unused('tasks.list'),
   create: unused('tasks.create'),

@@ -6,6 +6,7 @@ import { copy } from '../copy';
 import { useUiStore, type ThemeMode } from '../state/uiStore';
 import { Button } from '../ui/Button';
 import { Chip } from '../ui/Chip';
+import { MemorySection } from '../memory/MemorySection';
 import { ListItem } from '../ui/ListItem';
 import { UpdateSection } from '../updater/UpdateSection';
 import { AllowedFolders } from '../worker/AllowedFolders';
@@ -42,6 +43,8 @@ export function SettingsScreen() {
         <ListItem title={copy.settings.server} trailing={session?.serverUrl ?? ''} />
         <ListItem title={copy.settings.device} trailing={session?.deviceName ?? ''} />
       </section>
+
+      <MemorySection />
 
       <AllowedFolders />
 

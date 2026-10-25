@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Memori yang terlihat (A9) -->
+    <string name="memory_title">Memori</string>
+    <string name="memory_settings_item">Memori</string>
+    <string name="memory_settings_supporting">Fakta tentang Anda yang selalu diketahui AI</string>
+    <string name="memory_intro">Fakta tentang Anda yang selalu diketahui AI di setiap chat. Nonaktifkan untuk menyimpan tanpa memakainya.</string>
+    <string name="memory_add_label">Fakta baru</string>
+    <string name="memory_placeholder">Mis. Saya lebih suka jawaban singkat.</string>
+    <string name="memory_counter">%1$d/%2$d karakter</string>
+    <string name="memory_add">Simpan ke memori</string>
+    <string name="memory_saving">Menyimpan…</string>
+    <string name="memory_saved">Tersimpan di memori.</string>
+    <string name="memory_updated">Memori diperbarui.</string>
+    <string name="memory_removed">Memori dihapus.</string>
+    <string name="memory_empty">Belum ada memori. Tambahkan di atas, atau tekan lama pesan Anda di chat lalu pilih Ingat.</string>
+    <string name="memory_edit">Ubah</string>
+    <string name="memory_edit_title">Ubah memori</string>
+    <string name="memory_save">Simpan</string>
+    <string name="memory_delete">Hapus</string>
+    <string name="memory_delete_title">Hapus memori ini?</string>
+    <string name="memory_cancel">Batal</string>
+    <string name="memory_toggle">Pakai memori: %1$s</string>
+    <string name="memory_remember">Ingat</string>
+    <string name="memory_remember_title">Ingat ini</string>
+    <string name="memory_remember_body">Ringkas menjadi satu fakta singkat. Fakta ini ikut di setiap chat berikutnya.</string>
+</resources>

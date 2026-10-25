@@ -1,6 +1,7 @@
 package app.aios.android.ui.chat
 
 import androidx.activity.compose.rememberLauncherForActivityResult
+import app.aios.android.ui.memory.RememberDialog
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
@@ -66,6 +67,7 @@ fun ChatScreen(viewModel: ChatViewModel, snackbar: SnackbarHostState) {
     var modelSheet by remember { mutableStateOf(false) }
     var roleSheet by remember { mutableStateOf(false) }
     var toDelete by remember { mutableStateOf<String?>(null) }
+    var toRemember by remember { mutableStateOf<String?>(null) }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         if (uris.isNotEmpty()) viewModel.addAttachments(uris.map { it.toString() })
     }
@@ -125,6 +127,7 @@ fun ChatScreen(viewModel: ChatViewModel, snackbar: SnackbarHostState) {
                     onResend = viewModel::resendLast,
                     onStartEdit = viewModel::startEdit,
                     onDelete = { toDelete = it },
+                    onRemember = { toRemember = it },
                     onRoleClick = { roleSheet = true },
                     onCopied = { /* umpan balik lewat snackbar di bawah */ },
                     copiedText = copiedText,
@@ -171,6 +174,9 @@ fun ChatScreen(viewModel: ChatViewModel, snackbar: SnackbarHostState) {
             onDismiss = { toDelete = null }
         )
     }
+    toRemember?.let { text ->
+        RememberDialog(initial = text, snackbar = snackbar, onDismiss = { toRemember = null })
+    }
     if (roleSheet) {
         RoleSheet(
             roles = ui.roles,
@@ -194,6 +200,7 @@ private fun MessageList(
     onResend: () -> Unit,
     onStartEdit: (String) -> Unit,
     onDelete: (String) -> Unit,
+    onRemember: (String) -> Unit,
     onRoleClick: () -> Unit,
     onCopied: () -> Unit,
     copiedText: String,
@@ -226,6 +233,7 @@ private fun MessageList(
                     onResend = onResend,
                     onStartEdit = onStartEdit,
                     onDelete = onDelete,
+                    onRemember = onRemember,
                     onRoleClick = onRoleClick,
                     onCopied = {
                         copiedTick++
@@ -257,6 +265,7 @@ private fun ChatRow(
     onResend: () -> Unit,
     onStartEdit: (String) -> Unit,
     onDelete: (String) -> Unit,
+    onRemember: (String) -> Unit,
     onRoleClick: () -> Unit,
     onCopied: () -> Unit
 ) {
@@ -266,7 +275,8 @@ private fun ChatRow(
             onEdit = onEdit,
             onResend = onResend,
             onStartEdit = onStartEdit,
-            onDelete = onDelete
+            onDelete = onDelete,
+            onRemember = onRemember
         )
         is ChatItem.PendingUser -> PendingUserRow(item)
         is ChatItem.Assistant -> AssistantMessageRow(

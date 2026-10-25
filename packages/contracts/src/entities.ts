@@ -335,3 +335,19 @@ export const AuditLogSchema = z
   })
   .meta({ id: 'AuditLog' });
 export type AuditLog = z.infer<typeof AuditLogSchema>;
+
+/** Batas panjang satu fakta memori; cukup untuk satu atau dua kalimat. */
+export const MEMORY_TEXT_MAX = 500;
+
+/** Fakta tentang pemilik yang disuntik ke pesan sistem setiap run (W17). Dikelola pemilik, bukan diisi otomatis. */
+export const MemorySchema = z
+  .object({
+    id: IdSchema,
+    text: z.string().min(1).max(MEMORY_TEXT_MAX),
+    /** Memori nonaktif tetap tersimpan tetapi tidak disuntik ke agent. */
+    enabled: z.boolean(),
+    createdAt: TimestampSchema,
+    updatedAt: TimestampSchema,
+  })
+  .meta({ id: 'Memory' });
+export type Memory = z.infer<typeof MemorySchema>;

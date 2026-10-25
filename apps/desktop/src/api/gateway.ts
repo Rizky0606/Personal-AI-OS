@@ -5,6 +5,8 @@ import {
   FileRecordSchema,
   IdSchema,
   LoginResponseSchema,
+  MemoryListSchema,
+  MemorySchema,
   MessageSchema,
   ModelListSchema,
   ProjectSchema,
@@ -229,6 +231,15 @@ export function createGatewayApi(call: Call) {
         })
       ).items,
     cancelRun: (id: string) => get(`/runs/${id}/cancel`, RunSchema, { method: 'POST' }),
+
+    listMemories: async () => (await get('/memories', MemoryListSchema)).items,
+    createMemory: (text: string) =>
+      get('/memories', MemorySchema, { method: 'POST', body: { text } }),
+    updateMemory: (id: string, patch: { text?: string; enabled?: boolean }) =>
+      get(`/memories/${id}`, MemorySchema, { method: 'PATCH', body: patch }),
+    deleteMemory: async (id: string) => {
+      await call(`/memories/${id}`, { method: 'DELETE' });
+    },
 
     listSchedules: async () => (await get('/schedules', ScheduleListSchema)).items,
     createSchedule: (input: CreateScheduleInput) =>

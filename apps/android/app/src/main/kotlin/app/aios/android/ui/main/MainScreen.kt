@@ -67,6 +67,7 @@ import app.aios.android.debug.debugRoutes
 import app.aios.android.ui.components.AiosIcon
 import app.aios.android.ui.components.AiosSnackbarHost
 import app.aios.android.ui.components.Hairline
+import app.aios.android.ui.memory.MemoryScreen
 import app.aios.android.ui.settings.SettingsScreen
 import app.aios.android.ui.theme.AiosTheme
 import app.aios.ui.tokens.Tokens
@@ -80,6 +81,7 @@ private object Routes {
     const val SCHEDULE_NEW = "schedules/new"
     const val SCHEDULE_DETAIL = "schedules/{id}"
     const val SETTINGS = "settings"
+    const val MEMORY = "settings/memory"
 }
 
 private data class Tab(val route: String, @StringRes val label: Int, @DrawableRes val icon: Int)
@@ -263,8 +265,12 @@ fun MainScreen(online: Boolean, sessionKey: String, link: AppLink?, onLinkConsum
                         )
                     }
                     composable(Routes.SETTINGS) {
-                        SettingsScreen(onOpenCatalog = { nav.navigate(DebugFeatures.ROUTE) })
+                        SettingsScreen(
+                            onOpenCatalog = { nav.navigate(DebugFeatures.ROUTE) },
+                            onOpenMemory = { nav.navigate(Routes.MEMORY) }
+                        )
                     }
+                    composable(Routes.MEMORY) { MemoryScreen(online = online, snackbar = snackbar) }
                     debugRoutes()
                 }
             }
@@ -279,6 +285,7 @@ private fun titleFor(route: String): Int = when (route) {
     Routes.SCHEDULES, Routes.SCHEDULE_DETAIL -> R.string.nav_schedules
     Routes.SCHEDULE_NEW -> R.string.schedule_new
     Routes.SETTINGS -> R.string.settings_title
+    Routes.MEMORY -> R.string.memory_title
     DebugFeatures.ROUTE -> R.string.catalog_title
     else -> R.string.nav_chat
 }

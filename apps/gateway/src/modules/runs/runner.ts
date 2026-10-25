@@ -84,6 +84,8 @@ export interface RunnerDeps {
     bundle(roleId: string): { systemPrompt: string };
     get(roleId: string): { engine: string } | undefined;
   };
+  /** Memori pemilik (W17) yang ditambahkan ke pesan sistem setiap run; tanpa ini tidak ada memori. */
+  memory?: { promptSection(): Promise<string> };
   log?: {
     warn: (obj: object, msg: string) => void;
     error: (obj: object, msg: string) => void;
@@ -118,6 +120,22 @@ const textOf = (events: Iterable<AgentEvent>) => {
 export function createRunner(deps: RunnerDeps): Runner {
   const { db, store, hub, adapter, log } = deps;
   const active = new Map<string, Active>();
+
+  /** Pesan sistem run: bundel role lalu memori pemilik. Memori yang gagal dimuat tidak menggagalkan run. */
+  async function systemPromptFor(roleId: string): Promise<string> {
+    const bundle = deps.roles.bundle(roleId).systemPrompt;
+    let memory = '';
+    try {
+      memory = (await deps.memory?.promptSection()) ?? '';
+    } catch (err) {
+      log?.warn({ err }, 'memori gagal dimuat; run berjalan tanpa memori');
+    }
+    return memory
+      ? `${bundle}
+
+${memory}`
+      : bundle;
+  }
 
   async function execute(input: LaunchInput, ctl: Active): Promise<void> {
     const { run } = input;
@@ -257,8 +275,8 @@ export function createRunner(deps: RunnerDeps): Runner {
             runId: run.id,
             messageId: input.assistantMessageId,
             prompt: input.prompt,
-            // Dihitung per run: perubahan role di mode dev berlaku pada run berikutnya.
-            systemPrompt: deps.roles.bundle(chosenRole).systemPrompt,
+            // Dihitung per run: perubahan role (mode dev) dan memori berlaku pada run berikutnya.
+            systemPrompt: await systemPromptFor(chosenRole),
             sessionId: input.sessionId,
             ...(input.history?.length ? { history: input.history } : {}),
             ...(input.images?.length ? { images: input.images } : {}),

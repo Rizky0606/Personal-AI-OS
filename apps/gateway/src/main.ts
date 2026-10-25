@@ -9,6 +9,7 @@ import { createTitleService } from './modules/chat/title.js';
 import { createAuthService } from './modules/auth/service.js';
 import { deriveAuthKeys } from './modules/auth/secrets.js';
 import { createDevicesService } from './modules/devices/service.js';
+import { createMemoryService } from './modules/memory/service.js';
 import { createHealthService } from './modules/health/service.js';
 import { createNineRouterClient } from './modules/llm/client.js';
 import { createModelsService } from './modules/llm/models.js';
@@ -68,6 +69,7 @@ async function main(): Promise<void> {
   const workerRelay = createWorkerRelay({ hub: workerHub, projects });
   workerHub.onPresence((deviceId, online) => workerRelay.presence(deviceId, online));
   const observer = createRunObserver(log);
+  const memory = createMemoryService({ db });
   const runner = createRunner({
     db,
     store,
@@ -76,6 +78,7 @@ async function main(): Promise<void> {
     adapter: createHermesAdapter({ baseUrl: config.HERMES_URL, apiKey: config.HERMES_API_KEY }),
     workerAdapter: createWorkerRelayAdapter({ relay: workerRelay }),
     roles,
+    memory,
     log,
   });
   const routing = createRoutingService({
@@ -169,6 +172,7 @@ async function main(): Promise<void> {
     projects,
     tasks,
     compare: createCompareService({ client }),
+    memory,
     status: createStatusService({
       db,
       health,
