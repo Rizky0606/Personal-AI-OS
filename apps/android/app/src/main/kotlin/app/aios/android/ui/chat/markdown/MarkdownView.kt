@@ -168,6 +168,17 @@ private fun CodeBlock(block: Block.Code, onCopied: () -> Unit) {
                 color = colors.text2,
                 modifier = Modifier.weight(1f)
             )
+            val artifact = remember(block) { if (block.closed) ArtifactPage.kind(block.language, block.code) else null }
+            if (artifact != null) {
+                var previewing by remember { mutableStateOf(false) }
+                Box(
+                    modifier = Modifier
+                        .size(Tokens.touchTarget)
+                        .clickable(role = Role.Button) { previewing = true },
+                    contentAlignment = Alignment.Center
+                ) { AiosIcon(R.drawable.ic_play, contentDescription = stringResource(R.string.chat_artifact_preview)) }
+                if (previewing) ArtifactDialog(artifact, block.language, block.code) { previewing = false }
+            }
             val label = stringResource(R.string.chat_copy_code)
             Box(
                 modifier = Modifier

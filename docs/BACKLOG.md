@@ -465,6 +465,14 @@ Isi ditulis sendiri sebagai ringkasan prinsip, bukan salinan; dibaca dari halama
 - **Belum ada**: pratinjau gambar di riwayat (hanya chip nama), unduh ulang lampiran (`GET /files/:id` tidak ada di kontrak), pembersihan berkas yang diunggah tetapi tidak pernah dikirim, lampiran pada run coding (omp mengabaikan gambar; dokumen tetap masuk sebagai teks), dan riwayat yang dikirim ulang setelah edit/hapus pesan hanya membawa teks (isi lampiran lama tidak ikut).
 - **Android**: pemilih dokumen sistem (gambar, PDF, DOCX, teks); kamera langsung belum ada.
 
+## Temuan Fase 25 (pratinjau artifact)
+
+- **Rust tidak bisa dikompilasi di mesin pengembangan** (tanpa MSVC Build Tools); `artifact.rs` dan pendaftaran protocol diverifikasi oleh clippy dan `cargo test` di CI (job desktop). Jalur Tauri di E2E memakai shim (blob URL), bukan protocol asli; cek manual di aplikasi terpasang tetap perlu.
+- **Butuh internet** untuk React dan Mermaid (CDN). HTML dan SVG berjalan tanpa internet.
+- **React hanya satu berkas** tanpa paket lain selain React (impor lain dilaporkan sebagai galat). Tailwind atau ikon dari CDN bisa dipakai lewat HTML biasa.
+- Pratinjau yang dibuka saat jawaban masih mengalir tertutup lagi ketika jawaban selesai (pesan dirender ulang sebagai pesan tersimpan).
+- Android menampilkan pratinjau di dialog layar penuh, bukan inline, karena WebView di dalam daftar chat yang bisa digulir mahal dan tingginya sulit diatur.
+
 ## Rencana fitur lanjutan (Fase 25–34)
 
 Disusun 2026-10-25 dari perbandingan dengan ChatGPT, Claude, Gemini/NotebookLM, Perplexity, Cursor, Codex, Raycast, dan asisten self-hosted (Open WebUI, LibreChat, LobeChat, Khoj). Dikerjakan berurutan; setiap fase satu branch `feat/<fase>-<ringkas>`, merge ke `main` (rilis otomatis), dan gateway di VPS diperbarui bila fase menyentuh server. ID fitur baru dicatat di PRD.md.

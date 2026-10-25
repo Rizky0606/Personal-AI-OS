@@ -23,6 +23,12 @@ export interface Fakes {
 }
 
 export const HERMES_PARTS = ['Halo! ', 'Ini jawaban ', 'streaming dari ', 'Hermes uji.'];
+/** Jawaban berisi blok kode yang bisa dipratinjau dan diunduh (pesan pengguna menyebut "artifact"). */
+export const ARTIFACT_PARTS = [
+  'Berikut halamannya.\n\n',
+  '```html index.html\n<h1 id="judul">Halo artifact</h1>\n',
+  '<script>document.getElementById("judul").textContent += " berjalan";</script>\n```\n',
+];
 export const CODING_FILE = 'catatan-e2e.txt';
 export const CODING_COMMIT = 'docs: tambah catatan e2e';
 
@@ -51,8 +57,11 @@ const textOf = (content: unknown) => (typeof content === 'string' ? content : ''
 
 export async function startFakes(): Promise<Fakes> {
   const hermes = await startFakeHermes();
-  hermes.onRequest(async (stream) => {
-    for (const part of HERMES_PARTS) {
+  hermes.onRequest(async (stream, req) => {
+    const last = req.body.messages.at(-1)?.content;
+    const parts =
+      typeof last === 'string' && last.includes('artifact') ? ARTIFACT_PARTS : HERMES_PARTS;
+    for (const part of parts) {
       stream.delta(part);
       await sleep(180);
     }

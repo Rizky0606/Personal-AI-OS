@@ -171,7 +171,7 @@ function BlockView({
         </p>
       );
     case 'code':
-      return <CodeBlock language={block.language} code={block.code} />;
+      return <CodeBlock language={block.language} code={block.code} closed={block.closed} />;
     case 'quote':
       return (
         <blockquote className="flex flex-col gap-2 border-l-2 border-border-strong pl-3 text-text-2">
