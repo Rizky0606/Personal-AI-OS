@@ -12,6 +12,7 @@ import {
 import { copy } from '../copy';
 import { cn } from '../lib/cn';
 import { rank, type PaletteGroup } from '../palette/rank';
+import { useHistorySearch } from '../palette/useHistorySearch';
 import { usePaletteItems } from '../palette/usePaletteItems';
 import { useUiStore } from '../state/uiStore';
 
@@ -28,7 +29,9 @@ export function CommandPalette() {
   const id = useId();
   const close = useCallback(() => setOpen(false), [setOpen]);
   const items = usePaletteItems(open, close);
-  const results = useMemo(() => rank(items, query), [items, query]);
+  const history = useHistorySearch(open, query, close);
+  // Hasil riwayat dari server menyusul di akhir, tanpa disaring ulang (server sudah mencocokkan semua kata).
+  const results = useMemo(() => [...rank(items, query), ...history], [items, query, history]);
   const current = results[Math.min(active, results.length - 1)];
 
   // Setiap dibuka mulai dari kosong.

@@ -167,6 +167,13 @@ class FakeChatRepo : ChatRepository {
     override suspend fun loadOlder(conversationId: String): Boolean = false
 
     val createdInSpace = mutableListOf<String?>()
+    var searchResults: List<app.aios.android.data.api.SearchHit> = emptyList()
+    val searches = mutableListOf<String>()
+
+    override suspend fun search(query: String): List<app.aios.android.data.api.SearchHit> {
+        searches += query
+        return searchResults
+    }
 
     override suspend fun createConversation(title: String?, spaceId: String?): Conversation {
         createCalls++

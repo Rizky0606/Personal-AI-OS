@@ -506,6 +506,12 @@ Isi ditulis sendiri sebagai ringkasan prinsip, bukan salinan; dibaca dari halama
 - Penanda "menjawab dari ruang" baru ada di Android (chat baru dari layar Ruang); desktop belum menampilkan penanda di layar chat.
 - Hapus ruang menghapus dokumen dan indeks, tetapi berkas di tabel `files` tetap (dipakai lampiran juga).
 
+## Temuan Fase 32 (pencarian riwayat)
+
+- Full-text `simple` dihitung saat kueri tanpa indeks tambahan (data satu pemilik kecil). Bila riwayat tumbuh besar, tambahkan kolom tsvector generated di `messages` dengan indeks GIN.
+- Semua kata kunci harus ada (AND, pencocokan awalan); hasil membuka percakapan, belum menggulir ke pesan yang cocok.
+- Desktop: grup Riwayat di palet Ctrl+K. Android: hasil di bawah daftar percakapan saat mencari di drawer.
+
 ## Rencana fitur lanjutan (Fase 25–34)
 
 Disusun 2026-10-25 dari perbandingan dengan ChatGPT, Claude, Gemini/NotebookLM, Perplexity, Cursor, Codex, Raycast, dan asisten self-hosted (Open WebUI, LibreChat, LobeChat, Khoj). Dikerjakan berurutan; setiap fase satu branch `feat/<fase>-<ringkas>`, merge ke `main` (rilis otomatis), dan gateway di VPS diperbarui bila fase menyentuh server. ID fitur baru dicatat di PRD.md.

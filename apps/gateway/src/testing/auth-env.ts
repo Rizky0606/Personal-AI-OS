@@ -11,6 +11,7 @@ import { createFilesService } from '../modules/files/service.js';
 import { createTitleService } from '../modules/chat/title.js';
 import { createDevicesService } from '../modules/devices/service.js';
 import { createMemoryService } from '../modules/memory/service.js';
+import { createSearchService } from '../modules/search/service.js';
 import { createSpacesService } from '../modules/spaces/service.js';
 import { createNineRouterClient } from '../modules/llm/client.js';
 import { createModelsService } from '../modules/llm/models.js';
@@ -310,6 +311,7 @@ export async function createAuthEnv(
     status,
     memory,
     spaces,
+    search: createSearchService({ db }),
     worker: { hub: workerHub, relay: workerRelay },
     ws: {
       hub,

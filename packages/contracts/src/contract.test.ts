@@ -64,6 +64,7 @@ const DOCUMENTED_ENDPOINTS = [
   'POST /research/:id/cancel',
   'GET /research/:id/export',
   'POST /files',
+  'GET /search',
   'GET /memories',
   'POST /memories',
   'PATCH /memories/:id',

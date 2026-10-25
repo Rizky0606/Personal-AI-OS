@@ -8,12 +8,25 @@ import {
   StatusSchema,
   ResearchExportQuerySchema,
   ResearchJobDetailSchema,
+  SearchQuerySchema,
+  SearchResponseSchema,
 } from '../api-schemas.js';
 import { FileRecordSchema, ResearchJobSchema } from '../entities.js';
 import { PageQuerySchema, pageOf } from '../common.js';
 import { json, type Endpoint } from '../endpoint.js';
 
 export const miscEndpoints: readonly Endpoint[] = [
+  {
+    operationId: 'search',
+    method: 'get',
+    path: '/search',
+    tag: 'Pencarian',
+    summary: 'Cari di semua pesan chat dan laporan riset (semua kata harus cocok)',
+    auth: true,
+    query: SearchQuerySchema,
+    responses: [json(200, 'Hasil, paling relevan dulu', SearchResponseSchema)],
+    errors: [400, 401],
+  },
   {
     operationId: 'createResearch',
     method: 'post',

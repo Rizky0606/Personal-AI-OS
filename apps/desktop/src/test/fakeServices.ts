@@ -66,6 +66,7 @@ export const api: FakeApi = {
   updateTask: fn<'updateTask'>(),
   runTask: fn<'runTask'>(),
   breakdownTasks: fn<'breakdownTasks'>(),
+  search: fn<'search'>(),
   listSpaces: fn<'listSpaces'>(),
   createSpace: fn<'createSpace'>(),
   updateSpace: fn<'updateSpace'>(),
@@ -176,6 +177,7 @@ export function resetApi(): void {
   api.listSchedules.mockResolvedValue([]);
   api.listMemories.mockResolvedValue([]);
   api.listSpaces.mockResolvedValue([]);
+  api.search.mockResolvedValue([]);
   api.listSpaceDocuments.mockResolvedValue([]);
   api.listSpaceConversations.mockResolvedValue({ items: [], nextBefore: null });
   api.listProjects.mockResolvedValue([]);

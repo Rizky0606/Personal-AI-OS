@@ -41,6 +41,8 @@ export const unusedSpaces: AppDeps['spaces'] = {
   contextFor: unused('spaces.contextFor'),
 };
 
+export const unusedSearch: AppDeps['search'] = { search: unused('search.search') };
+
 export const unusedMemory: AppDeps['memory'] = {
   list: unused('memory.list'),
   create: unused('memory.create'),
