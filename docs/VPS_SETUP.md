@@ -93,6 +93,7 @@ Semua skrip ada di `infra/scripts`; unit systemd di `infra/systemd`. Skrip diuji
 3. Buat kata sandi repositori: `openssl rand -base64 32 | sudo tee /etc/aios/restic-password` lalu `chmod 600`. **Simpan salinannya di luar VPS** (pengelola kata sandi): tanpanya backup tidak bisa dibuka.
 4. `sudo -E restic init` (sekali; dengan variabel dari `backup.env`), lalu uji manual: `sudo infra/scripts/backup.sh`.
 5. Pasang timer: `sudo cp infra/systemd/aios-*.{service,timer} /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable --now aios-backup.timer aios-restore-test.timer`. Sesuaikan `ExecStart` bila repo tidak di `/srv/personal-ai-os`.
+6. Folder kiriman berkas buatan AI: `deploy.sh` membuat `~/aios-outbox` (milik pengguna yang menjalankan Hermes). Pasang pembersihnya: `sudo cp infra/systemd/aios-outbox-clean.{service,timer} /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable --now aios-outbox-clean.timer`. Sesuaikan `User=` dan path bila Hermes tidak berjalan sebagai `ubuntu`.
 
 Yang dicadangkan: dump `pg_dump -Fc` database, folder data Hermes, `.env`, `gateway.env`, dan `secrets/` (restic mengenkripsi seluruh repositori). Retensi: semua backup dalam 31 hari terakhir (`KEEP_WITHIN`), yang lebih tua dihapus otomatis, backup terakhir selalu disimpan. Dump database tanpa kompresi internal (`pg_dump -Fc -Z0`) supaya restic hanya menyimpan bagian yang berubah lalu mengompresnya dengan zstd `max` (repo format v2; repo v1 di-upgrade sekali dengan `restic migrate upgrade_repo_v2`). Cek integritas ringan tiap hari.
 

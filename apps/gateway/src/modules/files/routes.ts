@@ -1,4 +1,4 @@
-import { MAX_FILE_BYTES } from '@aios/contracts';
+import { IdParamsSchema, MAX_FILE_BYTES } from '@aios/contracts';
 import type { FastifyPluginCallback } from 'fastify';
 import { AppError } from '../../errors.js';
 import { requireScope } from '../auth/guard.js';
@@ -57,5 +57,23 @@ export const fileRoutes: FastifyPluginCallback<{ files: FilesService }> = (
     },
   );
 
+  app.get('/files/:id/download', { onRequest: requireScope('app') }, async (req, reply) => {
+    const { id } = IdParamsSchema.parse(req.params);
+    const file = await files.download(id);
+    // Selalu sebagai unduhan (attachment), tidak pernah dirender di origin gateway.
+    return reply
+      .header('content-type', file.mime)
+      .header('content-disposition', contentDisposition(file.name))
+      .header('x-content-type-options', 'nosniff')
+      .header('cache-control', 'private, no-store')
+      .send(file.content);
+  });
+
   done();
 };
+
+/** Nama berkas aman untuk header: cadangan ASCII plus nama UTF-8 (RFC 6266/5987). */
+export function contentDisposition(name: string): string {
+  const ascii = name.replace(/[^\x20-\x7e]/g, '_').replace(/["\\]/g, '_');
+  return `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(name)}`;
+}

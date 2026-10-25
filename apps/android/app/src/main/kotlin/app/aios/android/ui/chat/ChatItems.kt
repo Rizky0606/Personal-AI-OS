@@ -35,7 +35,9 @@ sealed interface ChatItem {
         /** Chip role bisa diketuk (reroute) hanya pada jawaban terakhir yang sudah selesai. */
         val canReroute: Boolean,
         /** Menu Hapus tersedia (jawaban tersimpan dan tidak ada run berjalan). */
-        val canModify: Boolean = false
+        val canModify: Boolean = false,
+        /** Berkas buatan agent (folder kiriman) yang bisa diunduh. */
+        val files: List<MessagePart.File> = emptyList()
     ) : ChatItem {
         override val key get() = id
     }
@@ -83,7 +85,8 @@ fun buildChatItems(state: ChatUiState): List<ChatItem> {
                         model = message.model,
                         streaming = false,
                         canReroute = message.id == lastAssistantId && !state.busy,
-                        canModify = !state.busy
+                        canModify = !state.busy,
+                        files = message.parts.filterIsInstance<MessagePart.File>()
                     )
                 }
             }

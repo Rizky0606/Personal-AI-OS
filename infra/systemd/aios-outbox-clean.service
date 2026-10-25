@@ -1,0 +1,12 @@
+[Unit]
+Description=Bersihkan folder kiriman berkas buatan AI (lebih dari 24 jam)
+
+[Service]
+Type=oneshot
+# Pemilik folder dan proses Hermes. Sesuaikan path bila AIOS_OUTBOX diubah.
+User=ubuntu
+ExecStart=/usr/bin/find /home/ubuntu/aios-outbox -mindepth 1 -mmin +1440 -delete
+Nice=10
+NoNewPrivileges=true
+ProtectSystem=full
+PrivateTmp=true

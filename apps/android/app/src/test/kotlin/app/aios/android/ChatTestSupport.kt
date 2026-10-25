@@ -169,6 +169,9 @@ class FakeChatRepo : ChatRepository {
     val createdInSpace = mutableListOf<String?>()
     var searchResults: List<app.aios.android.data.api.SearchHit> = emptyList()
     val searches = mutableListOf<String>()
+    val downloads = mutableMapOf<String, ByteArray>()
+
+    override suspend fun download(fileId: String): ByteArray = downloads[fileId] ?: error("berkas $fileId tidak ada")
 
     override suspend fun search(query: String): List<app.aios.android.data.api.SearchHit> {
         searches += query

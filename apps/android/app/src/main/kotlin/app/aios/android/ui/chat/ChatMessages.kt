@@ -63,6 +63,8 @@ import app.aios.android.ui.components.accentGlow
 import app.aios.android.ui.theme.AiosTheme
 import app.aios.android.ui.theme.PlexMono
 import app.aios.ui.tokens.Tokens
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.util.Locale
 
 /**
@@ -315,7 +317,8 @@ fun AssistantMessageRow(
     roleName: (String) -> String,
     onRoleClick: () -> Unit,
     onCopied: () -> Unit,
-    onDelete: (String) -> Unit = {}
+    onDelete: (String) -> Unit = {},
+    onDownload: FileDownload = { _, _ -> }
 ) {
     val colors = AiosTheme.colors
     var menuOpen by remember { mutableStateOf(false) }
@@ -394,7 +397,52 @@ fun AssistantMessageRow(
             }
         }
         if (item.streaming && item.text.isNotEmpty()) TypingDots()
+        item.files.forEach { file -> GeneratedFileRow(file, onDownload) }
         if (!item.streaming) CodeZipButton(item.text)
+    }
+}
+
+/** Mengunduh berkas lalu menyerahkan isinya ke penulis yang menyimpan ke tujuan pilihan pemilik. */
+typealias FileDownload = (MessagePart.File, suspend (ByteArray) -> Unit) -> Unit
+
+/** Berkas yang dibuat agent untuk pemilik (folder kiriman); Unduh membuka dialog simpan sistem. */
+@Composable
+private fun GeneratedFileRow(file: MessagePart.File, onDownload: FileDownload) {
+    val context = LocalContext.current
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(file.mime)) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        onDownload(file) { bytes ->
+            withContext(Dispatchers.IO) {
+                context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) } ?: error("stream")
+            }
+        }
+    }
+    val colors = AiosTheme.colors
+    val shape = RoundedCornerShape(Tokens.Radius.sm)
+    val label = stringResource(R.string.chat_file_download_label, file.name)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(colors.surface2, shape)
+            .border(Hairline, colors.border, shape)
+            .padding(start = Tokens.Space.s12),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = file.name,
+            style = AiosTheme.type.ui,
+            color = colors.text,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
+        AiosButton(
+            text = stringResource(R.string.chat_file_download),
+            onClick = { launcher.launch(file.name) },
+            kind = ButtonKind.Ghost,
+            modifier = Modifier.semantics { contentDescription = label },
+            leadingIcon = { AiosIcon(R.drawable.ic_download, contentDescription = null) }
+        )
     }
 }
 

@@ -42,6 +42,10 @@ const EnvSchema = z.object({
   RESEARCH_SUMMARY_MODEL: withDefault(z.string().min(1), 'general-cheap'),
   /** Chromium/Chrome/Edge untuk halaman yang butuh JavaScript. Kosong = halaman seperti itu dilewati. */
   BROWSER_EXECUTABLE_PATH: optionalString,
+  /** Folder kiriman berkas buatan agent seperti terlihat gateway (mis. /outbox). Kosong = fitur mati. */
+  OUTBOX_DIR: optionalString,
+  /** Folder yang sama seperti terlihat agent di host (mis. /home/ubuntu/aios-outbox). */
+  OUTBOX_HOST_DIR: optionalString,
   /** Combo 9Router kecil untuk mengurai jadwal dari bahasa alami. */
   SCHEDULE_MODEL: withDefault(z.string().min(1), 'router-fast'),
   /** Combo 9Router kecil untuk memecah ide menjadi kartu kanban. */

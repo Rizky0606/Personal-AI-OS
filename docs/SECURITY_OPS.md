@@ -31,6 +31,12 @@ Hasil audit terakhir dan temuannya ada di `docs/SECURITY_AUDIT.md`; tes `securit
 - Bundel `quick.html` tidak mengimpor `app/services` (diperiksa saat build).
 - Menutup jendela utama menutup aplikasi, termasuk jendela Quick Ask yang tersembunyi dan worker.
 
+## Berkas buatan agent (folder kiriman)
+
+- Hermes menulis berkas untuk pemilik ke `/home/ubuntu/aios-outbox/<id-run>/`. Gateway me-mount folder itu read-only (`/outbox`) dan hanya mengambil berkas biasa di dalam folder run yang sedang selesai: symlink dan path yang keluar folder diabaikan, maks 10 berkas, 25 MB per berkas, 50 MB per run.
+- Berkas disalin ke tabel `files` (ikut backup) dan diunduh lewat `GET /files/:id/download` (scope `app`) selalu sebagai attachment dengan `nosniff`, tidak pernah dirender di origin gateway.
+- Timer `aios-outbox-clean` menghapus isi folder kiriman yang lebih tua dari 24 jam.
+
 ## Pratinjau artifact
 
 - Kode buatan AI (HTML, SVG, React, Mermaid) hanya dijalankan di origin terpisah: desktop lewat custom protocol `aiosartifact` di iframe `sandbox="allow-scripts allow-modals"` (tanpa `allow-same-origin`), Android lewat WebView tanpa jembatan JS, tanpa akses berkas atau content provider, dan tanpa navigasi keluar. Skrip artifact tidak bisa membaca token, IPC, atau DOM aplikasi.

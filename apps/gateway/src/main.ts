@@ -9,6 +9,7 @@ import { createTitleService } from './modules/chat/title.js';
 import { createAuthService } from './modules/auth/service.js';
 import { deriveAuthKeys } from './modules/auth/secrets.js';
 import { createDevicesService } from './modules/devices/service.js';
+import { createOutbox } from './modules/files/outbox.js';
 import { createMemoryService } from './modules/memory/service.js';
 import { createSearchService } from './modules/search/service.js';
 import { createSpacesService } from './modules/spaces/service.js';
@@ -72,6 +73,16 @@ async function main(): Promise<void> {
   workerHub.onPresence((deviceId, online) => workerRelay.presence(deviceId, online));
   const observer = createRunObserver(log);
   const memory = createMemoryService({ db });
+  const files = createFilesService({ db });
+  const outbox =
+    config.OUTBOX_DIR && config.OUTBOX_HOST_DIR
+      ? createOutbox({
+          dir: config.OUTBOX_DIR,
+          hostDir: config.OUTBOX_HOST_DIR,
+          save: (input) => files.saveGenerated(input),
+          log,
+        })
+      : undefined;
   const runner = createRunner({
     db,
     store,
@@ -82,6 +93,7 @@ async function main(): Promise<void> {
     roles,
     memory,
     projectRules: projects,
+    ...(outbox ? { outbox } : {}),
     log,
   });
   const routing = createRoutingService({
@@ -90,7 +102,6 @@ async function main(): Promise<void> {
     complete: createRouterComplete(client, config.ROUTER_MODEL),
     log,
   });
-  const files = createFilesService({ db });
   const spaces = createSpacesService({ db });
   const chat = createChatService({
     db,

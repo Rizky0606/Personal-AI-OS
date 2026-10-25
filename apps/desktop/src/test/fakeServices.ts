@@ -69,6 +69,7 @@ export const api: FakeApi = {
   search: fn<'search'>(),
   updateProject: fn<'updateProject'>(),
   deleteProject: fn<'deleteProject'>(),
+  downloadFile: fn<'downloadFile'>(),
   deleteConversation: fn<'deleteConversation'>(),
   listSpaces: fn<'listSpaces'>(),
   createSpace: fn<'createSpace'>(),

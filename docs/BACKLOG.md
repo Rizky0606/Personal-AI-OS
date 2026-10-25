@@ -516,6 +516,8 @@ Isi ditulis sendiri sebagai ringkasan prinsip, bukan salinan; dibaca dari halama
 
 - Aturan disimpan di server (`projects.instructions`, migrasi 0008) dan disuntik ke pesan sistem setiap run di project (coding lewat worker dan chat project), setelah bundel role dan memori. Belum membaca berkas AGENTS.md atau .cursor/rules dari folder project; ide lanjutan: tombol impor dari berkas itu lewat worker.
 - Tes git worker (review.test.ts) bisa melewati batas 5 detik saat mesin sibuk (emulator berjalan); lulus bila dijalankan sendiri.
+- E2E Android `bb_artifact_blok_html_dibuka_di_pratinjau` sesekali gagal ComposeNotIdleException saat WebView pratinjau terbuka; lulus saat diulang.
+- Berkas buatan AI: run coding di Windows belum memakai folder kiriman (hasilnya sudah ada di worktree lokal). Pratinjau gambar/PDF di chip berkas bisa ditambah nanti.
 
 ## Temuan Fase 34 (widget dan tile Quick Settings)
 
@@ -538,6 +540,7 @@ Disusun 2026-10-25 dari perbandingan dengan ChatGPT, Claude, Gemini/NotebookLM, 
 | 32 | Pencarian di semua riwayat | W22, A14 | Gateway, klien | Full-text search di pesan chat dan laporan riset, hasil membuka percakapan pada pesan yang cocok | Tes integrasi, E2E |
 | 33 | Aturan per project | W23 | Gateway, worker, desktop | Instruksi per project (gaya kode, perintah tes) yang bisa diedit di UI dan ikut disuntik ke run coding | Tes worker dan desktop |
 | 34 | Widget dan tile Quick Settings | A15 | Android | Tile "Tanya cepat" dan widget "Catat ide ke kanban" | Tes instrumentasi, cek manual |
+| 35 | Berkas buatan AI (folder kiriman) | - | Gateway, infra, desktop, Android | Hermes menyimpan berkas (zip, PDF, gambar) di folder kiriman per run; gateway menempelkannya ke jawaban dengan tombol Unduh | Tes unit dan integrasi gateway, tes desktop dan Android |
 
 **Ditunda sampai ada verifikasi atau keputusan:**
 - Rekam dan ringkas rapat (butuh model transkripsi lewat 9Router atau VPS; cek dulu ketersediaan dan beban VPS ARM).

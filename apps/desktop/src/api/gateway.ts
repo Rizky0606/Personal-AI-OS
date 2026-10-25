@@ -304,6 +304,9 @@ export function createGatewayApi(call: Call) {
     getResearch: (id: string) => get(`/research/${id}`, ResearchJobDetailSchema),
     cancelResearch: (id: string) =>
       get(`/research/${id}/cancel`, ResearchJobSchema, { method: 'POST' }),
+    /** Isi berkas (lampiran atau berkas buatan agent) untuk disimpan pemilik. */
+    downloadFile: async (id: string) =>
+      (await call(`/files/${id}/download`, { raw: true })) as Blob,
     exportResearch: async (id: string, format: 'md' | 'pdf') =>
       (await call(`/research/${id}/export${query({ format })}`, { raw: true })) as Blob,
   };

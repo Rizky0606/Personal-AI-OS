@@ -6,6 +6,9 @@
     <string name="chat_search_label">Cari percakapan</string>
     <string name="chat_search_hint">Cari judul atau isi percakapan</string>
     <string name="chat_history_title">Riwayat</string>
+    <string name="chat_file_download">Unduh</string>
+    <string name="chat_file_download_label">Unduh %1$s</string>
+    <string name="chat_file_saved">Berkas tersimpan.</string>
     <string name="chat_history_research">Riset: %1$s</string>
     <string name="chat_filter_active">Aktif</string>
     <string name="chat_filter_archived">Arsip</string>
