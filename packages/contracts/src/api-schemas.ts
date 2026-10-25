@@ -4,6 +4,8 @@ import {
   CronSchema,
   ApprovalDecisionSchema,
   DeviceSchema,
+  MEMORY_TEXT_MAX,
+  MemorySchema,
   MessagePartInputSchema,
   MessageSchema,
   ResearchDepthSchema,
@@ -355,6 +357,18 @@ export const CreateScheduleRequestSchema = z
     enabled: z.boolean().default(true),
   })
   .meta({ id: 'CreateScheduleRequest' });
+
+export const MemoryListSchema = itemsOf(MemorySchema).meta({ id: 'MemoryList' });
+const MemoryTextSchema = z.string().trim().min(1).max(MEMORY_TEXT_MAX);
+export const CreateMemoryRequestSchema = z
+  .object({ text: MemoryTextSchema })
+  .meta({ id: 'CreateMemoryRequest' });
+export const UpdateMemoryRequestSchema = z
+  .object({ text: MemoryTextSchema.optional(), enabled: z.boolean().optional() })
+  .refine((v) => v.text !== undefined || v.enabled !== undefined, {
+    message: 'Isi text atau enabled.',
+  })
+  .meta({ id: 'UpdateMemoryRequest' });
 
 export const UpdateScheduleRequestSchema = z
   .object({

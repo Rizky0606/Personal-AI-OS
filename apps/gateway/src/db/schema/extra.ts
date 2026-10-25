@@ -149,3 +149,16 @@ export const auditLog = pgTable(
   },
   (t) => [index('audit_log_ts_idx').on(t.ts)],
 );
+
+/** Memori yang terlihat (W17): fakta tentang pemilik, disuntik ke pesan sistem setiap run bila aktif. */
+export const memories = pgTable(
+  'memories',
+  {
+    id: id(),
+    text: text('text').notNull(),
+    enabled: boolean('enabled').notNull().default(true),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index('memories_created_idx').on(t.createdAt)],
+);

@@ -48,13 +48,14 @@ const DOCUMENTED_TABLES = [
   'routing_decisions',
   'routing_corrections',
   'audit_log',
+  'memories',
 ];
 
 describe('skema Drizzle', () => {
   /** Tabel internal gateway yang tidak ada di "Model data inti" karena tidak diekspos lewat API. */
   const INTERNAL_TABLES = ['owner_account'];
 
-  it('memuat 17 tabel "Model data inti" ditambah tabel internal yang disebut eksplisit', () => {
+  it('memuat 18 tabel "Model data inti" ditambah tabel internal yang disebut eksplisit', () => {
     expect(tables.map((t) => getTableName(t)).sort()).toEqual(
       [...DOCUMENTED_TABLES, ...INTERNAL_TABLES].sort(),
     );

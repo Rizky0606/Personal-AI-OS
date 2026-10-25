@@ -10,6 +10,7 @@ import { createChatService, type ChatService } from '../modules/chat/service.js'
 import { createFilesService } from '../modules/files/service.js';
 import { createTitleService } from '../modules/chat/title.js';
 import { createDevicesService } from '../modules/devices/service.js';
+import { createMemoryService } from '../modules/memory/service.js';
 import { createNineRouterClient } from '../modules/llm/client.js';
 import { createModelsService } from '../modules/llm/models.js';
 import { createQuotaService, createUsageRecorder } from '../modules/llm/usage.js';
@@ -161,6 +162,7 @@ export async function createAuthEnv(
   const workerRelay = createWorkerRelay({ hub: workerHub, projects });
   workerHub.onPresence((deviceId, online) => workerRelay.presence(deviceId, online));
   const observer = createRunObserver();
+  const memory = createMemoryService({ db });
   const runner = createRunner({
     db,
     store,
@@ -177,6 +179,7 @@ export async function createAuthEnv(
       ...(options.workerRelay ?? {}),
     }),
     roles,
+    memory,
   });
   const routing = createRoutingService({
     db,
@@ -302,6 +305,7 @@ export async function createAuthEnv(
     tasks,
     compare: createCompareService({ client }),
     status,
+    memory,
     worker: { hub: workerHub, relay: workerRelay },
     ws: {
       hub,
