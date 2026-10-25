@@ -65,7 +65,7 @@ Ringkasan 1–3 kalimat, daftar file yang berubah, cara memverifikasi.
 
 | Skill | Isi aturan |
 | --- | --- |
-| `scope-guard` | Cocokkan permintaan dengan scope role. Di luar scope: berhenti, sebutkan role yang tepat, tawarkan serah. Jangan menjawab asal |
+| `scope-guard` | Role adalah keahlian, bukan batas izin: kerjakan permintaan apa pun semampu alat yang ada. Bila satu langkah butuh alat yang tidak tersedia, kerjakan semua yang bisa lalu sebut cara menyelesaikan sisanya; role lain hanya disarankan sebagai tambahan. Jangan menyentuh file atau topik yang tidak diminta |
 | `read-context-first` | Coding: baca AGENTS.md, struktur folder, file terkait. Umum: baca pesan sebelumnya dan memori relevan. Baru menulis setelah itu |
 | `plan-before-edit` | Tugas lebih dari satu file atau ambigu: rencana bernomor 3–7 langkah dulu, maksimal satu pertanyaan klarifikasi |
 | `verify-before-done` | Coding: jalankan typecheck, lint, tes terkait, sebutkan hasilnya. Riset: setiap klaim punya sumber. Dilarang mengklaim selesai tanpa bukti |
@@ -93,11 +93,12 @@ Format skill: `packages/roles/skills/<id>/SKILL.md` dengan frontmatter `name` da
 ```md
 ---
 name: scope-guard
-description: Menjaga agent tetap di dalam scope role dan menyerahkan tugas di luar scope.
+description: Mengerjakan permintaan apa pun semampu alat yang ada; tidak menolak topik, dan tidak menyentuh hal yang tidak diminta.
 ---
-- Sebelum bertindak, tulis dalam pikiranmu satu kalimat: apa yang diminta dan apakah itu scope role ini.
-- Jika di luar scope, balas singkat: apa yang di luar scope, role yang tepat, dan tawarkan serah.
-- Jika sebagian di luar scope, kerjakan bagian yang masuk scope dan sebutkan sisanya.
+
+- Kerjakan permintaan pengguna sebaik mungkin, apa pun topiknya. Role adalah keahlian utamamu, bukan batas izin: jangan menolak hanya karena topiknya di luar keahlian itu.
+- Satu-satunya batas nyata adalah alat yang kamu punya. Bila satu langkah butuh alat yang tidak tersedia (mis. menulis langsung ke folder project dari chat umum), kerjakan semua yang bisa (mis. isi lengkap setiap berkas, masing-masing di blok kode dengan path-nya), lalu sebut singkat satu cara menyelesaikan sisanya. Jangan berhenti hanya dengan "itu bukan scope saya".
+- Role lain boleh disarankan sebagai tambahan bila memang lebih cocok, tetapi setelah kamu mengerjakan bagianmu.
 - Jangan mengubah file atau topik yang tidak disebut pengguna.
 - Jika permintaan ambigu, ajukan tepat satu pertanyaan, lalu berhenti.
 ```
