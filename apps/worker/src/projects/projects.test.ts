@@ -139,6 +139,7 @@ describe('detectGit', () => {
       isRepo: false,
       defaultBranch: null,
       currentBranch: null,
+      branches: [],
     });
   });
 
@@ -151,6 +152,7 @@ describe('detectGit', () => {
       isRepo: true,
       defaultBranch: 'trunk',
       currentBranch: 'trunk',
+      branches: ['trunk'],
     });
   });
 
@@ -172,11 +174,10 @@ describe('detectGit', () => {
     git(root, 'symbolic-ref', 'refs/remotes/origin/HEAD', 'refs/remotes/origin/develop');
     git(root, 'checkout', '-q', '-b', 'fitur');
 
-    expect(await detectGit(new ProcessManager(), root)).toEqual({
-      isRepo: true,
-      defaultBranch: 'develop',
-      currentBranch: 'fitur',
-    });
+    const info = await detectGit(new ProcessManager(), root);
+    expect(info).toMatchObject({ isRepo: true, defaultBranch: 'develop', currentBranch: 'fitur' });
+    // Hanya branch lokal (refs/heads), tanpa branch remote.
+    expect([...info.branches].sort()).toEqual(['fitur', 'main']);
   });
 
   it('HEAD lepas: cabang saat ini null, bawaan tetap terisi', async () => {
@@ -189,6 +190,7 @@ describe('detectGit', () => {
       isRepo: true,
       defaultBranch: 'main',
       currentBranch: null,
+      branches: ['main'],
     });
   });
 });

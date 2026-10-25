@@ -244,6 +244,36 @@ export const copy = {
     workerOff:
       'Worker belum tersambung. Project belum bisa ditambahkan, tetapi daftar tetap tampil.',
     columns: { name: 'Nama', stack: 'Stack', branch: 'Branch', folder: 'Folder', rules: 'Aturan' },
+    branch: {
+      change: 'Ganti',
+      title: (name: string) => `Branch kerja ${name}`,
+      intro:
+        'Branch dasar tiap tugas coding (worktree dibuat dari sini) dan tujuan merge saat hasil diterima.',
+      loading: 'Membaca branch lokal…',
+      localBranches: 'Branch lokal',
+      unbound:
+        'Folder project belum terikat di PC ini, jadi daftar branch tidak bisa dibaca. Ketik nama branch.',
+      label: 'Nama branch',
+      notLocal: (name: string) =>
+        `Branch "${name}" belum ada di folder lokal; tugas coding akan gagal sampai branch itu dibuat.`,
+      save: 'Simpan branch',
+      saving: 'Menyimpan…',
+      saved: (name: string) => `Branch kerja diganti ke ${name}.`,
+    },
+    unbind: {
+      action: 'Lepas folder',
+      title: 'Lepas folder dari project ini?',
+      body: (path: string) =>
+        `Ikatan ke ${path} dilepas. Berkas di folder itu tidak dihapus; ikat lagi kapan saja.`,
+      done: 'Folder dilepas.',
+    },
+    remove: {
+      action: 'Hapus project',
+      title: 'Hapus project ini?',
+      body: (name: string) =>
+        `"${name}" dan kartu kanbannya dihapus. Percakapannya tetap ada sebagai chat biasa, dan folder di PC tidak disentuh.`,
+      done: 'Project dihapus.',
+    },
     rules: {
       edit: 'Ubah aturan',
       none: 'Belum ada',
@@ -444,6 +474,11 @@ export const copy = {
     pin: 'Sematkan',
     unpin: 'Lepas sematan',
     archive: 'Arsipkan',
+    deleteConversation: 'Hapus',
+    deleteConversationTitle: 'Hapus percakapan ini?',
+    deleteConversationBody: (title: string) =>
+      `"${title}" dan semua pesannya dihapus permanen. Pilih Arsipkan bila hanya ingin menyembunyikannya.`,
+    deleted: 'Percakapan dihapus.',
     save: 'Simpan',
     cancel: 'Batal',
     conversation: 'Percakapan',

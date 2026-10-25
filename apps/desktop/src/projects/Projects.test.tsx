@@ -36,7 +36,7 @@ const inspection = (over: Partial<ProjectInspection> = {}): ProjectInspection =>
   path: 'C:\\Kerja\\aplikasi',
   name: 'aplikasi',
   stack: { languages: ['typescript'], frameworks: ['react'], packageManager: 'pnpm' },
-  git: { isRepo: true, defaultBranch: 'main', currentBranch: 'main' },
+  git: { isRepo: true, defaultBranch: 'main', currentBranch: 'main', branches: ['main', 'prod'] },
   ...over,
 });
 
@@ -105,6 +105,89 @@ describe('ProjectsScreen: daftar', () => {
     });
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(await screen.findByText(copy.projects.rules.saved)).toBeInTheDocument();
+  });
+
+  it('ganti branch: branch lokal dari worker dipilih lalu disimpan ke server', async () => {
+    connected();
+    const user = userEvent.setup();
+    api.listProjects.mockResolvedValue([project({ defaultBranch: 'prod' })]);
+    workerApi.bindings.mockResolvedValue([
+      { projectId: P1, path: 'C:\\Kerja\\aplikasi', available: true },
+    ]);
+    workerApi.inspect.mockResolvedValue(
+      inspection({
+        git: {
+          isRepo: true,
+          defaultBranch: 'main',
+          currentBranch: 'main',
+          branches: ['main', 'prod'],
+        },
+      }),
+    );
+    api.updateProject.mockResolvedValue(project({ defaultBranch: 'main' }));
+    await renderScreen(<ProjectsScreen />, '/projects');
+
+    const table = await screen.findByRole('table', { name: copy.projects.listLabel });
+    await within(table).findByText('C:\\Kerja\\aplikasi');
+    await user.click(
+      within(table).getByRole('button', { name: `${copy.projects.branch.change}: Aplikasi saya` }),
+    );
+    const dialog = await screen.findByRole('dialog', {
+      name: copy.projects.branch.title('Aplikasi saya'),
+    });
+    expect(workerApi.inspect).toHaveBeenCalledWith('C:\\Kerja\\aplikasi');
+    const local = await within(dialog).findByRole('group', {
+      name: copy.projects.branch.localBranches,
+    });
+    await user.click(within(local).getByRole('button', { name: 'main' }));
+    await user.click(within(dialog).getByRole('button', { name: copy.projects.branch.save }));
+    expect(api.updateProject).toHaveBeenCalledWith(P1, { defaultBranch: 'main' });
+    expect(await screen.findByText(copy.projects.branch.saved('main'))).toBeInTheDocument();
+  });
+
+  it('lepas folder dengan konfirmasi; berkas tidak disentuh (hanya ikatan worker)', async () => {
+    connected();
+    const user = userEvent.setup();
+    api.listProjects.mockResolvedValue([project()]);
+    workerApi.bindings.mockResolvedValue([
+      { projectId: P1, path: 'C:\\Kerja\\aplikasi', available: true },
+    ]);
+    workerApi.unbind.mockResolvedValue([]);
+    await renderScreen(<ProjectsScreen />, '/projects');
+
+    const table = await screen.findByRole('table', { name: copy.projects.listLabel });
+    await user.click(
+      await within(table).findByRole('button', {
+        name: `${copy.projects.unbind.action}: Aplikasi saya`,
+      }),
+    );
+    const dialog = await screen.findByRole('dialog', { name: copy.projects.unbind.title });
+    await user.click(within(dialog).getByRole('button', { name: copy.projects.unbind.action }));
+    await waitFor(() => expect(workerApi.unbind).toHaveBeenCalledWith(P1));
+    expect(await screen.findByText(copy.projects.unbind.done)).toBeInTheDocument();
+  });
+
+  it('hapus project: konfirmasi, hapus di server, lalu ikatan folder lokal ikut dilepas', async () => {
+    connected();
+    const user = userEvent.setup();
+    api.listProjects.mockResolvedValue([project()]);
+    workerApi.bindings.mockResolvedValue([
+      { projectId: P1, path: 'C:\\Kerja\\aplikasi', available: true },
+    ]);
+    api.deleteProject.mockResolvedValue(undefined);
+    workerApi.unbind.mockResolvedValue([]);
+    await renderScreen(<ProjectsScreen />, '/projects');
+
+    const table = await screen.findByRole('table', { name: copy.projects.listLabel });
+    await within(table).findByText('C:\\Kerja\\aplikasi');
+    await user.click(
+      within(table).getByRole('button', { name: `${copy.projects.remove.action}: Aplikasi saya` }),
+    );
+    const dialog = await screen.findByRole('dialog', { name: copy.projects.remove.title });
+    await user.click(within(dialog).getByRole('button', { name: copy.projects.remove.action }));
+    await waitFor(() => expect(api.deleteProject).toHaveBeenCalledWith(P1));
+    await waitFor(() => expect(workerApi.unbind).toHaveBeenCalledWith(P1));
+    expect(await screen.findByText(copy.projects.remove.done)).toBeInTheDocument();
   });
 
   it('folder hilang atau izin dicabut diberi peringatan', async () => {
@@ -249,7 +332,9 @@ describe('AddProjectDialog', () => {
     connected();
     pickFolder.mockResolvedValue('C:\\Kerja\\aplikasi');
     workerApi.inspect.mockResolvedValue(
-      inspection({ git: { isRepo: false, defaultBranch: null, currentBranch: null } }),
+      inspection({
+        git: { isRepo: false, defaultBranch: null, currentBranch: null, branches: [] },
+      }),
     );
     const { user, dialog } = await openDialog();
 

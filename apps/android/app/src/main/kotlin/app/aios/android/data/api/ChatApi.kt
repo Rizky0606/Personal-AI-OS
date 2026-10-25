@@ -27,8 +27,12 @@ interface ChatApi {
     suspend fun updateConversation(@Path("id") id: String, @Body body: UpdateConversationRequest): Conversation
 
     /** Server hanya mengarsipkan; tidak ada penghapusan permanen di API. */
+    /** Tanpa [permanent] percakapan diarsipkan; "true" menghapusnya beserta pesannya. */
     @DELETE("conversations/{id}")
-    suspend fun archiveConversation(@Path("id") id: String): Response<Unit>
+    suspend fun archiveConversation(
+        @Path("id") id: String,
+        @Query("permanent") permanent: String? = null
+    ): Response<Unit>
 
     @GET("conversations/{id}/messages")
     suspend fun listMessages(

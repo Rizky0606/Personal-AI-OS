@@ -3,7 +3,8 @@ import type {
   Project,
   UpdateProjectRequestSchema,
 } from '@aios/contracts';
-import { desc, eq } from 'drizzle-orm';
+import { TERMINAL_RUN_STATUSES } from '@aios/contracts';
+import { desc, eq, sql } from 'drizzle-orm';
 import type { z } from 'zod';
 import type { Database } from '../../db/client.js';
 import { projects } from '../../db/schema/index.js';
@@ -28,6 +29,11 @@ export interface ProjectsService {
   ownedBy(projectId: string, workerDeviceId: string): Promise<boolean>;
   /** Perangkat worker pemilik project; undefined bila project tidak ada. */
   workerOf(projectId: string): Promise<string | undefined>;
+  /**
+   * Menghapus project: kartu kanban dan aturan izin ikut terhapus, percakapan menjadi chat biasa. Ditolak bila
+   * masih ada run yang berjalan di project ini. Folder di PC tidak disentuh (path tidak pernah ada di server).
+   */
+  remove(actorDeviceId: string, id: string): Promise<void>;
   /** Bagian pesan sistem berisi aturan project, atau string kosong bila tidak ada. */
   rulesSection(projectId: string): Promise<string>;
 }
@@ -122,6 +128,28 @@ export function createProjectsService(deps: { db: Database }): ProjectsService {
         .from(projects)
         .where(eq(projects.id, projectId));
       return row?.workerDeviceId === workerDeviceId;
+    },
+
+    async remove(actorDeviceId, id) {
+      await load(id);
+      const active = await db.execute<{ n: number }>(sql`
+        select count(*)::int as n from runs r
+        left join conversations c on c.id = r.conversation_id
+        left join tasks t on t.id = r.task_id
+        where (c.project_id = ${id} or t.project_id = ${id})
+          and r.status not in (${sql.join(
+            TERMINAL_RUN_STATUSES.map((s) => sql`${s}`),
+            sql`, `,
+          )}, 'needs_review')`);
+      if ((active.rows[0]?.n ?? 0) > 0) {
+        throw new AppError(
+          409,
+          'project_busy',
+          'Masih ada tugas yang berjalan di project ini. Hentikan atau tunggu selesai dulu.',
+        );
+      }
+      await db.delete(projects).where(eq(projects.id, id));
+      await writeAudit(db, { actorDeviceId, action: 'project.deleted', target: `project:${id}` });
     },
 
     async rulesSection(projectId) {

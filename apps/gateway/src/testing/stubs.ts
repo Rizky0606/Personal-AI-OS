@@ -24,6 +24,7 @@ export const unusedProjects: AppDeps['projects'] = {
   ownedBy: unused('projects.ownedBy'),
   workerOf: unused('projects.workerOf'),
   rulesSection: unused('projects.rulesSection'),
+  remove: unused('projects.remove'),
 };
 
 export const unusedCompare: AppDeps['compare'] = { run: unused('compare.run') };
@@ -74,6 +75,7 @@ export const unusedChat: AppDeps['chat'] = {
   createConversation: unused('chat.createConversation'),
   updateConversation: unused('chat.updateConversation'),
   archiveConversation: unused('chat.archiveConversation'),
+  deleteConversation: unused('chat.deleteConversation'),
   listMessages: unused('chat.listMessages'),
   sendMessage: unused('chat.sendMessage'),
   reroute: unused('chat.reroute'),

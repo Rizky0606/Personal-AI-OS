@@ -58,6 +58,18 @@ export const workEndpoints: readonly Endpoint[] = [
     errors: [400, 401, 404],
   },
   {
+    operationId: 'deleteProject',
+    method: 'delete',
+    path: '/projects/{id}',
+    tag: 'Project',
+    summary:
+      'Hapus project: kartu kanban ikut terhapus, percakapan menjadi chat biasa; folder di PC tidak disentuh',
+    auth: true,
+    params: IdParamsSchema,
+    responses: [noContent('Project dihapus')],
+    errors: [401, 404, 409],
+  },
+  {
     operationId: 'listTasks',
     method: 'get',
     path: '/projects/{id}/tasks',

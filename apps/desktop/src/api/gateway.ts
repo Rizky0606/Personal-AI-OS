@@ -138,8 +138,10 @@ export function createGatewayApi(call: Call) {
     registerWorker: (name: string) =>
       get('/devices/worker', LoginResponseSchema, { method: 'POST', body: { name } }),
     listProjects: async () => (await get('/projects', ProjectListSchema)).items,
-    updateProject: (id: string, patch: { name?: string; instructions?: string }) =>
-      get(`/projects/${id}`, ProjectSchema, { method: 'PATCH', body: patch }),
+    updateProject: (
+      id: string,
+      patch: { name?: string; instructions?: string; defaultBranch?: string },
+    ) => get(`/projects/${id}`, ProjectSchema, { method: 'PATCH', body: patch }),
     createProject: (input: CreateProjectInput) =>
       get('/projects', ProjectSchema, { method: 'POST', body: input }),
 
@@ -162,6 +164,13 @@ export function createGatewayApi(call: Call) {
       get(`/conversations/${id}`, ConversationSchema, { method: 'PATCH', body: patch }),
     archiveConversation: async (id: string) => {
       await call(`/conversations/${id}`, { method: 'DELETE' });
+    },
+    /** Menghapus percakapan beserta pesannya (tidak bisa dibatalkan). */
+    deleteConversation: async (id: string) => {
+      await call(`/conversations/${id}${query({ permanent: 'true' })}`, { method: 'DELETE' });
+    },
+    deleteProject: async (id: string) => {
+      await call(`/projects/${id}`, { method: 'DELETE' });
     },
 
     listMessages: (conversationId: string, before?: string) =>

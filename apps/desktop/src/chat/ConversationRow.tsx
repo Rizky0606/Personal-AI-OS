@@ -1,10 +1,11 @@
 import type { Conversation } from '@aios/contracts';
 import { Link } from '@tanstack/react-router';
-import { Archive, MoreHorizontal, Pencil, Pin, PinOff } from 'lucide-react';
+import { Archive, MoreHorizontal, Pencil, Pin, PinOff, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { copy } from '../copy';
 import { cn } from '../lib/cn';
 import { ActionMenu } from '../ui/ActionMenu';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { IconButton } from '../ui/IconButton';
 
 export interface ConversationRowProps {
@@ -13,19 +14,23 @@ export interface ConversationRowProps {
   onRename: (title: string) => void;
   onPin: (pinned: boolean) => void;
   onArchive: () => void;
+  /** Hapus permanen (setelah konfirmasi). */
+  onDelete: () => void;
 }
 
 const icon = { size: 14, strokeWidth: 1.5, 'aria-hidden': true } as const;
 
-/** Baris 32px dengan menu ⋯ (ubah judul, sematkan, arsipkan). Judul bisa diubah langsung di tempat. */
+/** Baris 32px dengan menu ⋯ (ubah judul, sematkan, arsipkan, hapus). Judul bisa diubah langsung di tempat. */
 export function ConversationRow({
   conversation,
   active,
   onRename,
   onPin,
   onArchive,
+  onDelete,
 }: ConversationRowProps) {
   const [editing, setEditing] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [title, setTitle] = useState(conversation.title);
   const label = conversation.title || copy.chat.untitled;
 
@@ -106,11 +111,30 @@ export function ConversationRow({
               label: copy.chat.archive,
               icon: <Archive {...icon} />,
               onSelect: onArchive,
+            },
+            {
+              id: 'delete',
+              label: copy.chat.deleteConversation,
+              icon: <Trash2 {...icon} />,
+              onSelect: () => setConfirmDelete(true),
               danger: true,
             },
           ]}
         />
       </span>
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title={copy.chat.deleteConversationTitle}
+        body={copy.chat.deleteConversationBody(label)}
+        confirmLabel={copy.chat.deleteConversation}
+        cancelLabel={copy.chat.cancel}
+        destructive
+        onConfirm={() => {
+          setConfirmDelete(false);
+          onDelete();
+        }}
+      />
     </div>
   );
 }

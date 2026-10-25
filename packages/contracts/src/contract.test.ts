@@ -46,6 +46,7 @@ const DOCUMENTED_ENDPOINTS = [
   'GET /projects',
   'POST /projects',
   'PATCH /projects/:id',
+  'DELETE /projects/:id',
   'GET /projects/:id/tasks',
   'POST /tasks',
   'PATCH /tasks/:id',

@@ -14,6 +14,9 @@ import { workerErrorMessage } from '../worker/errors';
 import type { Project } from '@aios/contracts';
 import { AddProjectDialog } from './AddProjectDialog';
 import { ProjectRulesDialog } from './ProjectRulesDialog';
+import { BranchDialog } from './BranchDialog';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { api } from '../app/services';
 import { StackChips } from './StackChips';
 import { useProjectRows } from './useProjectRows';
 
@@ -29,6 +32,44 @@ export function ProjectsScreen() {
   const push = useToastStore((s) => s.push);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [rulesOf, setRulesOf] = useState<Project | null>(null);
+  const [branchOf, setBranchOf] = useState<{ project: Project; path: string | null } | null>(null);
+  const [unbindOf, setUnbindOf] = useState<{ projectId: string; path: string } | null>(null);
+  const [removeOf, setRemoveOf] = useState<{ project: Project; bound: boolean } | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function unbind(projectId: string) {
+    setBusy(true);
+    try {
+      await workerApi.unbind(projectId);
+      await queryClient.invalidateQueries({ queryKey: ['worker'] });
+      push(copy.projects.unbind.done);
+    } catch (error) {
+      push(workerErrorMessage(error), 'danger');
+    } finally {
+      setBusy(false);
+      setUnbindOf(null);
+    }
+  }
+
+  async function remove(project: Project, bound: boolean) {
+    setBusy(true);
+    try {
+      await api.deleteProject(project.id);
+      // Ikatan folder lokal ikut dilepas supaya worker tidak menyimpan project yang sudah tidak ada.
+      if (bound) await workerApi.unbind(project.id).catch(() => undefined);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['projects'] }),
+        queryClient.invalidateQueries({ queryKey: ['worker'] }),
+        queryClient.invalidateQueries({ queryKey: ['conversations'] }),
+      ]);
+      push(copy.projects.remove.done);
+    } catch (error) {
+      push(apiErrorMessage(error, online), 'danger');
+    } finally {
+      setBusy(false);
+      setRemoveOf(null);
+    }
+  }
   const workerReady = worker.local === 'connected';
 
   const view: ViewState = projects.isPending
@@ -92,12 +133,34 @@ export function ProjectsScreen() {
           <tbody>
             {rows.map(({ project, binding, mine }) => (
               <tr key={project.id}>
-                <td className={`${cellClass} font-medium text-text`}>{project.name}</td>
+                <td className={cellClass}>
+                  <span className="flex flex-col items-start gap-1">
+                    <span className="font-medium text-text">{project.name}</span>
+                    <Button
+                      variant="ghost"
+                      aria-label={`${copy.projects.remove.action}: ${project.name}`}
+                      onClick={() => setRemoveOf({ project, bound: !!binding })}
+                    >
+                      {copy.projects.remove.action}
+                    </Button>
+                  </span>
+                </td>
                 <td className={cellClass}>
                   <StackChips stack={project.stack} />
                 </td>
-                <td className={`${cellClass} font-mono text-meta text-text-2`}>
-                  {project.defaultBranch}
+                <td className={cellClass}>
+                  <span className="flex items-center gap-2">
+                    <span className="font-mono text-meta text-text-2">{project.defaultBranch}</span>
+                    <Button
+                      variant="ghost"
+                      aria-label={`${copy.projects.branch.change}: ${project.name}`}
+                      onClick={() =>
+                        setBranchOf({ project, path: binding?.available ? binding.path : null })
+                      }
+                    >
+                      {copy.projects.branch.change}
+                    </Button>
+                  </span>
                 </td>
                 <td className={cellClass}>
                   {binding ? (
@@ -113,6 +176,16 @@ export function ProjectsScreen() {
                           {copy.projects.folderUnavailable}
                         </span>
                       )}
+                      <span>
+                        <Button
+                          variant="ghost"
+                          disabled={!workerReady}
+                          aria-label={`${copy.projects.unbind.action}: ${project.name}`}
+                          onClick={() => setUnbindOf({ projectId: project.id, path: binding.path })}
+                        >
+                          {copy.projects.unbind.action}
+                        </Button>
+                      </span>
                     </span>
                   ) : mine ? (
                     <span className="flex items-center gap-2">
@@ -151,6 +224,32 @@ export function ProjectsScreen() {
       </StateView>
       <AddProjectDialog open={dialogOpen} onOpenChange={setDialogOpen} />
       <ProjectRulesDialog project={rulesOf} onClose={() => setRulesOf(null)} />
+      <BranchDialog
+        project={branchOf?.project ?? null}
+        path={branchOf?.path ?? null}
+        onClose={() => setBranchOf(null)}
+      />
+      <ConfirmDialog
+        open={unbindOf !== null}
+        onOpenChange={(open) => !open && setUnbindOf(null)}
+        title={copy.projects.unbind.title}
+        body={unbindOf ? copy.projects.unbind.body(unbindOf.path) : ''}
+        confirmLabel={copy.projects.unbind.action}
+        cancelLabel={copy.chat.cancel}
+        busy={busy}
+        onConfirm={() => unbindOf && void unbind(unbindOf.projectId)}
+      />
+      <ConfirmDialog
+        open={removeOf !== null}
+        onOpenChange={(open) => !open && setRemoveOf(null)}
+        title={copy.projects.remove.title}
+        body={removeOf ? copy.projects.remove.body(removeOf.project.name) : ''}
+        confirmLabel={copy.projects.remove.action}
+        cancelLabel={copy.chat.cancel}
+        destructive
+        busy={busy}
+        onConfirm={() => removeOf && void remove(removeOf.project, removeOf.bound)}
+      />
     </div>
   );
 }

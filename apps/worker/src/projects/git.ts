@@ -21,16 +21,30 @@ export async function detectGit(processes: ProcessManager, dir: string): Promise
   };
 
   if ((await git('rev-parse', '--is-inside-work-tree')) !== 'true') {
-    return { isRepo: false, defaultBranch: null, currentBranch: null };
+    return { isRepo: false, defaultBranch: null, currentBranch: null, branches: [] };
   }
 
   const current = (await git('symbolic-ref', '--short', '-q', 'HEAD')) ?? null;
   const remoteHead = await git('symbolic-ref', '--short', '-q', 'refs/remotes/origin/HEAD');
   const fromRemote = remoteHead?.startsWith('origin/') ? remoteHead.slice('origin/'.length) : null;
+  // Branch lokal untuk pilihan branch kerja di desktop; terbaru diubah dulu.
+  const branches = (
+    (await git(
+      'for-each-ref',
+      '--count=200',
+      '--sort=-committerdate',
+      '--format=%(refname:short)',
+      'refs/heads',
+    )) ?? ''
+  )
+    .split('\n')
+    .map((b) => b.trim())
+    .filter(Boolean);
 
   return {
     isRepo: true,
     defaultBranch: fromRemote ?? current ?? FALLBACK_BRANCH,
     currentBranch: current,
+    branches,
   };
 }

@@ -93,6 +93,22 @@ describe('ConversationList', () => {
     await waitFor(() => expect(api.archiveConversation).toHaveBeenCalledWith(item.id));
   });
 
+  it('menu baris: Hapus meminta konfirmasi lalu menghapus permanen', async () => {
+    const item = conversation({ title: 'Coba fitur' });
+    api.listConversations.mockResolvedValue({ items: [item], nextBefore: null });
+    api.deleteConversation.mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    await renderScreen(<ConversationList />);
+
+    await user.click(await screen.findByRole('button', { name: `${copy.chat.menu}: Coba fitur` }));
+    await user.click(await screen.findByRole('menuitem', { name: copy.chat.deleteConversation }));
+    const dialog = await screen.findByRole('dialog', { name: copy.chat.deleteConversationTitle });
+    expect(api.deleteConversation).not.toHaveBeenCalled();
+    await user.click(within(dialog).getByRole('button', { name: copy.chat.deleteConversation }));
+    await waitFor(() => expect(api.deleteConversation).toHaveBeenCalledWith(item.id));
+    expect(await screen.findByText(copy.chat.deleted)).toBeInTheDocument();
+  });
+
   it('Esc membatalkan ubah judul tanpa memanggil server', async () => {
     const item = conversation({ title: 'Lama' });
     api.listConversations.mockResolvedValue({ items: [item], nextBefore: null });

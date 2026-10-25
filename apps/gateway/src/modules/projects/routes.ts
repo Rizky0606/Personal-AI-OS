@@ -36,5 +36,10 @@ export const projectRoutes: FastifyPluginCallback<{ projects: ProjectsService }>
     ),
   );
 
+  app.delete('/projects/:id', guard, async (req, reply) => {
+    await projects.remove(requireAuth(req).deviceId, IdParamsSchema.parse(req.params).id);
+    return reply.code(204).send();
+  });
+
   done();
 };
