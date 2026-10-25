@@ -7,6 +7,7 @@ import { Toaster } from '../ui/Toaster';
 import { TooltipProvider } from '../ui/Tooltip';
 import { useAuthState } from './hooks';
 import { queryClient } from './queryClient';
+import { QuickAskLifecycle } from './QuickAskLifecycle';
 import { RealtimeLifecycle } from './RealtimeLifecycle';
 import { WorkerLifecycle } from './WorkerLifecycle';
 import { router } from './router';
@@ -55,7 +56,10 @@ export function App() {
         ) : state.status === 'signedOut' ? (
           <LoginScreen initialServer={readLastServer()} fixedServer={BUILT_IN_SERVER} />
         ) : (
-          <RouterProvider router={router} />
+          <>
+            <RouterProvider router={router} />
+            <QuickAskLifecycle />
+          </>
         )}
         <Toaster />
       </TooltipProvider>

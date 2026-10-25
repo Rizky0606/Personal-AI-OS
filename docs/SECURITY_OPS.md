@@ -25,6 +25,12 @@ Hasil audit terakhir dan temuannya ada di `docs/SECURITY_AUDIT.md`; tes `securit
 - Approval wajib untuk: perintah shell yang bukan baca, akses jaringan, instalasi paket, penghapusan file. Aturan "selalu izinkan" disimpan per project dan per pola perintah.
 - Batas waktu run default 30 menit, bisa diubah. Proses anak dimatikan saat run selesai.
 
+## Quick Ask (jendela kedua desktop)
+
+- Hanya jendela utama yang memegang sesi (token, refresh, WebSocket). Jendela Quick Ask hanya UI dan bertukar event Tauri dengan jendela utama; capability-nya (`capabilities/quick.json`) tanpa HTTP, WebSocket, atau penyimpanan rahasia. Dua sesi di dua jendela akan saling merotasi refresh token dan memicu pencabutan perangkat.
+- Bundel `quick.html` tidak mengimpor `app/services` (diperiksa saat build).
+- Menutup jendela utama menutup aplikasi, termasuk jendela Quick Ask yang tersembunyi dan worker.
+
 ## Pratinjau artifact
 
 - Kode buatan AI (HTML, SVG, React, Mermaid) hanya dijalankan di origin terpisah: desktop lewat custom protocol `aiosartifact` di iframe `sandbox="allow-scripts allow-modals"` (tanpa `allow-same-origin`), Android lewat WebView tanpa jembatan JS, tanpa akses berkas atau content provider, dan tanpa navigasi keluar. Skrip artifact tidak bisa membaca token, IPC, atau DOM aplikasi.

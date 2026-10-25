@@ -22,6 +22,8 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 getrandom = "0.2"
 tauri-plugin-websocket = "2"
+# Hotkey global untuk jendela Quick Ask (W20).
+tauri-plugin-global-shortcut = "2"
 # Windows Credential Manager untuk token. Hanya backend native Windows; tanpa fallback ke berkas.
 keyring = { version = "3", features = ["windows-native"] }
 

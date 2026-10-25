@@ -87,6 +87,7 @@ export function SettingsScreen() {
           <li>{copy.shortcuts.newChat}</li>
           <li>{copy.shortcuts.sidebar}</li>
           <li>{copy.shortcuts.rightPanel}</li>
+          <li>{copy.shortcuts.quickAsk}</li>
         </ul>
       </section>
 

@@ -7,7 +7,13 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   clearScreen: false,
   server: { port: 1420, strictPort: true, host: '127.0.0.1' },
-  build: { target: 'es2023', outDir: 'dist', sourcemap: false },
+  build: {
+    target: 'es2023',
+    outDir: 'dist',
+    sourcemap: false,
+    // Dua halaman: aplikasi utama dan jendela Quick Ask (W20).
+    rollupOptions: { input: { main: 'index.html', quick: 'quick.html' } },
+  },
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],

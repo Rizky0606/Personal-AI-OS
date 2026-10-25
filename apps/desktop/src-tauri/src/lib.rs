@@ -76,6 +76,16 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_websocket::init())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        // Jendela Quick Ask tersembunyi tidak boleh menahan aplikasi tetap hidup setelah jendela utama ditutup.
+        .on_window_event(|window, event| {
+            if window.label() == "main"
+                && matches!(event, tauri::WindowEvent::CloseRequested { .. })
+            {
+                use tauri::Manager;
+                window.app_handle().exit(0);
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             secret_get,
             secret_set,
