@@ -465,6 +465,15 @@ export const copy = {
     reasoning: 'Penalaran',
     copy: 'Salin',
     copied: 'Tersalin',
+    artifact: {
+      preview: 'Pratinjau',
+      showCode: 'Lihat kode',
+      expand: 'Perbesar pratinjau',
+      close: 'Tutup pratinjau',
+      frameTitle: 'Pratinjau artifact',
+      failed: 'Pratinjau gagal dibuka.',
+      dialogTitle: (language: string) => (language ? 'Pratinjau ' + language : 'Pratinjau'),
+    },
     you: 'Anda',
     assistantName: 'Personal AI',
     zip: {

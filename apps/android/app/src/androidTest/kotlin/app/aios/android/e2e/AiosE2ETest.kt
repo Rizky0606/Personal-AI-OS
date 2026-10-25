@@ -4,10 +4,12 @@ import android.Manifest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
@@ -15,6 +17,7 @@ import androidx.compose.ui.test.printToLog
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.rule.GrantPermissionRule
 import app.aios.android.MainActivity
+import app.aios.android.ui.chat.markdown.ARTIFACT_WEBVIEW_TAG
 import org.junit.FixMethodOrder
 import org.junit.Rule
 import org.junit.Test
@@ -73,6 +76,29 @@ class AiosE2ETest {
 
         await(hasText("Halo dari Android, jelaskan closure."), 15_000)
         await(hasText(arg("hermesAnswer"), substring = true), 45_000)
+    }
+
+    @Test
+    fun bb_artifact_blok_html_dibuka_di_pratinjau() {
+        await(hasContentDescription("Pesan"), 30_000)
+        compose.onNode(hasSetTextAction() and hasContentDescription("Pesan"))
+            .performTextInput("Buatkan artifact halaman sapaan.")
+        compose.onNodeWithContentDescription("Kirim").performClick()
+
+        await(hasText("Halo artifact", substring = true), 45_000)
+        await(hasContentDescription("Pratinjau"), 15_000)
+        compose.onAllNodes(hasContentDescription("Pratinjau")).onLast().performClick()
+
+        await(hasText("Pratinjau html"), 10_000)
+        await(hasTestTag(ARTIFACT_WEBVIEW_TAG), 10_000)
+        // Bukti visual untuk pemeriksaan manual: halaman dirender dan skripnya berjalan.
+        Thread.sleep(3_000)
+        // Disimpan sebagai shell di /data/local/tmp agar tetap ada setelah aplikasi uji di-uninstall.
+        val capture = InstrumentationRegistry.getInstrumentation().uiAutomation
+            .executeShellCommand("screencap -p /data/local/tmp/artifact-e2e.png")
+        android.os.ParcelFileDescriptor.AutoCloseInputStream(capture).use { it.readBytes() }
+        compose.onNodeWithContentDescription("Tutup pratinjau").performClick()
+        await(hasText("Halo artifact", substring = true), 5_000)
     }
 
     @Test

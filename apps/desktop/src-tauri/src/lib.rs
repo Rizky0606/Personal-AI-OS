@@ -1,8 +1,10 @@
 //! Cangkang Tauri yang tipis: semua logika aplikasi ada di TypeScript. Rust hanya menyediakan hal yang
 //! tidak bisa dilakukan webview dengan aman: penyimpanan rahasia di Windows Credential Manager dan nama perangkat.
 //! HTTP dan WebSocket ke gateway lewat plugin resmi (klien Rust, bukan fetch webview) supaya CORS tetap tertutup
-//! dan header Authorization bisa dipasang saat handshake WebSocket.
+//! dan header Authorization bisa dipasang saat handshake WebSocket. Pratinjau artifact disajikan dari origin
+//! terpisah lewat custom protocol (lihat artifact.rs).
 
+mod artifact;
 mod worker;
 
 use keyring::Entry;
@@ -62,6 +64,13 @@ fn device_name() -> String {
 pub fn run() {
     let app = tauri::Builder::default()
         .manage(worker::WorkerState::default())
+        .manage(artifact::ArtifactStore::default())
+        .register_uri_scheme_protocol("aiosartifact", |ctx, request| {
+            use tauri::Manager;
+            ctx.app_handle()
+                .state::<artifact::ArtifactStore>()
+                .respond(request.uri().path())
+        })
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_opener::init())
@@ -72,7 +81,8 @@ pub fn run() {
             secret_set,
             secret_remove,
             device_name,
-            worker::worker_connect_info
+            worker::worker_connect_info,
+            artifact::artifact_put
         ])
         .build(tauri::generate_context!())
         .expect("aplikasi gagal dibangun");

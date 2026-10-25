@@ -25,6 +25,12 @@ Hasil audit terakhir dan temuannya ada di `docs/SECURITY_AUDIT.md`; tes `securit
 - Approval wajib untuk: perintah shell yang bukan baca, akses jaringan, instalasi paket, penghapusan file. Aturan "selalu izinkan" disimpan per project dan per pola perintah.
 - Batas waktu run default 30 menit, bisa diubah. Proses anak dimatikan saat run selesai.
 
+## Pratinjau artifact
+
+- Kode buatan AI (HTML, SVG, React, Mermaid) hanya dijalankan di origin terpisah: desktop lewat custom protocol `aiosartifact` di iframe `sandbox="allow-scripts allow-modals"` (tanpa `allow-same-origin`), Android lewat WebView tanpa jembatan JS, tanpa akses berkas atau content provider, dan tanpa navigasi keluar. Skrip artifact tidak bisa membaca token, IPC, atau DOM aplikasi.
+- CSP aplikasi desktop tetap melarang skrip inline; hanya `frame-src` yang ditambah `http://aiosartifact.localhost`.
+- React, Babel, dan Mermaid dimuat dari jsDelivr dengan versi terkunci dan hash SRI. Mengganti versi berarti memperbarui URL dan hash di `artifact.ts` dan `ArtifactPage.kt` bersamaan (tes Android membandingkan keduanya).
+
 ## Rahasia
 
 - `.env` di VPS dengan izin 600, password Postgres lewat Docker secret.

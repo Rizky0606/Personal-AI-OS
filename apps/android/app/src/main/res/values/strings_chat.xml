@@ -30,6 +30,9 @@
     <string name="chat_connecting">Menyambung…</string>
     <string name="chat_run_failed">Jawaban gagal dibuat. Kirim ulang pesan terakhir.</string>
     <string name="chat_copy_code">Salin kode</string>
+    <string name="chat_artifact_preview">Pratinjau</string>
+    <string name="chat_artifact_title">Pratinjau %1$s</string>
+    <string name="chat_artifact_close">Tutup pratinjau</string>
     <string name="chat_copied">Kode disalin.</string>
     <string name="chat_tool_running">berjalan</string>
     <string name="chat_tool_ok">selesai</string>
