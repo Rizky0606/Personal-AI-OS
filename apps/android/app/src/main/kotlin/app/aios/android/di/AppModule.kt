@@ -11,7 +11,10 @@ import app.aios.android.BuildConfig
 import app.aios.android.data.Connectivity
 import app.aios.android.data.ConnectivityObserver
 import app.aios.android.data.api.ChatApi
+import app.aios.android.data.api.MemoryApi
 import app.aios.android.data.api.ScheduleApi
+import app.aios.android.data.memory.MemoryRepository
+import app.aios.android.data.memory.RemoteMemoryRepository
 import app.aios.android.data.schedules.RemoteScheduleRepository
 import app.aios.android.data.schedules.ScheduleRepository
 import app.aios.android.data.api.DevicesApi
@@ -222,6 +225,15 @@ object AppModule {
     @Provides
     @Singleton
     fun scheduleRepository(api: ScheduleApi): ScheduleRepository = RemoteScheduleRepository(api)
+
+    @Provides
+    @Singleton
+    fun memoryApi(@Named("authed") client: OkHttpClient, json: Json): MemoryApi =
+        retrofit(client, json).create(MemoryApi::class.java)
+
+    @Provides
+    @Singleton
+    fun memoryRepository(api: MemoryApi): MemoryRepository = RemoteMemoryRepository(api)
 
     @Provides
     @Singleton

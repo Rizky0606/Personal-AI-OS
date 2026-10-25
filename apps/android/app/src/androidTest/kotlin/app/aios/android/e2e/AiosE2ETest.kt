@@ -2,6 +2,7 @@ package app.aios.android.e2e
 
 import android.Manifest
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasTestTag
@@ -99,6 +100,24 @@ class AiosE2ETest {
         android.os.ParcelFileDescriptor.AutoCloseInputStream(capture).use { it.readBytes() }
         compose.onNodeWithContentDescription("Tutup pratinjau").performClick()
         await(hasText("Halo artifact", substring = true), 5_000)
+    }
+
+    @Test
+    fun bc_memori_ditambah_dari_pengaturan() {
+        await(hasContentDescription("Pengaturan"), 30_000)
+        compose.onNodeWithContentDescription("Pengaturan").performClick()
+        await(hasText("Fakta tentang Anda yang selalu diketahui AI"), 10_000)
+        compose.onNodeWithText("Fakta tentang Anda yang selalu diketahui AI").performClick()
+
+        await(hasText("Fakta baru"), 10_000)
+        field("Fakta baru").performTextInput("Saya memakai Android dan Windows.")
+        compose.onNodeWithText("Simpan ke memori").performClick()
+        await(hasText("Saya memakai Android dan Windows."), 15_000)
+        compose.onNode(hasContentDescription("Pakai memori: Saya memakai Android dan Windows.")).assertIsOn()
+
+        // Kembali ke chat untuk tes berikutnya.
+        androidx.test.espresso.Espresso.pressBack()
+        androidx.test.espresso.Espresso.pressBack()
     }
 
     @Test

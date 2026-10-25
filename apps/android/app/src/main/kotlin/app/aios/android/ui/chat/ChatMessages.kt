@@ -76,15 +76,18 @@ fun UserMessageRow(
     onEdit: () -> Unit,
     onResend: () -> Unit,
     onStartEdit: (String) -> Unit,
-    onDelete: (String) -> Unit
+    onDelete: (String) -> Unit,
+    onRemember: (String) -> Unit = {}
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     val menuLabel = stringResource(R.string.chat_message_menu)
     val files = item.message.parts.filterIsInstance<MessagePart.File>()
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.End) {
         // Tekan lama di teks maupun lampiran membuka menu; pesan berisi lampiran saja tetap bisa diubah/dihapus.
+        // "Ingat" tersedia kapan saja selama pesan berisi teks; Ubah dan Hapus hanya saat tidak ada jawaban berjalan.
+        val canRemember = item.message.text.isNotBlank()
         Box(
-            modifier = if (item.canModify) {
+            modifier = if (item.canModify || canRemember) {
                 Modifier.combinedClickable(onLongClickLabel = menuLabel, onLongClick = { menuOpen = true }) {}
             } else {
                 Modifier
@@ -99,8 +102,9 @@ fun UserMessageRow(
             MessageMenu(
                 expanded = menuOpen,
                 onDismiss = { menuOpen = false },
-                onEdit = { onStartEdit(item.message.id) },
-                onDelete = { onDelete(item.message.id) }
+                onEdit = if (item.canModify) ({ onStartEdit(item.message.id) }) else null,
+                onDelete = if (item.canModify) ({ onDelete(item.message.id) }) else null,
+                onRemember = if (canRemember) ({ onRemember(item.message.text) }) else null
             )
         }
         if (item.canEdit) {
@@ -186,10 +190,26 @@ private fun FileChips(files: List<MessagePart.File>) {
     }
 }
 
-/** Menu pesan: Ubah (hanya pesan pengguna) dan Hapus. */
+/** Menu pesan: Ubah dan Ingat (hanya pesan pengguna) serta Hapus. */
 @Composable
-private fun MessageMenu(expanded: Boolean, onDismiss: () -> Unit, onEdit: (() -> Unit)?, onDelete: () -> Unit) {
+private fun MessageMenu(
+    expanded: Boolean,
+    onDismiss: () -> Unit,
+    onEdit: (() -> Unit)?,
+    onDelete: (() -> Unit)?,
+    onRemember: (() -> Unit)? = null
+) {
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
+        if (onRemember != null) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.memory_remember), style = AiosTheme.type.ui) },
+                leadingIcon = { AiosIcon(R.drawable.ic_pin, contentDescription = null) },
+                onClick = {
+                    onDismiss()
+                    onRemember()
+                }
+            )
+        }
         if (onEdit != null) {
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.chat_message_edit), style = AiosTheme.type.ui) },
@@ -200,20 +220,24 @@ private fun MessageMenu(expanded: Boolean, onDismiss: () -> Unit, onEdit: (() ->
                 }
             )
         }
-        DropdownMenuItem(
-            text = {
-                Text(
-                    stringResource(R.string.chat_message_delete),
-                    style = AiosTheme.type.ui,
-                    color = AiosTheme.colors.danger
-                )
-            },
-            leadingIcon = { AiosIcon(R.drawable.ic_trash, contentDescription = null, tint = AiosTheme.colors.danger) },
-            onClick = {
-                onDismiss()
-                onDelete()
-            }
-        )
+        if (onDelete != null) {
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        stringResource(R.string.chat_message_delete),
+                        style = AiosTheme.type.ui,
+                        color = AiosTheme.colors.danger
+                    )
+                },
+                leadingIcon = {
+                    AiosIcon(R.drawable.ic_trash, contentDescription = null, tint = AiosTheme.colors.danger)
+                },
+                onClick = {
+                    onDismiss()
+                    onDelete()
+                }
+            )
+        }
     }
 }
 

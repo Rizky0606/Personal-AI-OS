@@ -6,6 +6,7 @@ import { isSettled, type LiveRun, type PendingApproval } from '../realtime/liveR
 import { Button } from '../ui/Button';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { ErrorBanner } from '../ui/ErrorBanner';
+import { RememberDialog } from '../memory/RememberDialog';
 import { ApprovalPanel } from './ApprovalPanel';
 import { AssistantMessage, type AssistantPart } from './AssistantMessage';
 import { messageText } from './messageData';
@@ -90,6 +91,7 @@ export function MessageList({
   const scroller = useRef<HTMLDivElement>(null);
   const [toDelete, setToDelete] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [toRemember, setToRemember] = useState<string | null>(null);
   const modifiable = canModify && !!onDeleteMessage;
   const stick = useRef(true);
 
@@ -141,6 +143,7 @@ export function MessageList({
               }
               onResend={message.id === editableUserId ? onResendLast : undefined}
               onDelete={modifiable ? () => setToDelete(message.id) : undefined}
+              onRemember={() => setToRemember(messageText(message))}
             />
           ) : message.author === 'assistant' ? (
             <AssistantMessage
@@ -208,6 +211,7 @@ export function MessageList({
           });
         }}
       />
+      <RememberDialog text={toRemember} onClose={() => setToRemember(null)} />
     </div>
   );
 }

@@ -473,6 +473,13 @@ Isi ditulis sendiri sebagai ringkasan prinsip, bukan salinan; dibaca dari halama
 - Pratinjau yang dibuka saat jawaban masih mengalir tertutup lagi ketika jawaban selesai (pesan dirender ulang sebagai pesan tersimpan).
 - Android menampilkan pratinjau di dialog layar penuh, bukan inline, karena WebView di dalam daftar chat yang bisa digulir mahal dan tingginya sulit diatur.
 
+## Temuan Fase 26 (memori yang terlihat)
+
+- **Memori milik gateway, terpisah dari memori internal Hermes.** VERIFICATION.md hanya mencatat cakupan memori Hermes lewat header `X-Hermes-Session-Key`, tanpa API untuk membaca isinya, jadi memori Hermes tidak ditampilkan. Memori gateway disuntik ke pesan sistem setiap run (chat dan coding) setelah bundel role, dihitung per run.
+- Memori hanya diisi pemilik (tambah manual atau "Ingat" pada pesan sendiri); AI tidak menulis memori otomatis. Ide lanjutan: usulan memori dari AI yang harus dikonfirmasi pemilik.
+- Batas 200 memori × 500 karakter menjaga pesan sistem tetap pendek; belum ada penghitungan token.
+- Riset (pipeline terpisah) belum memakai memori.
+
 ## Rencana fitur lanjutan (Fase 25–34)
 
 Disusun 2026-10-25 dari perbandingan dengan ChatGPT, Claude, Gemini/NotebookLM, Perplexity, Cursor, Codex, Raycast, dan asisten self-hosted (Open WebUI, LibreChat, LobeChat, Khoj). Dikerjakan berurutan; setiap fase satu branch `feat/<fase>-<ringkas>`, merge ke `main` (rilis otomatis), dan gateway di VPS diperbarui bila fase menyentuh server. ID fitur baru dicatat di PRD.md.

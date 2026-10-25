@@ -66,6 +66,10 @@ export const api: FakeApi = {
   updateTask: fn<'updateTask'>(),
   runTask: fn<'runTask'>(),
   breakdownTasks: fn<'breakdownTasks'>(),
+  listMemories: fn<'listMemories'>(),
+  createMemory: fn<'createMemory'>(),
+  updateMemory: fn<'updateMemory'>(),
+  deleteMemory: fn<'deleteMemory'>(),
   listSchedules: fn<'listSchedules'>(),
   createSchedule: fn<'createSchedule'>(),
   updateSchedule: fn<'updateSchedule'>(),
@@ -162,6 +166,7 @@ export function resetApi(): void {
   api.listConversations.mockResolvedValue({ items: [], nextBefore: null });
   api.listResearch.mockResolvedValue({ items: [], nextBefore: null });
   api.listSchedules.mockResolvedValue([]);
+  api.listMemories.mockResolvedValue([]);
   api.listProjects.mockResolvedValue([]);
   for (const mock of Object.values(workerApi)) mock.mockReset();
   workerApi.folders.mockResolvedValue([]);

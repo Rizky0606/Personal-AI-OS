@@ -16,6 +16,8 @@ export interface UserMessageProps {
   onDelete?: (() => void) | undefined;
   /** Hanya pesan terakhir: kirim ulang teks yang sama sebagai pesan baru. */
   onResend?: (() => void) | undefined;
+  /** "Ingat ini": membuka dialog untuk menyimpan teks pesan sebagai memori. */
+  onRemember?: (() => void) | undefined;
 }
 
 /** Jam lokal (mis. 14.22) dari waktu ISO. */
@@ -33,6 +35,7 @@ export function UserMessage({
   onEdit,
   onDelete,
   onResend,
+  onRemember,
 }: UserMessageProps) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(text);
@@ -83,7 +86,7 @@ export function UserMessage({
     );
   }
 
-  const hasActions = Boolean(onEdit ?? onDelete ?? onResend);
+  const hasActions = Boolean(onEdit ?? onDelete ?? onResend ?? (text ? onRemember : undefined));
   return (
     <article
       aria-label={copy.chat.you}
@@ -141,6 +144,11 @@ export function UserMessage({
           {onResend ? (
             <Button variant="ghost" onClick={onResend}>
               {copy.chat.resend}
+            </Button>
+          ) : null}
+          {onRemember && text ? (
+            <Button variant="ghost" onClick={onRemember}>
+              {copy.chat.remember}
             </Button>
           ) : null}
           {onDelete ? (
