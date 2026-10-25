@@ -467,6 +467,11 @@ export const copy = {
     copied: 'Tersalin',
     you: 'Anda',
     assistantName: 'Personal AI',
+    zip: {
+      download: (n: number) => (n === 1 ? 'Unduh berkas (ZIP)' : `Unduh ${n} berkas (ZIP)`),
+      hint: (n: number) =>
+        `Semua ${n} blok kode di jawaban ini dalam satu zip; struktur folder mengikuti path tiap blok.`,
+    },
     sent: 'Terkirim',
     tool: {
       running: 'berjalan',

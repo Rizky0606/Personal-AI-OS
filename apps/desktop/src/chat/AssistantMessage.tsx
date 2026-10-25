@@ -2,7 +2,10 @@ import type { RoleInfo } from '../api/gateway';
 import { copy } from '../copy';
 import { Button } from '../ui/Button';
 import { cn } from '../lib/cn';
-import { Bot } from 'lucide-react';
+import { Bot, Download } from 'lucide-react';
+import { useMemo } from 'react';
+import { saveBlob } from '../lib/external';
+import { buildZip, extractCodeFiles, type CodeFile } from './codeArchive';
 import { Markdown } from '../markdown/Markdown';
 import { ReasoningBlock } from './ReasoningBlock';
 import { RoleChip } from './RoleChip';
@@ -53,6 +56,11 @@ function BotAvatar({ streaming }: { streaming: boolean }) {
   );
 }
 
+function downloadZip(files: CodeFile[]) {
+  const stamp = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '');
+  saveBlob(new Blob([buildZip(files)], { type: 'application/zip' }), `kode-${stamp}.zip`);
+}
+
 /** Kartu jawaban: avatar, nama, chip role, dan model di atas; teks sampai 72 karakter per baris. */
 export function AssistantMessage({
   parts,
@@ -64,6 +72,14 @@ export function AssistantMessage({
   streaming = false,
   onDelete,
 }: AssistantMessageProps) {
+  // Blok kode di jawaban yang sudah selesai bisa diunduh sekaligus sebagai satu zip (struktur folder ikut path).
+  const files = useMemo(
+    () =>
+      streaming
+        ? []
+        : extractCodeFiles(parts.flatMap((p) => (p.type === 'text' ? [p.text] : [])).join('\n\n')),
+    [parts, streaming],
+  );
   return (
     <article
       aria-busy={streaming}
@@ -102,6 +118,18 @@ export function AssistantMessage({
         ) : null,
       )}
       {streaming ? <TypingDots /> : null}
+      {!streaming && files.length > 0 ? (
+        <footer className="flex items-center justify-end border-t border-border pt-3">
+          <Button
+            variant="secondary"
+            onClick={() => downloadZip(files)}
+            title={copy.chat.zip.hint(files.length)}
+          >
+            <Download size={14} strokeWidth={1.5} aria-hidden="true" />
+            {copy.chat.zip.download(files.length)}
+          </Button>
+        </footer>
+      ) : null}
     </article>
   );
 }
