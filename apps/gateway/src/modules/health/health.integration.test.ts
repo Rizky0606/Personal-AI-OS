@@ -54,6 +54,17 @@ async function mock(handler = ok()) {
   return server;
 }
 
+/**
+ * Layanan yang mati: port 2 praktis selalu tertutup (dan tidak diblokir fetch seperti port 1), jadi koneksi pasti
+ * ditolak. Menutup server tiruan lalu memakai alamatnya tidak andal: di runner CI yang sibuk, port yang baru dilepas
+ * bisa dipakai server lain.
+ */
+const closedService = (): MockServer => ({
+  url: 'http://127.0.0.1:2',
+  requests: [],
+  close: () => Promise.resolve(),
+});
+
 interface Setup {
   hermes?: MockServer;
   router?: MockServer;
@@ -150,8 +161,7 @@ describe('GET /v1/readyz', () => {
   });
 
   it('503 degraded dan menandai hanya Hermes bila Hermes mati', async () => {
-    const hermes = await mock();
-    await hermes.close();
+    const hermes = closedService();
     const { app: a } = await makeApp({ hermes });
     const { res, body } = await readyz(a);
 
@@ -222,8 +232,7 @@ describe('GET /v1/readyz', () => {
   });
 
   it('respons tidak memuat kunci API, URL, atau pesan mentah', async () => {
-    const hermes = await mock();
-    await hermes.close();
+    const hermes = closedService();
     const { app: a } = await makeApp({ hermes });
     const { res } = await readyz(a);
 
