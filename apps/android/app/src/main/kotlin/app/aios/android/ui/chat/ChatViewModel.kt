@@ -239,6 +239,20 @@ class ChatViewModel @Inject constructor(
 
     fun cancelEdit() = state.update { it.copy(draft = "", editingId = null) }
 
+    /** Mengunduh berkas lalu menyerahkan isinya ke [write] (tujuan dipilih pemilik lewat dialog simpan). */
+    fun downloadFile(file: MessagePart.File, write: suspend (ByteArray) -> Unit) {
+        viewModelScope.launch {
+            try {
+                write(repo.download(file.fileId))
+                notices.trySend(ChatEvent.Notice(R.string.chat_file_saved))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                notices.trySend(ChatEvent.Notice(e.toApiError(connectivity.isConnected()).messageRes))
+            }
+        }
+    }
+
     /** Menghapus pesan beserta semua sesudahnya; agent tidak lagi mengingatnya. */
     fun deleteMessage(messageId: String) {
         val conversationId = state.value.conversationId ?: return

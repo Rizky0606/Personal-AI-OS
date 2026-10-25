@@ -86,6 +86,11 @@ export interface RunnerDeps {
   };
   /** Memori pemilik (W17) yang ditambahkan ke pesan sistem setiap run; tanpa ini tidak ada memori. */
   memory?: { promptSection(): Promise<string> };
+  /** Folder kiriman: berkas buatan agent di server ditempel ke jawaban saat run chat selesai. */
+  outbox?: {
+    promptFor(runId: string): string;
+    collect(runId: string): Promise<Extract<MessagePart, { type: 'file' }>[]>;
+  };
   /** Aturan project (W23) yang ditambahkan ke pesan sistem run di project itu. */
   projectRules?: { rulesSection(projectId: string): Promise<string> };
   log?: {
@@ -109,9 +114,9 @@ const CANCEL_WAIT_MS = 5000;
  */
 export const SERVER_FILES_RULE = [
   '# Berkas untuk pemilik',
-  'Kamu berjalan di server yang sistem berkasnya tidak bisa diakses pemilik. Jangan membuat berkas, folder, atau arsip (zip, tar, docx, dan sejenisnya) di server sebagai hasil untuk pemilik, dan jangan pernah menjawab dengan path berkas di server.',
+  'Kamu berjalan di server yang sistem berkasnya tidak bisa diakses pemilik. Jangan membuat berkas, folder, atau arsip (zip, tar, docx, dan sejenisnya) di server sebagai hasil untuk pemilik, kecuali di folder kiriman bila disebut di bawah, dan jangan pernah menjawab dengan path berkas di server.',
   'Bila pemilik meminta berkas, project, atau zip: tulis isi lengkap setiap berkas di jawaban, satu blok kode per berkas dengan path di baris pembuka (mis. ```jsx src/App.jsx), termasuk package.json dan konfigurasi. Aplikasi menampilkan tombol Unduh ZIP yang mengemas semua blok kode itu; sebut tombol itu sekali di akhir.',
-  'Berkas biner (gambar, PDF, dokumen Office) tidak bisa dikirim: jelaskan singkat, lalu berikan sumbernya dalam format teks (mis. HTML, Markdown, CSV, SVG) bila memungkinkan.',
+  'Berkas biner (gambar, PDF, dokumen Office) tidak bisa ditulis di jawaban: simpan di folder kiriman bila tersedia; bila tidak ada, jelaskan singkat lalu berikan sumbernya dalam format teks (mis. HTML, Markdown, CSV, SVG).',
 ].join('\n');
 
 async function* emptyEvents(): AsyncGenerator<AgentEvent> {
@@ -143,6 +148,7 @@ export function createRunner(deps: RunnerDeps): Runner {
     roleId: string,
     projectId: string | null,
     onServer: boolean,
+    runId: string,
   ): Promise<string> {
     const bundle = deps.roles.bundle(roleId).systemPrompt;
     const extra = async (name: string, load: () => Promise<string> | undefined) => {
@@ -157,7 +163,10 @@ export function createRunner(deps: RunnerDeps): Runner {
     const rules = projectId
       ? await extra('aturan project', () => deps.projectRules?.rulesSection(projectId))
       : '';
-    return [bundle, onServer ? SERVER_FILES_RULE : '', memory, rules].filter(Boolean).join('\n\n');
+    const outbox = onServer && deps.outbox ? deps.outbox.promptFor(runId) : '';
+    return [bundle, onServer ? SERVER_FILES_RULE : '', outbox, memory, rules]
+      .filter(Boolean)
+      .join('\n\n');
   }
 
   async function execute(input: LaunchInput, ctl: Active): Promise<void> {
@@ -188,10 +197,12 @@ export function createRunner(deps: RunnerDeps): Runner {
       deps.observer?.notify(run.id);
     };
 
+    /** Berkas buatan agent (folder kiriman) yang ikut di jawaban, setelah teks. */
+    let fileParts: Extract<MessagePart, { type: 'file' }>[] = [];
     const saveText = () =>
       db
         .update(messages)
-        .set({ parts: [...toolParts.values(), { type: 'text', text }] })
+        .set({ parts: [...toolParts.values(), { type: 'text', text }, ...fileParts] })
         .where(eq(messages.id, input.assistantMessageId));
 
     /** Mencatat pergantian izin; status run mengikuti: menunggu izin <-> berjalan. */
@@ -299,7 +310,12 @@ export function createRunner(deps: RunnerDeps): Runner {
             messageId: input.assistantMessageId,
             prompt: input.prompt,
             // Dihitung per run: perubahan role (mode dev) dan memori berlaku pada run berikutnya.
-            systemPrompt: await systemPromptFor(chosenRole, input.projectId ?? null, !coding),
+            systemPrompt: await systemPromptFor(
+              chosenRole,
+              input.projectId ?? null,
+              !coding,
+              run.id,
+            ),
             sessionId: input.sessionId,
             ...(input.history?.length ? { history: input.history } : {}),
             ...(input.images?.length ? { images: input.images } : {}),
@@ -351,6 +367,13 @@ export function createRunner(deps: RunnerDeps): Runner {
           if (event.type === 'run.completed') {
             // Baris DB final lebih dulu, supaya klien yang membaca REST setelah event ini melihat status akhir.
             completed = true;
+            if (!coding && deps.outbox) {
+              try {
+                fileParts = await deps.outbox.collect(run.id);
+              } catch (err) {
+                log?.warn({ err, runId: run.id }, 'folder kiriman gagal dibaca');
+              }
+            }
             await saveText();
             // Run coding berhenti di needs_review (menunggu tinjauan diff); run chat langsung selesai.
             await db

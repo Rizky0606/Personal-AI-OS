@@ -17,6 +17,24 @@ import { json, type Endpoint } from '../endpoint.js';
 
 export const miscEndpoints: readonly Endpoint[] = [
   {
+    operationId: 'downloadFile',
+    method: 'get',
+    path: '/files/{id}/download',
+    tag: 'Berkas',
+    summary: 'Unduh berkas (lampiran pengguna atau berkas buatan agent di jawaban)',
+    auth: true,
+    params: IdParamsSchema,
+    responses: [
+      {
+        status: 200,
+        description: 'Isi berkas sebagai attachment',
+        schema: z.string().meta({ format: 'binary' }),
+        contentType: 'application/octet-stream',
+      },
+    ],
+    errors: [401, 404],
+  },
+  {
     operationId: 'search',
     method: 'get',
     path: '/search',

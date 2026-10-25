@@ -201,7 +201,7 @@ mkdir -p "$ROOT/repo"
 run_deploy() {
   : > "$LOG"
   PATH="$STUBS:$PATH" STUB_LOG="$LOG" AIOS_BACKUP_ENV="$ROOT/backup.env" AIOS_BACKUP_LOCK="$ROOT/lock" TMPDIR="$ROOT" \
-    AIOS_REPO="$ROOT/repo" COMPOSE_DIR="$ROOT/compose" READY_TIMEOUT=3 READY_INTERVAL=1 \
+    AIOS_REPO="$ROOT/repo" COMPOSE_DIR="$ROOT/compose" READY_TIMEOUT=3 READY_INTERVAL=1 AIOS_OUTBOX="$ROOT/outbox" \
     bash "$HERE/deploy.sh" "$@" > "$ROOT/out.txt" 2>&1
 }
 run_deploy; code=$?
@@ -209,6 +209,7 @@ run_deploy; code=$?
 expect_log 'restic backup --tag aios' "backup dijalankan sebelum deploy"
 expect_log 'docker tag aios-gateway:latest aios-gateway:previous' "image berjalan ditandai :previous"
 expect_log 'docker compose build gateway' "build image"
+[[ -d "$ROOT/outbox" ]] && pass "folder kiriman dibuat sebelum compose" || fail "folder kiriman tidak dibuat"
 expect_log 'docker compose up -d gateway' "gateway dijalankan (migrasi di kontainer)"
 expect_log 'curl .*v1/readyz' "menunggu /readyz"
 expect_no_log 'docker tag aios-gateway:previous aios-gateway:latest' "tanpa rollback saat berhasil"

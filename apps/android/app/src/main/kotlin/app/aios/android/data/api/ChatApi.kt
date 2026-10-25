@@ -1,6 +1,7 @@
 package app.aios.android.data.api
 
 import okhttp3.MultipartBody
+import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -11,6 +12,7 @@ import retrofit2.http.Part
 import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
+import retrofit2.http.Streaming
 
 interface ChatApi {
     @GET("conversations")
@@ -71,6 +73,11 @@ interface ChatApi {
 
     @GET("roles")
     suspend fun listRoles(): RoleList
+
+    /** Isi berkas (lampiran atau berkas buatan agent) untuk disimpan pemilik. */
+    @Streaming
+    @GET("files/{id}/download")
+    suspend fun downloadFile(@Path("id") id: String): ResponseBody
 
     @GET("search")
     suspend fun search(@Query("q") q: String, @Query("limit") limit: Int = SEARCH_LIMIT): SearchResponse

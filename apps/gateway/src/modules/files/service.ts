@@ -1,6 +1,6 @@
 import { MAX_FILE_BYTES, type FileRecord, type MessagePartInput } from '@aios/contracts';
 import { createHash } from 'node:crypto';
-import { inArray } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import type { Database } from '../../db/client.js';
 import { files } from '../../db/schema/index.js';
 import { AppError } from '../../errors.js';
@@ -25,6 +25,10 @@ export interface PreparedAttachments {
 
 export interface FilesService {
   save(input: { name: string; mime: string; bytes: Buffer }): Promise<FileRecord>;
+  /** Berkas buatan agent (folder kiriman): jenis apa pun, MIME dari ekstensi, tanpa pemeriksaan isi. */
+  saveGenerated(input: { name: string; bytes: Buffer }): Promise<FileRecord>;
+  /** Isi berkas untuk diunduh pemilik. */
+  download(id: string): Promise<{ name: string; mime: string; content: Buffer }>;
   /** Membaca lampiran pesan dari database: dokumen menjadi teks, gambar menjadi base64. */
   prepare(parts: readonly MessagePartInput[]): Promise<PreparedAttachments>;
 }
@@ -41,6 +45,31 @@ const unreadable = (name: string) =>
     'file_unreadable',
     `Isi "${name}" tidak bisa dibaca. Periksa berkasnya lalu coba lagi.`,
   );
+
+/** MIME berkas buatan agent dari ekstensinya; sisanya octet-stream (selalu diunduh, tidak ditampilkan). */
+const MIME_BY_EXTENSION: Record<string, string> = {
+  zip: 'application/zip',
+  pdf: 'application/pdf',
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  webp: 'image/webp',
+  gif: 'image/gif',
+  svg: 'image/svg+xml',
+  csv: 'text/csv',
+  txt: 'text/plain',
+  md: 'text/markdown',
+  json: 'application/json',
+  html: 'text/html',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  mp3: 'audio/mpeg',
+  mp4: 'video/mp4',
+};
+
+export const mimeOf = (name: string) =>
+  MIME_BY_EXTENSION[name.toLowerCase().split('.').at(-1) ?? ''] ?? 'application/octet-stream';
 
 /** Nama tampilan: tanpa path, tanpa karakter kontrol, maks 200 karakter. */
 function cleanName(raw: string): string {
@@ -101,6 +130,37 @@ export function createFilesService(deps: { db: Database }): FilesService {
           createdAt: files.createdAt,
         });
       return { ...row!, createdAt: row!.createdAt.toISOString() };
+    },
+
+    async saveGenerated({ name: rawName, bytes }) {
+      const name = cleanName(rawName);
+      const [row] = await db
+        .insert(files)
+        .values({
+          name,
+          mime: mimeOf(name),
+          size: bytes.length,
+          content: bytes,
+          sha256: createHash('sha256').update(bytes).digest('hex'),
+        })
+        .returning({
+          id: files.id,
+          name: files.name,
+          mime: files.mime,
+          size: files.size,
+          sha256: files.sha256,
+          createdAt: files.createdAt,
+        });
+      return { ...row!, createdAt: row!.createdAt.toISOString() };
+    },
+
+    async download(id) {
+      const [row] = await db
+        .select({ name: files.name, mime: files.mime, content: files.content })
+        .from(files)
+        .where(eq(files.id, id));
+      if (!row) throw new AppError(404, 'file_not_found', 'Berkas tidak ditemukan.');
+      return row;
     },
 
     async prepare(parts) {

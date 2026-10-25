@@ -1,9 +1,12 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { copy } from '../copy';
 import type * as External from '../lib/external';
+import { api, resetApi } from '../test/fakeServices';
 import { TooltipProvider } from '../ui/Tooltip';
+
+vi.mock('../app/services', async () => (await import('../test/fakeServices')).fakeServices);
 
 const saveBlob = vi.hoisted(() => vi.fn());
 vi.mock('../lib/external', async (original) => ({
@@ -36,7 +39,10 @@ const renderMessage = (streaming: boolean, body = text) =>
     </TooltipProvider>,
   );
 
-beforeEach(() => saveBlob.mockReset());
+beforeEach(() => {
+  saveBlob.mockReset();
+  resetApi();
+});
 
 describe('AssistantMessage: Unduh ZIP', () => {
   it('jawaban selesai dengan blok kode: tombol mengunduh semua berkas sebagai satu zip', async () => {
@@ -50,6 +56,32 @@ describe('AssistantMessage: Unduh ZIP', () => {
     expect(name).toMatch(/^kode-\d{12}\.zip$/);
     expect(blob.type).toBe('application/zip');
     expect(blob.size).toBeGreaterThan(0);
+  });
+
+  it('berkas buatan AI tampil dengan tombol Unduh yang menyimpan isi dari gateway', async () => {
+    const user = userEvent.setup();
+    const blob = new Blob(['PK'], { type: 'application/zip' });
+    api.downloadFile.mockResolvedValue(blob);
+    render(
+      <TooltipProvider>
+        <AssistantMessage
+          parts={[
+            { type: 'text', text: 'Sudah saya buat.' },
+            { type: 'file', fileId: 'f1', name: 'todo-app.zip', mime: 'application/zip' },
+          ]}
+          role="general"
+          model={null}
+          roles={[]}
+        />
+      </TooltipProvider>,
+    );
+    const list = screen.getByRole('list', { name: copy.chat.generatedFiles });
+    expect(within(list).getByText('todo-app.zip')).toBeInTheDocument();
+    await user.click(
+      within(list).getByRole('button', { name: `${copy.chat.downloadFile}: todo-app.zip` }),
+    );
+    expect(api.downloadFile).toHaveBeenCalledWith('f1');
+    await waitFor(() => expect(saveBlob).toHaveBeenCalledWith(blob, 'todo-app.zip'));
   });
 
   it('selama jawaban masih ditulis, atau tanpa blok kode, tombol tidak tampil', () => {

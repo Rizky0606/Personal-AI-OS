@@ -10,6 +10,7 @@ import { createChatService, type ChatService } from '../modules/chat/service.js'
 import { createFilesService } from '../modules/files/service.js';
 import { createTitleService } from '../modules/chat/title.js';
 import { createDevicesService } from '../modules/devices/service.js';
+import { createOutbox } from '../modules/files/outbox.js';
 import { createMemoryService } from '../modules/memory/service.js';
 import { createSearchService } from '../modules/search/service.js';
 import { createSpacesService } from '../modules/spaces/service.js';
@@ -133,6 +134,8 @@ export async function createAuthEnv(
     push?: { baseUrl: string; account: ServiceAccount };
     /** Alamat Hermes tiruan. Default: port yang tidak mendengarkan. */
     hermesUrl?: string;
+    /** Folder kiriman berkas buatan agent (sama untuk gateway dan agent di tes). */
+    outboxDir?: string;
     hermesIdleMs?: number;
     heartbeatMs?: number;
     /** Masa tunggu relay worker (putus-sambung dan pembatalan) agar tes tidak menunggu puluhan detik. */
@@ -165,6 +168,14 @@ export async function createAuthEnv(
   workerHub.onPresence((deviceId, online) => workerRelay.presence(deviceId, online));
   const observer = createRunObserver();
   const memory = createMemoryService({ db });
+  const files = createFilesService({ db });
+  const outbox = options.outboxDir
+    ? createOutbox({
+        dir: options.outboxDir,
+        hostDir: options.outboxDir,
+        save: (input) => files.saveGenerated(input),
+      })
+    : undefined;
   const runner = createRunner({
     db,
     store,
@@ -183,6 +194,7 @@ export async function createAuthEnv(
     roles,
     memory,
     projectRules: projects,
+    ...(outbox ? { outbox } : {}),
   });
   const routing = createRoutingService({
     db,
@@ -215,7 +227,6 @@ export async function createAuthEnv(
         })
       : unusedResearch;
   if (options.research) await research.start();
-  const files = createFilesService({ db });
   const spaces = createSpacesService({ db });
   const chat = createChatService({
     db,

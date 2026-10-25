@@ -88,6 +88,8 @@ export const unusedChat: AppDeps['chat'] = {
 export const unusedFiles: AppDeps['files'] = {
   save: unused('files.save'),
   prepare: unused('files.prepare'),
+  saveGenerated: unused('files.saveGenerated'),
+  download: unused('files.download'),
 };
 
 export const unusedRuns: AppDeps['runs'] = {

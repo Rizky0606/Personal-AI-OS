@@ -44,6 +44,9 @@ const STICK_THRESHOLD = 48;
 function assistantParts(message: Message): AssistantPart[] {
   return message.parts.flatMap((part): AssistantPart[] => {
     if (part.type === 'text') return [{ type: 'text', text: part.text }];
+    if (part.type === 'file') {
+      return [{ type: 'file', fileId: part.fileId, name: part.name, mime: part.mime }];
+    }
     if (part.type === 'tool') {
       return [
         {

@@ -449,6 +449,27 @@ class ChatViewModelTest {
     }
 
     @Test
+    fun `berkas buatan AI di jawaban tampil dan bisa diunduh`() = runVmTest { r ->
+        val file = MessagePart.File("f1", "todo-app.zip", "application/zip")
+        val answer = message("m0a", AUTHOR_ASSISTANT, "Sudah saya buat.", runId = "r0")
+        val item = buildChatItems(r.ui.copy(messages = listOf(answer.copy(parts = answer.parts + file))))
+            .filterIsInstance<ChatItem.Assistant>().single()
+        assertEquals(listOf(file), item.files)
+
+        r.repo.downloads["f1"] = byteArrayOf(1, 2, 3)
+        var written: ByteArray? = null
+        r.vm.downloadFile(file) { written = it }
+        runCurrent()
+        assertTrue(byteArrayOf(1, 2, 3).contentEquals(written))
+        assertEquals(listOf(R.string.chat_file_saved), r.notices)
+
+        r.vm.downloadFile(MessagePart.File("hilang", "x.pdf", "application/pdf")) { written = null }
+        runCurrent()
+        assertNotNull(written)
+        assertEquals(2, r.notices.size)
+    }
+
+    @Test
     fun `menu ubah dan hapus hanya tersedia saat tidak ada jawaban berjalan`() = runVmTest { r ->
         openC1(r)
         val idle = buildChatItems(r.ui)

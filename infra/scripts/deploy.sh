@@ -74,6 +74,11 @@ rollback() {
   exit 1
 }
 
+# Folder kiriman berkas buatan Hermes: dibuat sebagai pengguna ini (pemilik proses Hermes) sebelum compose
+# me-mount-nya; folder yang belum ada akan dibuat Docker sebagai root dan Hermes tidak bisa menulis ke sana.
+export AIOS_OUTBOX="${AIOS_OUTBOX:-$HOME/aios-outbox}"
+run mkdir -p "$AIOS_OUTBOX"
+
 # 3. Build (arm64 native di VPS).
 log "build image $IMAGE:latest"
 if [[ $DRY -eq 0 ]]; then

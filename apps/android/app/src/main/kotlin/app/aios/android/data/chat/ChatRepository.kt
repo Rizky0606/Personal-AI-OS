@@ -1,5 +1,7 @@
 package app.aios.android.data.chat
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import app.aios.android.data.api.ChatApi
 import app.aios.android.data.api.Conversation
 import app.aios.android.data.api.CreateConversationRequest
@@ -64,6 +66,9 @@ interface ChatRepository {
 
     /** Mengunggah lampiran; hasilnya dirujuk dari pesan lewat part `file`. */
     suspend fun upload(file: PickedFile): MessagePart.File
+
+    /** Isi berkas dari server (lampiran atau berkas buatan agent). */
+    suspend fun download(fileId: String): ByteArray
 
     /** Pencarian isi pesan dan laporan riset di server (tanpa cache). */
     suspend fun search(query: String): List<SearchHit>
@@ -196,6 +201,9 @@ class RoomChatRepository(
     }
 
     override suspend fun search(query: String) = api.search(query).items
+
+    override suspend fun download(fileId: String): ByteArray =
+        withContext(Dispatchers.IO) { api.downloadFile(fileId).use { it.bytes() } }
 
     override suspend fun upload(file: PickedFile): MessagePart.File {
         val body = file.bytes.toRequestBody(file.mime.toMediaTypeOrNull())

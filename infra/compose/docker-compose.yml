@@ -56,6 +56,13 @@ services:
     # lalu aktifkan baris di bawah dan isi FCM_SERVICE_ACCOUNT_FILE=/run/secrets/fcm_service_account di gateway.env.
     # Sengaja tidak aktif bawaan: bind mount ke file yang belum ada akan membuat direktori kosong.
     #   volumes: ['./secrets/fcm.json:/run/secrets/fcm_service_account:ro']
+    # Folder kiriman berkas buatan Hermes (berjalan di host sebagai ubuntu): dibaca saja oleh gateway, dibersihkan
+    # timer aios-outbox-clean. deploy.sh membuat foldernya lebih dulu agar Docker tidak membuatnya sebagai root.
+    environment:
+      OUTBOX_DIR: /outbox
+      OUTBOX_HOST_DIR: ${AIOS_OUTBOX:-/home/ubuntu/aios-outbox}
+    volumes:
+      - '${AIOS_OUTBOX:-/home/ubuntu/aios-outbox}:/outbox:ro'
     command: ['sh', '-c', 'node dist/db/migrate.js && exec node dist/main.js']
     depends_on:
       postgres:

@@ -475,6 +475,9 @@ export const copy = {
     unpin: 'Lepas sematan',
     archive: 'Arsipkan',
     deleteConversation: 'Hapus',
+    generatedFiles: 'Berkas dari AI',
+    downloadFile: 'Unduh',
+    downloading: 'Mengunduh…',
     deleteConversationTitle: 'Hapus percakapan ini?',
     deleteConversationBody: (title: string) =>
       `"${title}" dan semua pesannya dihapus permanen. Pilih Arsipkan bila hanya ingin menyembunyikannya.`,

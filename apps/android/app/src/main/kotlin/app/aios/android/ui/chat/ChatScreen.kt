@@ -137,6 +137,7 @@ fun ChatScreen(viewModel: ChatViewModel, snackbar: SnackbarHostState) {
                     onStartEdit = viewModel::startEdit,
                     onDelete = { toDelete = it },
                     onRemember = { toRemember = it },
+                    onDownload = viewModel::downloadFile,
                     onRoleClick = { roleSheet = true },
                     onCopied = { /* umpan balik lewat snackbar di bawah */ },
                     copiedText = copiedText,
@@ -210,6 +211,7 @@ private fun MessageList(
     onStartEdit: (String) -> Unit,
     onDelete: (String) -> Unit,
     onRemember: (String) -> Unit,
+    onDownload: FileDownload,
     onRoleClick: () -> Unit,
     onCopied: () -> Unit,
     copiedText: String,
@@ -243,6 +245,7 @@ private fun MessageList(
                     onStartEdit = onStartEdit,
                     onDelete = onDelete,
                     onRemember = onRemember,
+                    onDownload = onDownload,
                     onRoleClick = onRoleClick,
                     onCopied = {
                         copiedTick++
@@ -275,6 +278,7 @@ private fun ChatRow(
     onStartEdit: (String) -> Unit,
     onDelete: (String) -> Unit,
     onRemember: (String) -> Unit,
+    onDownload: FileDownload,
     onRoleClick: () -> Unit,
     onCopied: () -> Unit
 ) {
@@ -293,7 +297,8 @@ private fun ChatRow(
             roleName = roleName,
             onRoleClick = onRoleClick,
             onCopied = onCopied,
-            onDelete = onDelete
+            onDelete = onDelete,
+            onDownload = onDownload
         )
         is ChatItem.System -> SystemNoteRow(item.message.text)
         is ChatItem.Failure -> FailureRow(item, onResend = onResend)
