@@ -102,6 +102,18 @@ const RUNNABLE_ENGINES = new Set(['hermes', 'research']);
 
 const CANCEL_WAIT_MS = 5000;
 
+/**
+ * Aturan untuk run yang berjalan di server (Hermes), bukan run coding di PC: mesin di server punya alat tulis
+ * berkas dan terminal, tetapi pemilik tidak bisa menjangkau sistem berkas server. Hasil berupa berkas harus sampai
+ * lewat jawaban (blok kode berpath) supaya aplikasi bisa menyediakan Unduh ZIP.
+ */
+export const SERVER_FILES_RULE = [
+  '# Berkas untuk pemilik',
+  'Kamu berjalan di server yang sistem berkasnya tidak bisa diakses pemilik. Jangan membuat berkas, folder, atau arsip (zip, tar, docx, dan sejenisnya) di server sebagai hasil untuk pemilik, dan jangan pernah menjawab dengan path berkas di server.',
+  'Bila pemilik meminta berkas, project, atau zip: tulis isi lengkap setiap berkas di jawaban, satu blok kode per berkas dengan path di baris pembuka (mis. ```jsx src/App.jsx), termasuk package.json dan konfigurasi. Aplikasi menampilkan tombol Unduh ZIP yang mengemas semua blok kode itu; sebut tombol itu sekali di akhir.',
+  'Berkas biner (gambar, PDF, dokumen Office) tidak bisa dikirim: jelaskan singkat, lalu berikan sumbernya dalam format teks (mis. HTML, Markdown, CSV, SVG) bila memungkinkan.',
+].join('\n');
+
 async function* emptyEvents(): AsyncGenerator<AgentEvent> {
   // Tidak ada event: adapter gagal dimulai.
 }
@@ -127,7 +139,11 @@ export function createRunner(deps: RunnerDeps): Runner {
    * Pesan sistem run: bundel role, memori pemilik, lalu aturan project (bila run di project). Bagian tambahan yang
    * gagal dimuat tidak menggagalkan run.
    */
-  async function systemPromptFor(roleId: string, projectId: string | null): Promise<string> {
+  async function systemPromptFor(
+    roleId: string,
+    projectId: string | null,
+    onServer: boolean,
+  ): Promise<string> {
     const bundle = deps.roles.bundle(roleId).systemPrompt;
     const extra = async (name: string, load: () => Promise<string> | undefined) => {
       try {
@@ -141,7 +157,7 @@ export function createRunner(deps: RunnerDeps): Runner {
     const rules = projectId
       ? await extra('aturan project', () => deps.projectRules?.rulesSection(projectId))
       : '';
-    return [bundle, memory, rules].filter(Boolean).join('\n\n');
+    return [bundle, onServer ? SERVER_FILES_RULE : '', memory, rules].filter(Boolean).join('\n\n');
   }
 
   async function execute(input: LaunchInput, ctl: Active): Promise<void> {
@@ -283,7 +299,7 @@ export function createRunner(deps: RunnerDeps): Runner {
             messageId: input.assistantMessageId,
             prompt: input.prompt,
             // Dihitung per run: perubahan role (mode dev) dan memori berlaku pada run berikutnya.
-            systemPrompt: await systemPromptFor(chosenRole, input.projectId ?? null),
+            systemPrompt: await systemPromptFor(chosenRole, input.projectId ?? null, !coding),
             sessionId: input.sessionId,
             ...(input.history?.length ? { history: input.history } : {}),
             ...(input.images?.length ? { images: input.images } : {}),
