@@ -243,7 +243,21 @@ export const copy = {
     add: 'Tambah project',
     workerOff:
       'Worker belum tersambung. Project belum bisa ditambahkan, tetapi daftar tetap tampil.',
-    columns: { name: 'Nama', stack: 'Stack', branch: 'Branch', folder: 'Folder' },
+    columns: { name: 'Nama', stack: 'Stack', branch: 'Branch', folder: 'Folder', rules: 'Aturan' },
+    rules: {
+      edit: 'Ubah aturan',
+      none: 'Belum ada',
+      title: (name: string) => `Aturan project ${name}`,
+      intro:
+        'Instruksi untuk AI di setiap tugas coding dan chat project ini: gaya kode, perintah tes, hal yang dilarang.',
+      label: 'Aturan',
+      placeholder:
+        '- Pakai pnpm, bukan npm\n- Jalankan pnpm test sebelum selesai\n- Jangan ubah folder migrations tanpa izin',
+      counter: (n: number, max: number) => `${n}/${max} karakter`,
+      save: 'Simpan aturan',
+      saving: 'Menyimpan…',
+      saved: 'Aturan project disimpan.',
+    },
     folderMissing: 'Tidak ada di PC ini',
     folderUnavailable: 'Folder hilang atau izinnya dicabut',
     unbound: 'Folder belum terikat',

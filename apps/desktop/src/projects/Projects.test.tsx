@@ -26,6 +26,7 @@ const project = (over: Partial<Project> = {}): Project => ({
   workerDeviceId: WORKER,
   stack: { languages: ['typescript'], frameworks: ['react'] },
   defaultBranch: 'main',
+  instructions: '',
   createdAt: TS,
   updatedAt: TS,
   ...over,
@@ -76,6 +77,34 @@ describe('ProjectsScreen: daftar', () => {
     expect(within(mine).getByText('react')).toBeInTheDocument();
     const other = within(table).getByText('Proyek PC lain').closest('tr') as HTMLElement;
     expect(within(other).getByText(copy.projects.folderMissing)).toBeInTheDocument();
+  });
+
+  it('aturan project: ringkasan di tabel, dialog mengubah dan menyimpan ke server', async () => {
+    connected();
+    const user = userEvent.setup();
+    api.listProjects.mockResolvedValue([project({ instructions: 'Pakai pnpm.' })]);
+    workerApi.bindings.mockResolvedValue([]);
+    api.updateProject.mockResolvedValue(project({ instructions: 'Pakai pnpm.\nJalankan tes.' }));
+    await renderScreen(<ProjectsScreen />, '/projects');
+
+    const table = await screen.findByRole('table', { name: copy.projects.listLabel });
+    expect(within(table).getByText('Pakai pnpm.')).toBeInTheDocument();
+    await user.click(
+      within(table).getByRole('button', { name: `${copy.projects.rules.edit}: Aplikasi saya` }),
+    );
+    const dialog = await screen.findByRole('dialog', {
+      name: copy.projects.rules.title('Aplikasi saya'),
+    });
+    const field = within(dialog).getByRole('textbox', { name: copy.projects.rules.label });
+    expect(field).toHaveValue('Pakai pnpm.');
+    await user.type(field, '{Enter}Jalankan tes.  ');
+    await user.click(within(dialog).getByRole('button', { name: copy.projects.rules.save }));
+
+    expect(api.updateProject).toHaveBeenCalledWith(P1, {
+      instructions: 'Pakai pnpm.\nJalankan tes.',
+    });
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(await screen.findByText(copy.projects.rules.saved)).toBeInTheDocument();
   });
 
   it('folder hilang atau izin dicabut diberi peringatan', async () => {

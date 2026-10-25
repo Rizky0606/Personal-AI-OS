@@ -161,6 +161,9 @@ export const StackSchema = z
   .meta({ id: 'Stack' });
 export type Stack = z.infer<typeof StackSchema>;
 
+/** Batas panjang aturan project; ikut di setiap pesan sistem run project. */
+export const PROJECT_INSTRUCTIONS_MAX = 4000;
+
 export const ProjectSchema = z
   .object({
     id: IdSchema,
@@ -168,6 +171,8 @@ export const ProjectSchema = z
     workerDeviceId: IdSchema,
     stack: StackSchema,
     defaultBranch: z.string().min(1),
+    /** Aturan project (W23): gaya kode, perintah tes, larangan; disuntik ke setiap run di project ini. */
+    instructions: z.string().max(PROJECT_INSTRUCTIONS_MAX),
     createdAt: TimestampSchema,
     updatedAt: TimestampSchema,
   })

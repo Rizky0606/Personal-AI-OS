@@ -512,6 +512,11 @@ Isi ditulis sendiri sebagai ringkasan prinsip, bukan salinan; dibaca dari halama
 - Semua kata kunci harus ada (AND, pencocokan awalan); hasil membuka percakapan, belum menggulir ke pesan yang cocok.
 - Desktop: grup Riwayat di palet Ctrl+K. Android: hasil di bawah daftar percakapan saat mencari di drawer.
 
+## Temuan Fase 33 (aturan per project)
+
+- Aturan disimpan di server (`projects.instructions`, migrasi 0008) dan disuntik ke pesan sistem setiap run di project (coding lewat worker dan chat project), setelah bundel role dan memori. Belum membaca berkas AGENTS.md atau .cursor/rules dari folder project; ide lanjutan: tombol impor dari berkas itu lewat worker.
+- Tes git worker (review.test.ts) bisa melewati batas 5 detik saat mesin sibuk (emulator berjalan); lulus bila dijalankan sendiri.
+
 ## Rencana fitur lanjutan (Fase 25–34)
 
 Disusun 2026-10-25 dari perbandingan dengan ChatGPT, Claude, Gemini/NotebookLM, Perplexity, Cursor, Codex, Raycast, dan asisten self-hosted (Open WebUI, LibreChat, LobeChat, Khoj). Dikerjakan berurutan; setiap fase satu branch `feat/<fase>-<ringkas>`, merge ke `main` (rilis otomatis), dan gateway di VPS diperbarui bila fase menyentuh server. ID fitur baru dicatat di PRD.md.

@@ -86,6 +86,8 @@ export interface RunnerDeps {
   };
   /** Memori pemilik (W17) yang ditambahkan ke pesan sistem setiap run; tanpa ini tidak ada memori. */
   memory?: { promptSection(): Promise<string> };
+  /** Aturan project (W23) yang ditambahkan ke pesan sistem run di project itu. */
+  projectRules?: { rulesSection(projectId: string): Promise<string> };
   log?: {
     warn: (obj: object, msg: string) => void;
     error: (obj: object, msg: string) => void;
@@ -121,20 +123,25 @@ export function createRunner(deps: RunnerDeps): Runner {
   const { db, store, hub, adapter, log } = deps;
   const active = new Map<string, Active>();
 
-  /** Pesan sistem run: bundel role lalu memori pemilik. Memori yang gagal dimuat tidak menggagalkan run. */
-  async function systemPromptFor(roleId: string): Promise<string> {
+  /**
+   * Pesan sistem run: bundel role, memori pemilik, lalu aturan project (bila run di project). Bagian tambahan yang
+   * gagal dimuat tidak menggagalkan run.
+   */
+  async function systemPromptFor(roleId: string, projectId: string | null): Promise<string> {
     const bundle = deps.roles.bundle(roleId).systemPrompt;
-    let memory = '';
-    try {
-      memory = (await deps.memory?.promptSection()) ?? '';
-    } catch (err) {
-      log?.warn({ err }, 'memori gagal dimuat; run berjalan tanpa memori');
-    }
-    return memory
-      ? `${bundle}
-
-${memory}`
-      : bundle;
+    const extra = async (name: string, load: () => Promise<string> | undefined) => {
+      try {
+        return (await load()) ?? '';
+      } catch (err) {
+        log?.warn({ err }, `${name} gagal dimuat; run berjalan tanpanya`);
+        return '';
+      }
+    };
+    const memory = await extra('memori', () => deps.memory?.promptSection());
+    const rules = projectId
+      ? await extra('aturan project', () => deps.projectRules?.rulesSection(projectId))
+      : '';
+    return [bundle, memory, rules].filter(Boolean).join('\n\n');
   }
 
   async function execute(input: LaunchInput, ctl: Active): Promise<void> {
@@ -276,7 +283,7 @@ ${memory}`
             messageId: input.assistantMessageId,
             prompt: input.prompt,
             // Dihitung per run: perubahan role (mode dev) dan memori berlaku pada run berikutnya.
-            systemPrompt: await systemPromptFor(chosenRole),
+            systemPrompt: await systemPromptFor(chosenRole, input.projectId ?? null),
             sessionId: input.sessionId,
             ...(input.history?.length ? { history: input.history } : {}),
             ...(input.images?.length ? { images: input.images } : {}),

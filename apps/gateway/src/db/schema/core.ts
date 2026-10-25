@@ -70,6 +70,8 @@ export const projects = pgTable('projects', {
     .references(() => devices.id),
   stack: jsonb('stack').$type<Stack>().notNull(),
   defaultBranch: text('default_branch').notNull().default('main'),
+  /** Aturan project (W23), disuntik ke pesan sistem setiap run di project ini. */
+  instructions: text('instructions').notNull().default(''),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });

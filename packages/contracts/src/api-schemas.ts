@@ -10,6 +10,7 @@ import {
   SpaceDocumentSchema,
   SpaceSchema,
   MessageSchema,
+  PROJECT_INSTRUCTIONS_MAX,
   ResearchDepthSchema,
   ResearchJobSchema,
   ResearchSourceSchema,
@@ -299,6 +300,7 @@ export const CreateProjectRequestSchema = z
     workerDeviceId: IdSchema,
     stack: StackSchema,
     defaultBranch: z.string().min(1).default('main'),
+    instructions: z.string().trim().max(PROJECT_INSTRUCTIONS_MAX).default(''),
   })
   .meta({ id: 'CreateProjectRequest' });
 
@@ -307,6 +309,7 @@ export const UpdateProjectRequestSchema = z
     name: z.string().min(1).optional(),
     stack: StackSchema.optional(),
     defaultBranch: z.string().min(1).optional(),
+    instructions: z.string().trim().max(PROJECT_INSTRUCTIONS_MAX).optional(),
   })
   .meta({ id: 'UpdateProjectRequest' });
 

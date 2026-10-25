@@ -23,6 +23,7 @@ export const unusedProjects: AppDeps['projects'] = {
   update: unused('projects.update'),
   ownedBy: unused('projects.ownedBy'),
   workerOf: unused('projects.workerOf'),
+  rulesSection: unused('projects.rulesSection'),
 };
 
 export const unusedCompare: AppDeps['compare'] = { run: unused('compare.run') };

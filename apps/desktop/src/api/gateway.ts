@@ -138,6 +138,8 @@ export function createGatewayApi(call: Call) {
     registerWorker: (name: string) =>
       get('/devices/worker', LoginResponseSchema, { method: 'POST', body: { name } }),
     listProjects: async () => (await get('/projects', ProjectListSchema)).items,
+    updateProject: (id: string, patch: { name?: string; instructions?: string }) =>
+      get(`/projects/${id}`, ProjectSchema, { method: 'PATCH', body: patch }),
     createProject: (input: CreateProjectInput) =>
       get('/projects', ProjectSchema, { method: 'POST', body: input }),
 

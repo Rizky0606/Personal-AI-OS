@@ -22,6 +22,7 @@ const project: Project = {
   workerDeviceId: '0192f0c4-7a1b-7c2d-a001-4a5b6c7d8e91',
   stack: { languages: ['typescript'], frameworks: [] },
   defaultBranch: 'main',
+  instructions: '',
   createdAt: TS,
   updatedAt: TS,
 };
