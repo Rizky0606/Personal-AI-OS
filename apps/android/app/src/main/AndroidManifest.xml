@@ -71,5 +71,27 @@
                 <data android:mimeType="text/plain" />
             </intent-filter>
         </activity>
+        <!-- Widget layar utama dan tile Quick Settings (A15). -->
+        <receiver
+            android:name=".widget.QuickWidgetProvider"
+            android:exported="false"
+            android:label="@string/widget_quick_ask">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_quick_info" />
+        </receiver>
+        <service
+            android:name=".widget.QuickAskTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_mic"
+            android:label="@string/tile_quick_ask"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
     </application>
 </manifest>

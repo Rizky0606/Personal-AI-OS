@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Widget A15: Tanya cepat (chat baru + suara) dan Riset baru. Tinggi tombol 48dp (target sentuh). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:padding="8dp">
+
+    <TextView
+        android:id="@+id/widget_quick_ask"
+        android:layout_width="0dp"
+        android:layout_height="48dp"
+        android:layout_marginEnd="8dp"
+        android:layout_weight="1"
+        android:background="@drawable/widget_button_primary"
+        android:gravity="center"
+        android:text="@string/widget_quick_ask"
+        android:textColor="@color/widget_on_accent"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/widget_new_research"
+        android:layout_width="0dp"
+        android:layout_height="48dp"
+        android:layout_weight="1"
+        android:background="@drawable/widget_button_secondary"
+        android:gravity="center"
+        android:text="@string/widget_new_research"
+        android:textColor="@color/widget_text"
+        android:textSize="14sp" />
+</LinearLayout>

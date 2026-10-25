@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Widget dan tile Quick Settings (A15) -->
+    <string name="widget_quick_ask">Tanya cepat</string>
+    <string name="widget_new_research">Riset baru</string>
+    <string name="widget_description">Tanya dengan suara atau mulai riset langsung dari layar utama.</string>
+    <string name="tile_quick_ask">Tanya AI</string>
+</resources>

@@ -137,6 +137,7 @@ fun MainScreen(online: Boolean, sessionKey: String, link: AppLink?, onLinkConsum
                 chatVm.open(target.conversationId)
                 openChat()
             }
+            AppLink.NewResearch -> nav.navigate(Routes.RESEARCH_NEW)
             AppLink.Assist -> {
                 chatVm.open(null)
                 chatVm.requestVoice()
