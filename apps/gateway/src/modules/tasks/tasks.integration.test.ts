@@ -454,10 +454,12 @@ describe('batas run paralel', () => {
     await reach(projectId, a.id, 'review');
 
     // Kartu antrean bisa dibatalkan dengan memindahkannya keluar Running.
+    // Urutan di kolom mengikuti kedatangan, jadi B dan C diselesaikan satu per satu (bukan bersamaan),
+    // supaya urutannya pasti di runner CI yang lambat maupun mesin cepat.
     await finish(fake, runB);
+    await reach(projectId, b.id, 'review');
     await finish(fake, runC);
     await reach(projectId, c.id, 'review');
-    await reach(projectId, b.id, 'review');
     expect(column(await board(projectId), 'review')).toEqual(['Kartu A', 'Kartu B', 'Kartu C']);
   });
 
