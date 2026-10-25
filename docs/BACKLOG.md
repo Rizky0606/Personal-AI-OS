@@ -465,6 +465,29 @@ Isi ditulis sendiri sebagai ringkasan prinsip, bukan salinan; dibaca dari halama
 - **Belum ada**: pratinjau gambar di riwayat (hanya chip nama), unduh ulang lampiran (`GET /files/:id` tidak ada di kontrak), pembersihan berkas yang diunggah tetapi tidak pernah dikirim, lampiran pada run coding (omp mengabaikan gambar; dokumen tetap masuk sebagai teks), dan riwayat yang dikirim ulang setelah edit/hapus pesan hanya membawa teks (isi lampiran lama tidak ikut).
 - **Android**: pemilih dokumen sistem (gambar, PDF, DOCX, teks); kamera langsung belum ada.
 
+## Rencana fitur lanjutan (Fase 25–34)
+
+Disusun 2026-10-25 dari perbandingan dengan ChatGPT, Claude, Gemini/NotebookLM, Perplexity, Cursor, Codex, Raycast, dan asisten self-hosted (Open WebUI, LibreChat, LobeChat, Khoj). Dikerjakan berurutan; setiap fase satu branch `feat/<fase>-<ringkas>`, merge ke `main` (rilis otomatis), dan gateway di VPS diperbarui bila fase menyentuh server. ID fitur baru dicatat di PRD.md.
+
+| Fase | Fitur | PRD | Sisi | Inti rencana | Verifikasi |
+| --- | --- | --- | --- | --- | --- |
+| 25 | Pratinjau artifact dan diagram Mermaid | W16, A8 | Desktop, Android | Blok kode `html`, `svg`, `jsx`/`tsx` (satu komponen React), dan `mermaid` mendapat tombol Pratinjau. Halaman dibangun di klien lalu dijalankan di origin terpisah tanpa akses ke aplikasi: desktop lewat custom protocol Tauri `aiosartifact` (CSP aplikasi melarang skrip inline dan ikut berlaku untuk iframe `srcdoc`), Android lewat WebView tanpa jembatan JS dan tanpa akses berkas. React, Babel, dan Mermaid dimuat dari CDN dengan versi terkunci di dalam halaman terisolasi itu, jadi tanpa dependensi npm atau aset besar baru | Tes unit pembangun halaman, tes komponen, E2E desktop, cek manual di aplikasi Tauri dan emulator |
+| 26 | Memori yang terlihat dan bisa diedit | W17, A9 | Gateway, desktop, Android | Tabel `memories` milik gateway (fakta singkat tentang pemilik), disuntik ke pesan sistem setiap chat; layar Memori (lihat, ubah, hapus, matikan) dan aksi "Ingat ini" di pesan. Sebelum mulai, cek apakah Hermes mengekspos memori internalnya; bila ya, tampilkan juga sebagai sumber baca-saja | Tes integrasi gateway, tes klien, E2E |
+| 27 | Briefing pagi | W18, A10 | Gateway, klien | Jenis jadwal `briefing`: merangkum riset selesai 24 jam terakhir, kartu kanban di Review, hasil jadwal lain, dan topik pilihan, lalu dikirim sebagai push | Tes integrasi scheduler |
+| 28 | Jadwal yang ingat run sebelumnya | W19, A11 | Gateway, klien | Opsi `notify: always | on_change`; hasil run terakhir ikut dikirim ke model dan push hanya dikirim bila model menandai ada perubahan | Tes integrasi scheduler |
+| 29 | Quick Ask global (Windows) | W20 | Desktop | Hotkey global (plugin resmi `tauri-plugin-global-shortcut`, dependensi baru) membuka jendela kecil di atas aplikasi lain, berisi teks clipboard bila ada; jawaban bisa dilanjutkan di chat utama | Tes unit, cek manual |
+| 30 | Asisten bawaan Android | A12 | Android | Activity menangani `ACTION_ASSIST` sehingga aplikasi bisa dipilih sebagai "Aplikasi asisten digital"; tekan lama power/home membuka chat baru dengan input suara siap | Tes instrumentasi intent, cek manual |
+| 31 | Ruang pengetahuan | W21, A13 | Gateway, klien | Ruang berisi dokumen yang diunggah; teks dipotong per bagian dan diindeks dengan full-text search Postgres (tanpa model embedding atau pgvector dulu); chat di dalam ruang menyertakan potongan teratas dan jawaban menyebut sumbernya | Tes integrasi gateway, E2E |
+| 32 | Pencarian di semua riwayat | W22, A14 | Gateway, klien | Full-text search di pesan chat dan laporan riset, hasil membuka percakapan pada pesan yang cocok | Tes integrasi, E2E |
+| 33 | Aturan per project | W23 | Gateway, worker, desktop | Instruksi per project (gaya kode, perintah tes) yang bisa diedit di UI dan ikut disuntik ke run coding | Tes worker dan desktop |
+| 34 | Widget dan tile Quick Settings | A15 | Android | Tile "Tanya cepat" dan widget "Catat ide ke kanban" | Tes instrumentasi, cek manual |
+
+**Ditunda sampai ada verifikasi atau keputusan:**
+- Rekam dan ringkas rapat (butuh model transkripsi lewat 9Router atau VPS; cek dulu ketersediaan dan beban VPS ARM).
+- Ringkasan audio dan peta pikiran laporan riset (butuh TTS; peta pikiran bisa memakai Mermaid dari Fase 25).
+- Konektor MCP untuk chat umum (cek dukungan MCP di Hermes; kredensial pihak ketiga perlu aturan di SECURITY_OPS.md).
+- Coding dari HP lewat GitHub (bertentangan dengan non-goal "Android tidak mengendalikan Windows"; butuh keputusan pemilik dan agent yang berjalan di VPS).
+
 ## Ide di luar scope
 
 (kosong)

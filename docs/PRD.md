@@ -41,6 +41,14 @@ Produk ini adalah satu asisten AI pribadi dengan dua wajah: Windows untuk kerja 
 | W13 | Pembanding model | P2 | Satu prompt ke beberapa model berdampingan |
 | W14 | Dasbor kuota | P2 | Pemakaian dan kuota dari 9Router |
 | W15 | Command palette | P1 | Ctrl+K untuk semua aksi |
+| W16 | Pratinjau artifact | P1 | Blok HTML, SVG, React, dan Mermaid dijalankan di halaman terisolasi |
+| W17 | Memori terlihat | P1 | Lihat, ubah, hapus fakta yang diingat AI; aksi Ingat ini |
+| W18 | Briefing pagi | P2 | Rangkuman harian riset, kanban, dan jadwal |
+| W19 | Jadwal dengan ingatan | P2 | Notifikasi hanya bila hasil berubah dari run sebelumnya |
+| W20 | Quick Ask global | P2 | Hotkey dari aplikasi mana pun membuka jendela tanya cepat |
+| W21 | Ruang pengetahuan | P2 | Dokumen yang diunggah jadi sumber jawaban bersitasi |
+| W22 | Pencarian riwayat | P2 | Cari di semua pesan chat dan laporan riset |
+| W23 | Aturan per project | P2 | Instruksi project yang ikut disuntik ke run coding |
 
 ## Fitur Android
 
@@ -53,6 +61,14 @@ Produk ini adalah satu asisten AI pribadi dengan dua wajah: Windows untuk kerja 
 | A5 | Input suara | P1 | STT, lalu teks bisa diedit sebelum dikirim |
 | A6 | Share ke chat | P1 | Teks atau link dari aplikasi lain masuk sebagai pesan baru |
 | A7 | Ekspor | P2 | Laporan riset ke Markdown atau PDF |
+| A8 | Pratinjau artifact | P1 | Sama dengan W16 |
+| A9 | Memori terlihat | P1 | Sama dengan W17 |
+| A10 | Briefing pagi | P2 | Push rangkuman harian |
+| A11 | Jadwal dengan ingatan | P2 | Sama dengan W19 |
+| A12 | Asisten bawaan | P2 | Bisa dipilih sebagai aplikasi asisten digital Android |
+| A13 | Ruang pengetahuan | P2 | Sama dengan W21 |
+| A14 | Pencarian riwayat | P2 | Sama dengan W22 |
+| A15 | Widget dan tile | P3 | Tanya cepat dan catat ide dari layar utama |
 
 ## Fitur server (dipakai keduanya)
 
