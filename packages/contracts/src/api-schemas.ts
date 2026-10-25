@@ -13,6 +13,7 @@ import {
   ResearchSourceSchema,
   RoutingCorrectionSchema,
   RunSchema,
+  ScheduleNotifySchema,
   ScheduleTargetSchema,
   StackSchema,
   TaskStatusSchema,
@@ -355,6 +356,7 @@ export const CreateScheduleRequestSchema = z
     target: ScheduleTargetSchema,
     agentRole: RoleIdSchema.nullable().optional(),
     enabled: z.boolean().default(true),
+    notify: ScheduleNotifySchema.default('always'),
   })
   .meta({ id: 'CreateScheduleRequest' });
 
@@ -379,6 +381,7 @@ export const UpdateScheduleRequestSchema = z
     target: ScheduleTargetSchema.optional(),
     agentRole: RoleIdSchema.nullable().optional(),
     enabled: z.boolean().optional(),
+    notify: ScheduleNotifySchema.optional(),
   })
   .meta({ id: 'UpdateScheduleRequest' });
 
@@ -395,6 +398,7 @@ export const ScheduleParseResponseSchema = z
     prompt: z.string().min(1),
     target: ScheduleTargetSchema,
     agentRole: RoleIdSchema.nullable(),
+    notify: ScheduleNotifySchema,
     /** Jadwal yang dibaca manusia, mis. "Setiap Senin 07.00 WIB". */
     description: z.string().min(1),
     nextRuns: z.array(TimestampSchema).length(3),

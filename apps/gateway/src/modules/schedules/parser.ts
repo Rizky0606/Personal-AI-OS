@@ -26,8 +26,9 @@ const ModelOutputSchema = z.object({
   cron: z.string().nullish(),
   timezone: z.string().nullish(),
   prompt: z.string().nullish(),
-  target: z.enum(['chat', 'research', 'role']).nullish(),
+  target: z.enum(['chat', 'research', 'role', 'briefing']).nullish(),
   agent_role: z.string().nullish(),
+  notify: z.enum(['always', 'on_change']).nullish(),
   error: z.string().nullish(),
 });
 
@@ -90,7 +91,7 @@ export function createScheduleParser(deps: {
 
     const target = raw.target ?? 'chat';
     let agentRole: string | null = raw.agent_role?.trim() ? raw.agent_role.trim() : null;
-    if (target === 'research') agentRole = null;
+    if (target === 'research' || target === 'briefing') agentRole = null;
     if (target === 'role' && !agentRole) throw new Error('target "role" wajib mengisi agent_role');
     if (agentRole) {
       const role = roles.list().find((r) => r.id === agentRole);
@@ -99,7 +100,9 @@ export function createScheduleParser(deps: {
         throw new Error(`role "${agentRole}" tidak bisa dijadwalkan (butuh worker Windows)`);
       }
     }
-    return { name, cron, timezone, prompt, target, agentRole };
+    // Riset selalu memberi tahu: laporannya selalu berbeda, jadi pembanding tidak bermakna.
+    const notify = target === 'research' ? 'always' : (raw.notify ?? 'always');
+    return { name, cron, timezone, prompt, target, agentRole, notify };
   }
 
   function systemPrompt(timezone: string): string {
@@ -112,12 +115,13 @@ export function createScheduleParser(deps: {
       'Kamu pengurai jadwal. Ubah permintaan pengguna menjadi SATU jadwal berulang.',
       `Sekarang: ${nowText(new Date(now()), timezone)}. Zona waktu bawaan: ${timezone}.`,
       'Balas hanya JSON, tanpa teks lain:',
-      '{"name": "judul pendek", "cron": "m h tanggal bulan hari", "timezone": "IANA", "prompt": "perintah untuk agent", "target": "chat|research|role", "agent_role": null, "error": null}',
+      '{"name": "judul pendek", "cron": "m h tanggal bulan hari", "timezone": "IANA", "prompt": "perintah untuk agent", "target": "chat|research|role|briefing", "agent_role": null, "notify": "always|on_change", "error": null}',
       'Aturan:',
       '- cron lima field standar (menit jam tanggal bulan hari-minggu; Minggu=0, Senin=1). Contoh: "setiap 5 menit" → */5 * * * *; "setiap Senin 07.00" → 0 7 * * 1; "hari kerja jam 8 pagi" → 0 8 * * 1-5; "tanggal 1 jam 9" → 0 9 1 * *; "jam 7 pagi dan 7 malam" → 0 7,19 * * *. Gunakan jam 24 (sore jam 5 = 17).',
       `- timezone: pakai zona bawaan kecuali pengguna menyebut lain (${TIMEZONE_NAMES}).`,
       '- prompt: perintah yang dijalankan agent TIAP kali jadwal berjalan, tanpa kata waktu atau jadwal (mis. "Ringkas berita AI terbaru."). Tulis dalam bahasa pengguna.',
-      '- target: "research" bila diminta riset/penelusuran yang butuh sumber dan laporan; "role" bila pengguna menyebut role tertentu (isi agent_role); selain itu "chat".',
+      '- target: "briefing" bila diminta briefing, rangkuman harian, atau ringkasan pagi/hari ini (prompt berisi topik tambahan yang diminta, mis. "Berita AI dan cuaca Jakarta.", atau "Briefing harian." bila tidak ada); "research" bila diminta riset/penelusuran yang butuh sumber dan laporan; "role" bila pengguna menyebut role tertentu (isi agent_role); selain itu "chat".',
+      '- notify: "on_change" bila pengguna hanya ingin dikabari saat ada perubahan atau kondisi tertentu (mis. "kabari kalau harga turun", "beri tahu bila ada rilis baru"); selain itu "always".',
       `- agent_role: id role dari daftar ini saja: ${available}. Isi null bila tidak disebut.`,
       '- name: maksimal 60 karakter.',
       '- Hanya jadwal berulang. Permintaan sekali jalan ("besok jam 7") atau yang bukan jadwal: isi "error" dengan alasan singkat dan biarkan field lain null.',

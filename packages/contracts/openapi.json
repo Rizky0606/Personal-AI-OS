@@ -583,6 +583,12 @@
                   "failed",
                   "missed"
                 ]
+              },
+              "changed": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               }
             },
             "required": [
@@ -1275,6 +1281,12 @@
                   "succeeded",
                   "failed",
                   "missed"
+                ]
+              },
+              "changed": {
+                "type": [
+                  "boolean",
+                  "null"
                 ]
               }
             },
@@ -3509,7 +3521,8 @@
             "enum": [
               "chat",
               "research",
-              "role"
+              "role",
+              "briefing"
             ]
           },
           "agentRole": {
@@ -3521,6 +3534,13 @@
           },
           "enabled": {
             "type": "boolean"
+          },
+          "notify": {
+            "type": "string",
+            "enum": [
+              "always",
+              "on_change"
+            ]
           },
           "nextRunAt": {
             "type": [
@@ -3554,6 +3574,7 @@
           "target",
           "agentRole",
           "enabled",
+          "notify",
           "nextRunAt",
           "conversationId",
           "createdAt",
@@ -3585,7 +3606,8 @@
             "enum": [
               "chat",
               "research",
-              "role"
+              "role",
+              "briefing"
             ]
           },
           "agentRole": {
@@ -3598,6 +3620,14 @@
           "enabled": {
             "type": "boolean",
             "default": true
+          },
+          "notify": {
+            "type": "string",
+            "enum": [
+              "always",
+              "on_change"
+            ],
+            "default": "always"
           }
         },
         "required": [
@@ -3631,7 +3661,8 @@
             "enum": [
               "chat",
               "research",
-              "role"
+              "role",
+              "briefing"
             ]
           },
           "agentRole": {
@@ -3643,6 +3674,13 @@
           },
           "enabled": {
             "type": "boolean"
+          },
+          "notify": {
+            "type": "string",
+            "enum": [
+              "always",
+              "on_change"
+            ]
           }
         }
       },
@@ -3670,7 +3708,8 @@
             "enum": [
               "chat",
               "research",
-              "role"
+              "role",
+              "briefing"
             ]
           },
           "agentRole": {
@@ -3679,6 +3718,13 @@
               "null"
             ],
             "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "notify": {
+            "type": "string",
+            "enum": [
+              "always",
+              "on_change"
+            ]
           },
           "description": {
             "type": "string",
@@ -3699,6 +3745,7 @@
           "prompt",
           "target",
           "agentRole",
+          "notify",
           "description",
           "nextRuns"
         ]
@@ -3779,6 +3826,12 @@
               "null"
             ],
             "format": "date-time"
+          },
+          "changed": {
+            "type": [
+              "boolean",
+              "null"
+            ]
           }
         },
         "required": [
@@ -3787,7 +3840,8 @@
           "runId",
           "status",
           "startedAt",
-          "finishedAt"
+          "finishedAt",
+          "changed"
         ]
       },
       "ResearchJob": {

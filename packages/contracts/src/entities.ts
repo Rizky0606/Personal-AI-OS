@@ -205,8 +205,16 @@ export type Task = z.infer<typeof TaskSchema>;
 /** Lima field cron standar, dipisah spasi. Validasi isi dilakukan scheduler. */
 export const CronSchema = z.string().regex(/^\S+(\s+\S+){4}$/, 'cron harus 5 field');
 
-export const ScheduleTargetSchema = z.enum(['chat', 'research', 'role']);
+/** `briefing` (W18): rangkuman harian riset, kanban, dan jadwal 24 jam terakhir, ditambah topik di prompt. */
+export const ScheduleTargetSchema = z.enum(['chat', 'research', 'role', 'briefing']);
 export type ScheduleTarget = z.infer<typeof ScheduleTargetSchema>;
+
+/**
+ * Kapan hasil jadwal diberitahukan (W19). `on_change`: hasil run sebelumnya ikut dikirim ke agent, dan push
+ * hanya dikirim bila agent menyatakan ada perubahan. Tidak berlaku untuk target `research`.
+ */
+export const ScheduleNotifySchema = z.enum(['always', 'on_change']);
+export type ScheduleNotify = z.infer<typeof ScheduleNotifySchema>;
 
 export const DEFAULT_TIMEZONE = 'Asia/Jakarta';
 
@@ -220,6 +228,7 @@ export const ScheduleSchema = z
     target: ScheduleTargetSchema,
     agentRole: RoleIdSchema.nullable(),
     enabled: z.boolean(),
+    notify: ScheduleNotifySchema,
     nextRunAt: TimestampSchema.nullable(),
     /** Percakapan khusus jadwal ini; hasil tiap run tersimpan sebagai pesan di sana. */
     conversationId: IdSchema.nullable(),
@@ -241,6 +250,8 @@ export const ScheduleRunSchema = z
     status: ScheduleRunStatusSchema,
     startedAt: TimestampSchema,
     finishedAt: TimestampSchema.nullable(),
+    /** Jadwal `on_change`: false bila hasilnya sama dengan run sebelumnya (tanpa push); null bila tidak dibandingkan. */
+    changed: z.boolean().nullable(),
   })
   .meta({ id: 'ScheduleRun' });
 export type ScheduleRun = z.infer<typeof ScheduleRunSchema>;

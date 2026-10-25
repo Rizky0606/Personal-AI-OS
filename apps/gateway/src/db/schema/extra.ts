@@ -17,7 +17,13 @@ import {
 import type { z } from 'zod';
 import { uuidv7 } from '../../lib/uuidv7.js';
 import { conversations, devices, messages, runs } from './core.js';
-import { researchDepth, researchStatus, scheduleRunStatus, scheduleTarget } from './enums.js';
+import {
+  researchDepth,
+  researchStatus,
+  scheduleNotify,
+  scheduleRunStatus,
+  scheduleTarget,
+} from './enums.js';
 
 /** Kolom biner Postgres (`bytea`) sebagai Buffer Node. */
 const bytea = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => 'bytea' });
@@ -44,6 +50,7 @@ export const schedules = pgTable('schedules', {
   target: scheduleTarget('target').notNull(),
   agentRole: text('agent_role'),
   enabled: boolean('enabled').notNull().default(true),
+  notify: scheduleNotify('notify').notNull().default('always'),
   nextRunAt: timestamp('next_run_at', { withTimezone: true }),
   conversationId: uuid('conversation_id').references(() => conversations.id, {
     onDelete: 'set null',
@@ -63,6 +70,8 @@ export const scheduleRuns = pgTable(
     status: scheduleRunStatus('status').notNull().default('running'),
     startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
     finishedAt: timestamp('finished_at', { withTimezone: true }),
+    /** Jadwal on_change: false bila hasil sama dengan run sebelumnya; null bila tidak dibandingkan. */
+    changed: boolean('changed'),
   },
   (t) => [
     index('schedule_runs_schedule_idx').on(t.scheduleId, t.id),

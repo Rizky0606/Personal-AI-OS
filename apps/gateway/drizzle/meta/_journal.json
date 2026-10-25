@@ -43,6 +43,13 @@
       "when": 1792911033661,
       "tag": "0005_memories",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792913195080,
+      "tag": "0006_schedule_briefing_notify",
+      "breakpoints": true
     }
   ]
 }

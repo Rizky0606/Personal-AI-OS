@@ -8,6 +8,9 @@ import app.aios.android.R
 import app.aios.android.data.Connectivity
 import app.aios.android.data.api.ApiError
 import app.aios.android.data.api.DEFAULT_TIMEZONE
+import app.aios.android.data.api.NOTIFY_ALWAYS
+import app.aios.android.data.api.NOTIFY_ON_CHANGE
+import app.aios.android.data.api.TARGET_RESEARCH
 import app.aios.android.data.api.Problem
 import app.aios.android.data.api.problemBody
 import app.aios.android.data.api.problemJson
@@ -134,6 +137,8 @@ data class ScheduleCreateUi(
     val name: String = "",
     val prompt: String = "",
     val saving: Boolean = false,
+    /** Pilihan notifikasi; diisi dari hasil baca dan bisa diubah sebelum disimpan. */
+    val notify: String = NOTIFY_ALWAYS,
     @StringRes val textError: Int? = null,
     /** Penjelasan dari server (mis. kalimat bukan jadwal berulang), sudah berbahasa Indonesia. */
     val serverMessage: String? = null,
@@ -159,6 +164,9 @@ class ScheduleCreateViewModel @Inject constructor(
 
     fun onPrompt(value: String) = state.update { it.copy(prompt = value, formError = null) }
 
+    fun onNotifyOnChange(onChange: Boolean) =
+        state.update { it.copy(notify = if (onChange) NOTIFY_ON_CHANGE else NOTIFY_ALWAYS) }
+
     /** Kembali ke kalimat untuk mengubah waktu atau isi; pratinjau dibuang. */
     fun editText() = state.update { it.copy(draft = null, formError = null) }
 
@@ -177,7 +185,15 @@ class ScheduleCreateViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val draft = repo.parse(current.text, DEFAULT_TIMEZONE)
-                state.update { it.copy(parsing = false, draft = draft, name = draft.name, prompt = draft.prompt) }
+                state.update {
+                    it.copy(
+                        parsing = false,
+                        draft = draft,
+                        notify = draft.notify,
+                        name = draft.name,
+                        prompt = draft.prompt
+                    )
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -200,7 +216,8 @@ class ScheduleCreateViewModel @Inject constructor(
         state.update { it.copy(saving = true, formError = null) }
         viewModelScope.launch {
             try {
-                val created = repo.create(draft, current.name, current.prompt)
+                val notify = if (draft.target == TARGET_RESEARCH) NOTIFY_ALWAYS else current.notify
+                val created = repo.create(draft, current.name, current.prompt, notify)
                 outcomes.trySend(ScheduleEvent.Created(created.id))
                 state.value = ScheduleCreateUi()
             } catch (e: CancellationException) {
@@ -306,6 +323,23 @@ class ScheduleDetailViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 state.update { it.copy(schedule = repo.update(id, null, null, enabled)) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                state.update { it.copy(schedule = schedule) }
+                notices.trySend(ScheduleEvent.Notice(e.toApiError(connectivity.isConnected()).messageRes))
+            }
+        }
+    }
+
+    /** Toggle "hanya bila berubah" langsung terlihat; dikembalikan bila server menolak. */
+    fun setNotifyOnChange(onChange: Boolean) {
+        val schedule = state.value.schedule ?: return
+        val notify = if (onChange) NOTIFY_ON_CHANGE else NOTIFY_ALWAYS
+        state.update { it.copy(schedule = schedule.copy(notify = notify)) }
+        viewModelScope.launch {
+            try {
+                state.update { it.copy(schedule = repo.update(id, null, null, null, notify)) }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

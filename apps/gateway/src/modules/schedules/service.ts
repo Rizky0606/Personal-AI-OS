@@ -17,6 +17,7 @@ import { toRunDto } from '../chat/dto.js';
 import type { ResearchService } from '../research/service.js';
 import type { EventHub } from '../runs/hub.js';
 import { CronError, nextRuns, normalizeCron, occurrencesBetween } from './cron.js';
+import { briefingContext, changeContext, previousResult, readChange } from './briefing.js';
 import { SCHEDULABLE_ENGINES, type ParsedSchedule, type ScheduleParser } from './parser.js';
 
 export type ScheduleRow = typeof schedules.$inferSelect;
@@ -89,6 +90,7 @@ export function toScheduleDto(row: ScheduleRow): Schedule {
     target: row.target,
     agentRole: row.agentRole,
     enabled: row.enabled,
+    notify: row.notify,
     nextRunAt: row.nextRunAt?.toISOString() ?? null,
     conversationId: row.conversationId,
     createdAt: row.createdAt.toISOString(),
@@ -104,6 +106,7 @@ function toRunHistoryDto(row: typeof scheduleRuns.$inferSelect): ScheduleRun {
     status: row.status,
     startedAt: row.startedAt.toISOString(),
     finishedAt: row.finishedAt?.toISOString() ?? null,
+    changed: row.changed,
   };
 }
 
@@ -130,6 +133,7 @@ export function createScheduleService(deps: ScheduleServiceDeps): ScheduleServic
     timezone: string;
     target: string;
     agentRole: string | null;
+    notify?: string;
   }) {
     let cron: string;
     try {
@@ -140,6 +144,16 @@ export function createScheduleService(deps: ScheduleServiceDeps): ScheduleServic
     }
     if (input.target === 'role' && !input.agentRole) {
       throw new AppError(400, 'agent_role_required', 'Target "role" wajib mengisi agentRole.');
+    }
+    const researchEngine =
+      input.target === 'research' ||
+      (input.target === 'role' && deps.roles.get(input.agentRole ?? '')?.engine === 'research');
+    if (input.notify === 'on_change' && researchEngine) {
+      throw new AppError(
+        400,
+        'notify_unsupported',
+        'Notifikasi "hanya bila berubah" belum bisa dipakai untuk jadwal riset.',
+      );
     }
     if (input.agentRole) {
       const role = deps.roles.get(input.agentRole);
@@ -249,10 +263,11 @@ export function createScheduleService(deps: ScheduleServiceDeps): ScheduleServic
     scheduleRunId: string,
     runId: string | null,
     status: 'succeeded' | 'failed',
+    changed: boolean | null = null,
   ) {
     await db
       .update(scheduleRuns)
-      .set({ status, finishedAt: new Date(now()) })
+      .set({ status, finishedAt: new Date(now()), changed })
       .where(eq(scheduleRuns.id, scheduleRunId));
     hub.publishLive('user', {
       type: 'schedule.result',
@@ -260,7 +275,62 @@ export function createScheduleService(deps: ScheduleServiceDeps): ScheduleServic
       scheduleRunId,
       runId,
       status,
+      ...(changed !== null ? { changed } : {}),
     });
+  }
+
+  /**
+   * Konteks tersembunyi untuk run chat: data briefing (target briefing) dan hasil run sebelumnya (notify
+   * on_change). `compare` true bila ada hasil sebelumnya yang dibandingkan.
+   */
+  async function contextFor(
+    row: ScheduleRow,
+    conversationId: string,
+  ): Promise<{ context: string; compare: boolean }> {
+    const parts: string[] = [];
+    if (row.target === 'briefing') {
+      parts.push(
+        await briefingContext(db, {
+          now: new Date(now()),
+          timezone: row.timezone,
+          scheduleId: row.id,
+        }),
+      );
+    }
+    let compare = false;
+    if (row.notify === 'on_change') {
+      const previous = await previousResult(db, conversationId);
+      if (previous) {
+        parts.push(changeContext(previous, row.timezone));
+        compare = true;
+      }
+    }
+    return { context: parts.join('\n\n'), compare };
+  }
+
+  /** Jawaban run jadwal on_change: dibaca penandanya, dan penanda diganti kalimat biasa di pesan. */
+  async function settleChange(runId: string): Promise<boolean> {
+    const [answer] = await db
+      .select()
+      .from(messages)
+      .where(and(eq(messages.runId, runId), eq(messages.author, 'assistant')))
+      .orderBy(desc(messages.id))
+      .limit(1);
+    if (!answer) return true;
+    const text = answer.parts.map((p) => (p.type === 'text' ? p.text : '')).join('\n');
+    const { changed, display } = readChange(text);
+    if (!changed) {
+      await db
+        .update(messages)
+        .set({
+          parts: [
+            ...answer.parts.filter((p) => p.type !== 'text'),
+            { type: 'text', text: display },
+          ],
+        })
+        .where(eq(messages.id, answer.id));
+    }
+    return changed;
   }
 
   /* ---- eksekusi ---- */
@@ -310,7 +380,8 @@ export function createScheduleService(deps: ScheduleServiceDeps): ScheduleServic
       throw error;
     };
 
-    const role = row.agentRole ?? 'general';
+    // Briefing selalu disusun role Umum; role lain hanya untuk target chat/role.
+    const role = row.target === 'briefing' ? 'general' : (row.agentRole ?? 'general');
     const engine = deps.roles.get(role)?.engine;
     const mode: 'research' | 'chat' | 'unavailable' =
       row.target === 'research' || (row.target === 'role' && engine === 'research')
@@ -332,10 +403,12 @@ export function createScheduleService(deps: ScheduleServiceDeps): ScheduleServic
       const conversationId = await conversationOf(row);
 
       if (mode === 'chat') {
-        const { run } = await deps.chat.sendMessage(conversationId, {
-          parts: [{ type: 'text', text: row.prompt }],
-          role,
-        });
+        const { context, compare } = await contextFor(row, conversationId);
+        const { run } = await deps.chat.sendMessage(
+          conversationId,
+          { parts: [{ type: 'text', text: row.prompt }], role },
+          context ? { context } : undefined,
+        );
         await db
           .update(scheduleRuns)
           .set({ runId: run.id })
@@ -351,7 +424,8 @@ export function createScheduleService(deps: ScheduleServiceDeps): ScheduleServic
             );
             try {
               if (final?.status === 'completed') {
-                await finalize(row, scheduleRunId, run.id, 'succeeded');
+                const changed = compare ? await settleChange(run.id) : null;
+                await finalize(row, scheduleRunId, run.id, 'succeeded', changed);
               } else {
                 const why =
                   final?.error?.message ??
@@ -541,6 +615,7 @@ export function createScheduleService(deps: ScheduleServiceDeps): ScheduleServic
           target: input.target,
           agentRole,
           enabled: input.enabled,
+          notify: input.notify,
           nextRunAt: input.enabled ? nextAfter({ cron, timezone: input.timezone }) : null,
           conversationId: conversation!.id,
         })
@@ -559,6 +634,7 @@ export function createScheduleService(deps: ScheduleServiceDeps): ScheduleServic
         target: patch.target ?? current.target,
         agentRole: patch.agentRole === undefined ? current.agentRole : patch.agentRole,
         enabled: patch.enabled ?? current.enabled,
+        notify: patch.notify ?? current.notify,
       };
       const cron = validate(merged);
       const [row] = await db

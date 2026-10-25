@@ -9,6 +9,7 @@ import {
   ResearchStatusSchema,
   RunKindSchema,
   RunStatusSchema,
+  ScheduleNotifySchema,
   ScheduleRunStatusSchema,
   ScheduleTargetSchema,
   SurfaceSchema,
@@ -33,6 +34,7 @@ export const approvalStatus = pgEnum('approval_status', values(ApprovalStatusSch
 export const approvalDecision = pgEnum('approval_decision', values(ApprovalDecisionSchema.options));
 export const taskStatus = pgEnum('task_status', values(TaskStatusSchema.options));
 export const scheduleTarget = pgEnum('schedule_target', values(ScheduleTargetSchema.options));
+export const scheduleNotify = pgEnum('schedule_notify', values(ScheduleNotifySchema.options));
 export const scheduleRunStatus = pgEnum(
   'schedule_run_status',
   values(ScheduleRunStatusSchema.options),

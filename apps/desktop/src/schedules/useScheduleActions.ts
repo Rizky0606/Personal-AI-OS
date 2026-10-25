@@ -53,6 +53,11 @@ export function useScheduleActions() {
         await api.updateSchedule(id, { enabled });
         await refresh(id);
       }),
+    setNotify: (id: string, notify: 'always' | 'on_change') =>
+      guarded(`notify:${id}`, async () => {
+        await api.updateSchedule(id, { notify });
+        await refresh(id);
+      }),
     runNow: (id: string) =>
       guarded(`run:${id}`, async () => {
         await api.runScheduleNow(id);

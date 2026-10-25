@@ -47,6 +47,7 @@ const schedule: Schedule = {
   target: 'chat',
   agentRole: null,
   enabled: true,
+  notify: 'always',
   nextRunAt: null,
   conversationId: null,
   createdAt: TS,

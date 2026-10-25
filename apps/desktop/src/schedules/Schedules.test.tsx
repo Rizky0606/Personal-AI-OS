@@ -25,6 +25,7 @@ function schedule(over: Partial<Schedule> = {}): Schedule {
     target: 'chat',
     agentRole: null,
     enabled: true,
+    notify: 'always',
     nextRunAt: '2026-10-26T00:00:00Z',
     conversationId: '0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e90',
     createdAt: TS,
@@ -40,6 +41,7 @@ const parsed = {
   prompt: 'Ringkas berita AI',
   target: 'chat' as const,
   agentRole: null,
+  notify: 'always' as const,
   description: 'Setiap Senin 07.00 WIB',
   nextRuns: ['2026-10-26T00:00:00Z', '2026-11-02T00:00:00Z', '2026-11-09T00:00:00Z'] as [
     string,
@@ -145,6 +147,10 @@ describe('NewScheduleDialog: bahasa alami dengan konfirmasi', () => {
     const name = within(check).getByLabelText(copy.schedules.dialog.name);
     await user.clear(name);
     await user.type(name, 'Pagi AI');
+    // Hasil parse "always"; pemilik mengubahnya jadi hanya bila berubah.
+    const notify = within(check).getByRole('switch', { name: copy.schedules.notify.label });
+    expect(notify).toHaveAttribute('aria-checked', 'false');
+    await user.click(notify);
     await user.click(within(check).getByRole('button', { name: copy.schedules.dialog.save }));
 
     expect(api.createSchedule).toHaveBeenCalledWith({
@@ -155,6 +161,7 @@ describe('NewScheduleDialog: bahasa alami dengan konfirmasi', () => {
       target: 'chat',
       agentRole: null,
       enabled: true,
+      notify: 'on_change',
     });
     await waitFor(() =>
       expect(router.state.location.pathname).toBe(
@@ -209,6 +216,7 @@ describe('ScheduleDetailScreen: riwayat dan aksi', () => {
           scheduleId: SCHEDULE,
           runId: RUN_1,
           status: 'succeeded',
+          changed: null,
           startedAt: '2026-10-19T00:00:00Z',
           finishedAt: '2026-10-19T00:01:00Z',
         },
@@ -217,8 +225,18 @@ describe('ScheduleDetailScreen: riwayat dan aksi', () => {
           scheduleId: SCHEDULE,
           runId: null,
           status: 'missed',
+          changed: null,
           startedAt: '2026-10-12T00:00:00Z',
           finishedAt: null,
+        },
+        {
+          id: '0192f0c4-7a1b-7c2d-8e3f-0000000000b3',
+          scheduleId: SCHEDULE,
+          runId: RUN_1,
+          status: 'succeeded',
+          changed: false,
+          startedAt: '2026-10-05T00:00:00Z',
+          finishedAt: '2026-10-05T00:01:00Z',
         },
       ],
       nextBefore: null,
@@ -230,6 +248,8 @@ describe('ScheduleDetailScreen: riwayat dan aksi', () => {
     const history = await screen.findByRole('table', { name: copy.schedules.detail.history });
     expect(within(history).getByText(copy.schedules.runStatus.succeeded)).toBeInTheDocument();
     expect(within(history).getByText(copy.schedules.runStatus.missed)).toBeInTheDocument();
+    // Jadwal "hanya bila berubah" yang hasilnya sama.
+    expect(within(history).getByText(copy.schedules.unchanged)).toBeInTheDocument();
     expect(
       screen.getByRole('link', { name: copy.schedules.detail.openResult }),
     ).toBeInTheDocument();

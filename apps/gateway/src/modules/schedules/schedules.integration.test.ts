@@ -7,7 +7,15 @@ import {
 } from '@aios/contracts';
 import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, inject, it } from 'vitest';
-import { conversations, messages, scheduleRuns, schedules } from '../../db/schema/index.js';
+import {
+  conversations,
+  messages,
+  projects,
+  researchJobs,
+  scheduleRuns,
+  schedules,
+  tasks,
+} from '../../db/schema/index.js';
 import { createAuthEnv, type AuthEnv } from '../../testing/auth-env.js';
 import { startFakeFcm, type FakeFcm } from '../../testing/fake-fcm.js';
 import { startFakeHermes, type FakeHermes } from '../../testing/fake-hermes.js';
@@ -479,4 +487,137 @@ describe('cron nyata pg-boss', () => {
     await env.push.idle();
     expect(fcm.sent.some((m) => m.title === 'Tiap menit')).toBe(true);
   }, 150_000);
+});
+
+describe('briefing pagi dan notifikasi hanya bila berubah', () => {
+  const lastPrompt = () => {
+    const msgs = hermes.requests.at(-1)?.body.messages ?? [];
+    return String(msgs.filter((m) => m.role === 'user').at(-1)?.content ?? '');
+  };
+  const runOnce = async (id: string) => {
+    expect((await env.post(`/schedules/${id}/run-now`, {}, token)).statusCode).toBe(201);
+    await env.schedules.idle();
+    await env.push.idle();
+  };
+
+  it('briefing: data 24 jam terakhir dikirim ke agent sebagai konteks, tidak disimpan di pesan pengguna', async () => {
+    const worker = await env.loginOk({ kind: 'worker', name: 'PC briefing' });
+    const [project] = await db()
+      .insert(projects)
+      .values({
+        name: 'toko-online',
+        workerDeviceId: worker.device.id,
+        stack: { languages: [], frameworks: [] },
+      })
+      .returning();
+    await db()
+      .insert(tasks)
+      .values({ projectId: project!.id, title: 'Halaman checkout', status: 'review' });
+    await db()
+      .insert(researchJobs)
+      .values({ question: 'Tren mobil listrik 2026', status: 'completed' });
+
+    const s = await create({ target: 'briefing', prompt: 'Berita AI hari ini.' });
+    await runOnce(s.id);
+
+    const prompt = lastPrompt();
+    expect(prompt).toContain('Berita AI hari ini.');
+    expect(prompt).toContain('# Data briefing');
+    expect(prompt).toContain('[toko-online] Halaman checkout');
+    expect(prompt).toContain('Tren mobil listrik 2026');
+    // Briefing selalu disusun role Umum.
+    const msgs = await conversationMessages(s.conversationId!);
+    expect(msgs.map((m) => [m.author, m.agentRole])).toEqual([
+      ['user', null],
+      ['assistant', 'general'],
+    ]);
+    expect(msgs[0]!.parts).toEqual([{ type: 'text', text: 'Berita AI hari ini.' }]);
+    expect(fcm.sent).toHaveLength(1);
+  });
+
+  it('on_change: run pertama memberi tahu; hasil sama ditandai changed=false tanpa push; hasil beda memberi tahu', async () => {
+    const s = await create({ notify: 'on_change', prompt: 'Cek harga laptop X.' });
+    expect(s.notify).toBe('on_change');
+
+    hermes.onRequest((st) => {
+      st.delta('Harga laptop X Rp15 juta.');
+      st.finish();
+      st.done();
+    });
+    await runOnce(s.id);
+    expect(lastPrompt()).not.toContain('Hasil run sebelumnya');
+    expect((await history(s.id))[0]).toMatchObject({ status: 'succeeded', changed: null });
+    expect(fcm.sent).toHaveLength(1);
+
+    hermes.onRequest((st) => {
+      st.delta('[TIDAK ADA PERUBAHAN] Masih Rp15 juta.');
+      st.finish();
+      st.done();
+    });
+    await runOnce(s.id);
+    expect(lastPrompt()).toContain('# Hasil run sebelumnya');
+    expect(lastPrompt()).toContain('Harga laptop X Rp15 juta.');
+    expect((await history(s.id))[0]).toMatchObject({ status: 'succeeded', changed: false });
+    expect(fcm.sent).toHaveLength(1);
+    const msgs = await conversationMessages(s.conversationId!);
+    expect(msgs.at(-1)!.parts).toEqual([
+      { type: 'text', text: '**Tidak ada perubahan sejak run sebelumnya.** Masih Rp15 juta.' },
+    ]);
+    // Pesan pengguna tetap prompt jadwal saja, tanpa konteks pembanding.
+    expect(msgs.filter((m) => m.author === 'user').map((m) => m.parts)).toEqual([
+      [{ type: 'text', text: 'Cek harga laptop X.' }],
+      [{ type: 'text', text: 'Cek harga laptop X.' }],
+    ]);
+
+    hermes.onRequest((st) => {
+      st.delta('Turun! Sekarang Rp13 juta.');
+      st.finish();
+      st.done();
+    });
+    await runOnce(s.id);
+    expect((await history(s.id))[0]).toMatchObject({ status: 'succeeded', changed: true });
+    expect(fcm.sent).toHaveLength(2);
+  });
+
+  it('on_change ditolak untuk jadwal riset; notify bisa diubah lewat PATCH', async () => {
+    const res = await env.post(
+      '/schedules',
+      body({ target: 'research', notify: 'on_change' }),
+      token,
+    );
+    expect(res.statusCode).toBe(400);
+    expect(problem(res).code).toBe('notify_unsupported');
+
+    const s = await create();
+    expect(s.notify).toBe('always');
+    const updated = await patch(`/schedules/${s.id}`, { notify: 'on_change' }, token);
+    expect(updated.statusCode, updated.body).toBe(200);
+    expect(ScheduleSchema.parse(updated.json()).notify).toBe('on_change');
+  });
+
+  it('pengurai: target briefing dan notify on_change diteruskan; riset dipaksa always', async () => {
+    parserReply = {
+      name: 'Briefing pagi',
+      cron: '0 7 * * *',
+      prompt: 'Berita AI.',
+      target: 'briefing',
+      notify: 'on_change',
+    };
+    const parsed = ScheduleParseResponseSchema.parse(
+      (await env.post('/schedules/parse', { text: 'briefing tiap pagi jam 7' }, token)).json(),
+    );
+    expect(parsed).toMatchObject({ target: 'briefing', notify: 'on_change', agentRole: null });
+
+    parserReply = {
+      name: 'Riset',
+      cron: '0 7 * * 1',
+      prompt: 'Riset EV.',
+      target: 'research',
+      notify: 'on_change',
+    };
+    const research = ScheduleParseResponseSchema.parse(
+      (await env.post('/schedules/parse', { text: 'riset EV tiap Senin' }, token)).json(),
+    );
+    expect(research.notify).toBe('always');
+  });
 });
