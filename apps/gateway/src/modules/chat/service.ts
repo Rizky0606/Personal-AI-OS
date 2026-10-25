@@ -46,7 +46,15 @@ export interface ChatService {
   sendMessage(
     conversationId: string,
     input: z.infer<typeof SendMessageRequestSchema>,
-    options?: { continueFromRunId?: string; taskId?: string },
+    options?: {
+      continueFromRunId?: string;
+      taskId?: string;
+      /**
+       * Konteks tambahan untuk agent pada giliran ini saja (mis. data briefing, hasil run jadwal sebelumnya).
+       * Dikirim setelah teks pesan tetapi tidak disimpan di pesan pengguna, jadi riwayat tetap ringkas.
+       */
+      context?: string;
+    },
   ): Promise<{ message: Message; run: Run }>;
   /** Mengganti role pesan terakhir, mencatat koreksi, dan menjalankan ulang dengan role baru. */
   reroute(
@@ -427,7 +435,7 @@ export function createChatService(deps: {
         run,
         conversationId,
         assistantMessageId,
-        prompt,
+        prompt: options?.context ? `${prompt}\n\n${options.context}` : prompt,
         sessionId,
         ...(history.length ? { history } : {}),
         ...(images.length ? { images } : {}),

@@ -164,6 +164,8 @@ export const ScheduleResultEventSchema = z.object({
   scheduleRunId: IdSchema,
   runId: IdSchema.nullable(),
   status: ScheduleRunStatusSchema,
+  /** Jadwal `on_change`: false = hasil sama dengan sebelumnya, tanpa notifikasi. */
+  changed: z.boolean().nullable().optional(),
 });
 
 export const ResearchCompletedEventSchema = z.object({

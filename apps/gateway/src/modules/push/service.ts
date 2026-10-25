@@ -92,6 +92,8 @@ export function createPushService(deps: {
 
   async function onScheduleResult(event: Extract<UserEvent, { type: 'schedule.result' }>) {
     if (event.status === 'missed' || event.status === 'running') return;
+    // Jadwal "hanya bila berubah" yang hasilnya sama: tersimpan di riwayat, tanpa notifikasi.
+    if (event.changed === false) return;
     const [schedule] = await db.select().from(schedules).where(eq(schedules.id, event.scheduleId));
     if (!schedule) return;
     const title =
