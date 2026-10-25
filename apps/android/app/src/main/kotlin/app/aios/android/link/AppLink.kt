@@ -8,6 +8,9 @@ sealed interface AppLink {
     /** Dipanggil sebagai asisten digital: chat baru dan langsung mendengarkan suara. */
     data object Assist : AppLink
 
+    /** Widget "Riset baru": langsung ke formulir riset. */
+    data object NewResearch : AppLink
+
     data class OpenResearch(val researchId: String) : AppLink
 
     /** Hasil jadwal tersimpan sebagai pesan di percakapan khusus jadwal itu. */
@@ -42,10 +45,18 @@ object AppLinks {
     }
 
     /** Dari action intent yang tidak membawa data (asisten digital). */
-    fun fromAction(action: String?): AppLink? = if (action == ACTION_ASSIST) AppLink.Assist else null
+    fun fromAction(action: String?): AppLink? = when (action) {
+        ACTION_ASSIST, ACTION_QUICK_ASK -> AppLink.Assist
+        ACTION_NEW_RESEARCH -> AppLink.NewResearch
+        else -> null
+    }
 
     /** Sama dengan Intent.ACTION_ASSIST; ditulis ulang supaya fungsi ini bisa dites tanpa Android. */
     const val ACTION_ASSIST = "android.intent.action.ASSIST"
+
+    /** Action milik aplikasi untuk widget dan tile Quick Settings (A15). */
+    const val ACTION_QUICK_ASK = "app.aios.android.action.QUICK_ASK"
+    const val ACTION_NEW_RESEARCH = "app.aios.android.action.NEW_RESEARCH"
 
     /** Dari share intent: subjek (judul halaman) ikut bila belum ada di teks. Kosong = tidak ada tautan. */
     fun fromShare(subject: String?, text: String?): AppLink.SharedText? {

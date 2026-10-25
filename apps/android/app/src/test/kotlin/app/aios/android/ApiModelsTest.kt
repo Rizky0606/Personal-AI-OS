@@ -108,4 +108,22 @@ class ApiModelsTest {
         assertEquals(argb(Tokens.darkColors.bg), xml("src/main/res/values-night/colors.xml"))
         assertTrue(Tokens.touchTarget.value >= 48f)
     }
+
+    @Test
+    fun `warna widget sama dengan token`() {
+        fun argb(c: Color) = "#%08X".format(c.toArgb())
+        fun color(path: String, name: String) =
+            Regex("""name="$name">(#[0-9A-Fa-f]{8})<""").find(File(path).readText())!!.groupValues[1].uppercase()
+        for ((path, colors, onAccent) in listOf(
+            Triple("src/main/res/values/colors.xml", Tokens.lightColors, Tokens.lightColors.surface),
+            Triple("src/main/res/values-night/colors.xml", Tokens.darkColors, Tokens.darkColors.bg)
+        )) {
+            assertEquals(argb(colors.surface), color(path, "widget_surface"))
+            assertEquals(argb(colors.border), color(path, "widget_border"))
+            assertEquals(argb(colors.text), color(path, "widget_text"))
+            assertEquals(argb(colors.accent), color(path, "widget_accent"))
+            // Sama dengan AiosTheme.onAccent: teks di atas aksen.
+            assertEquals(argb(onAccent), color(path, "widget_on_accent"))
+        }
+    }
 }

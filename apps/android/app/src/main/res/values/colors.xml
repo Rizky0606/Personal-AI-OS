@@ -5,4 +5,10 @@
 -->
 <resources>
     <color name="window_background">#FFF5F8FC</color>
+    <!-- Widget layar utama (A15): RemoteViews tidak bisa memakai token Compose; nilainya dijaga TokensSyncTest. -->
+    <color name="widget_surface">#FFFFFFFF</color>
+    <color name="widget_border">#FFD8E0EA</color>
+    <color name="widget_text">#FF0F172A</color>
+    <color name="widget_accent">#FF0D7490</color>
+    <color name="widget_on_accent">#FFFFFFFF</color>
 </resources>

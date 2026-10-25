@@ -73,6 +73,8 @@ class AppLinksTest {
     @Test
     fun `action ASSIST membuka mode asisten, action lain tidak`() {
         assertEquals(AppLink.Assist, AppLinks.fromAction("android.intent.action.ASSIST"))
+        assertEquals(AppLink.Assist, AppLinks.fromAction(AppLinks.ACTION_QUICK_ASK))
+        assertEquals(AppLink.NewResearch, AppLinks.fromAction(AppLinks.ACTION_NEW_RESEARCH))
         assertNull(AppLinks.fromAction("android.intent.action.MAIN"))
         assertNull(AppLinks.fromAction(null))
     }
