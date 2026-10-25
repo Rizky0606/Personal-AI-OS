@@ -7,6 +7,10 @@ import {
   LoginResponseSchema,
   MemoryListSchema,
   MemorySchema,
+  SpaceDocumentListSchema,
+  SpaceDocumentSchema,
+  SpaceListSchema,
+  SpaceSchema,
   MessageSchema,
   ModelListSchema,
   ProjectSchema,
@@ -144,11 +148,13 @@ export function createGatewayApi(call: Call) {
         `/conversations${query({ before, limit: PAGE_SIZE, projectId })}`,
         ConversationPageSchema,
       ),
-    createConversation: (surface: Surface = 'windows', projectId?: string) =>
+    createConversation: (surface: Surface = 'windows', projectId?: string, spaceId?: string) =>
       get('/conversations', ConversationSchema, {
         method: 'POST',
-        body: { surface, ...(projectId ? { projectId } : {}) },
+        body: { surface, ...(projectId ? { projectId } : {}), ...(spaceId ? { spaceId } : {}) },
       }),
+    listSpaceConversations: (spaceId: string) =>
+      get(`/conversations${query({ limit: PAGE_SIZE, spaceId })}`, ConversationPageSchema),
     updateConversation: (id: string, patch: { title?: string; pinned?: boolean }) =>
       get(`/conversations/${id}`, ConversationSchema, { method: 'PATCH', body: patch }),
     archiveConversation: async (id: string) => {
@@ -231,6 +237,25 @@ export function createGatewayApi(call: Call) {
         })
       ).items,
     cancelRun: (id: string) => get(`/runs/${id}/cancel`, RunSchema, { method: 'POST' }),
+
+    listSpaces: async () => (await get('/spaces', SpaceListSchema)).items,
+    createSpace: (name: string, description: string) =>
+      get('/spaces', SpaceSchema, { method: 'POST', body: { name, description } }),
+    updateSpace: (id: string, patch: { name?: string; description?: string }) =>
+      get(`/spaces/${id}`, SpaceSchema, { method: 'PATCH', body: patch }),
+    deleteSpace: async (id: string) => {
+      await call(`/spaces/${id}`, { method: 'DELETE' });
+    },
+    listSpaceDocuments: async (spaceId: string) =>
+      (await get(`/spaces/${spaceId}/documents`, SpaceDocumentListSchema)).items,
+    addSpaceDocument: (spaceId: string, fileId: string) =>
+      get(`/spaces/${spaceId}/documents`, SpaceDocumentSchema, {
+        method: 'POST',
+        body: { fileId },
+      }),
+    deleteSpaceDocument: async (spaceId: string, documentId: string) => {
+      await call(`/spaces/${spaceId}/documents/${documentId}`, { method: 'DELETE' });
+    },
 
     listMemories: async () => (await get('/memories', MemoryListSchema)).items,
     createMemory: (text: string) =>

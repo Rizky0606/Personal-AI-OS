@@ -499,6 +499,13 @@ Isi ditulis sendiri sebagai ringkasan prinsip, bukan salinan; dibaca dari halama
 - Memakai intent `ACTION_ASSIST` (cukup untuk peran `android.app.role.ASSISTANT`; diverifikasi di emulator API 37 dengan `cmd role add-role-holder` dan `KEYCODE_ASSIST`), bukan `VoiceInteractionService`. Akibatnya tidak ada hotword dan tidak ada overlay di atas aplikasi lain: Personal AI terbuka penuh di chat baru dan langsung mendengarkan.
 - Peran asisten tidak bisa diminta lewat dialog sistem; Pengaturan membuka layar Aplikasi default.
 
+## Temuan Fase 31 (ruang pengetahuan)
+
+- Pencarian memakai full-text Postgres konfigurasi `simple` (tanpa stemming), kata kunci pertanyaan digabung OR dengan pencocokan awalan, diurutkan `ts_rank_cd`. Tanpa model embedding: sinonim dan parafrasa tidak ditemukan. Ide lanjutan: pgvector dengan model embedding lewat 9Router.
+- Potongan dikirim sebagai konteks tersembunyi tiap giliran (bukan disimpan di pesan); agent diminta menyebut [n] dan daftar Sumber. Klien belum menautkan [n] ke dokumen.
+- Penanda "menjawab dari ruang" baru ada di Android (chat baru dari layar Ruang); desktop belum menampilkan penanda di layar chat.
+- Hapus ruang menghapus dokumen dan indeks, tetapi berkas di tabel `files` tetap (dipakai lampiran juga).
+
 ## Rencana fitur lanjutan (Fase 25–34)
 
 Disusun 2026-10-25 dari perbandingan dengan ChatGPT, Claude, Gemini/NotebookLM, Perplexity, Cursor, Codex, Raycast, dan asisten self-hosted (Open WebUI, LibreChat, LobeChat, Khoj). Dikerjakan berurutan; setiap fase satu branch `feat/<fase>-<ringkas>`, merge ke `main` (rilis otomatis), dan gateway di VPS diperbarui bila fase menyentuh server. ID fitur baru dicatat di PRD.md.

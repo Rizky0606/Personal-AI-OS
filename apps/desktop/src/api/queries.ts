@@ -48,6 +48,20 @@ export const useQuota = () =>
 export const useSystemStatus = () =>
   useQuery({ queryKey: ['status'], queryFn: api.getStatus, refetchInterval: 15_000 });
 
+export const useSpaces = () => useQuery({ queryKey: ['spaces'], queryFn: api.listSpaces });
+
+export const useSpaceDocuments = (spaceId: string) =>
+  useQuery({
+    queryKey: ['spaceDocuments', spaceId],
+    queryFn: () => api.listSpaceDocuments(spaceId),
+  });
+
+export const useSpaceConversations = (spaceId: string) =>
+  useQuery({
+    queryKey: ['spaceConversations', spaceId],
+    queryFn: async () => (await api.listSpaceConversations(spaceId)).items,
+  });
+
 export const useMemories = () => useQuery({ queryKey: ['memories'], queryFn: api.listMemories });
 
 export const useSchedules = () => useQuery({ queryKey: ['schedules'], queryFn: api.listSchedules });

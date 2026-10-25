@@ -58,6 +58,7 @@ const conversation = {
   title: 'Rencana rilis versi 2',
   surface: 'windows' as const,
   projectId: null,
+  spaceId: null,
   pinned: false,
   archivedAt: null,
   createdAt: TS,

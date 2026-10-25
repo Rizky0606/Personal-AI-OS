@@ -161,6 +161,7 @@ describe('Shell', () => {
           title: 'Rencana rilis',
           surface: 'windows',
           projectId: null,
+          spaceId: null,
           pinned: false,
           archivedAt: null,
           createdAt: '2026-10-22T06:38:00Z',

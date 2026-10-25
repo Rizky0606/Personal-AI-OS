@@ -55,6 +55,9 @@ data class PendingAttachment(
     val uploading: Boolean get() = part == null && error == null
 }
 
+/** Ruang yang dipilih untuk percakapan baru (nama untuk penanda di layar). */
+data class SpaceRef(val id: String, val name: String)
+
 data class ChatUiState(
     val conversationId: String? = null,
     val title: String = "",
@@ -69,6 +72,8 @@ data class ChatUiState(
     /** Error run terakhir (gagal di server); hilang saat pesan baru dikirim. */
     val runError: RunError? = null,
     val draft: String = "",
+    /** Chat baru dari layar Ruang: percakapan dibuat di ruang ini saat pesan pertama dikirim (A13). */
+    val newInSpace: SpaceRef? = null,
     /** Diminta mulai mendengarkan suara (dipanggil sebagai asisten); dikonsumsi layar chat. */
     val voiceRequested: Boolean = false,
     /** Pesan yang sedang diubah lewat composer; Kirim memotong percakapan dari pesan ini. */
@@ -160,6 +165,12 @@ class ChatViewModel @Inject constructor(
             )
         }
         if (id != null) attach(id)
+    }
+
+    /** Chat baru yang terikat ruang pengetahuan; jawabannya memakai dokumen ruang itu sebagai sumber. */
+    fun openInSpace(spaceId: String, name: String) {
+        open(null)
+        state.update { it.copy(newInSpace = SpaceRef(spaceId, name)) }
     }
 
     fun retryLoad() {
@@ -328,7 +339,9 @@ class ChatViewModel @Inject constructor(
         }
         viewModelScope.launch {
             try {
-                val conversationId = snapshot.conversationId ?: repo.createConversation().id.also { newId ->
+                val conversationId = snapshot.conversationId ?: repo.createConversation(
+                    spaceId = snapshot.newInSpace?.id
+                ).id.also { newId ->
                     state.update { it.copy(conversationId = newId) }
                     attach(newId)
                 }

@@ -7,6 +7,7 @@ import { copy } from '../copy';
 import { ProjectList } from '../projects/ProjectList';
 import { ResearchList } from '../research/ResearchList';
 import { ScheduleList } from '../schedules/ScheduleList';
+import { SpaceList } from '../spaces/SpaceList';
 import { useUiStore } from '../state/uiStore';
 import { EmptyState } from '../ui/EmptyState';
 import { IconButton } from '../ui/IconButton';
@@ -49,6 +50,7 @@ function sectionFor(pathname: string): Section {
       list: <ResearchList />,
       action: { label: copy.research.newResearch, to: '/research' },
     };
+  if (pathname.startsWith('/spaces')) return { title: copy.nav.spaces, list: <SpaceList /> };
   if (pathname.startsWith('/status'))
     return {
       title: copy.status.page.title,

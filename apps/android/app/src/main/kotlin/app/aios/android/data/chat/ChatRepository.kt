@@ -46,7 +46,7 @@ interface ChatRepository {
     /** Memuat halaman yang lebih lama dari pesan tertua di cache. Mengembalikan true bila masih ada lagi. */
     suspend fun loadOlder(conversationId: String): Boolean
 
-    suspend fun createConversation(title: String? = null): Conversation
+    suspend fun createConversation(title: String? = null, spaceId: String? = null): Conversation
 
     suspend fun setPinned(id: String, pinned: Boolean)
 
@@ -137,8 +137,10 @@ class RoomChatRepository(
         return page.nextBefore != null
     }
 
-    override suspend fun createConversation(title: String?): Conversation {
-        val created = api.createConversation(CreateConversationRequest(surface = SURFACE_ANDROID, title = title))
+    override suspend fun createConversation(title: String?, spaceId: String?): Conversation {
+        val created = api.createConversation(
+            CreateConversationRequest(surface = SURFACE_ANDROID, title = title, spaceId = spaceId)
+        )
         dao.upsertConversations(listOf(created.toEntity()))
         return created
     }
