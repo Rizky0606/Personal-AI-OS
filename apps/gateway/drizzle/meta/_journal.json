@@ -57,6 +57,13 @@
       "when": 1792917122970,
       "tag": "0007_spaces",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792921842271,
+      "tag": "0008_project_instructions",
+      "breakpoints": true
     }
   ]
 }

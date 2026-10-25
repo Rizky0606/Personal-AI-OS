@@ -20,6 +20,7 @@ const project = (name: string): Project => ({
   workerDeviceId: WORKER,
   stack: { languages: [], frameworks: [] },
   defaultBranch: 'main',
+  instructions: '',
   createdAt: TS,
   updatedAt: TS,
 });

@@ -81,6 +81,7 @@ async function main(): Promise<void> {
     workerAdapter: createWorkerRelayAdapter({ relay: workerRelay }),
     roles,
     memory,
+    projectRules: projects,
     log,
   });
   const routing = createRoutingService({

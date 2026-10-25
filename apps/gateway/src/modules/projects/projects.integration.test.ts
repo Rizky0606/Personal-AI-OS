@@ -153,7 +153,16 @@ describe('/projects', () => {
     );
 
     expect(Object.keys(res.json()).sort()).toEqual(
-      ['createdAt', 'defaultBranch', 'id', 'name', 'stack', 'updatedAt', 'workerDeviceId'].sort(),
+      [
+        'createdAt',
+        'defaultBranch',
+        'id',
+        'instructions',
+        'name',
+        'stack',
+        'updatedAt',
+        'workerDeviceId',
+      ].sort(),
     );
   });
 });

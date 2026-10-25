@@ -11,7 +11,9 @@ import { ErrorBanner } from '../ui/ErrorBanner';
 import { StateView, type ViewState } from '../ui/StateView';
 import { useToastStore } from '../ui/Toaster';
 import { workerErrorMessage } from '../worker/errors';
+import type { Project } from '@aios/contracts';
 import { AddProjectDialog } from './AddProjectDialog';
+import { ProjectRulesDialog } from './ProjectRulesDialog';
 import { StackChips } from './StackChips';
 import { useProjectRows } from './useProjectRows';
 
@@ -26,6 +28,7 @@ export function ProjectsScreen() {
   const queryClient = useQueryClient();
   const push = useToastStore((s) => s.push);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [rulesOf, setRulesOf] = useState<Project | null>(null);
   const workerReady = worker.local === 'connected';
 
   const view: ViewState = projects.isPending
@@ -79,7 +82,7 @@ export function ProjectsScreen() {
         <table aria-label={copy.projects.listLabel} className="w-full border-collapse">
           <thead>
             <tr>
-              {(['name', 'stack', 'branch', 'folder'] as const).map((column) => (
+              {(['name', 'stack', 'branch', 'folder', 'rules'] as const).map((column) => (
                 <th key={column} scope="col" className={headerClass}>
                   {copy.projects.columns[column]}
                 </th>
@@ -127,12 +130,27 @@ export function ProjectsScreen() {
                     <span className="text-meta text-text-3">{copy.projects.folderMissing}</span>
                   )}
                 </td>
+                <td className={cellClass}>
+                  <span className="flex flex-col items-start gap-1">
+                    <span className="line-clamp-2 max-w-64 text-meta whitespace-pre-wrap text-text-2">
+                      {project.instructions || copy.projects.rules.none}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      aria-label={`${copy.projects.rules.edit}: ${project.name}`}
+                      onClick={() => setRulesOf(project)}
+                    >
+                      {copy.projects.rules.edit}
+                    </Button>
+                  </span>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </StateView>
       <AddProjectDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+      <ProjectRulesDialog project={rulesOf} onClose={() => setRulesOf(null)} />
     </div>
   );
 }

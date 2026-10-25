@@ -21,6 +21,7 @@ const project: Project = {
   workerDeviceId: '0192f0c4-7a1b-7c2d-a003-4a5b6c7d8e93',
   stack: { languages: [], frameworks: [] },
   defaultBranch: 'main',
+  instructions: '',
   createdAt: TS,
   updatedAt: TS,
 };

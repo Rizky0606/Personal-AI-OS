@@ -182,6 +182,7 @@ export async function createAuthEnv(
     }),
     roles,
     memory,
+    projectRules: projects,
   });
   const routing = createRoutingService({
     db,

@@ -67,6 +67,7 @@ export const api: FakeApi = {
   runTask: fn<'runTask'>(),
   breakdownTasks: fn<'breakdownTasks'>(),
   search: fn<'search'>(),
+  updateProject: fn<'updateProject'>(),
   listSpaces: fn<'listSpaces'>(),
   createSpace: fn<'createSpace'>(),
   updateSpace: fn<'updateSpace'>(),

@@ -28,6 +28,8 @@ export interface ProjectsService {
   ownedBy(projectId: string, workerDeviceId: string): Promise<boolean>;
   /** Perangkat worker pemilik project; undefined bila project tidak ada. */
   workerOf(projectId: string): Promise<string | undefined>;
+  /** Bagian pesan sistem berisi aturan project, atau string kosong bila tidak ada. */
+  rulesSection(projectId: string): Promise<string>;
 }
 
 const notFound = () => new AppError(404, 'project_not_found', 'Project tidak ditemukan.');
@@ -39,6 +41,7 @@ export function toProjectDto(row: ProjectRow): Project {
     workerDeviceId: row.workerDeviceId,
     stack: row.stack,
     defaultBranch: row.defaultBranch,
+    instructions: row.instructions,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -79,6 +82,7 @@ export function createProjectsService(deps: { db: Database }): ProjectsService {
           workerDeviceId: input.workerDeviceId,
           stack: input.stack,
           defaultBranch: input.defaultBranch,
+          instructions: input.instructions,
         })
         .returning();
       if (!row) throw new Error('insert project gagal');
@@ -98,6 +102,7 @@ export function createProjectsService(deps: { db: Database }): ProjectsService {
           ...(patch.name !== undefined ? { name: patch.name } : {}),
           ...(patch.stack !== undefined ? { stack: patch.stack } : {}),
           ...(patch.defaultBranch !== undefined ? { defaultBranch: patch.defaultBranch } : {}),
+          ...(patch.instructions !== undefined ? { instructions: patch.instructions } : {}),
           updatedAt: new Date(),
         })
         .where(eq(projects.id, id))
@@ -117,6 +122,15 @@ export function createProjectsService(deps: { db: Database }): ProjectsService {
         .from(projects)
         .where(eq(projects.id, projectId));
       return row?.workerDeviceId === workerDeviceId;
+    },
+
+    async rulesSection(projectId) {
+      const [row] = await db
+        .select({ name: projects.name, instructions: projects.instructions })
+        .from(projects)
+        .where(eq(projects.id, projectId));
+      if (!row?.instructions.trim()) return '';
+      return `# Aturan project "${row.name}"\n\nDitulis pemilik untuk project ini. Patuhi selama tidak bertentangan dengan aturan keamanan di atas.\n\n${row.instructions.trim()}`;
     },
 
     async workerOf(projectId) {
