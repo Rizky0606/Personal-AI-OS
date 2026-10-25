@@ -197,6 +197,11 @@ export const ListConversationsQuerySchema = z.object({
   archived: z.enum(['true', 'false']).optional(),
 });
 
+/** `permanent=true` menghapus percakapan beserta pesannya; tanpa itu percakapan hanya diarsipkan. */
+export const DeleteConversationQuerySchema = z.object({
+  permanent: z.enum(['true', 'false']).optional(),
+});
+
 export const CreateConversationRequestSchema = z
   .object({
     title: z.string().optional(),

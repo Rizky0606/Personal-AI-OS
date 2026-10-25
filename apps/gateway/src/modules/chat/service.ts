@@ -40,6 +40,8 @@ export interface ChatService {
     patch: z.infer<typeof UpdateConversationRequestSchema>,
   ): Promise<Conversation>;
   archiveConversation(id: string): Promise<void>;
+  /** Menghapus percakapan beserta pesannya; run dan jadwal yang merujuknya tetap ada tanpa rujukan. */
+  deleteConversation(id: string): Promise<void>;
   listMessages(
     conversationId: string,
     q: { before?: string | undefined; limit: number },
@@ -380,6 +382,13 @@ export function createChatService(deps: {
         .where(eq(conversations.id, id))
         .returning({ id: conversations.id });
       if (rows.length === 0) throw notFound();
+    },
+
+    async deleteConversation(id) {
+      await getConversation(id);
+      // Jawaban yang masih berjalan menulis ke pesan percakapan ini; hentikan dulu dari aplikasi.
+      await assertNoActiveRun(id);
+      await db.delete(conversations).where(eq(conversations.id, id));
     },
 
     async listMessages(conversationId, q) {

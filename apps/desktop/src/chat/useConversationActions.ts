@@ -4,9 +4,10 @@ import { useCallback } from 'react';
 import { apiErrorMessage } from '../api/errors';
 import { useOnline } from '../app/hooks';
 import { api } from '../app/services';
+import { copy } from '../copy';
 import { useToastStore } from '../ui/Toaster';
 
-/** Ubah judul, sematkan, dan arsipkan percakapan; daftar disegarkan setelah server menjawab. */
+/** Ubah judul, sematkan, arsipkan, dan hapus percakapan; daftar disegarkan setelah server menjawab. */
 export function useConversationActions(activeId?: string) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -32,6 +33,12 @@ export function useConversationActions(activeId?: string) {
       run(async () => {
         await api.archiveConversation(id);
         if (id === activeId) await navigate({ to: '/' });
+      }),
+    remove: (id: string) =>
+      run(async () => {
+        await api.deleteConversation(id);
+        if (id === activeId) await navigate({ to: '/' });
+        push(copy.chat.deleted);
       }),
   };
 }

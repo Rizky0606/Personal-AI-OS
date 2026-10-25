@@ -48,6 +48,8 @@ export const GitInfoSchema = z.object({
   /** Cabang bawaan (origin/HEAD, atau cabang saat ini bila tanpa remote); null bila bukan repo. */
   defaultBranch: z.string().nullable(),
   currentBranch: z.string().nullable(),
+  /** Branch lokal (refs/heads), maks 200; kosong bila bukan repo. */
+  branches: z.array(z.string()),
 });
 export type GitInfo = z.infer<typeof GitInfoSchema>;
 

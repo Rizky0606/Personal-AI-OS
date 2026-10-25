@@ -160,7 +160,8 @@ class RoomChatRepository(
     }
 
     override suspend fun delete(id: String) {
-        api.archiveConversation(id)
+        val response = api.archiveConversation(id, permanent = "true")
+        if (!response.isSuccessful) throw HttpException(response)
         dao.deleteConversation(id)
     }
 

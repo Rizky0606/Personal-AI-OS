@@ -2,6 +2,7 @@ import {
   ApprovalDecisionRequestSchema,
   ApprovalParamsSchema,
   CreateConversationRequestSchema,
+  DeleteConversationQuerySchema,
   IdParamsSchema,
   ListConversationsQuerySchema,
   PageQuerySchema,
@@ -45,7 +46,10 @@ export const chatRoutes: FastifyPluginCallback<{ chat: ChatService; runs: RunsSe
   );
 
   app.delete('/conversations/:id', guard, async (req, reply) => {
-    await chat.archiveConversation(IdParamsSchema.parse(req.params).id);
+    const { id } = IdParamsSchema.parse(req.params);
+    const { permanent } = DeleteConversationQuerySchema.parse(req.query);
+    if (permanent === 'true') await chat.deleteConversation(id);
+    else await chat.archiveConversation(id);
     return reply.code(204).send();
   });
 

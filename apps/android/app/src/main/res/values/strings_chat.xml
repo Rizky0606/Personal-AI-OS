@@ -21,7 +21,7 @@
     <string name="chat_delete">Hapus</string>
     <string name="chat_pinned_marker">Disematkan</string>
     <string name="chat_delete_title">Hapus percakapan ini?</string>
-    <string name="chat_delete_body">Percakapan hilang dari daftar dan cache di perangkat. Di server percakapan diarsipkan, bukan dihapus permanen.</string>
+    <string name="chat_delete_body">Percakapan dan semua pesannya dihapus permanen dari server dan perangkat. Pilih Arsipkan bila hanya ingin menyembunyikannya.</string>
     <string name="chat_delete_confirm">Hapus</string>
     <string name="chat_delete_cancel">Batal</string>
 

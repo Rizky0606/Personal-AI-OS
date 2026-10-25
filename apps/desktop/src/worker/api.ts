@@ -31,6 +31,9 @@ export function createWorkerApi(call: WorkerCall) {
       ProjectInspectionSchema.parse(await call('project.inspect', { path })),
     bind: async (projectId: string, path: string): Promise<ProjectBinding> =>
       ProjectBindingSchema.parse(await call('project.bind', { projectId, path })),
+    /** Melepas ikatan project dari folder di PC ini; berkas di folder tidak disentuh. */
+    unbind: async (projectId: string): Promise<ProjectBinding[]> =>
+      ProjectsResultSchema.parse(await call('project.unbind', { projectId })).projects,
     bindings: async (): Promise<ProjectBinding[]> =>
       ProjectsResultSchema.parse(await call('projects.list')).projects,
     /** Diff worktree terhadap base, checkpoint, dan pesan commit usulan agent. */
