@@ -21,6 +21,7 @@ import {
 import { createAuthEnv, type AuthEnv } from '../../testing/auth-env.js';
 import { startFakeHermes, type FakeHermes } from '../../testing/fake-hermes.js';
 import { startMockServer, type MockServer } from '../../testing/mock-server.js';
+import { SERVER_FILES_RULE } from '../runs/runner.js';
 
 interface RouterCall {
   model: string;
@@ -32,6 +33,10 @@ interface RouterAnswer {
   status?: number;
   content?: string;
 }
+
+/** Pesan sistem run chat di server: bundel role lalu aturan berkas untuk pemilik. */
+const serverPrompt = (role: string) =>
+  [env.roles.bundle(role).systemPrompt, SERVER_FILES_RULE].join('\n\n');
 
 let env: AuthEnv;
 let hermes: FakeHermes;
@@ -193,7 +198,7 @@ describe('chat memakai role yang dipilih router', () => {
     expect(row).toMatchObject({ role: 'writer', confidence: 0.92, reason: 'memilih writer' });
     expect(row!.latencyMs).toBeGreaterThanOrEqual(0);
 
-    expect(systemOf()).toBe(env.roles.bundle('writer').systemPrompt);
+    expect(systemOf()).toBe(serverPrompt('writer'));
     expect(systemOf()).toContain('# Peran: Penulis');
     const history = (await env.get(`/conversations/${conv.id}/messages`, token)).json<{
       items: { author: string; agentRole: string | null }[];
@@ -228,7 +233,7 @@ describe('chat memakai role yang dipilih router', () => {
     expect(done.agentRole).toBe('writer');
     expect(await routeDecided(next.run.id)).toMatchObject({ role: 'writer', confidence: 0.9 });
     expect((await decisionsOf(next.message.id))[0]!.reason).toContain('lanjutan');
-    expect(systemOf(1)).toBe(env.roles.bundle('writer').systemPrompt);
+    expect(systemOf(1)).toBe(serverPrompt('writer'));
 
     // Pesan biasa berikutnya: model dipanggil lagi dan melihat riwayat singkat.
     routerAnswer = () => route('researcher');
@@ -248,7 +253,7 @@ describe('chat memakai role yang dipilih router', () => {
     expect(done.agentRole).toBe('researcher');
     expect(await routeDecided(run.id)).toMatchObject({ role: 'researcher', confidence: 1 });
     expect((await decisionsOf(message.id))[0]!.reason).toContain('manual');
-    expect(systemOf()).toBe(env.roles.bundle('researcher').systemPrompt);
+    expect(systemOf()).toBe(serverPrompt('researcher'));
 
     const before = (await db().select({ n: count() }).from(runs))[0]!.n;
     const coding = await env.post(
@@ -309,7 +314,7 @@ describe('chat memakai role yang dipilih router', () => {
     );
     expect((await settle(run.id)).agentRole).toBe('general');
     expect((await decisionsOf(message.id))[0]!.reason).toContain('tidak tersedia di konteks ini');
-    expect(systemOf()).toBe(env.roles.bundle('general').systemPrompt);
+    expect(systemOf()).toBe(serverPrompt('general'));
   });
 
   it('needs_split: sub-tugas tertulis di alasan keputusan dan event, run memakai role utama', async () => {
@@ -441,7 +446,7 @@ describe('POST /messages/:id/reroute', () => {
     // Hermes menerima prompt yang sama dengan bundel role baru, di sesi yang sama.
     expect(hermes.requests).toHaveLength(1);
     expect(hermes.requests[0]!.body.messages).toEqual([
-      { role: 'system', content: env.roles.bundle('writer').systemPrompt },
+      { role: 'system', content: serverPrompt('writer') },
       { role: 'user', content: 'Buatkan script TikTok 30 detik tentang hemat uang' },
     ]);
     expect(hermes.requests[0]!.headers['x-hermes-session-id']).toBe(`aios-${conv.id}`);
