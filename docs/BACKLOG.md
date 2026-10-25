@@ -487,6 +487,13 @@ Isi ditulis sendiri sebagai ringkasan prinsip, bukan salinan; dibaca dari halama
 - "Hanya bila berubah" mengandalkan agent menulis penanda `[TIDAK ADA PERUBAHAN]` di awal jawaban; bila agent lupa, hasil dianggap berubah (notifikasi tetap terkirim, lebih aman daripada diam). Penanda diganti kalimat biasa di pesan tersimpan.
 - Migrasi 0006 memakai `ALTER TYPE ... ADD VALUE` (aman di Postgres 12+ selama nilai baru tidak dipakai di transaksi yang sama).
 
+## Temuan Fase 29 (Quick Ask Windows)
+
+- Hotkey tetap `Ctrl+Shift+Spasi`; bila dipakai aplikasi lain, Quick Ask tidak aktif (dicatat di konsol) dan aplikasi utama tetap jalan. Belum bisa diganti dari Pengaturan.
+- Teks terpilih atau tangkapan layar dari aplikasi lain belum diambil otomatis (butuh simulasi Ctrl+C atau API tangkap layar); pemilik menempel sendiri.
+- Tiap pertanyaan membuat percakapan baru di Chat umum; tombol Lanjutkan di chat membukanya di jendela utama.
+- **Belum terverifikasi di mesin pengembangan**: Rust (tanpa MSVC) dan perilaku multi-jendela Tauri sungguhan. Logika jembatan dan UI dites dengan host palsu; clippy dan `cargo test` di CI. Cek manual: tekan Ctrl+Shift+Spasi saat aplikasi berjalan di belakang, tanya, lalu Lanjutkan di chat.
+
 ## Rencana fitur lanjutan (Fase 25–34)
 
 Disusun 2026-10-25 dari perbandingan dengan ChatGPT, Claude, Gemini/NotebookLM, Perplexity, Cursor, Codex, Raycast, dan asisten self-hosted (Open WebUI, LibreChat, LobeChat, Khoj). Dikerjakan berurutan; setiap fase satu branch `feat/<fase>-<ringkas>`, merge ke `main` (rilis otomatis), dan gateway di VPS diperbarui bila fase menyentuh server. ID fitur baru dicatat di PRD.md.

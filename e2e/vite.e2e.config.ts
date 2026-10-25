@@ -22,6 +22,8 @@ export default defineConfig({
       { find: /^@tauri-apps\/plugin-dialog$/, replacement: here('shims/dialog.ts') },
       { find: /^@tauri-apps\/plugin-opener$/, replacement: here('shims/opener.ts') },
       { find: /^@tauri-apps\/plugin-updater$/, replacement: here('shims/updater.ts') },
+      { find: /^@tauri-apps\/api\/(event|window)$/, replacement: here('shims/quick.ts') },
+      { find: /^@tauri-apps\/plugin-global-shortcut$/, replacement: here('shims/quick.ts') },
     ],
   },
   build: {
