@@ -71,6 +71,13 @@ import java.io.IOException
 
 class AppLinksTest {
     @Test
+    fun `action ASSIST membuka mode asisten, action lain tidak`() {
+        assertEquals(AppLink.Assist, AppLinks.fromAction("android.intent.action.ASSIST"))
+        assertNull(AppLinks.fromAction("android.intent.action.MAIN"))
+        assertNull(AppLinks.fromAction(null))
+    }
+
+    @Test
     fun `notifikasi riset membuka layar riset`() {
         val link = AppLinks.fromPush(mapOf("type" to "research.completed", "researchId" to "r1", "runId" to "x"))
         assertEquals(AppLink.OpenResearch("r1"), link)

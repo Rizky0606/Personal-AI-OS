@@ -517,6 +517,18 @@ class ChatViewModelTest {
     }
 
     @Test
+    fun `dipanggil sebagai asisten - chat baru dan permintaan suara sekali pakai`() = runVmTest { r ->
+        openC1(r)
+        r.vm.open(null)
+        r.vm.requestVoice()
+        runCurrent()
+        assertNull(r.ui.conversationId)
+        assertTrue(r.ui.voiceRequested)
+        r.vm.consumeVoiceRequest()
+        assertFalse(r.ui.voiceRequested)
+    }
+
+    @Test
     fun `kembali online memicu sambung ulang dan penyegaran`() = runVmTest { r ->
         openC1(r)
         r.connectivity.state.value = false

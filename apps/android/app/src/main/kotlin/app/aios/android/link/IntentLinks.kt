@@ -13,6 +13,7 @@ object IntentLinks {
 
     fun from(intent: Intent?): AppLink? {
         intent ?: return null
+        AppLinks.fromAction(intent.action)?.let { return it }
         if (intent.action == Intent.ACTION_SEND && intent.type?.startsWith("text/") == true) {
             return AppLinks.fromShare(
                 subject = intent.getStringExtra(Intent.EXTRA_SUBJECT),

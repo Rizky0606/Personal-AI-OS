@@ -132,6 +132,11 @@ fun MainScreen(online: Boolean, sessionKey: String, link: AppLink?, onLinkConsum
                 chatVm.open(target.conversationId)
                 openChat()
             }
+            AppLink.Assist -> {
+                chatVm.open(null)
+                chatVm.requestVoice()
+                openChat()
+            }
             is AppLink.OpenResearch -> nav.navigate("research/${target.researchId}")
             is AppLink.OpenSchedule -> nav.navigate("schedules/${target.scheduleId}")
         }

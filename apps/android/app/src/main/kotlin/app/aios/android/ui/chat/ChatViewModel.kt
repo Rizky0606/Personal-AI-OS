@@ -69,6 +69,8 @@ data class ChatUiState(
     /** Error run terakhir (gagal di server); hilang saat pesan baru dikirim. */
     val runError: RunError? = null,
     val draft: String = "",
+    /** Diminta mulai mendengarkan suara (dipanggil sebagai asisten); dikonsumsi layar chat. */
+    val voiceRequested: Boolean = false,
     /** Pesan yang sedang diubah lewat composer; Kirim memotong percakapan dari pesan ini. */
     val editingId: String? = null,
     val sending: Boolean = false,
@@ -207,6 +209,10 @@ class ChatViewModel @Inject constructor(
     }
 
     fun onDraft(text: String) = state.update { it.copy(draft = text) }
+
+    fun requestVoice() = state.update { it.copy(voiceRequested = true) }
+
+    fun consumeVoiceRequest() = state.update { it.copy(voiceRequested = false) }
 
     fun selectModel(id: String?) = state.update { it.copy(selectedModel = id) }
 
