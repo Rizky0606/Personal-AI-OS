@@ -12,6 +12,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import android.content.Intent
+import android.provider.Settings
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -60,6 +63,17 @@ fun SettingsScreen(
             title = stringResource(R.string.memory_settings_item),
             supporting = stringResource(R.string.memory_settings_supporting),
             onClick = onOpenMemory
+        )
+
+        Section(R.string.assistant_section)
+        val context = LocalContext.current
+        AiosListItem(
+            title = stringResource(R.string.assistant_item),
+            supporting = stringResource(R.string.assistant_supporting),
+            onClick = {
+                // Peran asisten tidak bisa diminta lewat dialog; pemilik memilihnya di Aplikasi default.
+                runCatching { context.startActivity(Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)) }
+            }
         )
 
         Section(R.string.settings_theme_section)

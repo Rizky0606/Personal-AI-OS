@@ -5,6 +5,9 @@ sealed interface AppLink {
     /** Teks atau URL dari aplikasi lain: membuka chat baru dengan isian terisi, belum terkirim. */
     data class SharedText(val text: String) : AppLink
 
+    /** Dipanggil sebagai asisten digital: chat baru dan langsung mendengarkan suara. */
+    data object Assist : AppLink
+
     data class OpenResearch(val researchId: String) : AppLink
 
     /** Hasil jadwal tersimpan sebagai pesan di percakapan khusus jadwal itu. */
@@ -37,6 +40,12 @@ object AppLinks {
             else -> null
         }
     }
+
+    /** Dari action intent yang tidak membawa data (asisten digital). */
+    fun fromAction(action: String?): AppLink? = if (action == ACTION_ASSIST) AppLink.Assist else null
+
+    /** Sama dengan Intent.ACTION_ASSIST; ditulis ulang supaya fungsi ini bisa dites tanpa Android. */
+    const val ACTION_ASSIST = "android.intent.action.ASSIST"
 
     /** Dari share intent: subjek (judul halaman) ikut bila belum ada di teks. Kosong = tidak ada tautan. */
     fun fromShare(subject: String?, text: String?): AppLink.SharedText? {

@@ -24,4 +24,8 @@
     <string name="memory_remember">Ingat</string>
     <string name="memory_remember_title">Ingat ini</string>
     <string name="memory_remember_body">Ringkas menjadi satu fakta singkat. Fakta ini ikut di setiap chat berikutnya.</string>
+    <!-- Asisten bawaan (A12) -->
+    <string name="assistant_section">Asisten bawaan</string>
+    <string name="assistant_item">Jadikan asisten digital</string>
+    <string name="assistant_supporting">Pilih Personal AI di Aplikasi default, Aplikasi asisten digital. Tekan lama tombol power atau home untuk membuka chat dengan suara.</string>
 </resources>

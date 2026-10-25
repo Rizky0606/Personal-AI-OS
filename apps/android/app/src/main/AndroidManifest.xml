@@ -59,6 +59,11 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Asisten digital (A12): tekan lama power/home membuka chat baru dengan input suara. -->
+            <intent-filter>
+                <action android:name="android.intent.action.ASSIST" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
             <!-- Bagikan teks atau URL dari aplikasi lain: membuka chat baru dengan isian terisi. -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />

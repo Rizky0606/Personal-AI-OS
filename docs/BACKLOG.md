@@ -494,6 +494,11 @@ Isi ditulis sendiri sebagai ringkasan prinsip, bukan salinan; dibaca dari halama
 - Tiap pertanyaan membuat percakapan baru di Chat umum; tombol Lanjutkan di chat membukanya di jendela utama.
 - **Belum terverifikasi di mesin pengembangan**: Rust (tanpa MSVC) dan perilaku multi-jendela Tauri sungguhan. Logika jembatan dan UI dites dengan host palsu; clippy dan `cargo test` di CI. Cek manual: tekan Ctrl+Shift+Spasi saat aplikasi berjalan di belakang, tanya, lalu Lanjutkan di chat.
 
+## Temuan Fase 30 (asisten bawaan Android)
+
+- Memakai intent `ACTION_ASSIST` (cukup untuk peran `android.app.role.ASSISTANT`; diverifikasi di emulator API 37 dengan `cmd role add-role-holder` dan `KEYCODE_ASSIST`), bukan `VoiceInteractionService`. Akibatnya tidak ada hotword dan tidak ada overlay di atas aplikasi lain: Personal AI terbuka penuh di chat baru dan langsung mendengarkan.
+- Peran asisten tidak bisa diminta lewat dialog sistem; Pengaturan membuka layar Aplikasi default.
+
 ## Rencana fitur lanjutan (Fase 25–34)
 
 Disusun 2026-10-25 dari perbandingan dengan ChatGPT, Claude, Gemini/NotebookLM, Perplexity, Cursor, Codex, Raycast, dan asisten self-hosted (Open WebUI, LibreChat, LobeChat, Khoj). Dikerjakan berurutan; setiap fase satu branch `feat/<fase>-<ringkas>`, merge ke `main` (rilis otomatis), dan gateway di VPS diperbarui bila fase menyentuh server. ID fitur baru dicatat di PRD.md.

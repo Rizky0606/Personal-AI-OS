@@ -101,6 +101,14 @@ fun ChatScreen(viewModel: ChatViewModel, snackbar: SnackbarHostState) {
         }
     )
 
+    // Dipanggil sebagai asisten digital (A12): langsung mendengarkan suara.
+    LaunchedEffect(ui.voiceRequested) {
+        if (ui.voiceRequested) {
+            viewModel.consumeVoiceRequest()
+            voice.start()
+        }
+    }
+
     val selectedModelLabel = ui.selectedModel?.let { id -> ui.models.firstOrNull { it.id == id }?.label ?: id }
     val modelLabel = selectedModelLabel ?: stringResource(R.string.chat_model_auto)
     val roleNames = remember(ui.roles) { ui.roles.associate { it.id to it.name } }
