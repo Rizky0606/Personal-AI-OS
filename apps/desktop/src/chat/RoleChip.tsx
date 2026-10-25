@@ -14,7 +14,7 @@ export interface RoleChipProps {
 }
 
 const chipClass =
-  'inline-flex h-6 items-center gap-1 rounded-badge bg-surface-2 px-2 text-meta text-text-2';
+  'inline-flex h-6 items-center gap-1 rounded-full bg-accent-soft px-2.5 text-meta text-text';
 
 /** Teks kecil + titik netral. Bila bisa diganti, klik membuka pemilih role. */
 export function RoleChip({ role, roles, onChange, active = false }: RoleChipProps) {

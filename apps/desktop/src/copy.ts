@@ -12,6 +12,7 @@ export const copy = {
   },
   shell: {
     rail: 'Navigasi utama',
+    brand: 'Personal AI OS',
     sidebar: 'Daftar',
     collapseSidebar: 'Ciutkan sidebar',
     expandSidebar: 'Buka sidebar',
@@ -465,6 +466,8 @@ export const copy = {
     copy: 'Salin',
     copied: 'Tersalin',
     you: 'Anda',
+    assistantName: 'Personal AI',
+    sent: 'Terkirim',
     tool: {
       running: 'berjalan',
       ok: 'selesai',

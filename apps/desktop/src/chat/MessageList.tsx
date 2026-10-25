@@ -132,6 +132,7 @@ export function MessageList({
             <UserMessage
               key={message.id}
               text={messageText(message)}
+              sentAt={message.createdAt}
               files={message.parts.flatMap((part) => (part.type === 'file' ? [part] : []))}
               onEdit={
                 canModify && onEditMessage

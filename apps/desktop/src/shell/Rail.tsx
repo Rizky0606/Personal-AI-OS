@@ -1,5 +1,13 @@
 import { Link, useRouterState } from '@tanstack/react-router';
-import { CalendarClock, Folder, Kanban, MessageSquare, Search, Settings } from 'lucide-react';
+import {
+  BrainCircuit,
+  CalendarClock,
+  Folder,
+  Kanban,
+  MessageSquare,
+  Search,
+  Settings,
+} from 'lucide-react';
 import type { ReactNode } from 'react';
 import { copy } from '../copy';
 import { cn } from '../lib/cn';
@@ -63,6 +71,13 @@ export function Rail() {
       className="flex w-(--aios-rail-width) shrink-0 flex-col items-center justify-between border-r border-border bg-surface py-2"
     >
       <div className="flex flex-col items-center gap-1">
+        <span
+          role="img"
+          aria-label={copy.shell.brand}
+          className="mb-2 inline-flex size-9 items-center justify-center rounded-control bg-surface-2 text-accent shadow-glow"
+        >
+          <BrainCircuit size={18} strokeWidth={1.5} aria-hidden="true" />
+        </span>
         {items.map((item) => (
           <RailLink key={item.to} item={item} />
         ))}

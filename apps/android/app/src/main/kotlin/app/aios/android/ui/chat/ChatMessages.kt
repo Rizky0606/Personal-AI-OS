@@ -38,6 +38,11 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import app.aios.android.R
+import androidx.compose.foundation.border
+import androidx.compose.ui.text.font.FontWeight
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import app.aios.android.data.api.MessagePart
 import app.aios.android.ui.chat.markdown.MarkdownText
 import app.aios.android.ui.components.AiosButton
@@ -46,6 +51,7 @@ import app.aios.android.ui.components.AiosIcon
 import app.aios.android.ui.components.ButtonKind
 import app.aios.android.ui.components.ErrorBanner
 import app.aios.android.ui.components.SkeletonBlock
+import app.aios.android.ui.components.Hairline
 import app.aios.android.ui.components.accentGlow
 import app.aios.android.ui.theme.AiosTheme
 import app.aios.android.ui.theme.PlexMono
@@ -78,7 +84,9 @@ fun UserMessageRow(
             }
         ) {
             Column(horizontalAlignment = Alignment.End) {
-                if (item.message.text.isNotEmpty() || files.isEmpty()) UserBubble(text = item.message.text)
+                if (item.message.text.isNotEmpty() || files.isEmpty()) {
+                    UserBubble(text = item.message.text, sentAt = item.message.createdAt)
+                }
                 if (files.isNotEmpty()) FileChips(files)
             }
             MessageMenu(
@@ -203,20 +211,73 @@ private fun MessageMenu(expanded: Boolean, onDismiss: () -> Unit, onEdit: (() ->
 }
 
 @Composable
-private fun UserBubble(text: String, dimmed: Boolean = false, modifier: Modifier = Modifier) {
+private fun UserBubble(text: String, dimmed: Boolean = false, sentAt: String? = null, modifier: Modifier = Modifier) {
     val colors = AiosTheme.colors
-    Text(
-        text = text,
-        style = AiosTheme.type.chat,
-        color = if (dimmed) colors.text2 else colors.text,
+    val shape = RoundedCornerShape(
+        topStart = Tokens.Radius.lg,
+        topEnd = Tokens.Radius.sm,
+        bottomEnd = Tokens.Radius.lg,
+        bottomStart = Tokens.Radius.lg
+    )
+    Column(
         modifier = modifier
             .widthIn(max = Tokens.Space.s48 * 7)
-            .background(colors.surface2, RoundedCornerShape(Tokens.Radius.md))
-            .padding(horizontal = Tokens.Space.s12, vertical = Tokens.Space.s8)
-    )
+            .background(colors.surface2, shape)
+            .border(Hairline, colors.border, shape)
+            .padding(horizontal = Tokens.Space.s16, vertical = Tokens.Space.s12),
+        horizontalAlignment = Alignment.End
+    ) {
+        Text(text = text, style = AiosTheme.type.chat, color = if (dimmed) colors.text2 else colors.text)
+        val time = sentAt?.let(::clockOf)
+        if (time != null) {
+            val sent = stringResource(R.string.chat_sent)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Tokens.Space.s4),
+                modifier = Modifier.padding(top = Tokens.Space.s4)
+            ) {
+                Text(time, style = AiosTheme.type.caption.copy(fontFamily = PlexMono), color = colors.text3)
+                AiosIcon(
+                    R.drawable.ic_check,
+                    contentDescription = sent,
+                    tint = colors.accent,
+                    modifier = Modifier.size(Tokens.Space.s12)
+                )
+            }
+        }
+    }
 }
 
-/** Jawaban asisten: tanpa gelembung; chip role dan model di atas, langkah tool, lalu teks Markdown. */
+/** Jam lokal (mis. 14.22) dari waktu ISO; null bila formatnya tidak dikenal. */
+private fun clockOf(iso: String): String? = runCatching {
+    Instant.parse(iso).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH.mm"))
+}.getOrNull()
+
+/** Avatar bot dengan titik status: hijau saat selesai, cyan saat jawaban masih ditulis. */
+@Composable
+private fun BotAvatar(streaming: Boolean) {
+    val colors = AiosTheme.colors
+    val shape = RoundedCornerShape(Tokens.Radius.sm)
+    Box(modifier = Modifier.size(Tokens.Space.s32)) {
+        Box(
+            modifier = Modifier
+                .size(Tokens.Space.s32)
+                .accentGlow(shape)
+                .background(colors.bg, shape),
+            contentAlignment = Alignment.Center
+        ) { AiosIcon(R.drawable.ic_bot, contentDescription = null, tint = colors.accent) }
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .size(Tokens.Space.s12)
+                .background(colors.surface, CircleShape)
+                .padding(Tokens.Space.s4 / 2)
+                .background(if (streaming) colors.accent else colors.success, CircleShape)
+        )
+    }
+}
+
+/** Jawaban asisten: kartu berbingkai; avatar, nama, chip role, dan model di atas, lalu langkah tool dan teks. */
 @Composable
 fun AssistantMessageRow(
     item: ChatItem.Assistant,
@@ -227,13 +288,27 @@ fun AssistantMessageRow(
 ) {
     val colors = AiosTheme.colors
     var menuOpen by remember { mutableStateOf(false) }
-    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Tokens.Space.s8)) {
-        if (item.role != null || item.model != null || item.canModify) {
+    val cardShape = RoundedCornerShape(Tokens.Radius.lg)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(colors.surface, cardShape)
+            .border(Hairline, colors.border, cardShape)
+            .padding(Tokens.Space.s12),
+        verticalArrangement = Arrangement.spacedBy(Tokens.Space.s8)
+    ) {
+        run {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(Tokens.Space.s8),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                BotAvatar(item.streaming)
+                Text(
+                    text = stringResource(R.string.chat_assistant_name),
+                    style = AiosTheme.type.ui.copy(fontWeight = FontWeight.SemiBold),
+                    color = colors.text
+                )
                 item.role?.let { role ->
                     val name = roleName(role)
                     val description = stringResource(R.string.chat_role_label, name)
