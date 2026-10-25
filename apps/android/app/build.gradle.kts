@@ -26,8 +26,8 @@ android {
         applicationId = "app.aios.android"
         minSdk = 26
         targetSdk = 36
-        // CI mengisi keduanya: versionCode naik di setiap build (Android hanya memasang menimpa bila kodenya lebih
-        // tinggi), versionName dari tag rilis. Build lokal memakai nilai bawaan.
+        // CI (build.yml) mengisi keduanya dari versi rilis: versionCode = mayor*1.000.000 + minor*1.000 + patch, jadi
+        // selalu naik (Android hanya memasang menimpa bila kodenya lebih tinggi). Build lokal memakai nilai bawaan.
         versionCode = providers.gradleProperty("aiosVersionCode").orNull?.toInt() ?: 100
         versionName = providers.gradleProperty("aiosVersionName").getOrElse("1.0.3")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

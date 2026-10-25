@@ -1,10 +1,11 @@
 #!/usr/bin/env node
-// Menyiapkan rilis: menaikkan versi di semua tempat, commit, lalu membuat tag vX.Y.Z.
+// Rilis dengan versi pilihan sendiri (mis. lompatan minor/mayor). Rilis patch biasa tidak perlu skrip ini: setiap push
+// ke main sudah menaikkan versi otomatis (.github/workflows/build.yml). Skrip ini menaikkan versi di semua tempat,
+// commit, lalu membuat tag vX.Y.Z yang dipakai build.yml untuk commit itu; versi otomatis berikutnya melanjutkannya.
 //   node infra/scripts/release.mjs 1.0.1           # commit + tag (lokal)
 //   node infra/scripts/release.mjs 1.0.1 --push    # sekaligus push commit dan tag (memicu build rilis di CI)
 //   node infra/scripts/release.mjs 1.0.1 --dry-run # hanya menampilkan perubahan
-// Tag v* memicu build-desktop.yml (installer + latest.json untuk auto-update) dan build-android.yml
-// (APK bertanda tangan). Versi baru harus lebih tinggi dari rilis sebelumnya agar terpasang menimpa.
+// Versi baru harus lebih tinggi dari rilis sebelumnya agar terpasang menimpa.
 import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -93,9 +94,9 @@ git('tag', '-a', tag, '-m', `Rilis ${tag}`);
 console.log(`OK: ${current} -> ${version}, tag ${tag} dibuat.`);
 if (push) {
   const branch = git('rev-parse', '--abbrev-ref', 'HEAD');
-  git('push', 'origin', branch);
-  git('push', 'origin', tag);
+  // Atomik: branch dan tag tiba bersamaan, jadi build.yml (dipicu push ke main) langsung melihat tag di commit ini.
+  git('push', '--atomic', 'origin', branch, tag);
   console.log(`Didorong: ${branch} dan ${tag}. Build rilis berjalan di GitHub Actions.`);
 } else {
-  console.log(`Belum didorong. Jalankan: git push origin HEAD && git push origin ${tag}`);
+  console.log(`Belum didorong. Jalankan: git push --atomic origin HEAD ${tag}`);
 }

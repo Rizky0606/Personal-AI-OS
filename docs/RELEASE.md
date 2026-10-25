@@ -18,7 +18,7 @@ Kunci bisa dibuat sekali di PC pengembang ke `secrets/release/` (di-ignore git):
 
 ## 2. Windows: installer dan auto-update
 
-- Tag `v*` memicu `.github/workflows/build-desktop.yml`: menyuntikkan kunci publik dan versi lewat `tauri.release.conf.json` (tidak di-commit), membangun installer NSIS berisi sidecar worker, menandatanganinya, menyusun `latest.json`, dan membuat rilis **draf**.
+- `.github/workflows/build.yml` (job `desktop`): di setiap push ke `main` menyuntikkan kunci publik dan versi lewat `tauri.release.conf.json` (tidak di-commit), membangun installer NSIS berisi sidecar worker, menandatanganinya, dan menyusun `latest.json`. Job `rilis` menerbitkannya (bukan draf) setelah build Android juga lulus. Build PR tidak membawa updater dan tidak dirilis.
 - `tauri.conf.json` berisi placeholder `GANTI-DENGAN-KUNCI-PUBLIK-UPDATER`; build lokal tanpa overlay tidak bisa memeriksa pembaruan (hanya menampilkan galat), dan itu disengaja.
 - Pengaturan, bagian Pembaruan aplikasi: tombol Periksa pembaruan, lalu Pasang dan mulai ulang.
 - **Repo publik (saat ini):** updater mengunduh `latest.json` dan installer dari `releases/latest` tanpa kredensial. Bila repo dijadikan privat, klien tidak bisa lagi membacanya: terbitkan artefak rilis ke repo publik terpisah atau host sendiri, lalu ganti `endpoints` di overlay.
@@ -26,8 +26,8 @@ Kunci bisa dibuat sekali di PC pengembang ke `secrets/release/` (di-ignore git):
 
 ## 3. Android
 
-- `build-android.yml` membangun APK debug dan, bila secret keystore ada, APK release bertanda tangan di setiap push ke `main` dan setiap tag. Pasang **APK release**: kuncinya tetap, jadi terpasang menimpa versi sebelumnya. APK debug ditandatangani kunci acak per runner CI dan tidak bisa menimpa APK dari build lain (harus uninstall).
-- `versionCode` = 1000 + nomor run workflow (selalu naik); `versionName` = versi tag, atau `<versi>-dev.<run>` untuk build `main`.
+- `build.yml` (job `android`, paralel dengan `desktop`) membangun APK debug dan, bila secret keystore ada, APK release bertanda tangan. Pasang **APK release**: kuncinya tetap, jadi terpasang menimpa versi sebelumnya. APK debug ditandatangani kunci acak per runner CI dan tidak bisa menimpa APK dari build lain (harus uninstall).
+- `versionName` = versi rilis (PR: `<versi terakhir>-pr.<nomor>`); `versionCode` = mayor × 1.000.000 + minor × 1.000 + patch, jadi selalu naik mengikuti versi.
 
 ## 4. Gateway di VPS
 
@@ -47,9 +47,14 @@ pnpm --filter @aios/e2e android    # Android: butuh emulator/perangkat (adb devi
 
 ## 6. Urutan rilis
 
-1. Semua secret di bagian 1 sudah diisi di GitHub (tanpa secret Tauri, build desktop pada tag gagal dengan pesan jelas).
-2. `node infra/scripts/release.mjs X.Y.Z --push` di branch `main` yang bersih: menaikkan versi di `tauri.conf.json`, `Cargo.toml`, dan `build.gradle.kts`, memberi tanggal di CHANGELOG, commit `chore(release): vX.Y.Z`, lalu push commit dan tag. Versi harus lebih tinggi dari tag sebelumnya. `--dry-run` untuk melihat dulu.
-3. Tunggu GitHub Actions, buka rilis **draf** `vX.Y.Z`, periksa berkasnya (installer `.exe`, `.sig`, `latest.json`, APK), lalu **Publish**. Auto-update membaca `releases/latest`, jadi rilis draf belum terlihat oleh aplikasi.
-4. `infra/scripts/deploy.sh --ref vX.Y.Z` di VPS.
+Rilis berjalan otomatis (`.github/workflows/build.yml`):
+
+1. **Setiap push ke `main`** (termasuk PR yang di-merge), kecuali push yang hanya mengubah `*.md` atau `docs/`: job `versi` menghitung versi berikutnya (patch +1 dari tag `vX.Y.Z` terakhir), job `desktop` dan `android` berjalan **paralel**, lalu job `rilis` membuat tag dan menerbitkan rilis berisi installer, `.sig`, `latest.json`, dan APK. Aplikasi Windows melihatnya lewat Pengaturan, Pembaruan aplikasi. Bila salah satu build gagal, tidak ada tag atau rilis, dan nomor versi dipakai lagi oleh push berikutnya.
+2. **Pull request**: `desktop` dan `android` dibangun paralel sebagai artefak uji (versi `<terakhir>-pr.<nomor>`), tanpa rilis.
+3. Rilis berurutan: push yang berdekatan mengantre (concurrency `rilis-main`) supaya tidak berebut nomor versi.
+4. **Lompatan minor/mayor**: `node infra/scripts/release.mjs X.Y.Z --push` di `main` yang bersih (menaikkan versi di `tauri.conf.json`, `Cargo.toml`, `build.gradle.kts`, CHANGELOG, lalu push commit dan tag secara atomik). `build.yml` memakai tag itu untuk commit tersebut, dan versi otomatis berikutnya melanjutkan dari sana. `--dry-run` untuk melihat dulu.
+5. Gateway tidak ikut dirilis otomatis: `infra/scripts/deploy.sh --ref vX.Y.Z` di VPS bila ada perubahan server.
+
+Semua secret di bagian 1 wajib ada; tanpa secret Tauri, job `desktop` di `main` gagal dengan pesan jelas dan tidak ada rilis.
 
 Aplikasi Windows yang dipasang dari build `main` (bukan tag) tidak membawa kunci publik updater: pasang installer rilis sekali secara manual, setelah itu pembaruan berikutnya lewat Pengaturan, Pembaruan aplikasi.
