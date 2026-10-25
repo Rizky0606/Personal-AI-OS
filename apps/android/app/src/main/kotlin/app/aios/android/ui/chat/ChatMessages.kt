@@ -14,6 +14,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.height
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.remember
@@ -40,7 +41,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import app.aios.android.R
 import androidx.compose.foundation.border
 import androidx.compose.ui.text.font.FontWeight
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import java.time.Instant
+import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import app.aios.android.data.api.MessagePart
@@ -363,6 +370,35 @@ fun AssistantMessageRow(
             }
         }
         if (item.streaming && item.text.isNotEmpty()) TypingDots()
+        if (!item.streaming) CodeZipButton(item.text)
+    }
+}
+
+/** Unduh semua blok kode di jawaban sebagai satu zip lewat dialog simpan sistem; tidak tampil tanpa blok kode. */
+@Composable
+private fun CodeZipButton(text: String) {
+    val files = remember(text) { CodeArchive.extract(text) }
+    if (files.isEmpty()) return
+    val context = LocalContext.current
+    val saved = stringResource(R.string.chat_zip_saved)
+    val failed = stringResource(R.string.chat_zip_failed)
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val ok = runCatching {
+            context.contentResolver.openOutputStream(uri)?.use { it.write(CodeArchive.zip(files)) } ?: error("stream")
+        }.isSuccess
+        Toast.makeText(context, if (ok) saved else failed, Toast.LENGTH_SHORT).show()
+    }
+    Box(Modifier.fillMaxWidth().height(Hairline).background(AiosTheme.colors.border))
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+        AiosButton(
+            text = pluralStringResource(R.plurals.chat_zip_download, files.size, files.size),
+            onClick = {
+                val stamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmm"))
+                launcher.launch("kode-$stamp.zip")
+            },
+            leadingIcon = { AiosIcon(R.drawable.ic_download, contentDescription = null) }
+        )
     }
 }
 

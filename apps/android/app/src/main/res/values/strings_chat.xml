@@ -44,6 +44,12 @@
     <string name="chat_resend_last">Kirim ulang</string>
     <string name="chat_message_menu">Menu pesan</string>
     <string name="chat_assistant_name">Personal AI</string>
+    <plurals name="chat_zip_download">
+        <item quantity="one">Unduh berkas (ZIP)</item>
+        <item quantity="other">Unduh %d berkas (ZIP)</item>
+    </plurals>
+    <string name="chat_zip_saved">ZIP tersimpan</string>
+    <string name="chat_zip_failed">Gagal menyimpan ZIP</string>
     <string name="chat_sent">Terkirim</string>
     <string name="chat_welcome_title">Mau mengerjakan apa hari ini?</string>
     <string name="chat_welcome_subtitle">Tulis di bawah atau mulai dari salah satu saran. Role dipilih otomatis.</string>
