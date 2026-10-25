@@ -4,6 +4,12 @@
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
+/**
+ * Nama aset seperti yang disimpan GitHub Releases: karakter selain huruf, angka, `.`, `_`, `-`, dan `+` (termasuk
+ * spasi) diganti titik. "Personal AI OS_1.0.4_x64-setup.exe" menjadi "Personal.AI.OS_1.0.4_x64-setup.exe".
+ */
+export const githubAssetName = (name) => name.replace(/[^A-Za-z0-9._+-]/g, '.');
+
 export function buildLatest({ version, repo, installer, signature, notes = '', now = new Date() }) {
   if (!/^\d+\.\d+\.\d+(-[\w.]+)?$/.test(version)) throw new Error(`versi tidak valid: ${version}`);
   if (!signature.trim()) throw new Error('tanda tangan kosong');
@@ -14,7 +20,8 @@ export function buildLatest({ version, repo, installer, signature, notes = '', n
     platforms: {
       'windows-x86_64': {
         signature: signature.trim(),
-        url: `https://github.com/${repo}/releases/download/v${version}/${encodeURIComponent(installer)}`,
+        // Nama aset versi GitHub, bukan nama berkas lokal: tanpa ini URL berisi %20 dan updater mendapat 404.
+        url: `https://github.com/${repo}/releases/download/v${version}/${encodeURIComponent(githubAssetName(installer))}`,
       },
     },
   };
