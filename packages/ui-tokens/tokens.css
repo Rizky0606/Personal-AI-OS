@@ -2,20 +2,20 @@
 
 :root {
   color-scheme: light;
-  --aios-bg: oklch(0.985 0.002 90);
+  --aios-bg: oklch(0.978 0.006 255.5);
   --aios-surface: oklch(1 0 0);
-  --aios-surface-2: oklch(0.965 0.003 90);
-  --aios-border: oklch(0.91 0.004 90);
-  --aios-border-strong: oklch(0.84 0.005 90);
-  --aios-text: oklch(0.22 0.01 90);
-  --aios-text-2: oklch(0.45 0.01 90);
-  --aios-text-3: oklch(0.54 0.008 90);
-  --aios-accent: oklch(0.58 0.165 45);
-  --aios-accent-soft: oklch(0.95 0.04 45);
-  --aios-success: oklch(0.6 0.13 150);
-  --aios-warning: oklch(0.75 0.15 80);
-  --aios-danger: oklch(0.58 0.19 27);
-  --aios-info: oklch(0.6 0.12 240);
+  --aios-surface-2: oklch(0.959 0.01 252.8);
+  --aios-border: oklch(0.904 0.016 253.9);
+  --aios-border-strong: oklch(0.826 0.024 256.1);
+  --aios-text: oklch(0.208 0.04 265.8);
+  --aios-text-2: oklch(0.446 0.037 257.3);
+  --aios-text-3: oklch(0.524 0.037 258.4);
+  --aios-accent: oklch(0.52 0.094 223.1);
+  --aios-accent-soft: oklch(0.944 0.034 215);
+  --aios-success: oklch(0.508 0.105 165.6);
+  --aios-warning: oklch(0.626 0.125 70.4);
+  --aios-danger: oklch(0.505 0.19 27.5);
+  --aios-info: oklch(0.511 0.086 186.4);
   --aios-shadow-float: 0 4px 16px oklch(0 0 0 / 0.12);
   --aios-space-4: 4px;
   --aios-space-8: 8px;
@@ -45,40 +45,40 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     color-scheme: dark;
-    --aios-bg: oklch(0.17 0.005 90);
-    --aios-surface: oklch(0.2 0.005 90);
-    --aios-surface-2: oklch(0.24 0.006 90);
-    --aios-border: oklch(0.3 0.006 90);
-    --aios-border-strong: oklch(0.38 0.006 90);
-    --aios-text: oklch(0.94 0.005 90);
-    --aios-text-2: oklch(0.72 0.006 90);
-    --aios-text-3: oklch(0.62 0.006 90);
-    --aios-accent: oklch(0.72 0.15 50);
-    --aios-accent-soft: oklch(0.3 0.06 45);
-    --aios-success: oklch(0.72 0.13 150);
-    --aios-warning: oklch(0.8 0.14 80);
-    --aios-danger: oklch(0.68 0.17 27);
-    --aios-info: oklch(0.72 0.11 240);
+    --aios-bg: oklch(0.19 0.041 265.5);
+    --aios-surface: oklch(0.225 0.039 266);
+    --aios-surface-2: oklch(0.287 0.037 266.5);
+    --aios-border: oklch(0.328 0.039 270);
+    --aios-border-strong: oklch(0.407 0.039 259.9);
+    --aios-text: oklch(0.915 0.038 272.5);
+    --aios-text-2: oklch(0.827 0.015 218.1);
+    --aios-text-3: oklch(0.68 0.025 250.2);
+    --aios-accent: oklch(0.817 0.124 215.7);
+    --aios-accent-soft: oklch(0.328 0.053 227.4);
+    --aios-success: oklch(0.809 0.15 162.3);
+    --aios-warning: oklch(0.843 0.141 85.5);
+    --aios-danger: oklch(0.838 0.089 26.8);
+    --aios-info: oklch(0.811 0.123 182.5);
     --aios-shadow-float: 0 4px 16px oklch(0 0 0 / 0.5);
   }
 }
 
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --aios-bg: oklch(0.17 0.005 90);
-  --aios-surface: oklch(0.2 0.005 90);
-  --aios-surface-2: oklch(0.24 0.006 90);
-  --aios-border: oklch(0.3 0.006 90);
-  --aios-border-strong: oklch(0.38 0.006 90);
-  --aios-text: oklch(0.94 0.005 90);
-  --aios-text-2: oklch(0.72 0.006 90);
-  --aios-text-3: oklch(0.62 0.006 90);
-  --aios-accent: oklch(0.72 0.15 50);
-  --aios-accent-soft: oklch(0.3 0.06 45);
-  --aios-success: oklch(0.72 0.13 150);
-  --aios-warning: oklch(0.8 0.14 80);
-  --aios-danger: oklch(0.68 0.17 27);
-  --aios-info: oklch(0.72 0.11 240);
+  --aios-bg: oklch(0.19 0.041 265.5);
+  --aios-surface: oklch(0.225 0.039 266);
+  --aios-surface-2: oklch(0.287 0.037 266.5);
+  --aios-border: oklch(0.328 0.039 270);
+  --aios-border-strong: oklch(0.407 0.039 259.9);
+  --aios-text: oklch(0.915 0.038 272.5);
+  --aios-text-2: oklch(0.827 0.015 218.1);
+  --aios-text-3: oklch(0.68 0.025 250.2);
+  --aios-accent: oklch(0.817 0.124 215.7);
+  --aios-accent-soft: oklch(0.328 0.053 227.4);
+  --aios-success: oklch(0.809 0.15 162.3);
+  --aios-warning: oklch(0.843 0.141 85.5);
+  --aios-danger: oklch(0.838 0.089 26.8);
+  --aios-info: oklch(0.811 0.123 182.5);
   --aios-shadow-float: 0 4px 16px oklch(0 0 0 / 0.5);
 }
 
@@ -118,9 +118,9 @@
   --text-page--line-height: 1.25;
   --text-page--font-weight: 600;
   --spacing: 4px;
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 10px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
   --shadow-float: var(--aios-shadow-float);
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
 }

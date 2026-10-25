@@ -19,8 +19,8 @@ describe('tokens.json', () => {
     expect(tokens.space).toEqual([4, 8, 12, 16, 20, 24, 32, 40, 48]);
   });
 
-  it('radius desktop 4/6/10 dan Android 8/12/16; gerak 120/180/240 ms', () => {
-    expect(tokens.radius.desktop).toEqual({ sm: 4, md: 6, lg: 10 });
+  it('radius desktop 6/8/16 dan Android 8/12/16; gerak 120/180/240 ms', () => {
+    expect(tokens.radius.desktop).toEqual({ sm: 6, md: 8, lg: 16 });
     expect(tokens.radius.android).toEqual({ sm: 8, md: 12, lg: 16 });
     expect(tokens.motion.duration).toEqual({ fast: 120, base: 180, slow: 240, emphasis: 320 });
     // Pegas ringan: overshoot kecil (y1 sedikit di atas 1), bukan pantulan.
@@ -127,7 +127,6 @@ describe('kontras WCAG AA', () => {
    * `min` adalah ambang yang tidak tercapai (4.5 untuk teks, 3 untuk non-teks).
    */
   const KNOWN_FAILURES: { theme: 'light' | 'dark'; fg: ColorName; bg: ColorName; min: number }[] = [
-    { theme: 'light', fg: 'warning', bg: 'surface', min: 3 },
     { theme: 'dark', fg: 'text', bg: 'accent', min: 4.5 },
   ];
 
@@ -140,14 +139,14 @@ describe('kontras WCAG AA', () => {
 });
 
 describe('gamut sRGB', () => {
-  it('semua warna di dalam gamut kecuali accent-soft terang (dipotong ke sRGB)', () => {
+  it('semua warna di dalam gamut sRGB (palet Electric Slate diambil dari hex)', () => {
     const outside: string[] = [];
     for (const theme of ['light', 'dark'] as const) {
       for (const n of COLOR_NAMES) {
         if (!inSrgbGamut(tokens.color[theme][n])) outside.push(`${theme}.${n}`);
       }
     }
-    expect(outside).toEqual(['light.accent-soft']);
+    expect(outside).toEqual([]);
   });
 });
 
@@ -168,7 +167,7 @@ describe('file hasil generate', () => {
     expect(css).toContain('--color-accent: var(--aios-accent);');
     expect(css).toContain("--font-sans: 'IBM Plex Sans', sans-serif;");
     expect(css).toContain('--ease-standard: cubic-bezier(0.2, 0, 0, 1);');
-    expect(css).toContain('--aios-accent: oklch(0.72 0.15 50);');
+    expect(css).toContain('--aios-accent: oklch(0.817 0.124 215.7);');
   });
 
   it('Tokens.kt memuat warna hex hasil konversi, dp, sp, dan easing', () => {

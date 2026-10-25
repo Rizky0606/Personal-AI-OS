@@ -1,11 +1,11 @@
 # Design System — Personal AI OS
 
-Arah visualnya: alat kerja yang hidup tapi tetap rapi, padat informasi, dan presisi, seperti editor kode yang rapi, bukan halaman pemasaran. Netral hangat sebagai dasar, satu aksen oranye bara, tipografi IBM Plex, dan batas tipis sebagai pengganti bayangan. Sejak pembaruan tampilan pasca 1.0.1 (pilihan pemilik: "hidup tapi tetap rapi"), aksen boleh bercahaya dan bergradien satu warna di titik-titik penting, dan gerak boleh sedikit memegas; lihat bagian Efek.
+Arah visualnya: alat kerja yang hidup tapi tetap rapi, padat informasi, dan presisi, seperti editor kode yang rapi, bukan halaman pemasaran. Palet **Electric Slate** (referensi pemilik "Electric Cyberpunk Slate"): navy slate sebagai dasar, satu aksen cyan elektrik, teal dan emerald untuk informasi dan status, tipografi IBM Plex, dan batas tipis sebagai pengganti bayangan. Sejak pembaruan tampilan pasca 1.0.1 (pilihan pemilik: "hidup tapi tetap rapi"), aksen boleh bercahaya dan bergradien satu warna di titik-titik penting, dan gerak boleh sedikit memegas; lihat bagian Efek.
 
 ## Prinsip
 
 1. **Konten dulu.** Teks chat, diff, dan kode adalah tokoh utama. Chrome UI mundur.
-2. **Satu aksen.** Oranye hanya untuk aksi utama, fokus, dan status sedang berjalan. Maksimal satu elemen beraksen kuat per layar.
+2. **Satu aksen.** Cyan hanya untuk aksi utama, fokus, dan status sedang berjalan. Maksimal satu elemen beraksen kuat per layar.
 3. **Struktur dari garis, bukan kartu.** Panel dipisah border 1px. Bayangan hanya untuk elemen melayang (menu, dialog, toast).
 4. **Padat tapi lega.** Desktop memakai baris 32px dan teks 13px. Android memakai target sentuh 48dp.
 5. **Setiap state didesain.** Kosong, memuat, error, offline, dan tanpa izin wajib punya tampilan.
@@ -14,7 +14,7 @@ Arah visualnya: alat kerja yang hidup tapi tetap rapi, padat informasi, dan pres
 
 | Jangan | Gantinya |
 | --- | --- |
-| Gradien ungu-biru, gradien multiwarna, teks bergradien, latar blob | Latar netral polos; gradien hanya satu warna aksen (oranye) di tombol primer, item aktif, dan cahaya layar sambutan |
+| Gradien ungu-biru, gradien multiwarna, teks bergradien, latar blob | Latar netral polos; gradien hanya satu warna aksen (cyan) di tombol primer, item aktif, dan cahaya layar sambutan |
 | Glassmorphism dan blur dekoratif | Permukaan solid dengan border tipis |
 | Kartu membulat besar dengan bayangan di mana-mana | Daftar dan panel bergaris, radius kecil; bayangan lembut hanya saat kartu interaktif di-hover (terangkat 1–2px) |
 | Ikon kilau dan emoji di UI | Ikon Lucide garis 1.5, hanya bila memperjelas |
@@ -27,24 +27,24 @@ Arah visualnya: alat kerja yang hidup tapi tetap rapi, padat informasi, dan pres
 
 ## Token warna (OKLCH)
 
-Nilai di bawah adalah titik awal. Kontras wajib diverifikasi minimal WCAG AA saat implementasi.
+Sumber tunggal: `packages/ui-tokens/tokens.json` (dibangkitkan ke CSS dan Kotlin). Tema gelap diambil dari hex referensi (bg `#0b1326`, aksen `#4cd7f6`, teal `#4fdbc8`, emerald `#4edea3`); tema terang diturunkan dari palet yang sama dengan cyan lebih gelap (`#0e7490`) agar teks putih di atas aksen tetap AA. Kontras diuji otomatis (`tokens.test.ts`).
 
 | Token | Terang | Gelap | Dipakai untuk |
 | --- | --- | --- | --- |
-| `bg` | oklch(0.985 0.002 90) | oklch(0.17 0.005 90) | Latar aplikasi |
-| `surface` | oklch(1 0 0) | oklch(0.20 0.005 90) | Panel, editor, daftar |
-| `surface-2` | oklch(0.965 0.003 90) | oklch(0.24 0.006 90) | Hover, pesan pengguna, header blok kode |
-| `border` | oklch(0.91 0.004 90) | oklch(0.30 0.006 90) | Pemisah panel dan field |
-| `border-strong` | oklch(0.84 0.005 90) | oklch(0.38 0.006 90) | Field aktif, pemisah penting |
-| `text` | oklch(0.22 0.01 90) | oklch(0.94 0.005 90) | Teks utama |
-| `text-2` | oklch(0.45 0.01 90) | oklch(0.72 0.006 90) | Teks sekunder, label |
-| `text-3` | oklch(0.54 0.008 90) | oklch(0.62 0.006 90) | Meta, placeholder |
-| `accent` | oklch(0.58 0.165 45) | oklch(0.72 0.15 50) | Aksi utama, fokus, sedang berjalan |
-| `accent-soft` | oklch(0.95 0.04 45) | oklch(0.30 0.06 45) | Latar chip aktif, seleksi |
-| `success` | oklch(0.60 0.13 150) | oklch(0.72 0.13 150) | Selesai, tes lulus, baris tambah di diff |
-| `warning` | oklch(0.75 0.15 80) | oklch(0.80 0.14 80) | Butuh izin, kuota menipis |
-| `danger` | oklch(0.58 0.19 27) | oklch(0.68 0.17 27) | Error, gagal, baris hapus di diff |
-| `info` | oklch(0.60 0.12 240) | oklch(0.72 0.11 240) | Link, catatan |
+| `bg` | oklch(0.978 0.006 255.5) | oklch(0.19 0.041 265.5) | Latar aplikasi |
+| `surface` | oklch(1 0 0) | oklch(0.225 0.039 266) | Panel, kartu jawaban AI, daftar |
+| `surface-2` | oklch(0.959 0.01 252.8) | oklch(0.287 0.037 266.5) | Hover, gelembung pengguna, header blok kode |
+| `border` | oklch(0.904 0.016 253.9) | oklch(0.328 0.039 270) | Pemisah panel dan field |
+| `border-strong` | oklch(0.826 0.024 256.1) | oklch(0.407 0.039 259.9) | Field aktif, pemisah penting |
+| `text` | oklch(0.208 0.04 265.8) | oklch(0.915 0.038 272.5) | Teks utama |
+| `text-2` | oklch(0.446 0.037 257.3) | oklch(0.827 0.015 218.1) | Teks sekunder, label |
+| `text-3` | oklch(0.524 0.037 258.4) | oklch(0.68 0.025 250.2) | Meta, placeholder, jam pesan |
+| `accent` | oklch(0.52 0.094 223.1) | oklch(0.817 0.124 215.7) | Aksi utama, fokus, sedang berjalan (cyan elektrik) |
+| `accent-soft` | oklch(0.944 0.034 215) | oklch(0.328 0.053 227.4) | Latar chip role, seleksi |
+| `success` | oklch(0.508 0.105 165.6) | oklch(0.809 0.15 162.3) | Selesai, status online, baris tambah di diff (emerald) |
+| `warning` | oklch(0.626 0.125 70.4) | oklch(0.843 0.141 85.5) | Butuh izin, kuota menipis |
+| `danger` | oklch(0.505 0.19 27.5) | oklch(0.838 0.089 26.8) | Error, gagal, baris hapus di diff |
+| `info` | oklch(0.511 0.086 186.4) | oklch(0.811 0.123 182.5) | Link, catatan (teal) |
 
 Tema mengikuti sistem secara default, dengan pilihan manual terang atau gelap. Android tidak memakai dynamic color Material You secara default agar identitas tetap konsisten.
 
@@ -67,7 +67,7 @@ Tema mengikuti sistem secara default, dengan pilihan manual terang atau gelap. A
 ## Spasi, radius, elevasi, gerak
 
 - **Spasi:** kelipatan 4: 4, 8, 12, 16, 20, 24, 32, 40, 48.
-- **Radius:** 4 (badge, chip), 6 (tombol, input), 10 (panel, dialog). Bulat penuh hanya untuk avatar dan titik status. Android: 8, 12, 16 dp.
+- **Radius:** 6 (badge), 8 (tombol, input), 16 (panel, kartu, dialog). Bulat penuh untuk chip role, titik status, dan avatar. Android: 8, 12, 16 dp.
 - **Elevasi:** satu token bayangan untuk menu, popover, dialog, toast. Panel tidak berbayang.
 - **Gerak:** 120 ms untuk hover dan tekan, 180 ms untuk panel, 240 ms untuk dialog dan sheet, 320 ms (`emphasis`) untuk animasi masuk yang menonjol. Kurva `cubic-bezier(0.2, 0, 0, 1)`; pegas ringan `cubic-bezier(0.34, 1.32, 0.64, 1)` untuk elemen yang muncul. Saat `prefers-reduced-motion`, hanya fade.
 - **Efek:** cahaya aksen (`glow`, bayangan berwarna aksen transparan) untuk tombol primer saat hover, item aktif, indikator sedang menulis, dan cahaya layar sambutan; gradien satu warna aksen; kartu interaktif terangkat dengan bayangan lembut saat hover. Tetap dilarang: blur kaca, gradien multiwarna, partikel, dan efek yang terus bergerak di area kerja selain indikator status.
@@ -93,12 +93,12 @@ Tema mengikuti sistem secara default, dengan pilihan manual terang atau gelap. A
 
 | Komponen | Aturan |
 | --- | --- |
-| Pesan asisten | Tanpa gelembung. Teks penuh lebar sampai 72 karakter. Chip role dan model kecil di atasnya |
-| Pesan pengguna | Blok `surface-2`, rata kanan, radius 10 |
+| Pesan asisten | Kartu `surface` berbingkai, radius 16. Header: avatar bot dengan titik status (emerald selesai, cyan berdenyut saat menulis), nama "Personal AI", chip role, model mono. Teks sampai 72 karakter |
+| Pesan pengguna | Gelembung `surface-2` rata kanan, radius 16 dengan sudut kanan atas kecil; jam kirim mono dan tanda terkirim di bawah teks |
 | Langkah tool | Satu baris mono yang bisa dibuka: ikon, nama tool, target, status, durasi |
 | Blok kode | Header berisi bahasa atau path file plus tombol salin; isi mono 12–13 px |
 | Permintaan izin | Panel inline berwarna `warning`, berisi perintah persis, tombol Izinkan sekali, Selalu untuk project ini, Tolak |
-| Chip role | Teks kecil + titik warna netral; klik membuka pemilih role |
+| Chip role | Pil `accent-soft` dengan titik (cyan berdenyut saat menulis); klik pada jawaban terakhir membuka koreksi role |
 | Kartu kanban | Judul, chip role, titik status, branch, diff stat mono (+12 −3) |
 | Diff | Tampilan split atau unified, komentar per baris, tombol Terima dan Tolak per file dan semua |
 | Toast | Pojok kanan bawah, 4 detik, maksimal 3 bertumpuk |

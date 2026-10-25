@@ -2,6 +2,16 @@
 
 Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/); versi mengikuti [SemVer](https://semver.org/lang/id/).
 
+## [1.0.3] - belum dirilis
+
+### Diubah
+
+- Palet baru **Electric Slate** (navy slate, aksen cyan elektrik, teal, dan emerald) di desktop dan Android, tema gelap dan terang; kontras teks tetap WCAG AA.
+- Jawaban AI tampil dalam kartu dengan avatar bot dan titik status, nama, chip role berbentuk pil, dan model; gelembung pengguna menampilkan jam kirim dan tanda terkirim; logo di rail desktop.
+- Sudut lebih bulat (kartu 16 px, kontrol 8 px) dan ikon aplikasi navy-cyan.
+- Action GitHub diperbarui ke versi Node 24; runner dikunci ke Ubuntu 24.04.
+- Backup: dump database tanpa kompresi internal (restic dedup + zstd max) dan retensi 31 hari.
+
 ## [1.0.2] - 2026-10-24
 
 ### Diubah
