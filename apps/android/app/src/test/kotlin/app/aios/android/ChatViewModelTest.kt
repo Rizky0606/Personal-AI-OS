@@ -517,6 +517,16 @@ class ChatViewModelTest {
     }
 
     @Test
+    fun `chat dari ruang membuat percakapan di ruang itu saat pesan pertama`() = runVmTest { r ->
+        r.vm.openInSpace("s1", "Kontrak")
+        assertEquals("Kontrak", r.ui.newInSpace?.name)
+        r.vm.onDraft("Berapa denda?")
+        r.vm.send()
+        runCurrent()
+        assertEquals(listOf<String?>("s1"), r.repo.createdInSpace)
+    }
+
+    @Test
     fun `dipanggil sebagai asisten - chat baru dan permintaan suara sekali pakai`() = runVmTest { r ->
         openC1(r)
         r.vm.open(null)

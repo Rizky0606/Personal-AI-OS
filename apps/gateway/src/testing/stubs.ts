@@ -29,6 +29,18 @@ export const unusedCompare: AppDeps['compare'] = { run: unused('compare.run') };
 
 export const unusedStatus: AppDeps['status'] = { get: unused('status.get') };
 
+export const unusedSpaces: AppDeps['spaces'] = {
+  list: unused('spaces.list'),
+  create: unused('spaces.create'),
+  update: unused('spaces.update'),
+  remove: unused('spaces.remove'),
+  documents: unused('spaces.documents'),
+  addDocument: unused('spaces.addDocument'),
+  removeDocument: unused('spaces.removeDocument'),
+  exists: unused('spaces.exists'),
+  contextFor: unused('spaces.contextFor'),
+};
+
 export const unusedMemory: AppDeps['memory'] = {
   list: unused('memory.list'),
   create: unused('memory.create'),

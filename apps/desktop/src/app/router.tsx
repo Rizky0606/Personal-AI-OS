@@ -18,6 +18,8 @@ import { SettingsScreen } from '../screens/SettingsScreen';
 import { ScheduleDetailScreen } from '../schedules/ScheduleDetailScreen';
 import { SchedulesScreen } from '../schedules/SchedulesScreen';
 import { Shell } from '../shell/Shell';
+import { SpaceDetailScreen } from '../spaces/SpaceDetailScreen';
+import { SpacesScreen } from '../spaces/SpacesScreen';
 
 const rootRoute = createRootRoute({ component: Shell });
 
@@ -29,6 +31,11 @@ function ChatRoute() {
 function ResearchRoute() {
   const { researchId } = useParams({ from: '/research/$researchId' });
   return <ResearchDetailScreen researchId={researchId} />;
+}
+
+function SpaceRoute() {
+  const { spaceId } = useParams({ from: '/spaces/$spaceId' });
+  return <SpaceDetailScreen spaceId={spaceId} />;
 }
 
 function ScheduleRoute() {
@@ -61,6 +68,8 @@ const routes = [
     path: '/research/$researchId',
     component: ResearchRoute,
   }),
+  createRoute({ getParentRoute: () => rootRoute, path: '/spaces', component: SpacesScreen }),
+  createRoute({ getParentRoute: () => rootRoute, path: '/spaces/$spaceId', component: SpaceRoute }),
   createRoute({ getParentRoute: () => rootRoute, path: '/settings', component: SettingsScreen }),
   createRoute({ getParentRoute: () => rootRoute, path: '/quota', component: QuotaScreen }),
   createRoute({ getParentRoute: () => rootRoute, path: '/status', component: StatusScreen }),

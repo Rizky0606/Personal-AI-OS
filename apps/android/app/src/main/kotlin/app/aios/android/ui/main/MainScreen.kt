@@ -68,6 +68,8 @@ import app.aios.android.ui.components.AiosIcon
 import app.aios.android.ui.components.AiosSnackbarHost
 import app.aios.android.ui.components.Hairline
 import app.aios.android.ui.memory.MemoryScreen
+import app.aios.android.ui.spaces.SpaceDetailScreen
+import app.aios.android.ui.spaces.SpaceListScreen
 import app.aios.android.ui.settings.SettingsScreen
 import app.aios.android.ui.theme.AiosTheme
 import app.aios.ui.tokens.Tokens
@@ -80,6 +82,8 @@ private object Routes {
     const val SCHEDULES = "schedules"
     const val SCHEDULE_NEW = "schedules/new"
     const val SCHEDULE_DETAIL = "schedules/{id}"
+    const val SPACES = "spaces"
+    const val SPACE_DETAIL = "spaces/{id}"
     const val SETTINGS = "settings"
     const val MEMORY = "settings/memory"
 }
@@ -89,7 +93,8 @@ private data class Tab(val route: String, @StringRes val label: Int, @DrawableRe
 private val tabs = listOf(
     Tab(Routes.CHAT, R.string.nav_chat, R.drawable.ic_chat),
     Tab(Routes.RESEARCH, R.string.nav_research, R.drawable.ic_research),
-    Tab(Routes.SCHEDULES, R.string.nav_schedules, R.drawable.ic_schedule)
+    Tab(Routes.SCHEDULES, R.string.nav_schedules, R.drawable.ic_schedule),
+    Tab(Routes.SPACES, R.string.nav_spaces, R.drawable.ic_library)
 )
 
 /** Kerangka setelah login: top bar dengan ikon Pengaturan, konten, dan bottom nav 3 tab. */
@@ -269,6 +274,26 @@ fun MainScreen(online: Boolean, sessionKey: String, link: AppLink?, onLinkConsum
                             onClosed = { nav.popBackStack(Routes.SCHEDULES, inclusive = false) }
                         )
                     }
+                    composable(Routes.SPACES) {
+                        SpaceListScreen(online = online, snackbar = snackbar, onOpen = { nav.navigate("spaces/$it") })
+                    }
+                    composable(
+                        route = Routes.SPACE_DETAIL,
+                        arguments = listOf(navArgument("id") { type = NavType.StringType })
+                    ) {
+                        SpaceDetailScreen(
+                            online = online,
+                            snackbar = snackbar,
+                            onChat = { space ->
+                                chatVm.openInSpace(space.id, space.name)
+                                nav.navigate(Routes.CHAT) {
+                                    popUpTo(nav.graph.findStartDestination().id)
+                                    launchSingleTop = true
+                                }
+                            },
+                            onDeleted = { nav.popBackStack(Routes.SPACES, inclusive = false) }
+                        )
+                    }
                     composable(Routes.SETTINGS) {
                         SettingsScreen(
                             onOpenCatalog = { nav.navigate(DebugFeatures.ROUTE) },
@@ -289,6 +314,7 @@ private fun titleFor(route: String): Int = when (route) {
     Routes.RESEARCH_NEW -> R.string.research_form_title
     Routes.SCHEDULES, Routes.SCHEDULE_DETAIL -> R.string.nav_schedules
     Routes.SCHEDULE_NEW -> R.string.schedule_new
+    Routes.SPACES, Routes.SPACE_DETAIL -> R.string.nav_spaces
     Routes.SETTINGS -> R.string.settings_title
     Routes.MEMORY -> R.string.memory_title
     DebugFeatures.ROUTE -> R.string.catalog_title

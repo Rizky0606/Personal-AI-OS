@@ -18,6 +18,7 @@ function conversation(over: Partial<Conversation> = {}): Conversation {
     title: 'Judul',
     surface: 'windows',
     projectId: null,
+    spaceId: null,
     pinned: false,
     archivedAt: null,
     createdAt: TS,

@@ -1,5 +1,5 @@
 import type { ResearchPlanSchema } from '@aios/contracts';
-import { sql } from 'drizzle-orm';
+import { type SQL, sql } from 'drizzle-orm';
 import {
   bigint,
   boolean,
@@ -16,7 +16,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import type { z } from 'zod';
 import { uuidv7 } from '../../lib/uuidv7.js';
-import { conversations, devices, messages, runs } from './core.js';
+import { conversations, devices, messages, runs, spaces } from './core.js';
 import {
   researchDepth,
   researchStatus,
@@ -24,6 +24,9 @@ import {
   scheduleRunStatus,
   scheduleTarget,
 } from './enums.js';
+
+/** Kolom `tsvector` untuk full-text search; diisi Postgres sendiri (kolom generated). */
+const tsvector = customType<{ data: string }>({ dataType: () => 'tsvector' });
 
 /** Kolom biner Postgres (`bytea`) sebagai Buffer Node. */
 const bytea = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => 'bytea' });
@@ -170,4 +173,48 @@ export const memories = pgTable(
     updatedAt: updatedAt(),
   },
   (t) => [index('memories_created_idx').on(t.createdAt)],
+);
+
+/** Dokumen di ruang pengetahuan (W21): berkas dari tabel files yang teksnya sudah diindeks. */
+export const spaceDocuments = pgTable(
+  'space_documents',
+  {
+    id: id(),
+    spaceId: uuid('space_id')
+      .notNull()
+      .references(() => spaces.id, { onDelete: 'cascade' }),
+    fileId: uuid('file_id')
+      .notNull()
+      .references(() => files.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    chars: integer('chars').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('space_documents_space_idx').on(t.spaceId),
+    uniqueIndex('space_documents_file_unique').on(t.spaceId, t.fileId),
+  ],
+);
+
+/** Potongan teks dokumen ruang; dicari dengan full-text search `simple` (tanpa stemming bahasa tertentu). */
+export const spaceChunks = pgTable(
+  'space_chunks',
+  {
+    id: id(),
+    documentId: uuid('document_id')
+      .notNull()
+      .references(() => spaceDocuments.id, { onDelete: 'cascade' }),
+    spaceId: uuid('space_id')
+      .notNull()
+      .references(() => spaces.id, { onDelete: 'cascade' }),
+    ordinal: integer('ordinal').notNull(),
+    content: text('content').notNull(),
+    tsv: tsvector('tsv').generatedAlwaysAs(
+      (): SQL => sql`to_tsvector('simple', ${spaceChunks.content})`,
+    ),
+  },
+  (t) => [
+    index('space_chunks_space_idx').on(t.spaceId),
+    index('space_chunks_tsv_idx').using('gin', t.tsv),
+  ],
 );

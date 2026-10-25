@@ -30,11 +30,13 @@ data class Conversation(
     val pinned: Boolean = false,
     val archivedAt: String? = null,
     val createdAt: String,
-    val updatedAt: String
+    val updatedAt: String,
+    /** Ruang pengetahuan (A13); tidak disimpan di cache Room karena hanya dipakai saat membuat percakapan. */
+    val spaceId: String? = null
 )
 
 @Serializable
-data class CreateConversationRequest(val surface: String, val title: String? = null)
+data class CreateConversationRequest(val surface: String, val title: String? = null, val spaceId: String? = null)
 
 @Serializable
 data class UpdateConversationRequest(

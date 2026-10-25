@@ -74,6 +74,15 @@ export const projects = pgTable('projects', {
   updatedAt: updatedAt(),
 });
 
+/** Ruang pengetahuan (W21). Dokumen dan potongannya ada di extra.ts; di sini karena conversations merujuknya. */
+export const spaces = pgTable('spaces', {
+  id: id(),
+  name: text('name').notNull(),
+  description: text('description').notNull().default(''),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
 export const conversations = pgTable(
   'conversations',
   {
@@ -81,13 +90,17 @@ export const conversations = pgTable(
     title: text('title').notNull().default(''),
     surface: surface('surface').notNull(),
     projectId: uuid('project_id').references(() => projects.id, { onDelete: 'set null' }),
+    spaceId: uuid('space_id').references(() => spaces.id, { onDelete: 'set null' }),
     hermesSessionId: text('hermes_session_id'),
     pinned: boolean('pinned').notNull().default(false),
     archivedAt: timestamp('archived_at', { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (t) => [index('conversations_project_idx').on(t.projectId)],
+  (t) => [
+    index('conversations_project_idx').on(t.projectId),
+    index('conversations_space_idx').on(t.spaceId),
+  ],
 );
 
 export const tasks = pgTable(

@@ -31,6 +31,7 @@ export interface ChatService {
     before?: string | undefined;
     limit: number;
     projectId?: string | undefined;
+    spaceId?: string | undefined;
     archived?: 'true' | 'false' | undefined;
   }): Promise<Page<Conversation>>;
   createConversation(input: z.infer<typeof CreateConversationRequestSchema>): Promise<Conversation>;
@@ -90,9 +91,31 @@ export function createChatService(deps: {
   routing: RoutingService;
   /** Untuk menentukan mesin dari role. */
   roles: { get(roleId: string): { engine: string } | undefined };
+  /** Ruang pengetahuan (W21); tanpa ini percakapan tidak bisa terikat ke ruang. */
+  spaces?: {
+    exists(id: string): Promise<boolean>;
+    contextFor(spaceId: string, question: string): Promise<string>;
+  };
   now?: () => number;
 }): ChatService {
   const { db, runner, files, titles, routing, roles, now = Date.now } = deps;
+
+  /**
+   * Teks yang dikirim ke agent: pesan, lalu potongan dokumen ruang (bila percakapan terikat ruang), lalu konteks
+   * tambahan pemanggil. Hanya pesan yang disimpan; sisanya dihitung ulang tiap giliran.
+   */
+  async function agentPrompt(
+    conversation: { spaceId: string | null },
+    prompt: string,
+    question: string,
+    extra?: string,
+  ): Promise<string> {
+    const space =
+      conversation.spaceId && deps.spaces
+        ? await deps.spaces.contextFor(conversation.spaceId, question)
+        : '';
+    return [prompt, space, extra ?? ''].filter(Boolean).join('\n\n');
+  }
   const background = new Set<Promise<unknown>>();
 
   async function getConversation(id: string) {
@@ -297,6 +320,7 @@ export function createChatService(deps: {
           and(
             q.before ? lt(conversations.id, q.before) : undefined,
             q.projectId ? eq(conversations.projectId, q.projectId) : undefined,
+            q.spaceId ? eq(conversations.spaceId, q.spaceId) : undefined,
             q.archived === 'true'
               ? isNotNull(conversations.archivedAt)
               : isNull(conversations.archivedAt),
@@ -319,12 +343,16 @@ export function createChatService(deps: {
           .where(eq(projects.id, input.projectId));
         if (!project) throw new AppError(404, 'project_not_found', 'Project tidak ditemukan.');
       }
+      if (input.spaceId && !(await deps.spaces?.exists(input.spaceId))) {
+        throw new AppError(404, 'space_not_found', 'Ruang tidak ditemukan.');
+      }
       const [row] = await db
         .insert(conversations)
         .values({
           title: (input.title ?? '').trim().slice(0, MAX_TITLE_CHARS),
           surface: input.surface,
           projectId: input.projectId ?? null,
+          spaceId: input.spaceId ?? null,
         })
         .returning();
       return toConversationDto(row!);
@@ -435,7 +463,7 @@ export function createChatService(deps: {
         run,
         conversationId,
         assistantMessageId,
-        prompt: options?.context ? `${prompt}\n\n${options.context}` : prompt,
+        prompt: await agentPrompt(conversation, prompt, routingText, options?.context),
         sessionId,
         ...(history.length ? { history } : {}),
         ...(images.length ? { images } : {}),
@@ -571,7 +599,7 @@ export function createChatService(deps: {
         run,
         conversationId: conversation.id,
         assistantMessageId,
-        prompt,
+        prompt: await agentPrompt(conversation, prompt, prompt),
         sessionId,
         ...(history.length ? { history } : {}),
         projectId: conversation.projectId,

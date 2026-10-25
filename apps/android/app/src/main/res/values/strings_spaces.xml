@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Ruang pengetahuan (A13) -->
+    <string name="nav_spaces">Ruang</string>
+    <string name="space_intro">Kumpulkan dokumen (PDF, DOCX, teks) dalam satu ruang, lalu bertanya di chat ruang itu. Jawaban memakai isi dokumen dan menyebut sumbernya.</string>
+    <string name="space_name">Nama ruang</string>
+    <string name="space_name_hint">Mis. Kontrak kerja 2026</string>
+    <string name="space_create">Buat ruang</string>
+    <string name="space_creating">Membuat…</string>
+    <string name="space_empty">Belum ada ruang. Buat ruang pertama di atas.</string>
+    <plurals name="space_doc_count">
+        <item quantity="one">%d dokumen</item>
+        <item quantity="other">%d dokumen</item>
+    </plurals>
+    <string name="space_not_found">Ruang tidak ditemukan. Mungkin sudah dihapus.</string>
+    <string name="space_new_chat">Chat di ruang ini</string>
+    <string name="space_add_doc">Tambah dokumen</string>
+    <string name="space_adding">Mengindeks %1$s…</string>
+    <string name="space_documents">Dokumen</string>
+    <string name="space_documents_empty">Belum ada dokumen. Tambahkan PDF, DOCX, atau berkas teks.</string>
+    <string name="space_doc_meta">%1$d karakter · %2$d bagian</string>
+    <string name="space_doc_remove">Keluarkan</string>
+    <string name="space_doc_added">%1$s ditambahkan ke ruang.</string>
+    <string name="space_doc_removed">Dokumen dikeluarkan.</string>
+    <string name="space_delete">Hapus ruang</string>
+    <string name="space_delete_title">Hapus ruang ini?</string>
+    <string name="space_delete_body">Dokumen dan indeksnya dihapus dari ruang. Percakapan tetap ada, tetapi tidak lagi memakai dokumen.</string>
+    <string name="space_chat_strip">Menjawab dari dokumen ruang %1$s</string>
+</resources>

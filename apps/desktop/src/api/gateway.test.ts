@@ -13,6 +13,7 @@ const conversation = {
   title: 'Halo',
   surface: 'windows',
   projectId: null,
+  spaceId: null,
   pinned: false,
   archivedAt: null,
   createdAt: TS,

@@ -5,6 +5,7 @@ import { catalogEndpoints } from './endpoints/catalog.js';
 import { chatEndpoints } from './endpoints/chat.js';
 import { workEndpoints } from './endpoints/work.js';
 import { memoryEndpoints } from './endpoints/memory.js';
+import { spaceEndpoints } from './endpoints/spaces.js';
 import { miscEndpoints } from './endpoints/misc.js';
 import type { Endpoint } from './endpoint.js';
 
@@ -16,4 +17,5 @@ export const endpoints: readonly Endpoint[] = [
   ...workEndpoints,
   ...miscEndpoints,
   ...memoryEndpoints,
+  ...spaceEndpoints,
 ];

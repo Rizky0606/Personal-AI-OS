@@ -166,8 +166,11 @@ class FakeChatRepo : ChatRepository {
 
     override suspend fun loadOlder(conversationId: String): Boolean = false
 
-    override suspend fun createConversation(title: String?): Conversation {
+    val createdInSpace = mutableListOf<String?>()
+
+    override suspend fun createConversation(title: String?, spaceId: String?): Conversation {
         createCalls++
+        createdInSpace += spaceId
         return conversation(
             "new-$createCalls",
             title ?: "Judul new-$createCalls"

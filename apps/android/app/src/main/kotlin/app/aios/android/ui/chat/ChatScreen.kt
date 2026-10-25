@@ -116,6 +116,7 @@ fun ChatScreen(viewModel: ChatViewModel, snackbar: SnackbarHostState) {
     Column(modifier = Modifier.fillMaxSize().imePadding()) {
         if (!online) OfflineBanner()
         if (online && connection is ConnectionState.Reconnecting) ReconnectingStrip()
+        ui.newInSpace?.let { SpaceStrip(it.name) }
 
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             when {
@@ -343,6 +344,17 @@ private fun DeleteMessageDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
         dismissButton = {
             AiosButton(stringResource(R.string.chat_delete_cancel), onClick = onDismiss, kind = ButtonKind.Ghost)
         }
+    )
+}
+
+/** Penanda chat ruang pengetahuan (A13): jawaban memakai dokumen ruang ini sebagai sumber. */
+@Composable
+private fun SpaceStrip(name: String) {
+    Text(
+        text = stringResource(R.string.space_chat_strip, name),
+        style = AiosTheme.type.caption,
+        color = AiosTheme.colors.info,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = Tokens.Space.s16, vertical = Tokens.Space.s4)
     )
 }
 

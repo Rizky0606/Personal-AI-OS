@@ -28,6 +28,7 @@ const conversation = (title: string, projectId: string | null): Conversation => 
   title,
   surface: 'windows',
   projectId,
+  spaceId: null,
   pinned: false,
   archivedAt: null,
   createdAt: TS,
