@@ -4,5 +4,5 @@
     Tokens.lightColors.bg / Tokens.darkColors.bg; TokensSyncTest menjaga kesamaannya.
 -->
 <resources>
-    <color name="window_background">#FFFAFAF9</color>
+    <color name="window_background">#FFF5F8FC</color>
 </resources>

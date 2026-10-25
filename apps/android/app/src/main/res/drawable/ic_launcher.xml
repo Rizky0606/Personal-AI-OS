@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Placeholder: persegi bersudut dengan tanda terminal. Ganti saat identitas visual final ada. -->
+<!-- Persegi navy dengan tanda terminal cyan (palet Electric Slate). -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="48dp"
     android:height="48dp"
     android:viewportWidth="48"
     android:viewportHeight="48">
     <path
-        android:fillColor="#D55C13"
+        android:fillColor="#0B1326"
         android:pathData="M8,0h32a8,8 0 0 1 8,8v32a8,8 0 0 1 -8,8H8a8,8 0 0 1 -8,-8V8a8,8 0 0 1 8,-8z" />
     <path
         android:fillColor="#00000000"
         android:pathData="M14,18l8,6l-8,6M26,31h9"
-        android:strokeColor="#FFFFFF"
+        android:strokeColor="#4CD7F6"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
         android:strokeWidth="3" />

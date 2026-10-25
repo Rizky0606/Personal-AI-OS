@@ -43,6 +43,8 @@
     <string name="chat_edit_last">Edit</string>
     <string name="chat_resend_last">Kirim ulang</string>
     <string name="chat_message_menu">Menu pesan</string>
+    <string name="chat_assistant_name">Personal AI</string>
+    <string name="chat_sent">Terkirim</string>
     <string name="chat_welcome_title">Mau mengerjakan apa hari ini?</string>
     <string name="chat_welcome_subtitle">Tulis di bawah atau mulai dari salah satu saran. Role dipilih otomatis.</string>
     <string name="chat_welcome_summary">Ringkas teks</string>
