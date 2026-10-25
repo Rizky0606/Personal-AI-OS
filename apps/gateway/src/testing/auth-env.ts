@@ -11,6 +11,7 @@ import { createFilesService } from '../modules/files/service.js';
 import { createTitleService } from '../modules/chat/title.js';
 import { createDevicesService } from '../modules/devices/service.js';
 import { createMemoryService } from '../modules/memory/service.js';
+import { createSpacesService } from '../modules/spaces/service.js';
 import { createNineRouterClient } from '../modules/llm/client.js';
 import { createModelsService } from '../modules/llm/models.js';
 import { createQuotaService, createUsageRecorder } from '../modules/llm/usage.js';
@@ -213,6 +214,7 @@ export async function createAuthEnv(
       : unusedResearch;
   if (options.research) await research.start();
   const files = createFilesService({ db });
+  const spaces = createSpacesService({ db });
   const chat = createChatService({
     db,
     runner,
@@ -220,6 +222,7 @@ export async function createAuthEnv(
     titles: createTitleService({ client, model: 'router-fast' }),
     routing,
     roles,
+    spaces,
     now,
   });
   const runs = createRunsService({ db, store, runner, hub, relay: workerRelay, chat, observer });
@@ -306,6 +309,7 @@ export async function createAuthEnv(
     compare: createCompareService({ client }),
     status,
     memory,
+    spaces,
     worker: { hub: workerHub, relay: workerRelay },
     ws: {
       hub,

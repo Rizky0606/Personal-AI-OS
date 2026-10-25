@@ -7,6 +7,8 @@ import {
   MEMORY_TEXT_MAX,
   MemorySchema,
   MessagePartInputSchema,
+  SpaceDocumentSchema,
+  SpaceSchema,
   MessageSchema,
   ResearchDepthSchema,
   ResearchJobSchema,
@@ -189,6 +191,8 @@ export type RouterOutput = z.infer<typeof RouterOutputSchema>;
 export const ListConversationsQuerySchema = z.object({
   ...PageQuerySchema.shape,
   projectId: IdSchema.optional(),
+  /** Hanya percakapan di ruang ini. */
+  spaceId: IdSchema.optional(),
   archived: z.enum(['true', 'false']).optional(),
 });
 
@@ -197,6 +201,7 @@ export const CreateConversationRequestSchema = z
     title: z.string().optional(),
     surface: SurfaceSchema,
     projectId: IdSchema.optional(),
+    spaceId: IdSchema.optional(),
   })
   .meta({ id: 'CreateConversationRequest' });
 
@@ -359,6 +364,27 @@ export const CreateScheduleRequestSchema = z
     notify: ScheduleNotifySchema.default('always'),
   })
   .meta({ id: 'CreateScheduleRequest' });
+
+export const SpaceListSchema = itemsOf(SpaceSchema).meta({ id: 'SpaceList' });
+export const SpaceDocumentListSchema = itemsOf(SpaceDocumentSchema).meta({
+  id: 'SpaceDocumentList',
+});
+export const CreateSpaceRequestSchema = z
+  .object({
+    name: z.string().trim().min(1).max(120),
+    description: z.string().trim().max(500).default(''),
+  })
+  .meta({ id: 'CreateSpaceRequest' });
+export const UpdateSpaceRequestSchema = z
+  .object({
+    name: z.string().trim().min(1).max(120).optional(),
+    description: z.string().trim().max(500).optional(),
+  })
+  .meta({ id: 'UpdateSpaceRequest' });
+export const AddSpaceDocumentRequestSchema = z
+  .object({ fileId: IdSchema })
+  .meta({ id: 'AddSpaceDocumentRequest' });
+export const SpaceDocumentParamsSchema = z.object({ id: IdSchema, documentId: IdSchema });
 
 export const MemoryListSchema = itemsOf(MemorySchema).meta({ id: 'MemoryList' });
 const MemoryTextSchema = z.string().trim().min(1).max(MEMORY_TEXT_MAX);

@@ -39,6 +39,8 @@ import type { ScheduleService } from './modules/schedules/service.js';
 import { memoryRoutes } from './modules/memory/routes.js';
 import type { MemoryService } from './modules/memory/service.js';
 import { roleRoutes } from './modules/roles/routes.js';
+import { spaceRoutes } from './modules/spaces/routes.js';
+import type { SpacesService } from './modules/spaces/service.js';
 import type { RolesService } from './modules/roles/service.js';
 import type { RunsService } from './modules/runs/service.js';
 import { MAX_MESSAGE_BYTES, wsRoutes, type WsDeps } from './modules/ws/routes.js';
@@ -81,6 +83,7 @@ export interface AppDeps {
   compare: CompareService;
   status: StatusService;
   memory: MemoryService;
+  spaces: SpacesService;
   /** Hub koneksi worker dan relay-nya; dibuat di luar karena runner juga memakai relay. */
   worker: { hub: ReturnType<typeof createWorkerHub>; relay: WorkerRelay };
   /** WebSocket /v1/ws; `auth` diisi dari dependensi di atas. */
@@ -108,6 +111,7 @@ export function buildApp({
   compare,
   status,
   memory,
+  spaces,
   worker,
   ws,
   rateLimits,
@@ -189,6 +193,7 @@ export function buildApp({
         await protectedScope.register(compareRoutes, { compare });
         await protectedScope.register(statusRoutes, { status });
         await protectedScope.register(memoryRoutes, { memory });
+        await protectedScope.register(spaceRoutes, { spaces });
         await protectedScope.register(wsRoutes, { ...ws, auth });
         await protectedScope.register(workerRoutes, {
           auth,

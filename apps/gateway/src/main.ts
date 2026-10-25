@@ -10,6 +10,7 @@ import { createAuthService } from './modules/auth/service.js';
 import { deriveAuthKeys } from './modules/auth/secrets.js';
 import { createDevicesService } from './modules/devices/service.js';
 import { createMemoryService } from './modules/memory/service.js';
+import { createSpacesService } from './modules/spaces/service.js';
 import { createHealthService } from './modules/health/service.js';
 import { createNineRouterClient } from './modules/llm/client.js';
 import { createModelsService } from './modules/llm/models.js';
@@ -88,6 +89,7 @@ async function main(): Promise<void> {
     log,
   });
   const files = createFilesService({ db });
+  const spaces = createSpacesService({ db });
   const chat = createChatService({
     db,
     runner,
@@ -95,6 +97,7 @@ async function main(): Promise<void> {
     titles: createTitleService({ client, model: config.TITLE_MODEL, log }),
     routing,
     roles,
+    spaces,
   });
   const runs = createRunsService({ db, store, runner, hub, relay: workerRelay, chat, observer });
   const tasks = createTasksService({
@@ -173,6 +176,7 @@ async function main(): Promise<void> {
     tasks,
     compare: createCompareService({ client }),
     memory,
+    spaces,
     status: createStatusService({
       db,
       health,

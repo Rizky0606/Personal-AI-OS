@@ -37,6 +37,8 @@ export const ConversationSchema = z
     title: z.string(),
     surface: SurfaceSchema,
     projectId: IdSchema.nullable(),
+    /** Ruang pengetahuan (W21): jawaban di percakapan ini memakai dokumen ruang itu sebagai sumber. */
+    spaceId: IdSchema.nullable(),
     pinned: z.boolean(),
     archivedAt: TimestampSchema.nullable(),
     createdAt: TimestampSchema,
@@ -362,3 +364,30 @@ export const MemorySchema = z
   })
   .meta({ id: 'Memory' });
 export type Memory = z.infer<typeof MemorySchema>;
+
+/** Ruang pengetahuan (W21): kumpulan dokumen yang menjadi sumber jawaban bersitasi di percakapan ruang itu. */
+export const SpaceSchema = z
+  .object({
+    id: IdSchema,
+    name: z.string().min(1).max(120),
+    description: z.string(),
+    documentCount: z.number().int().nonnegative(),
+    createdAt: TimestampSchema,
+    updatedAt: TimestampSchema,
+  })
+  .meta({ id: 'Space' });
+export type Space = z.infer<typeof SpaceSchema>;
+
+/** Dokumen di ruang: teksnya sudah diekstrak dan dipotong per bagian untuk pencarian. */
+export const SpaceDocumentSchema = z
+  .object({
+    id: IdSchema,
+    spaceId: IdSchema,
+    fileId: IdSchema,
+    name: z.string().min(1),
+    chars: z.number().int().nonnegative(),
+    chunks: z.number().int().nonnegative(),
+    createdAt: TimestampSchema,
+  })
+  .meta({ id: 'SpaceDocument' });
+export type SpaceDocument = z.infer<typeof SpaceDocumentSchema>;
