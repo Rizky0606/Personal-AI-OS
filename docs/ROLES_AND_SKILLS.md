@@ -112,6 +112,8 @@ Aturan ini berlaku untuk agent yang berjalan di aplikasi (bukan agent yang memba
 - Perintah yang mengubah sistem, menghapus file, atau mengakses jaringan selalu melalui approval kecuali ada aturan "selalu izinkan" untuk project itu.
 - Tidak pernah membaca atau mengirim file `.env`, kunci SSH, atau folder di luar project tanpa izin eksplisit.
 
+Run yang berjalan di server (Hermes, bukan run coding di worker) juga mendapat aturan "Berkas untuk pemilik" (`SERVER_FILES_RULE` di `apps/gateway/src/modules/runs/runner.ts`): pemilik tidak bisa mengakses sistem berkas server, jadi agent tidak membuat berkas atau arsip hasil di server dan tidak menjawab dengan path server, melainkan menulis isi setiap berkas sebagai blok kode berpath agar aplikasi bisa menawarkan Unduh ZIP.
+
 ## Router otomatis
 
 Router memilih role sebelum mesin agent bekerja. Urutannya:

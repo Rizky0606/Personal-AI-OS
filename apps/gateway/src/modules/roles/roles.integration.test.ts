@@ -7,6 +7,7 @@ import { afterAll, beforeAll, describe, expect, inject, it } from 'vitest';
 import { createAuthEnv, type AuthEnv } from '../../testing/auth-env.js';
 import { startFakeHermes, type FakeHermes } from '../../testing/fake-hermes.js';
 import { createRolesService } from './service.js';
+import { SERVER_FILES_RULE } from '../runs/runner.js';
 
 let env: AuthEnv;
 let hermes: FakeHermes;
@@ -85,7 +86,10 @@ describe('bundel sebagai pesan sistem Hermes', () => {
     const [request] = hermes.requests;
     const [system, user] = request!.body.messages;
     expect(user).toEqual({ role: 'user', content: 'halo' });
-    expect(system).toEqual({ role: 'system', content: env.roles.bundle('general').systemPrompt });
+    expect(system!.role).toBe('system');
+    // Bundel role di depan; run di server menambahkan aturan berkas untuk pemilik sesudahnya.
+    expect(system!.content.startsWith(env.roles.bundle('general').systemPrompt)).toBe(true);
+    expect(system!.content).toContain(SERVER_FILES_RULE);
     for (const rule of AGENT_BEHAVIOR_RULES) expect(system!.content).toContain(rule);
     expect(system!.content).toContain('# Peran: Umum');
     for (const skill of ['scope-guard', 'verify-before-done', 'answer-first', 'clarify-once']) {

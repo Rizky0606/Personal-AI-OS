@@ -140,6 +140,8 @@ describe('run coding lewat worker', () => {
     });
     expect(start.bundle.systemPrompt).toContain('Aturan perilaku agent');
     expect(start.bundle.systemPrompt).toContain('frontend');
+    // Run coding menulis berkas di folder project di PC: tanpa aturan berkas server.
+    expect(start.bundle.systemPrompt).not.toContain('# Berkas untuk pemilik');
 
     // Run ditandai coding di omp, lengkap dengan branch kerjanya.
     await until(async () => (await statusOf(run.id)) === 'running', 'running');
