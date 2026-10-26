@@ -121,7 +121,7 @@ Router memilih role sebelum mesin agent bekerja. Urutannya:
 1. **Aturan cepat tanpa model:**
     - Pesan lanjutan pendek ("lanjut", "ubah warnanya", "oke") memakai role giliran sebelumnya.
     - Chat dari Android tanpa project hanya boleh memilih role grup Umum.
-    - Chat per folder project di Windows mendahulukan role grup Coding.
+    - Chat per folder project di Windows hanya memakai role grup Coding (hanya role itu yang membaca folder project); chat tanpa project hanya grup Umum. Bila router gagal atau ragu, role cadangannya role coding pertama (bukan general).
     - Pengguna mengganti chip role: pakai pilihan itu, catat sebagai koreksi.
 2. **Router AI:** model kecil lewat 9Router (combo `router-fast`), suhu 0, output JSON tervalidasi Zod.
 3. **Ambang:** confidence di bawah 0,6 berarti `general`, yang boleh mengajukan satu pertanyaan klarifikasi.

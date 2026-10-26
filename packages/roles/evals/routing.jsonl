@@ -3,7 +3,7 @@
 {"id":"gen-03","message":"Bantu aku membandingkan kopi arabika dan robusta dari rasanya","surface":"android","expect":"general"}
 {"id":"gen-04","message":"Buatkan daftar persiapan pindahan rumah supaya tidak ada yang terlewat","surface":"android","expect":"general"}
 {"id":"gen-05","message":"Berapa lama waktu terbaik merebus telur supaya matang setengah?","surface":"android","expect":"general"}
-{"id":"gen-06","message":"Terjemahkan 'terima kasih banyak atas bantuannya' ke bahasa Jepang","surface":"windows","expect":"general","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"gen-06","message":"Terjemahkan 'terima kasih banyak atas bantuannya' ke bahasa Jepang","surface":"windows","expect":"general"}
 {"id":"gen-07","message":"Kasih tips supaya tidur lebih nyenyak","surface":"android","expect":"general"}
 {"id":"gen-08","message":"oke lanjut","surface":"android","expect":"general","previousRole":"general","tags":["lanjutan"]}
 {"id":"gen-09","message":"Hai","surface":"android","expect":"general","tags":["ambigu"]}
@@ -16,12 +16,12 @@
 {"id":"gen-16","message":"Apa pendapatmu?","surface":"android","expect":"general","tags":["ambigu"]}
 {"id":"res-01","message":"Cari tahu perbandingan harga laptop gaming di bawah 15 juta yang terbaru beserta sumbernya","surface":"android","expect":"researcher"}
 {"id":"res-02","message":"Riset dampak puasa intermiten terhadap kolesterol, cantumkan jurnalnya","surface":"android","expect":"researcher"}
-{"id":"res-03","message":"Apa saja perubahan terbaru aturan pajak untuk freelancer di Indonesia? Sertakan rujukan resminya","surface":"windows","expect":"researcher","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"res-03","message":"Apa saja perubahan terbaru aturan pajak untuk freelancer di Indonesia? Sertakan rujukan resminya","surface":"windows","expect":"researcher"}
 {"id":"res-04","message":"Bandingkan Postgres, MySQL, dan SQLite untuk aplikasi pribadi, lengkap dengan referensi","surface":"android","expect":"researcher"}
 {"id":"res-05","message":"Berapa pangsa pasar mobil listrik di Asia Tenggara tahun lalu? Sebutkan sumber datanya","surface":"android","expect":"researcher"}
 {"id":"res-06","message":"Telusuri kontroversi suplemen kreatin dan rangkum temuan ilmiahnya","surface":"android","expect":"researcher"}
 {"id":"res-07","message":"Kumpulkan data jumlah penduduk kota-kota besar di Jawa dari BPS","surface":"android","expect":"researcher"}
-{"id":"res-08","message":"Siapa saja kompetitor utama aplikasi catatan seperti Notion dan apa fitur terbarunya?","surface":"windows","expect":"researcher","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"res-08","message":"Siapa saja kompetitor utama aplikasi catatan seperti Notion dan apa fitur terbarunya?","surface":"windows","expect":"researcher"}
 {"id":"res-09","message":"tambahkan sumber dari tahun 2025 juga","surface":"android","expect":"researcher","previousRole":"researcher","tags":["lanjutan"]}
 {"id":"res-10","message":"Rangkum dua pandangan ahli soal kerja jarak jauh versus di kantor, dengan rujukan","surface":"android","expect":"researcher"}
 {"id":"res-11","message":"Verifikasi klaim bahwa air lemon hangat menurunkan berat badan, cari buktinya","surface":"android","expect":"researcher"}
@@ -30,7 +30,7 @@
 {"id":"wri-03","message":"Draft email follow up ke klien yang belum membayar invoice, nadanya sopan tapi tegas","surface":"android","expect":"writer"}
 {"id":"wri-04","message":"Beri 5 ide judul video YouTube tentang belajar coding untuk pemula","surface":"android","expect":"writer"}
 {"id":"wri-05","message":"Rapikan paragraf ini biar enak dibaca: kemarin aku ke pasar beli banyak sayur tapi lupa bawa dompet","surface":"android","expect":"writer"}
-{"id":"wri-06","message":"Tulis pidato singkat 2 menit untuk acara perpisahan kantor","surface":"windows","expect":"writer","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"wri-06","message":"Tulis pidato singkat 2 menit untuk acara perpisahan kantor","surface":"windows","expect":"writer"}
 {"id":"wri-07","message":"Ubah teks ini jadi lebih santai untuk Instagram story","surface":"android","expect":"writer"}
 {"id":"wri-08","message":"Buatkan naskah pembuka podcast tentang kebiasaan membaca","surface":"android","expect":"writer"}
 {"id":"wri-09","message":"lebih santai lagi bahasanya","surface":"android","expect":"writer","previousRole":"writer","tags":["lanjutan"]}
