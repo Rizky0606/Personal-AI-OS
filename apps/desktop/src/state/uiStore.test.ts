@@ -12,6 +12,43 @@ beforeEach(() => {
   useUiStore.setState(useUiStore.getInitialState(), true);
 });
 
+describe('pembagian panel kanan', () => {
+  it('tanpa pembagian, membuka panel mengganti tab tunggal; setelah dibagi, tab ditampilkan di pane', () => {
+    const ui = useUiStore.getState();
+    ui.openPanel('terminal');
+    expect(useUiStore.getState()).toMatchObject({ rightPanelTab: 'terminal', paneTree: null });
+
+    ui.splitPane('root', 'column');
+    const tree = useUiStore.getState().paneTree;
+    expect(tree).toMatchObject({ type: 'split', direction: 'column' });
+
+    // Diff belum tampil: mengganti pane pertama; yang sudah tampil tidak berubah.
+    useUiStore.getState().openReview('run-1');
+    const tabs = () =>
+      JSON.stringify(useUiStore.getState().paneTree)
+        .match(/"tab":"(\w+)"/g)
+        ?.join(',');
+    expect(tabs()).toBe('"tab":"diff","tab":"preview"');
+    useUiStore.getState().openPanel('preview');
+    expect(tabs()).toBe('"tab":"diff","tab":"preview"');
+  });
+
+  it('tersimpan dan dipulihkan; pohon rusak di penyimpanan dibuang', async () => {
+    useUiStore.getState().splitPane('root', 'row');
+    const saved = JSON.parse(localStorage.getItem('aios.ui') ?? '{}') as {
+      state: { paneTree: unknown };
+    };
+    expect(saved.state.paneTree).toMatchObject({ type: 'split', direction: 'row' });
+
+    localStorage.setItem(
+      'aios.ui',
+      JSON.stringify({ state: { paneTree: { type: 'split', id: 'x' } }, version: 1 }),
+    );
+    await useUiStore.persist.rehydrate();
+    expect(useUiStore.getState().paneTree).toBeNull();
+  });
+});
+
 describe('lebar panel kanan', () => {
   it('dijepit ke batas dan membulat; nilai tak sah kembali ke bawaan', () => {
     expect(clampPanelWidth(10)).toBe(RIGHT_PANEL_MIN);

@@ -1,8 +1,22 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import {
+  ROOT_ID,
+  closePane,
+  parsePaneTree,
+  revealTab,
+  setLeafTab,
+  setSplitRatio,
+  splitPane,
+  type PaneNode,
+  type PaneTab,
+  type SplitDirection,
+} from '../panes/tree';
 
 export type ThemeMode = 'system' | 'light' | 'dark';
-export type RightPanelTab = 'preview' | 'diff' | 'terminal' | 'files';
+export type RightPanelTab = PaneTab;
+
+const newPaneId = () => Math.random().toString(36).slice(2, 10);
 
 export const RIGHT_PANEL_MIN = 280;
 export const RIGHT_PANEL_MAX = 960;
@@ -30,6 +44,8 @@ interface UiState {
   rightPanelOpen: boolean;
   rightPanelWidth: number;
   rightPanelTab: RightPanelTab;
+  /** Pembagian panel kanan menjadi beberapa pane; null = satu pane yang menampilkan `rightPanelTab`. */
+  paneTree: PaneNode | null;
   theme: ThemeMode;
   paletteOpen: boolean;
   /** Naik tiap Ctrl+N; layar chat memakainya untuk memulai percakapan baru. */
@@ -62,6 +78,11 @@ interface UiState {
   openPanel: (tab: RightPanelTab) => void;
   setRightPanelWidth: (width: number) => void;
   setRightPanelTab: (tab: RightPanelTab) => void;
+  /** Membagi pane; pane baru menampilkan tab yang belum terlihat. */
+  splitPane: (leafId: string, direction: SplitDirection) => void;
+  closePane: (leafId: string) => void;
+  setPaneTab: (leafId: string, tab: RightPanelTab) => void;
+  setPaneRatio: (splitId: string, ratio: number) => void;
   setTheme: (theme: ThemeMode) => void;
   setPaletteOpen: (open: boolean) => void;
   requestNewChat: () => void;
@@ -70,11 +91,12 @@ interface UiState {
 /** Keadaan tampilan yang diingat antar sesi (lebar panel, sidebar, tab, tema) di localStorage. */
 export const useUiStore = create<UiState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       sidebarOpen: true,
       rightPanelOpen: false,
       rightPanelWidth: RIGHT_PANEL_DEFAULT,
       rightPanelTab: 'preview',
+      paneTree: null,
       theme: 'system',
       paletteOpen: false,
       newChatSignal: 0,
@@ -94,15 +116,52 @@ export const useUiStore = create<UiState>()(
         set((s) => ({ attachments: s.attachments.filter((a) => a.id !== id) })),
       clearAttachments: () => set({ attachments: [] }),
       openReview: (reviewRunId) =>
-        set({ reviewRunId, rightPanelOpen: true, rightPanelTab: 'diff' }),
+        set((s) => ({
+          reviewRunId,
+          rightPanelOpen: true,
+          rightPanelTab: 'diff',
+          paneTree: s.paneTree ? revealTab(s.paneTree, 'diff') : null,
+        })),
       setReviewRunId: (reviewRunId) => set({ reviewRunId }),
       setActiveProject: (activeProjectId) => set({ activeProjectId, activeRunBranch: null }),
       setActiveRunBranch: (activeRunBranch) => set({ activeRunBranch }),
       toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
       toggleRightPanel: () => set((s) => ({ rightPanelOpen: !s.rightPanelOpen })),
-      openPanel: (rightPanelTab) => set({ rightPanelOpen: true, rightPanelTab }),
+      openPanel: (rightPanelTab) =>
+        set((s) => ({
+          rightPanelOpen: true,
+          rightPanelTab,
+          paneTree: s.paneTree ? revealTab(s.paneTree, rightPanelTab) : null,
+        })),
       setRightPanelWidth: (width) => set({ rightPanelWidth: clampPanelWidth(width) }),
       setRightPanelTab: (rightPanelTab) => set({ rightPanelTab }),
+      splitPane: (leafId, direction) => {
+        const tree = get().paneTree ?? {
+          type: 'leaf' as const,
+          id: ROOT_ID,
+          tab: get().rightPanelTab,
+        };
+        set({
+          paneTree: splitPane(tree, leafId, direction, { split: newPaneId(), leaf: newPaneId() }),
+        });
+      },
+      closePane: (leafId) => {
+        const tree = get().paneTree;
+        if (!tree) return;
+        const next = closePane(tree, leafId);
+        // Tinggal satu pane: kembali ke mode tab tunggal, tab terakhir tetap tampil.
+        if (next.type === 'leaf') set({ paneTree: null, rightPanelTab: next.tab });
+        else set({ paneTree: next });
+      },
+      setPaneTab: (leafId, tab) => {
+        const tree = get().paneTree;
+        if (!tree) set({ rightPanelTab: tab });
+        else set({ paneTree: setLeafTab(tree, leafId, tab) });
+      },
+      setPaneRatio: (splitId, ratio) => {
+        const tree = get().paneTree;
+        if (tree) set({ paneTree: setSplitRatio(tree, splitId, ratio) });
+      },
       setTheme: (theme) => set({ theme }),
       setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
       requestNewChat: () => set((s) => ({ newChatSignal: s.newChatSignal + 1 })),
@@ -115,6 +174,7 @@ export const useUiStore = create<UiState>()(
         rightPanelOpen: s.rightPanelOpen,
         rightPanelWidth: s.rightPanelWidth,
         rightPanelTab: s.rightPanelTab,
+        paneTree: s.paneTree,
         activeProjectId: s.activeProjectId,
         model: s.model,
         theme: s.theme,
@@ -126,6 +186,7 @@ export const useUiStore = create<UiState>()(
           ...current,
           ...p,
           rightPanelWidth: clampPanelWidth(p.rightPanelWidth ?? RIGHT_PANEL_DEFAULT),
+          paneTree: parsePaneTree(p.paneTree),
         };
       },
     },

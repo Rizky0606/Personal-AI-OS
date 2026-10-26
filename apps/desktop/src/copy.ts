@@ -25,6 +25,12 @@ export const copy = {
     panels: { preview: 'Preview', diff: 'Diff', terminal: 'Terminal', files: 'Berkas' },
     panelEmpty: 'Belum ada isi. Panel ini dipakai saat project dan run coding tersedia.',
   },
+  panes: {
+    splitRow: 'Bagi ke samping',
+    splitColumn: 'Bagi ke bawah',
+    close: 'Tutup pane',
+    resize: 'Ubah ukuran pane',
+  },
   status: {
     connected: 'Tersambung',
     connecting: 'Menyambung…',

@@ -549,7 +549,7 @@ Disusun 2026-10-26 dari perbandingan dengan Orca, Pi, Cline, Amp, Goose, dan Vib
 | Fase | Fitur | PRD | Sisi | Inti rencana | Verifikasi |
 | --- | --- | --- | --- | --- | --- |
 | 36 | Ruang Kerja multi-run | W24 | Gateway, desktop | `GET /runs` (ringkasan run dengan judul, project, status) dan layar Ruang Kerja: daftar run dengan status live dari WebSocket, pemilihan membuka konteks run itu | Tes integrasi gateway, tes komponen, E2E desktop |
-| 37 | Panel terbagi | W25 | Desktop | Area utama menjadi pohon pane yang bisa dibagi dan diubah ukurannya; tata letak disimpan per project di penyimpanan lokal | Tes unit pohon pane, tes komponen |
+| 37 | Panel terbagi | W25 | Desktop | Panel kanan menjadi pohon pane (maks 6) yang bisa dibagi ke samping atau ke bawah dan diubah ukurannya; tata letak disimpan di penyimpanan lokal (satu tata letak untuk semua project) | Tes unit pohon pane, tes komponen |
 | 38 | Berkas worktree | W26 | Worker, desktop | Worker menyajikan pohon dan isi berkas hanya di dalam worktree; tab Berkas dengan penyorotan, pratinjau, quick-open | Tes worker (path traversal), tes komponen |
 | 39 | Templat prompt | W27 | Gateway, desktop | Tabel templat, `/nama` di composer dan palette, parameter `{{nama}}` | Tes integrasi, tes komponen |
 | 40 | Pendapat kedua | W28 | Gateway, desktop | Endpoint tinjauan diff oleh model lain; temuan menjadi komentar baris | Tes integrasi dengan Hermes tiruan |
