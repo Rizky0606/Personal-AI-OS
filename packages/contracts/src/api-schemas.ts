@@ -144,6 +144,45 @@ export const CompareResponseSchema = z
   .object({ results: z.array(CompareResultSchema) })
   .meta({ id: 'CompareResponse' });
 
+/** Batas masukan pendapat kedua: diff yang lebih besar dipotong gateway sebelum dikirim ke model. */
+export const OPINION_MAX_FILES = 50;
+export const OPINION_MAX_PATCH_CHARS = 200_000;
+
+export const OpinionRequestSchema = z
+  .object({
+    /** Model peninjau (id dari GET /models), idealnya berbeda dari model agent yang menulis kodenya. */
+    model: z.string().min(1),
+    files: z
+      .array(
+        z.object({
+          path: z.string().min(1).max(500),
+          patch: z.string().max(OPINION_MAX_PATCH_CHARS),
+        }),
+      )
+      .min(1)
+      .max(OPINION_MAX_FILES),
+  })
+  .meta({ id: 'OpinionRequest' });
+
+export const OpinionSeveritySchema = z.enum(['info', 'warning', 'bug']);
+export const OpinionFindingSchema = z.object({
+  path: z.string(),
+  /** Nomor baris di berkas sesudah perubahan; null bila temuan berlaku untuk seluruh berkas. */
+  line: z.number().int().min(1).nullable(),
+  severity: OpinionSeveritySchema,
+  body: z.string().min(1).max(1000),
+});
+export type OpinionFinding = z.infer<typeof OpinionFindingSchema>;
+export const OpinionResponseSchema = z
+  .object({
+    model: z.string(),
+    summary: z.string(),
+    findings: z.array(OpinionFindingSchema),
+    /** Sebagian diff tidak ikut ditinjau karena terlalu besar. */
+    truncated: z.boolean(),
+  })
+  .meta({ id: 'OpinionResponse' });
+
 export const RoleInfoSchema = z
   .object({
     id: RoleIdSchema,

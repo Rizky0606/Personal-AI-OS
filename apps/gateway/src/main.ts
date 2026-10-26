@@ -11,6 +11,7 @@ import { deriveAuthKeys } from './modules/auth/secrets.js';
 import { createDevicesService } from './modules/devices/service.js';
 import { createOutbox } from './modules/files/outbox.js';
 import { createMemoryService } from './modules/memory/service.js';
+import { createOpinionService } from './modules/opinion/service.js';
 import { createTemplateService } from './modules/templates/service.js';
 import { createSearchService } from './modules/search/service.js';
 import { createSpacesService } from './modules/spaces/service.js';
@@ -191,6 +192,7 @@ async function main(): Promise<void> {
     compare: createCompareService({ client }),
     memory,
     templates: createTemplateService({ db }),
+    opinion: createOpinionService({ client }),
     spaces,
     search: createSearchService({ db }),
     status: createStatusService({

@@ -15,6 +15,7 @@ import { CheckpointList } from './CheckpointList';
 import type { DiffView } from './DiffTable';
 import { FileDiff } from './FileDiff';
 import { FileList } from './FileList';
+import { OpinionPanel } from './OpinionPanel';
 import { reviewKey, useReviewState } from './useReview';
 import { useReviewActions } from './useReviewActions';
 
@@ -165,6 +166,12 @@ export function ReviewView({ runId }: { runId: string }) {
           >
             {state ? (
               <div className="flex flex-col gap-3 p-3">
+                <OpinionPanel
+                  files={state.files}
+                  disabled={busy}
+                  hasComment={(path, line) => byFile.get(path)?.has(line) ?? false}
+                  onAddComment={saveComment}
+                />
                 <FileList
                   files={state.files}
                   commentCounts={counts}

@@ -62,6 +62,7 @@ export const api: FakeApi = {
   getStatus: fn<'getStatus'>(),
   getQuota: fn<'getQuota'>(),
   compareModels: fn<'compareModels'>(),
+  reviewOpinion: fn<'reviewOpinion'>(),
   listTasks: fn<'listTasks'>(),
   createTask: fn<'createTask'>(),
   updateTask: fn<'updateTask'>(),

@@ -1,6 +1,8 @@
 import {
   CompareRequestSchema,
   CompareResponseSchema,
+  OpinionRequestSchema,
+  OpinionResponseSchema,
   ModelListSchema,
   QuotaSchema,
   RoleListSchema,
@@ -40,6 +42,17 @@ export const catalogEndpoints: readonly Endpoint[] = [
     body: CompareRequestSchema,
     responses: [json(200, 'Jawaban per model', CompareResponseSchema)],
     errors: [400, 401],
+  },
+  {
+    operationId: 'reviewOpinion',
+    method: 'post',
+    path: '/review/opinion',
+    tag: 'Model',
+    summary: 'Pendapat kedua: model lain meninjau diff dan mengembalikan temuan per baris',
+    auth: true,
+    body: OpinionRequestSchema,
+    responses: [json(200, 'Ringkasan dan temuan', OpinionResponseSchema)],
+    errors: [400, 401, 502],
   },
   {
     operationId: 'listRoles',
