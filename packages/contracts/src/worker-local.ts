@@ -209,6 +209,22 @@ export const LocalRequestSchema = z.discriminatedUnion('method', [
   }),
   z.object({
     id: z.string().min(1),
+    method: z.literal('files.list'),
+    /** `path` relatif terhadap folder project (atau worktree run); kosong = akar. */
+    params: PreviewTargetSchema.extend({ path: z.string().max(1024).default('') }),
+  }),
+  z.object({
+    id: z.string().min(1),
+    method: z.literal('files.read'),
+    params: PreviewTargetSchema.extend({ path: z.string().min(1).max(1024) }),
+  }),
+  z.object({
+    id: z.string().min(1),
+    method: z.literal('files.find'),
+    params: PreviewTargetSchema.extend({ query: z.string().trim().min(1).max(200) }),
+  }),
+  z.object({
+    id: z.string().min(1),
     method: z.literal('preview.shot'),
     params: PreviewTargetSchema.extend({
       /** Elemen yang ditangkap; kosong = seluruh viewport. */
@@ -286,6 +302,35 @@ export const ReviewStateSchema = z
   })
   .meta({ id: 'ReviewState' });
 export type ReviewState = z.infer<typeof ReviewStateSchema>;
+
+/** Berkas atau folder di dalam folder project; `path` memakai `/` dan relatif terhadap akar. */
+export const FileEntrySchema = z.object({
+  name: z.string(),
+  path: z.string(),
+  kind: z.enum(['dir', 'file']),
+  size: z.number().int().nonnegative(),
+});
+export type FileEntry = z.infer<typeof FileEntrySchema>;
+export const FileListSchema = z.object({
+  path: z.string(),
+  entries: z.array(FileEntrySchema),
+  /** Folder punya lebih banyak isi daripada yang ditampilkan. */
+  truncated: z.boolean(),
+});
+export type FileList = z.infer<typeof FileListSchema>;
+
+/** Isi berkas: teks (UTF-8), gambar (base64), atau tidak bisa ditampilkan (biner, terlalu besar). */
+export const FileContentSchema = z.object({
+  path: z.string(),
+  size: z.number().int().nonnegative(),
+  kind: z.enum(['text', 'image', 'binary', 'too_large']),
+  mime: z.string(),
+  content: z.string(),
+  /** Teks dipotong karena terlalu besar. */
+  truncated: z.boolean(),
+});
+export type FileContent = z.infer<typeof FileContentSchema>;
+export const FileMatchesSchema = z.object({ paths: z.array(z.string()) });
 
 /** Hasil per metode, untuk validasi di sisi desktop. */
 export const FoldersResultSchema = z.object({ folders: z.array(z.string()) });

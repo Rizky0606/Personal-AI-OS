@@ -397,6 +397,38 @@ describe('sesi gateway lewat worker', () => {
     client.close();
   });
 
+  it('files.* lokal: project terikat bisa dijelajahi; di luar folder dan project belum terikat ditolak', async () => {
+    const allowed = path.join(base, 'izin');
+    const app = path.join(allowed, 'aplikasi');
+    await fs.mkdir(path.join(app, 'src'), { recursive: true });
+    await fs.writeFile(path.join(app, 'src', 'main.ts'), 'export {};\n');
+    await fs.writeFile(path.join(allowed, 'luar.txt'), 'rahasia');
+    const client = await Client.login(worker.port, TOKEN);
+    await client.call('folders.add', { path: allowed });
+
+    expect(await client.call('files.list', { projectId: PROJECT })).toMatchObject({
+      ok: false,
+      error: { code: 'preview_unavailable' },
+    });
+
+    await client.call('project.bind', { projectId: PROJECT, path: app });
+    expect(await client.call('files.list', { projectId: PROJECT })).toMatchObject({
+      ok: true,
+      result: { path: '', entries: [{ name: 'src', kind: 'dir' }] },
+    });
+    expect(
+      await client.call('files.read', { projectId: PROJECT, path: 'src/main.ts' }),
+    ).toMatchObject({ ok: true, result: { kind: 'text', content: 'export {};\n' } });
+    expect(await client.call('files.find', { projectId: PROJECT, query: 'main' })).toMatchObject({
+      ok: true,
+      result: { paths: ['src/main.ts'] },
+    });
+    expect(
+      await client.call('files.read', { projectId: PROJECT, path: '../luar.txt' }),
+    ).toMatchObject({ ok: false, error: { code: 'path_not_allowed' } });
+    client.close();
+  });
+
   it('preview.* lokal: belum ada preview dijawab null; project belum terikat dan worktree hilang preview_unavailable', async () => {
     const client = await Client.login(worker.port, TOKEN);
 
