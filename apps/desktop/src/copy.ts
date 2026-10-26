@@ -5,6 +5,7 @@ export const copy = {
     chat: 'Chat',
     projects: 'Project',
     kanban: 'Kanban',
+    workspace: 'Ruang Kerja',
     schedules: 'Jadwal',
     research: 'Riset',
     spaces: 'Ruang',
@@ -446,6 +447,19 @@ export const copy = {
     general: 'Chat umum',
     pick: 'Pilih project',
     none: 'Belum ada project. Tambahkan di layar Project.',
+  },
+  workspace: {
+    title: 'Ruang Kerja',
+    filterLabel: 'Saring run',
+    filters: { all: 'Semua', active: 'Berjalan', review: 'Perlu ditinjau', done: 'Selesai' },
+    loading: 'Memuat run',
+    empty:
+      'Belum ada run coding. Kerjakan kartu kanban dengan AI atau mulai chat di sebuah project.',
+    emptyFilter: 'Tidak ada run di kategori ini.',
+    sidebarHint: 'Semua run coding, dengan status yang diperbarui otomatis.',
+    open: 'Buka',
+    stop: 'Hentikan',
+    untitled: 'Tanpa judul',
   },
   runStatus: {
     queued: 'Mengantre',

@@ -44,6 +44,7 @@ export function usePaletteItems(open: boolean, close: () => void): PaletteItem[]
         | '/'
         | '/projects'
         | '/kanban'
+        | '/workspace'
         | '/schedules'
         | '/research'
         | '/settings'
@@ -91,6 +92,13 @@ export function usePaletteItems(open: boolean, close: () => void): PaletteItem[]
         run: go('/projects'),
       },
       { id: 'go-kanban', group: 'go', label: copy.nav.kanban, hint: 'Ctrl+3', run: go('/kanban') },
+      {
+        id: 'go-workspace',
+        group: 'go',
+        label: copy.nav.workspace,
+        keywords: 'run paralel agent worktree status',
+        run: go('/workspace'),
+      },
       {
         id: 'go-schedules',
         group: 'go',

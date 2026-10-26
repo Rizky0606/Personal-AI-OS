@@ -48,7 +48,7 @@ beforeEach(() => {
 });
 
 describe('Shell', () => {
-  it('kerangka final: rail 7 tujuan, sidebar, area utama, dan status bar; panel kanan tertutup', async () => {
+  it('kerangka final: rail 8 tujuan, sidebar, area utama, dan status bar; panel kanan tertutup', async () => {
     await renderShell();
 
     const rail = screen.getByRole('navigation', { name: copy.shell.rail });
@@ -57,6 +57,7 @@ describe('Shell', () => {
       copy.nav.chat,
       copy.nav.projects,
       copy.nav.kanban,
+      copy.nav.workspace,
       copy.nav.schedules,
       copy.nav.research,
       copy.nav.spaces,

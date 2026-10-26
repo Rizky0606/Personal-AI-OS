@@ -6,11 +6,12 @@ import {
   type ReviewRequestSchema,
   type ReviewResponseSchema,
   type Run,
+  type WorkspaceRunListSchema,
 } from '@aios/contracts';
-import { and, eq } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import type { z } from 'zod';
 import type { Database } from '../../db/client.js';
-import { approvals, conversations, runs } from '../../db/schema/index.js';
+import { approvals, conversations, projects, runs, tasks } from '../../db/schema/index.js';
 import { AppError } from '../../errors.js';
 import { writeAudit } from '../audit/repo.js';
 import { toApprovalDto, toRunDto } from '../chat/dto.js';
@@ -23,6 +24,11 @@ import type { EventStore, StoredEvent } from './store.js';
 
 export interface RunsService {
   get(id: string): Promise<Run>;
+  /** Run terbaru menurut jenis (terbaru dulu) dengan judul dan project, untuk Ruang Kerja. */
+  list(input: {
+    kind: Run['kind'];
+    limit: number;
+  }): Promise<z.infer<typeof WorkspaceRunListSchema>>;
   events(
     id: string,
     afterSeq: number,
@@ -110,6 +116,52 @@ export function createRunsService(deps: {
   return {
     async get(id) {
       return toRunDto(await load(id));
+    },
+
+    async list({ kind, limit }) {
+      const rows = await db
+        .select({
+          run: runs,
+          taskTitle: tasks.title,
+          taskProject: tasks.projectId,
+          conversationTitle: conversations.title,
+          conversationProject: conversations.projectId,
+        })
+        .from(runs)
+        .leftJoin(tasks, eq(tasks.id, runs.taskId))
+        .leftJoin(conversations, eq(conversations.id, runs.conversationId))
+        .where(eq(runs.kind, kind))
+        .orderBy(desc(runs.updatedAt))
+        .limit(limit);
+      const projectIds = [
+        ...new Set(
+          rows.flatMap((r) => {
+            const id = r.taskProject ?? r.conversationProject;
+            return id ? [id] : [];
+          }),
+        ),
+      ];
+      const names = new Map(
+        projectIds.length
+          ? (
+              await db
+                .select({ id: projects.id, name: projects.name })
+                .from(projects)
+                .where(inArray(projects.id, projectIds))
+            ).map((p) => [p.id, p.name])
+          : [],
+      );
+      return {
+        items: rows.map((r) => {
+          const projectId = r.taskProject ?? r.conversationProject ?? null;
+          return {
+            run: toRunDto(r.run),
+            title: r.taskTitle ?? r.conversationTitle ?? '',
+            projectId,
+            projectName: projectId ? (names.get(projectId) ?? null) : null,
+          };
+        }),
+      };
     },
 
     async events(id, afterSeq, limit) {

@@ -15,6 +15,7 @@ import {
   ResearchJobSchema,
   ResearchSourceSchema,
   RoutingCorrectionSchema,
+  RunKindSchema,
   RunSchema,
   ScheduleNotifySchema,
   ScheduleTargetSchema,
@@ -395,6 +396,21 @@ export const AddSpaceDocumentRequestSchema = z
 export const SpaceDocumentParamsSchema = z.object({ id: IdSchema, documentId: IdSchema });
 
 /* Pencarian riwayat (W22) */
+
+/** Ringkasan run untuk Ruang Kerja: run beserta judul (kartu atau percakapan) dan project-nya. */
+export const WorkspaceRunSchema = z
+  .object({
+    run: RunSchema,
+    title: z.string(),
+    projectId: IdSchema.nullable(),
+    projectName: z.string().nullable(),
+  })
+  .meta({ id: 'WorkspaceRun' });
+export const WorkspaceRunListSchema = itemsOf(WorkspaceRunSchema).meta({ id: 'WorkspaceRunList' });
+export const ListRunsQuerySchema = z.object({
+  kind: RunKindSchema.default('coding'),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+});
 
 export const SearchQuerySchema = z.object({
   q: z.string().trim().min(2).max(200),

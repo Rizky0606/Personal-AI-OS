@@ -10,6 +10,7 @@ import { CompareScreen } from '../compare/CompareScreen';
 import { StatusScreen } from '../status/StatusScreen';
 import { QuotaScreen } from '../quota/QuotaScreen';
 import { KanbanScreen } from '../kanban/KanbanScreen';
+import { WorkspaceScreen } from '../workspace/WorkspaceScreen';
 import { ResearchDetailScreen } from '../research/ResearchDetailScreen';
 import { ResearchFormScreen } from '../research/ResearchFormScreen';
 import { CatalogScreen } from '../screens/CatalogScreen';
@@ -52,6 +53,7 @@ const routes = [
   }),
   createRoute({ getParentRoute: () => rootRoute, path: '/projects', component: ProjectsScreen }),
   createRoute({ getParentRoute: () => rootRoute, path: '/kanban', component: KanbanScreen }),
+  createRoute({ getParentRoute: () => rootRoute, path: '/workspace', component: WorkspaceScreen }),
   createRoute({ getParentRoute: () => rootRoute, path: '/schedules', component: SchedulesScreen }),
   createRoute({
     getParentRoute: () => rootRoute,

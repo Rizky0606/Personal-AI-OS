@@ -4,6 +4,7 @@ import {
   CalendarClock,
   Folder,
   Kanban,
+  LayoutPanelLeft,
   Library,
   MessageSquare,
   Search,
@@ -15,7 +16,15 @@ import { cn } from '../lib/cn';
 import { Tooltip } from '../ui/Tooltip';
 
 interface RailItem {
-  to: '/' | '/projects' | '/kanban' | '/schedules' | '/research' | '/spaces' | '/settings';
+  to:
+    | '/'
+    | '/projects'
+    | '/kanban'
+    | '/workspace'
+    | '/schedules'
+    | '/research'
+    | '/spaces'
+    | '/settings';
   label: string;
   icon: ReactNode;
 }
@@ -26,6 +35,7 @@ const items: RailItem[] = [
   { to: '/', label: copy.nav.chat, icon: <MessageSquare {...ICON} /> },
   { to: '/projects', label: copy.nav.projects, icon: <Folder {...ICON} /> },
   { to: '/kanban', label: copy.nav.kanban, icon: <Kanban {...ICON} /> },
+  { to: '/workspace', label: copy.nav.workspace, icon: <LayoutPanelLeft {...ICON} /> },
   { to: '/schedules', label: copy.nav.schedules, icon: <CalendarClock {...ICON} /> },
   { to: '/research', label: copy.nav.research, icon: <Search {...ICON} /> },
   { to: '/spaces', label: copy.nav.spaces, icon: <Library {...ICON} /> },

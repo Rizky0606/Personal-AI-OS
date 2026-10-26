@@ -64,6 +64,19 @@ export const useSpaceConversations = (spaceId: string) =>
 
 export const useMemories = () => useQuery({ queryKey: ['memories'], queryFn: api.listMemories });
 
+/** Run coding untuk Ruang Kerja; dimuat ulang tiap 5 detik selama ada run yang belum final. */
+export const useWorkspaceRuns = () =>
+  useQuery({
+    queryKey: ['workspaceRuns'],
+    queryFn: api.listRuns,
+    refetchInterval: (query) =>
+      query.state.data?.some(
+        (i) => !['accepted', 'rejected', 'completed', 'failed', 'cancelled'].includes(i.run.status),
+      )
+        ? 5_000
+        : false,
+  });
+
 export const useSchedules = () => useQuery({ queryKey: ['schedules'], queryFn: api.listSchedules });
 
 export const useScheduleRuns = (scheduleId: string) =>
