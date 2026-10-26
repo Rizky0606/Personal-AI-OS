@@ -435,3 +435,73 @@ describe('Tinjau perubahan: batalkan file dan checkpoint', () => {
     expect(await screen.findByText(copy.workerErrors.run_active)).toBeInTheDocument();
   });
 });
+
+describe('Tinjau perubahan: pendapat kedua', () => {
+  const opinion = {
+    model: 'peninjau',
+    summary: 'Ada satu risiko.',
+    findings: [
+      { path: 'math.js', line: 2, severity: 'warning' as const, body: 'Tidak ada tes.' },
+      { path: 'math.js', line: 3, severity: 'bug' as const, body: 'mul tidak menangani NaN.' },
+      { path: 'math.js', line: null, severity: 'info' as const, body: 'Pertimbangkan TypeScript.' },
+    ],
+    truncated: false,
+  };
+
+  beforeEach(() => {
+    api.listModels.mockResolvedValue([
+      { id: 'peninjau', label: 'Peninjau', kind: 'model', ownedBy: 'x' },
+    ]);
+  });
+
+  it('mengirim patch tanpa file biner, menampilkan temuan, dan menjadikannya komentar', async () => {
+    api.reviewOpinion.mockResolvedValue(opinion);
+    const user = userEvent.setup();
+    await open();
+
+    await user.click(await screen.findByRole('button', { name: copy.review.opinion.ask }));
+    expect(api.reviewOpinion).toHaveBeenCalledWith({
+      model: 'peninjau',
+      files: [{ path: 'math.js', patch: PATCH_MATH }],
+    });
+
+    const list = await screen.findByRole('list', { name: copy.review.opinion.findings });
+    expect(within(list).getAllByRole('listitem')).toHaveLength(3);
+    expect(screen.getByText('Ada satu risiko.')).toBeInTheDocument();
+    expect(screen.getByText(copy.review.opinion.reviewedBy('peninjau'))).toBeInTheDocument();
+
+    // Satu temuan menjadi komentar; sisanya yang punya baris ditawarkan "semua".
+    await user.click(
+      screen.getByRole('button', { name: `${copy.review.opinion.addComment}: math.js:2` }),
+    );
+    expect(
+      screen.getByRole('button', { name: `${copy.review.opinion.added}: math.js:2` }),
+    ).toBeDisabled();
+    expect(screen.getByRole('button', { name: copy.review.sendComments(1) })).toBeEnabled();
+
+    // Temuan tanpa nomor baris tidak bisa jadi komentar.
+    expect(within(list).getAllByRole('button')).toHaveLength(2);
+  });
+
+  it('galat dari gateway tampil sebagai pesan, dan tombol bisa dicoba lagi', async () => {
+    api.reviewOpinion.mockRejectedValueOnce(new ApiProblem(502, 'opinion_failed', 'provider mati'));
+    api.reviewOpinion.mockResolvedValue({ ...opinion, findings: [], summary: '' });
+    const user = userEvent.setup();
+    await open();
+
+    await user.click(await screen.findByRole('button', { name: copy.review.opinion.ask }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(copy.errors.server);
+
+    await user.click(screen.getByRole('button', { name: copy.review.opinion.ask }));
+    expect(await screen.findByText(copy.review.opinion.clean)).toBeInTheDocument();
+  });
+
+  it('tanpa model yang tersedia: pesan, tanpa memanggil gateway', async () => {
+    api.listModels.mockResolvedValue([]);
+    const user = userEvent.setup();
+    await open();
+    await user.click(await screen.findByRole('button', { name: copy.review.opinion.ask }));
+    expect(await screen.findByText(copy.review.opinion.noModel)).toBeInTheDocument();
+    expect(api.reviewOpinion).not.toHaveBeenCalled();
+  });
+});

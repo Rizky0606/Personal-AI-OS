@@ -7,6 +7,7 @@ import {
   LoginResponseSchema,
   MemoryListSchema,
   MemorySchema,
+  OpinionResponseSchema,
   PromptTemplateListSchema,
   PromptTemplateSchema,
   SearchResponseSchema,
@@ -68,6 +69,7 @@ const ScheduleListSchema = items(ScheduleSchema);
 const ProjectListSchema = items(ProjectSchema);
 const TaskListSchema = items(TaskSchema);
 
+export type OpinionResult = z.infer<typeof OpinionResponseSchema>;
 export type RoleInfo = z.infer<typeof RoleInfoSchema>;
 export type Approval = z.infer<typeof ApprovalSchema>;
 export type ModelInfo = z.infer<typeof ModelInfoSchema>;
@@ -237,6 +239,9 @@ export function createGatewayApi(call: Call) {
     compareModels: async (prompt: string, models: string[]) =>
       (await get('/compare', CompareResponseSchema, { method: 'POST', body: { prompt, models } }))
         .results,
+    /** Pendapat kedua: model lain meninjau diff dan mengembalikan ringkasan dan temuan per baris. */
+    reviewOpinion: (input: { model: string; files: { path: string; patch: string }[] }) =>
+      get('/review/opinion', OpinionResponseSchema, { method: 'POST', body: input }),
     listTasks: async (projectId: string) =>
       (await get(`/projects/${projectId}/tasks`, TaskListSchema)).items,
     createTask: (input: CreateTaskInput) =>
