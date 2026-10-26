@@ -49,6 +49,14 @@ Produk ini adalah satu asisten AI pribadi dengan dua wajah: Windows untuk kerja 
 | W21 | Ruang pengetahuan | P2 | Dokumen yang diunggah jadi sumber jawaban bersitasi |
 | W22 | Pencarian riwayat | P2 | Cari di semua pesan chat dan laporan riset |
 | W23 | Aturan per project | P2 | Instruksi project yang ikut disuntik ke run coding |
+| W24 | Ruang Kerja multi-run | P1 | Daftar semua run coding dengan status live (berjalan, menunggu izin, perlu review, selesai); memilih satu membuka chat, diff, dan preview-nya |
+| W25 | Panel terbagi | P1 | Area kerja dibagi horizontal atau vertikal; tiap pane berisi chat, terminal, diff, preview, atau berkas; tata letak diingat |
+| W26 | Berkas worktree | P1 | Pohon berkas, penyorotan sintaks, pratinjau Markdown dan gambar, quick-open Ctrl+P, seret berkas ke prompt |
+| W27 | Templat prompt | P2 | Prompt tersimpan berparameter (`/nama`) dari composer dan palette |
+| W28 | Pendapat kedua | P2 | Model lain meninjau diff sebelum diterima; temuan bisa dikirim balik sebagai komentar |
+| W29 | Mode rencana | P2 | Run coding hanya membaca dan menulis rencana; berkas baru boleh diubah setelah rencana disetujui |
+| W30 | Lanjut dengan ringkasan | P2 | Percakapan panjang diringkas menjadi konteks awal percakapan baru |
+| W31 | Cabang percakapan | P2 | Fork percakapan dari pesan mana pun tanpa menghapus jalur lama |
 
 ## Fitur Android
 
