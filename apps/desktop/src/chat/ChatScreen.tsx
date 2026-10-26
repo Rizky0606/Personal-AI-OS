@@ -8,6 +8,7 @@ import { StateView, type ViewState } from '../ui/StateView';
 import { ChatWelcome } from './ChatWelcome';
 import { Composer } from './Composer';
 import { MessageList } from './MessageList';
+import { PlanBanner } from './PlanBanner';
 import { ReviewBanner } from './ReviewBanner';
 import { useChatController } from './useChatController';
 
@@ -101,6 +102,9 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
         )}
       </div>
       {chat.reviewRunId ? <ReviewBanner runId={chat.reviewRunId} /> : null}
+      {chat.awaitingPlanApproval ? (
+        <PlanBanner onApprove={chat.approvePlan} disabled={chat.sending || !chat.online} />
+      ) : null}
       <Composer
         draft={chat.draft}
         onDraft={chat.setDraft}
@@ -121,6 +125,7 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
         onRemoveFile={chat.removeFile}
         templates={templates.data ?? []}
         onUseTemplate={insert.use}
+        {...(chat.inProject ? { planMode: chat.planFirst, onPlanMode: chat.setPlanFirst } : {})}
       />
       {insert.dialog}
     </div>

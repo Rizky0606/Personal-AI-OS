@@ -443,3 +443,110 @@ describe('hasil run coding menunggu tinjauan', () => {
     expect(useUiStore.getState().reviewRunId).toBeNull();
   });
 });
+
+describe('mode rencana', () => {
+  const planRun = (status: 'running' | 'completed', planOnly = true) =>
+    run({ id: RUN_X, kind: 'coding', engine: 'omp', status, planOnly });
+  const chip = () => screen.queryByRole('button', { name: copy.chat.plan.chip });
+
+  it('sakelar Rencana dulu hanya ada di dalam project dan memengaruhi pesan berikutnya', async () => {
+    const general = await renderScreen(<ChatScreen />);
+    await screen.findByRole('button', { name: new RegExp(`${copy.chat.model.label}:`) });
+    expect(chip()).not.toBeInTheDocument();
+    general.unmount();
+
+    useUiStore.getState().setActiveProject(PROJECT);
+    api.createConversation.mockResolvedValue({
+      id: CONV,
+      title: '',
+      surface: 'windows',
+      projectId: PROJECT,
+      spaceId: null,
+      pinned: false,
+      archivedAt: null,
+      createdAt: TS,
+      updatedAt: TS,
+    });
+    api.sendMessage.mockResolvedValue({
+      message: message({ author: 'user', text: 'x', runId: RUN_X }),
+      run: planRun('running'),
+    });
+    const user = userEvent.setup();
+    await renderScreen(<ChatScreen />);
+    const toggle = await screen.findByRole('button', { name: copy.chat.plan.chip });
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
+    await user.type(field(), 'rencanakan dark mode{Enter}');
+
+    await waitFor(() => expect(api.sendMessage).toHaveBeenCalled());
+    expect(api.sendMessage.mock.calls[0]?.[1]).toMatchObject({
+      text: 'rencanakan dark mode',
+      planOnly: true,
+    });
+  });
+
+  it('tanpa sakelar, pesan dikirim tanpa planOnly', async () => {
+    useUiStore.getState().setActiveProject(PROJECT);
+    api.createConversation.mockResolvedValue({
+      id: CONV,
+      title: '',
+      surface: 'windows',
+      projectId: PROJECT,
+      spaceId: null,
+      pinned: false,
+      archivedAt: null,
+      createdAt: TS,
+      updatedAt: TS,
+    });
+    api.sendMessage.mockResolvedValue({
+      message: message({ author: 'user', text: 'x', runId: RUN_X }),
+      run: planRun('running', false),
+    });
+    const user = userEvent.setup();
+    await renderScreen(<ChatScreen />);
+    await user.type(await screen.findByRole('textbox'), 'kerjakan{Enter}');
+    await waitFor(() => expect(api.sendMessage).toHaveBeenCalled());
+    expect(api.sendMessage.mock.calls[0]?.[1].planOnly).toBeUndefined();
+  });
+
+  it('rencana selesai: banner persetujuan; Setujui mengirim pesan tanpa mode rencana', async () => {
+    useUiStore.getState().setActiveProject(PROJECT);
+    api.listMessages.mockResolvedValue(
+      page(
+        message({ author: 'user', text: 'rencanakan', runId: RUN_X }),
+        message({ author: 'assistant', text: '1. Tambah tema.', runId: RUN_X }),
+      ),
+    );
+    api.getRun.mockResolvedValue(planRun('completed'));
+    api.sendMessage.mockResolvedValue({
+      message: message({ author: 'user', text: 'x', runId: uid() }),
+      run: run({ id: uid(), kind: 'coding', engine: 'omp', status: 'running' }),
+    });
+    const user = userEvent.setup();
+    await renderScreen(<ChatScreen conversationId={CONV} />);
+
+    expect(await screen.findByText(copy.chat.plan.ready)).toBeInTheDocument();
+    // Tidak ada diff yang perlu ditinjau pada run rencana.
+    expect(screen.queryByRole('button', { name: copy.review.open })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: copy.chat.plan.approve }));
+    await waitFor(() => expect(api.sendMessage).toHaveBeenCalled());
+    expect(api.sendMessage.mock.calls[0]?.[1]).toMatchObject({
+      text: copy.chat.plan.approvalMessage,
+    });
+    expect(api.sendMessage.mock.calls[0]?.[1].planOnly).toBeUndefined();
+  });
+
+  it('run biasa selesai tidak menampilkan banner persetujuan', async () => {
+    useUiStore.getState().setActiveProject(PROJECT);
+    api.listMessages.mockResolvedValue(
+      page(message({ author: 'user', text: 'tes', runId: RUN_X })),
+    );
+    api.getRun.mockResolvedValue(planRun('completed', false));
+    await renderScreen(<ChatScreen conversationId={CONV} />);
+    await screen.findByRole('textbox');
+    expect(screen.queryByText(copy.chat.plan.ready)).not.toBeInTheDocument();
+  });
+});

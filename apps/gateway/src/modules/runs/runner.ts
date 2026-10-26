@@ -112,6 +112,12 @@ const CANCEL_WAIT_MS = 5000;
  * berkas dan terminal, tetapi pemilik tidak bisa menjangkau sistem berkas server. Hasil berupa berkas harus sampai
  * lewat jawaban (blok kode berpath) supaya aplikasi bisa menyediakan Unduh ZIP.
  */
+export const PLAN_RULE = [
+  '# Mode rencana',
+  'Pemilik meminta rencana dulu. Jangan mengubah berkas, membuat berkas, memasang paket, atau menjalankan perintah yang mengubah apa pun; semua izin tulis dan perintah akan ditolak. Kamu boleh membaca kode dan mencari.',
+  'Tulis rencana bernomor: tujuan, berkas yang akan diubah, langkah kerja, risiko, dan cara memverifikasi. Tanyakan bila ada yang perlu dikonfirmasi. Pemilik akan menyetujui rencana ini sebelum kamu mengerjakannya.',
+].join('\n');
+
 export const SERVER_FILES_RULE = [
   '# Berkas untuk pemilik',
   'Kamu berjalan di server yang sistem berkasnya tidak bisa diakses pemilik. Jangan membuat berkas, folder, atau arsip (zip, tar, docx, dan sejenisnya) di server sebagai hasil untuk pemilik, kecuali di folder kiriman bila disebut di bawah, dan jangan pernah menjawab dengan path berkas di server.',
@@ -149,6 +155,7 @@ export function createRunner(deps: RunnerDeps): Runner {
     projectId: string | null,
     onServer: boolean,
     runId: string,
+    planOnly = false,
   ): Promise<string> {
     const bundle = deps.roles.bundle(roleId).systemPrompt;
     const extra = async (name: string, load: () => Promise<string> | undefined) => {
@@ -164,7 +171,14 @@ export function createRunner(deps: RunnerDeps): Runner {
       ? await extra('aturan project', () => deps.projectRules?.rulesSection(projectId))
       : '';
     const outbox = onServer && deps.outbox ? deps.outbox.promptFor(runId) : '';
-    return [bundle, onServer ? SERVER_FILES_RULE : '', outbox, memory, rules]
+    return [
+      bundle,
+      onServer ? SERVER_FILES_RULE : '',
+      outbox,
+      planOnly ? PLAN_RULE : '',
+      memory,
+      rules,
+    ]
       .filter(Boolean)
       .join('\n\n');
   }
@@ -177,6 +191,8 @@ export function createRunner(deps: RunnerDeps): Runner {
     let failure: RunError | undefined;
     let completed = false;
     let coding = false;
+    // Run rencana tidak mengubah berkas, jadi tidak ada hasil yang perlu ditinjau: langsung selesai.
+    const reviewable = () => coding && !run.planOnly;
     /** Langkah tool run ini, disimpan sebagai bagian pesan asisten supaya tetap terlihat setelah dimuat ulang. */
     const toolParts = new Map<string, Extract<MessagePart, { type: 'tool' }>>();
 
@@ -302,6 +318,8 @@ export function createRunner(deps: RunnerDeps): Runner {
 
       if (runnable && decision && !ctl.cancelled) {
         const chosenRole = decision.role;
+        // Mode rencana hanya berarti untuk run coding; di chat biasa dihiraukan.
+        const planOnly = coding && run.planOnly;
         const startAdapter = coding ? deps.workerAdapter! : adapter;
         let handle: RunHandle | undefined;
         try {
@@ -315,6 +333,7 @@ export function createRunner(deps: RunnerDeps): Runner {
               input.projectId ?? null,
               !coding,
               run.id,
+              planOnly,
             ),
             sessionId: input.sessionId,
             ...(input.history?.length ? { history: input.history } : {}),
@@ -323,6 +342,7 @@ export function createRunner(deps: RunnerDeps): Runner {
             ...(coding && input.continueFromRunId
               ? { continueFromRunId: input.continueFromRunId }
               : {}),
+            ...(planOnly ? { planOnly: true } : {}),
             ...(run.model ? { model: run.model } : {}),
             signal: ctl.abort.signal,
           });
@@ -378,7 +398,10 @@ export function createRunner(deps: RunnerDeps): Runner {
             // Run coding berhenti di needs_review (menunggu tinjauan diff); run chat langsung selesai.
             await db
               .update(runs)
-              .set({ status: coding ? 'needs_review' : 'completed', usage: event.usage ?? usage })
+              .set({
+                status: reviewable() ? 'needs_review' : 'completed',
+                usage: event.usage ?? usage,
+              })
               .where(eq(runs.id, run.id));
             status = 'running';
           }
@@ -392,7 +415,7 @@ export function createRunner(deps: RunnerDeps): Runner {
 
       if (completed) {
         // Status DB sudah 'completed'; event penutup menyusul sebagai event terakhir run.
-        const finalStatus: RunStatus = coding ? 'needs_review' : 'completed';
+        const finalStatus: RunStatus = reviewable() ? 'needs_review' : 'completed';
         const stored = await emit({ type: 'run.status', status: finalStatus });
         status = finalStatus;
         hub.publishLive(`conversation:${input.conversationId}`, stored.event);

@@ -335,6 +335,35 @@ describe('RunCoordinator: event dan approval', () => {
     expect(rules.matches(PROJECT, 'command', 'node --test')).toBe(true);
   });
 
+  it('mode rencana: semua izin ditolak otomatis tanpa bertanya, juga yang punya aturan "selalu"', async () => {
+    await rules.add(PROJECT, 'command', 'node --test');
+    coordinator.start(command({ planOnly: true }));
+    await until(() => adapter.handles.length === 1, 'adapter dimulai');
+    const handle = adapter.handle;
+
+    handle.events.push({
+      type: 'approval.requested',
+      approvalId: APPROVAL,
+      kind: 'command',
+      detail: 'node --test',
+    });
+    handle.events.push({
+      type: 'approval.requested',
+      approvalId: APPROVAL_2,
+      kind: 'file_write',
+      detail: 'src/app.js',
+    });
+    await until(() => handle.resolved.length === 2, 'ditolak otomatis');
+
+    expect(handle.resolved).toEqual([
+      [APPROVAL, 'deny', undefined],
+      [APPROVAL_2, 'deny', undefined],
+    ]);
+    await new Promise((r) => setTimeout(r, 30));
+    // Pengguna tidak ditanya apa pun dan tidak ada yang diteruskan ke gateway.
+    expect(types()).toEqual([]);
+  });
+
   it('aturan tidak berlaku untuk perintah lain atau project lain', async () => {
     await rules.add(PROJECT, 'command', 'node --test');
     const handle = await running();

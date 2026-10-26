@@ -105,6 +105,8 @@ export interface MessageInput {
   files?: readonly FilePart[] | undefined;
   role?: string | undefined;
   model?: string | undefined;
+  /** Run coding hanya membuat rencana (tanpa mengubah berkas). */
+  planOnly?: boolean | undefined;
 }
 
 /** Teks (bila ada) lalu lampiran; server menolak pesan tanpa keduanya. */
@@ -116,6 +118,7 @@ function messageBody(input: MessageInput) {
     ],
     ...(input.role ? { role: input.role } : {}),
     ...(input.model ? { model: input.model } : {}),
+    ...(input.planOnly ? { planOnly: true } : {}),
   };
 }
 

@@ -60,6 +60,7 @@ export function toRunDto(row: typeof runs.$inferSelect): Run {
     branch: row.branch,
     usage: row.usage,
     error: row.error,
+    planOnly: row.planOnly && row.kind === 'coding',
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };

@@ -38,6 +38,7 @@ export function run(over: Partial<Run> = {}): Run {
     branch: null,
     usage: null,
     error: null,
+    planOnly: false,
     createdAt: TS,
     updatedAt: TS,
     ...over,

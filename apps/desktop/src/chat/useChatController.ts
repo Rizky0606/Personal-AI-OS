@@ -1,6 +1,6 @@
 import { withAttachments } from '../preview/attachment';
 import { workerBranchFor } from '@aios/contracts';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { apiErrorMessage } from '../api/errors';
@@ -52,6 +52,8 @@ export function useChatController(conversationId: string | undefined) {
   const [sending, setSending] = useState(false);
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
   const [focusNonce, setFocusNonce] = useState(0);
+  /** Mode rencana: pesan berikutnya di project hanya membuat rencana, tanpa mengubah berkas. */
+  const [planFirst, setPlanFirst] = useState(false);
   const attach = useFileAttachments(online);
 
   const messages = useMemo(() => chronological(messagesQuery.data), [messagesQuery.data]);
@@ -60,7 +62,16 @@ export function useChatController(conversationId: string | undefined) {
   const failure = useRunFailure(runId);
   const streaming = live !== undefined && !isSettled(live.status);
   const reviewRunId = useReviewTarget(runId ?? undefined, live);
-
+  // Run rencana yang sudah selesai menunggu persetujuan pemilik sebelum dikerjakan.
+  const planRun = useQuery({
+    queryKey: ['run', runId],
+    queryFn: () => api.getRun(runId!),
+    enabled: runId !== null && runId !== undefined,
+    retry: false,
+  });
+  const planStatus = live?.status ?? planRun.data?.status;
+  const awaitingPlanApproval =
+    planRun.data?.planOnly === true && planStatus === 'completed' && !streaming;
   // Chat umum hanya menawarkan role Umum; role coding (omp) butuh project, jadi hanya muncul di dalam project.
   const roles = useMemo(
     () => (rolesQuery.data ?? []).filter((r) => activeProjectId !== null || r.group === 'umum'),
@@ -120,7 +131,7 @@ export function useChatController(conversationId: string | undefined) {
 
   /** Mengirim isi kolom pesan, atau `override` (kirim ulang) tanpa menyentuh draf yang sedang diketik. */
   const send = useCallback(
-    async (override?: string) => {
+    async (override?: string, options?: { plan?: boolean }) => {
       const text = (override ?? draft).trim();
       // Kirim ulang hanya teks; lampiran di composer ikut pada kiriman biasa.
       const files = override === undefined ? attach.parts : [];
@@ -143,6 +154,7 @@ export function useChatController(conversationId: string | undefined) {
           text: body,
           files: files.length ? files : undefined,
           model: model ?? undefined,
+          planOnly: (options?.plan ?? planFirst) && activeProjectId !== null ? true : undefined,
         });
         addMessageToCache(queryClient, id, response.message);
         clearAttachments();
@@ -175,6 +187,7 @@ export function useChatController(conversationId: string | undefined) {
       conversationId,
       activeProjectId,
       model,
+      planFirst,
       queryClient,
       navigate,
       fail,
@@ -354,6 +367,14 @@ export function useChatController(conversationId: string | undefined) {
     deleteMessage,
     rerunnableId: lastAssistant && !streaming ? lastAssistant.id : null,
     focusNonce,
+    planFirst,
+    setPlanFirst,
+    awaitingPlanApproval,
+    /** Menyetujui rencana: pesan berikutnya dikerjakan sungguhan (tanpa mode rencana). */
+    approvePlan: () => {
+      setPlanFirst(false);
+      void send(copy.chat.plan.approvalMessage, { plan: false });
+    },
     /** Chat di dalam project (sambutan dan saran mengarah ke coding). */
     inProject: activeProjectId !== null,
     /** Mengisi kolom pesan dari kartu saran lalu memindahkan fokus ke sana (belum dikirim). */

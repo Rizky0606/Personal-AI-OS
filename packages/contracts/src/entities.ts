@@ -111,6 +111,8 @@ export const RunSchema = z
     branch: z.string().nullable(),
     usage: UsageSchema.nullable(),
     error: RunErrorSchema.nullable(),
+    /** Run coding mode rencana: hanya membaca dan menulis rencana, tanpa perubahan berkas (W29). */
+    planOnly: z.boolean().default(false),
     createdAt: TimestampSchema,
     updatedAt: TimestampSchema,
   })

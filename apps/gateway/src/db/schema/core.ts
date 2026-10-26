@@ -142,6 +142,8 @@ export const runs = pgTable(
     branch: text('branch'),
     usage: jsonb('usage').$type<Usage>(),
     error: jsonb('error').$type<RunError>(),
+    /** Mode rencana (W29): run coding yang hanya membaca dan menulis rencana. */
+    planOnly: boolean('plan_only').notNull().default(false),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

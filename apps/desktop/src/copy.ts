@@ -577,6 +577,14 @@ export const copy = {
     emptyThread: 'Tulis pesan di bawah. Role dipilih otomatis, bisa diganti lewat chip role.',
     loadOlder: 'Muat pesan lebih lama',
     composerLabel: 'Pesan',
+    plan: {
+      chip: 'Rencana dulu',
+      chipHint:
+        'Agent hanya membaca kode dan menulis rencana; tidak ada berkas yang diubah sampai Anda menyetujuinya.',
+      ready: 'Rencana siap. Setujui untuk mulai dikerjakan, atau tulis revisi di bawah.',
+      approve: 'Setujui dan kerjakan',
+      approvalMessage: 'Rencana disetujui. Kerjakan sekarang sesuai rencana di atas.',
+    },
     placeholder: 'Tulis pesan. Enter mengirim, Shift+Enter baris baru.',
     send: 'Kirim',
     stop: 'Hentikan',

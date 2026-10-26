@@ -282,6 +282,40 @@ describe('run coding lewat worker', () => {
     fake.close();
   });
 
+  it('mode rencana: run.start membawa planOnly dan aturan rencana; selesai langsung completed tanpa tinjauan', async () => {
+    const { fake, conversationId } = await setup('Worker Rencana');
+    const res = await env.post(
+      `/conversations/${conversationId}/messages`,
+      { parts: [{ type: 'text', text: 'rencanakan dark mode' }], role: 'frontend', planOnly: true },
+      desktop,
+    );
+    expect(res.statusCode, res.body).toBe(201);
+    const run = SendMessageResponseSchema.parse(res.json()).run;
+
+    await until(() => fake.command('run.start') !== undefined, 'run.start di worker');
+    const start = fake.command('run.start')!;
+    expect(start).toMatchObject({ runId: run.id, planOnly: true });
+    expect(start.bundle.systemPrompt).toContain('# Mode rencana');
+    await until(async () => (await statusOf(run.id)) === 'running', 'running');
+    expect(await getRun(run.id)).toMatchObject({ kind: 'coding', planOnly: true });
+
+    fake.emit(run.id, { type: 'message.delta', messageId: MESSAGE_ID, text: '1. Tambah tema.' });
+    fake.emit(run.id, { type: 'run.completed', summary: 'Rencana siap.' });
+    await until(async () => (await statusOf(run.id)) === 'completed', 'completed');
+    fake.close();
+  });
+
+  it('run biasa tidak membawa planOnly dan aturan rencana', async () => {
+    const { fake, conversationId } = await setup('Worker Tanpa Rencana');
+    const run = await startRun(conversationId);
+    await until(() => fake.command('run.start') !== undefined, 'run.start');
+    const start = fake.command('run.start')!;
+    expect(start.planOnly).toBeUndefined();
+    expect(start.bundle.systemPrompt).not.toContain('# Mode rencana');
+    expect((await getRun(run.id)).planOnly).toBe(false);
+    fake.close();
+  });
+
   it('Tolak: keputusan deny diteruskan ke worker dan tercatat denied', async () => {
     const { fake, conversationId } = await setup('Worker Tolak');
     const run = await startRun(conversationId);

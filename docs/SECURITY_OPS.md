@@ -23,6 +23,7 @@ Hasil audit terakhir dan temuannya ada di `docs/SECURITY_AUDIT.md`; tes `securit
 - Daftar folder yang diizinkan diatur di aplikasi desktop. Worker menolak path di luar daftar.
 - Run coding selalu di git worktree terpisah; branch kerja pengguna tidak disentuh sampai review diterima.
 - Approval wajib untuk: perintah shell yang bukan baca, akses jaringan, instalasi paket, penghapusan file. Aturan "selalu izinkan" disimpan per project dan per pola perintah.
+- Mode rencana (`planOnly`): worker menolak otomatis setiap permintaan izin (tulis, perintah, jaringan), termasuk yang punya aturan "selalu izinkan". Pembatasan ditegakkan di worker, bukan hanya lewat prompt.
 - Batas waktu run default 30 menit, bisa diubah. Proses anak dimatikan saat run selesai.
 
 ## Quick Ask (jendela kedua desktop)

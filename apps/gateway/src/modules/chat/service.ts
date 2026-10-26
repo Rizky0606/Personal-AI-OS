@@ -435,6 +435,7 @@ export function createChatService(deps: {
             engine: 'hermes',
             model,
             conversationId,
+            planOnly: input.planOnly === true,
             ...(options?.taskId ? { taskId: options.taskId } : {}),
           })
           .returning();
