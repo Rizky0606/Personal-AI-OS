@@ -356,6 +356,9 @@ export const AuditLogSchema = z
   .meta({ id: 'AuditLog' });
 export type AuditLog = z.infer<typeof AuditLogSchema>;
 
+/** Awal teks pesan sistem pembawa ringkasan percakapan lanjutan (W30); klien menampilkannya sebagai catatan khusus. */
+export const HANDOFF_PREFIX = 'Ringkasan percakapan sebelumnya';
+
 /** Nama templat prompt: dipanggil dengan `/nama` di composer, jadi huruf kecil, angka, dan strip. */
 export const PROMPT_TEMPLATE_NAME_RE = /^[a-z0-9][a-z0-9-]{0,39}$/;
 export const PROMPT_TEMPLATE_BODY_MAX = 4000;

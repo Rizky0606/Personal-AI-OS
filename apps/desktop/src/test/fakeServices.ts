@@ -81,6 +81,7 @@ export const api: FakeApi = {
   addSpaceDocument: fn<'addSpaceDocument'>(),
   deleteSpaceDocument: fn<'deleteSpaceDocument'>(),
   listSpaceConversations: fn<'listSpaceConversations'>(),
+  handoffConversation: fn<'handoffConversation'>(),
   listPromptTemplates: fn<'listPromptTemplates'>(),
   createPromptTemplate: fn<'createPromptTemplate'>(),
   updatePromptTemplate: fn<'updatePromptTemplate'>(),

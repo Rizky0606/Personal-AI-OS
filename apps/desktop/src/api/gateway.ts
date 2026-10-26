@@ -294,6 +294,9 @@ export function createGatewayApi(call: Call) {
       await call(`/memories/${id}`, { method: 'DELETE' });
     },
 
+    /** Meringkas percakapan lalu membuka percakapan baru yang diawali ringkasan itu. */
+    handoffConversation: (id: string, model: string) =>
+      get(`/conversations/${id}/handoff`, ConversationSchema, { method: 'POST', body: { model } }),
     listPromptTemplates: async () =>
       (await get('/prompt-templates', PromptTemplateListSchema)).items,
     createPromptTemplate: (input: { name: string; body: string }) =>

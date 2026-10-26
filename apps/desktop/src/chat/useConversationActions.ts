@@ -5,6 +5,7 @@ import { apiErrorMessage } from '../api/errors';
 import { useOnline } from '../app/hooks';
 import { api } from '../app/services';
 import { copy } from '../copy';
+import { useUiStore } from '../state/uiStore';
 import { useToastStore } from '../ui/Toaster';
 
 /** Ubah judul, sematkan, arsipkan, dan hapus percakapan; daftar disegarkan setelah server menjawab. */
@@ -33,6 +34,19 @@ export function useConversationActions(activeId?: string) {
       run(async () => {
         await api.archiveConversation(id);
         if (id === activeId) await navigate({ to: '/' });
+      }),
+    /** Meringkas percakapan dengan model pilihan (atau model pertama), lalu membuka percakapan lanjutan. */
+    handoff: (id: string) =>
+      run(async () => {
+        const model = useUiStore.getState().model ?? (await api.listModels())[0]?.id;
+        if (!model) {
+          push(copy.chat.handoff.noModel, 'danger');
+          return;
+        }
+        push(copy.chat.handoff.working, 'info');
+        const created = await api.handoffConversation(id, model);
+        await navigate({ to: '/chat/$conversationId', params: { conversationId: created.id } });
+        push(copy.chat.handoff.done);
       }),
     remove: (id: string) =>
       run(async () => {

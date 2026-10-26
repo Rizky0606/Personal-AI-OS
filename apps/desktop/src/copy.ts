@@ -561,6 +561,13 @@ export const copy = {
     pin: 'Sematkan',
     unpin: 'Lepas sematan',
     archive: 'Arsipkan',
+    handoff: {
+      menu: 'Lanjut dengan ringkasan',
+      working: 'Meringkas percakapan…',
+      done: 'Percakapan lanjutan dibuat.',
+      noModel: 'Belum ada model yang bisa dipakai untuk meringkas.',
+      noteTitle: 'Ringkasan percakapan sebelumnya',
+    },
     deleteConversation: 'Hapus',
     generatedFiles: 'Berkas dari AI',
     downloadFile: 'Unduh',

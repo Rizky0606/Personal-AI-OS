@@ -9,6 +9,7 @@ import { ErrorBanner } from '../ui/ErrorBanner';
 import { RememberDialog } from '../memory/RememberDialog';
 import { ApprovalPanel } from './ApprovalPanel';
 import { AssistantMessage, type AssistantPart } from './AssistantMessage';
+import { HandoffNote, isHandoffNote } from './HandoffNote';
 import { messageText } from './messageData';
 import { UserMessage } from './UserMessage';
 
@@ -158,6 +159,8 @@ export function MessageList({
               onChangeRole={message.id === rerunnableId ? onReroute : undefined}
               onDelete={modifiable ? () => setToDelete(message.id) : undefined}
             />
+          ) : message.author === 'system' && isHandoffNote(messageText(message)) ? (
+            <HandoffNote key={message.id} text={messageText(message)} />
           ) : null,
         )}
         {pending ? <UserMessage text={pending} /> : null}

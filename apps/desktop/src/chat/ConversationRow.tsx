@@ -1,6 +1,14 @@
 import type { Conversation } from '@aios/contracts';
 import { Link } from '@tanstack/react-router';
-import { Archive, MoreHorizontal, Pencil, Pin, PinOff, Trash2 } from 'lucide-react';
+import {
+  Archive,
+  CornerDownRight,
+  MoreHorizontal,
+  Pencil,
+  Pin,
+  PinOff,
+  Trash2,
+} from 'lucide-react';
 import { useState } from 'react';
 import { copy } from '../copy';
 import { cn } from '../lib/cn';
@@ -14,6 +22,8 @@ export interface ConversationRowProps {
   onRename: (title: string) => void;
   onPin: (pinned: boolean) => void;
   onArchive: () => void;
+  /** Ringkas lalu lanjut di percakapan baru. */
+  onHandoff?: () => void;
   /** Hapus permanen (setelah konfirmasi). */
   onDelete: () => void;
 }
@@ -27,6 +37,7 @@ export function ConversationRow({
   onRename,
   onPin,
   onArchive,
+  onHandoff,
   onDelete,
 }: ConversationRowProps) {
   const [editing, setEditing] = useState(false);
@@ -106,6 +117,16 @@ export function ConversationRow({
               icon: conversation.pinned ? <PinOff {...icon} /> : <Pin {...icon} />,
               onSelect: () => onPin(!conversation.pinned),
             },
+            ...(onHandoff
+              ? [
+                  {
+                    id: 'handoff',
+                    label: copy.chat.handoff.menu,
+                    icon: <CornerDownRight {...icon} />,
+                    onSelect: onHandoff,
+                  },
+                ]
+              : []),
             {
               id: 'archive',
               label: copy.chat.archive,
