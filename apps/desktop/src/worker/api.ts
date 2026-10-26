@@ -1,4 +1,7 @@
 import {
+  FileContentSchema,
+  FileListSchema,
+  FileMatchesSchema,
   FoldersResultSchema,
   ProjectBindingSchema,
   ProjectInspectionSchema,
@@ -7,6 +10,8 @@ import {
   ProjectsResultSchema,
   ReviewStateSchema,
   TerminalInfoSchema,
+  type FileContent,
+  type FileList,
   type PreviewInfo,
   type PreviewShot,
   type PreviewTarget,
@@ -69,6 +74,14 @@ export function createWorkerApi(call: WorkerCall) {
     previewShot: async (
       target: PreviewTarget & { selector?: string; width?: number; height?: number },
     ): Promise<PreviewShot> => PreviewShotSchema.parse(await call('preview.shot', target)),
+    /** Isi folder project (atau worktree run); `path` relatif, kosong = akar. Hanya baca. */
+    filesList: async (target: PreviewTarget, path: string): Promise<FileList> =>
+      FileListSchema.parse(await call('files.list', { ...target, path })),
+    filesRead: async (target: PreviewTarget, path: string): Promise<FileContent> =>
+      FileContentSchema.parse(await call('files.read', { ...target, path })),
+    /** Pencarian nama berkas longgar (quick-open); maks 30 hasil. */
+    filesFind: async (target: PreviewTarget, query: string): Promise<string[]> =>
+      FileMatchesSchema.parse(await call('files.find', { ...target, query })).paths,
     reviewRevertFile: async (runId: string, path: string): Promise<ReviewState> =>
       ReviewStateSchema.parse(await call('review.revertFile', { runId, path })),
   };

@@ -7,6 +7,7 @@ import { LocalServer } from './local/server.js';
 import { LlmProxy } from './llm/proxy.js';
 import { PreviewService } from './preview/service.js';
 import { resolveWorkDir } from './preview/target.js';
+import { createFilesService } from './files/service.js';
 import { TerminalService } from './terminal/service.js';
 import { AllowList } from './paths/allowlist.js';
 import { canonicalize } from './paths/normalize.js';
@@ -140,6 +141,10 @@ export async function startWorker(options: WorkerOptions): Promise<RunningWorker
     log,
   });
 
+  const files = createFilesService({
+    resolve: (target) => resolveWorkDir({ bindings, worktrees }, target),
+  });
+
   const coordinator: RunCoordinator = new RunCoordinator({
     bindings,
     worktrees,
@@ -197,6 +202,7 @@ export async function startWorker(options: WorkerOptions): Promise<RunningWorker
     review,
     preview,
     terminal,
+    files,
     worktrees,
     version: WORKER_VERSION,
     tools,
