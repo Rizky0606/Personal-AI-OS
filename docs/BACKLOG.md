@@ -555,7 +555,7 @@ Disusun 2026-10-26 dari perbandingan dengan Orca, Pi, Cline, Amp, Goose, dan Vib
 | 40 | Pendapat kedua | W28 | Gateway, desktop | Endpoint tinjauan diff oleh model lain; temuan menjadi komentar baris | Tes integrasi dengan Hermes tiruan |
 | 41 | Mode rencana | W29 | Gateway, worker, desktop | Run coding fase rencana tanpa izin tulis, tombol Setujui memulai fase kerja | Tes worker dan gateway |
 | 42 | Lanjut dengan ringkasan | W30 | Gateway, desktop | Ringkas percakapan lalu buka percakapan baru berisi ringkasan | Tes integrasi |
-| 43 | Cabang percakapan | W31 | Gateway, desktop | Salin percakapan sampai pesan tertentu sebagai percakapan baru bertaut ke asalnya | Tes integrasi, tes komponen |
+| 43 | Cabang percakapan | W31 | Gateway, desktop | Salin percakapan sampai pesan tertentu sebagai percakapan baru (judul "Cabang: …") | Tes integrasi, tes komponen |
 
 **Ditunda sampai ada verifikasi atau keputusan:**
 - Rekam dan ringkas rapat (butuh model transkripsi lewat 9Router atau VPS; cek dulu ketersediaan dan beban VPS ARM).
@@ -565,6 +565,7 @@ Disusun 2026-10-26 dari perbandingan dengan Orca, Pi, Cline, Amp, Goose, dan Vib
 
 ## Ide di luar scope
 
+- Cabang percakapan (Fase 43): belum ada tautan balik ke percakapan asal (hanya judul "Cabang: …"), dan belum ada di Android.
 - Lanjut dengan ringkasan (Fase 42): belum ada di Android, dan ringkasan tidak bisa disunting sebelum percakapan baru dibuka.
 - Mode rencana (Fase 41): rencana yang disetujui belum bisa diedit di tempat; revisi lewat pesan. Android belum punya run coding, jadi tidak ada sakelarnya.
 - Templat prompt (Fase 39): perintah palette Ctrl+K untuk memasukkan templat ke chat, dan templat di Android (menu `/` di composer).

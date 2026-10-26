@@ -9,7 +9,7 @@ import type {
   UpdateConversationRequestSchema,
 } from '@aios/contracts';
 import { HANDOFF_PREFIX, TERMINAL_RUN_STATUSES } from '@aios/contracts';
-import { and, asc, desc, eq, gte, isNotNull, isNull, lt, notInArray, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, isNotNull, isNull, lt, notInArray, sql } from 'drizzle-orm';
 import type { z } from 'zod';
 import type { Database } from '../../db/client.js';
 import { conversations, messages, projects, runs } from '../../db/schema/index.js';
@@ -225,13 +225,14 @@ export function createChatService(deps: {
       .where(eq(runs.conversationId, conversation.id))
       .limit(1);
     if (!anyRun) {
-      // Percakapan lanjutan: ringkasan dari percakapan sebelumnya menjadi riwayat awal.
+      // Percakapan lanjutan (ringkasan) atau cabang (salinan pesan): isinya menjadi riwayat awal.
       const seeds = await db
         .select({ author: messages.author, parts: messages.parts })
         .from(messages)
-        .where(and(eq(messages.conversationId, conversation.id), eq(messages.author, 'system')))
-        .orderBy(asc(messages.id))
+        .where(eq(messages.conversationId, conversation.id))
+        .orderBy(desc(messages.id))
         .limit(MAX_HISTORY_MESSAGES);
+      seeds.reverse();
       return { sessionId: `aios-${conversation.id}`, history: historyFrom(seeds) };
     }
 

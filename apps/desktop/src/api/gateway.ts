@@ -207,6 +207,9 @@ export function createGatewayApi(call: Call) {
     deleteMessage: async (messageId: string) => {
       await call(`/messages/${messageId}`, { method: 'DELETE' });
     },
+    /** Cabangkan percakapan dari pesan ini: pesan sampai di sini disalin ke percakapan baru. */
+    forkConversation: (messageId: string) =>
+      get(`/messages/${messageId}/fork`, ConversationSchema, { method: 'POST', body: {} }),
     rerouteMessage: (messageId: string, role: string) =>
       get(`/messages/${messageId}/reroute`, RerouteResponseSchema, {
         method: 'POST',

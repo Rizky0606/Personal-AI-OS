@@ -51,6 +51,7 @@ export const api: FakeApi = {
   listMessages: fn<'listMessages'>(),
   sendMessage: fn<'sendMessage'>(),
   uploadFile: fn<'uploadFile'>(),
+  forkConversation: fn<'forkConversation'>(),
   rerouteMessage: fn<'rerouteMessage'>(),
   editMessage: fn<'editMessage'>(),
   deleteMessage: fn<'deleteMessage'>(),

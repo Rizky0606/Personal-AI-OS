@@ -32,6 +32,8 @@ export interface AssistantMessageProps {
   streaming?: boolean;
   /** Meminta konfirmasi hapus jawaban ini beserta sesudahnya. */
   onDelete?: (() => void) | undefined;
+  /** Membuka percakapan baru berisi pesan sampai jawaban ini (cabang). */
+  onFork?: (() => void) | undefined;
 }
 
 /** Tiga titik yang memudar bergiliran selama jawaban masih ditulis. */
@@ -125,6 +127,7 @@ export function AssistantMessage({
   onChangeRole,
   streaming = false,
   onDelete,
+  onFork,
 }: AssistantMessageProps) {
   // Blok kode di jawaban yang sudah selesai bisa diunduh sekaligus sebagai satu zip (struktur folder ikut path).
   const files = useMemo(
@@ -153,14 +156,19 @@ export function AssistantMessage({
             {model}
           </span>
         ) : null}
-        {onDelete ? (
-          <Button
-            variant="ghost"
-            onClick={onDelete}
-            className="ml-auto opacity-0 transition-opacity duration-[120ms] group-focus-within:opacity-100 group-hover:opacity-100"
-          >
-            {copy.chat.deleteMessage}
-          </Button>
+        {onDelete || onFork ? (
+          <span className="ml-auto flex gap-1 opacity-0 transition-opacity duration-[120ms] group-focus-within:opacity-100 group-hover:opacity-100">
+            {onFork ? (
+              <Button variant="ghost" onClick={onFork}>
+                {copy.chat.fork}
+              </Button>
+            ) : null}
+            {onDelete ? (
+              <Button variant="ghost" onClick={onDelete}>
+                {copy.chat.deleteMessage}
+              </Button>
+            ) : null}
+          </span>
         ) : null}
       </header>
       {reasoning ? <ReasoningBlock text={reasoning} /> : null}
