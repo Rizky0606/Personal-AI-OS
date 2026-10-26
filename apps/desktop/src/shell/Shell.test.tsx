@@ -116,6 +116,34 @@ describe('Shell', () => {
     expect(handle).toHaveAttribute('aria-valuenow', String(RIGHT_PANEL_DEFAULT + 32));
   });
 
+  it('panel kanan bisa dibagi: pane baru menampilkan tab lain, bisa diubah ukurannya dan ditutup', async () => {
+    await renderShell();
+    ctrl('j');
+    expect(screen.queryByRole('separator', { name: copy.panes.resize })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: copy.panes.close })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: copy.panes.splitRow }));
+    expect(screen.getAllByRole('tablist')).toHaveLength(2);
+    expect(screen.getAllByRole('tab', { selected: true }).map((t) => t.textContent)).toEqual([
+      copy.shell.panels.preview,
+      copy.shell.panels.diff,
+    ]);
+
+    const handle = screen.getByRole('separator', { name: copy.panes.resize });
+    expect(handle).toHaveAttribute('aria-valuenow', '50');
+    fireEvent.keyDown(handle, { key: 'ArrowRight' });
+    expect(handle).toHaveAttribute('aria-valuenow', '55');
+    for (let i = 0; i < 20; i++) fireEvent.keyDown(handle, { key: 'ArrowRight' });
+    expect(handle).toHaveAttribute('aria-valuenow', '85');
+
+    // Pembagian disimpan; menutup salah satu pane mengembalikan mode tab tunggal.
+    expect(useUiStore.getState().paneTree).not.toBeNull();
+    fireEvent.click(screen.getAllByRole('button', { name: copy.panes.close })[0]!);
+    expect(screen.getAllByRole('tablist')).toHaveLength(1);
+    expect(useUiStore.getState().paneTree).toBeNull();
+    expect(useUiStore.getState().rightPanelTab).toBe('diff');
+  });
+
   it('Ctrl+K membuka palet perintah; Ctrl+N menaikkan sinyal chat baru', async () => {
     await renderShell();
 
