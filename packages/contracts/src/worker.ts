@@ -25,6 +25,8 @@ export const RunStartCommandSchema = z.object({
   model: z.string().min(1),
   /** Lanjutan dari run sebelumnya (revisi setelah komentar review): memakai worktree run itu. */
   continueFromRunId: IdSchema.optional(),
+  /** Mode rencana: semua permintaan izin (tulis, perintah, jaringan) ditolak worker. */
+  planOnly: z.boolean().optional(),
 });
 
 export const RunSteerCommandSchema = z.object({

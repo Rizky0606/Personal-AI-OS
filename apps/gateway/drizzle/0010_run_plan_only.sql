@@ -1,0 +1,1 @@
+ALTER TABLE "runs" ADD COLUMN "plan_only" boolean DEFAULT false NOT NULL;

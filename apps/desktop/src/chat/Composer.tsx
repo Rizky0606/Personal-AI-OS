@@ -41,6 +41,9 @@ export interface ComposerProps {
   /** Templat prompt untuk menu `/` di awal pesan. Tanpa onUseTemplate menu tidak tampil. */
   templates?: readonly PromptTemplate[];
   onUseTemplate?: (template: PromptTemplate) => void;
+  /** Mode rencana (hanya di dalam project): tanpa onPlanMode sakelarnya tidak tampil. */
+  planMode?: boolean;
+  onPlanMode?: (on: boolean) => void;
 }
 
 const MAX_HEIGHT_PX = 192;
@@ -70,6 +73,8 @@ export function Composer({
   onRemoveFile,
   templates = [],
   onUseTemplate,
+  planMode = false,
+  onPlanMode,
 }: ComposerProps) {
   const field = useRef<HTMLTextAreaElement>(null);
   const picker = useRef<HTMLInputElement>(null);
@@ -264,6 +269,15 @@ export function Composer({
                 </Chip>
               }
             />
+            {onPlanMode ? (
+              <Chip
+                selected={planMode}
+                title={copy.chat.plan.chipHint}
+                onClick={() => onPlanMode(!planMode)}
+              >
+                {copy.chat.plan.chip}
+              </Chip>
+            ) : null}
             <span className="ml-auto flex items-center gap-1">
               {onAddFiles ? (
                 <>

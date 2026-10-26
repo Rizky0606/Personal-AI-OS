@@ -314,6 +314,12 @@ export class RunCoordinator {
 
   private async onEvent(runId: string, run: RunState, event: AgentEvent): Promise<void> {
     if (event.type === 'approval.requested') {
+      // Mode rencana: agent hanya boleh membaca. Semua izin ditolak, termasuk aturan "izinkan selalu" project.
+      if (run.cmd.planOnly) {
+        run.silent.add(event.approvalId);
+        void run.handle?.resolveApproval(event.approvalId, 'deny').catch(() => undefined);
+        return;
+      }
       // Tool browser worker hanya menyentuh preview localhost run ini: tidak perlu mengganggu pengguna tiap screenshot.
       if (run.mcp && event.detail.startsWith(BROWSER_TOOL_PREFIX)) {
         run.silent.add(event.approvalId);

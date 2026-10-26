@@ -268,6 +268,8 @@ export const SendMessageRequestSchema = z
     /** Memilih role manual; tanpa ini router yang memutuskan. */
     role: RoleIdSchema.optional(),
     model: z.string().min(1).optional(),
+    /** Run coding hanya membaca dan menulis rencana; izin menulis dan menjalankan perintah ditolak. */
+    planOnly: z.boolean().optional(),
   })
   .meta({ id: 'SendMessageRequest' });
 

@@ -34,6 +34,8 @@ export interface StartRunInput {
   role?: string | undefined;
   /** Run lanjutan: memakai worktree run ini (revisi setelah komentar review). Hanya omp via worker. */
   continueFromRunId?: string | undefined;
+  /** Mode rencana: worker menolak semua permintaan izin. Hanya omp via worker. */
+  planOnly?: boolean | undefined;
   /** Folder kerja agent (worktree). Hanya omp; wajib di sana. */
   cwd?: string | undefined;
   /** Folder berkas pendukung run di luar worktree (konfigurasi provider, system prompt). Hanya omp. */
