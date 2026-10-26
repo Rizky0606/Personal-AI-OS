@@ -91,6 +91,7 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
               canModify={chat.canModify}
               onEditMessage={chat.editMessage}
               onDeleteMessage={chat.deleteMessage}
+              onForkMessage={chat.forkMessage}
               approvals={chat.approvals}
               resolvingApprovals={chat.resolvingApprovals}
               onResolveApproval={chat.resolveApproval}

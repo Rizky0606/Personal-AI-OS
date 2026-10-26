@@ -31,6 +31,8 @@ export interface MessageListProps {
   canModify?: boolean;
   onEditMessage?: (messageId: string, text: string) => Promise<boolean>;
   onDeleteMessage?: (messageId: string) => Promise<boolean>;
+  /** Cabangkan percakapan dari jawaban asisten; hanya saat tidak ada jawaban yang berjalan. */
+  onForkMessage?: (messageId: string) => void;
   /** Permintaan izin agent yang menunggu jawaban pengguna. */
   approvals: PendingApproval[];
   resolvingApprovals: ReadonlySet<string>;
@@ -85,6 +87,7 @@ export function MessageList({
   canModify = false,
   onEditMessage,
   onDeleteMessage,
+  onForkMessage,
   approvals,
   resolvingApprovals,
   onResolveApproval,
@@ -158,6 +161,7 @@ export function MessageList({
               roles={roles}
               onChangeRole={message.id === rerunnableId ? onReroute : undefined}
               onDelete={modifiable ? () => setToDelete(message.id) : undefined}
+              onFork={canModify && onForkMessage ? () => onForkMessage(message.id) : undefined}
             />
           ) : message.author === 'system' && isHandoffNote(messageText(message)) ? (
             <HandoffNote key={message.id} text={messageText(message)} />

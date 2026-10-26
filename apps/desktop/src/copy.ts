@@ -613,6 +613,8 @@ export const copy = {
       'Pesan ini dan semua pesan sesudahnya diganti; AI tidak mengingat bagian yang dibuang.',
     editFailed: 'Pesan belum diubah.',
     deleteMessage: 'Hapus',
+    fork: 'Cabangkan dari sini',
+    forkDone: 'Cabang percakapan dibuat.',
     remember: 'Ingat',
     deleteMessageTitle: 'Hapus pesan ini?',
     deleteMessageBody:

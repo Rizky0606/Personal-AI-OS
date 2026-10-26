@@ -122,6 +122,17 @@ export const chatEndpoints: readonly Endpoint[] = [
     errors: [400, 401, 404, 409],
   },
   {
+    operationId: 'forkConversation',
+    method: 'post',
+    path: '/messages/{id}/fork',
+    tag: 'Pesan',
+    summary: 'Cabangkan percakapan dari pesan ini: salin pesan sampai di sini ke percakapan baru',
+    auth: true,
+    params: IdParamsSchema,
+    responses: [json(201, 'Percakapan baru', ConversationSchema)],
+    errors: [401, 404, 409],
+  },
+  {
     operationId: 'editMessage',
     method: 'post',
     path: '/messages/{id}/edit',

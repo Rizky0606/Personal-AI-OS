@@ -11,6 +11,7 @@ import { deriveAuthKeys } from './modules/auth/secrets.js';
 import { createDevicesService } from './modules/devices/service.js';
 import { createOutbox } from './modules/files/outbox.js';
 import { createMemoryService } from './modules/memory/service.js';
+import { createForkService } from './modules/fork/service.js';
 import { createHandoffService } from './modules/handoff/service.js';
 import { createOpinionService } from './modules/opinion/service.js';
 import { createTemplateService } from './modules/templates/service.js';
@@ -195,6 +196,7 @@ async function main(): Promise<void> {
     templates: createTemplateService({ db }),
     opinion: createOpinionService({ client }),
     handoff: createHandoffService({ db, client }),
+    fork: createForkService({ db }),
     spaces,
     search: createSearchService({ db }),
     status: createStatusService({

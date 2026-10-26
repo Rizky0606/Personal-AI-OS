@@ -326,6 +326,21 @@ export function useChatController(conversationId: string | undefined) {
     [conversationId, sending, streaming, dropFrom, queryClient, fail, online],
   );
 
+  /** Cabangkan percakapan dari jawaban ini lalu pindah ke cabangnya. */
+  const forkMessage = useCallback(
+    async (messageId: string) => {
+      try {
+        const created = await api.forkConversation(messageId);
+        await queryClient.invalidateQueries({ queryKey: ['conversations'] });
+        await navigate({ to: '/chat/$conversationId', params: { conversationId: created.id } });
+        push(copy.chat.forkDone);
+      } catch (error) {
+        fail(error);
+      }
+    },
+    [queryClient, navigate, push, fail],
+  );
+
   const loadOlder = useCallback(() => void messagesQuery.fetchNextPage(), [messagesQuery]);
 
   return {
@@ -365,6 +380,7 @@ export function useChatController(conversationId: string | undefined) {
     canModify: !sending && !streaming,
     editMessage,
     deleteMessage,
+    forkMessage: (messageId: string) => void forkMessage(messageId),
     rerunnableId: lastAssistant && !streaming ? lastAssistant.id : null,
     focusNonce,
     planFirst,

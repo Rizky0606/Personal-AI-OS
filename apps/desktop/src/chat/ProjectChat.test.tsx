@@ -550,3 +550,51 @@ describe('mode rencana', () => {
     expect(screen.queryByText(copy.chat.plan.ready)).not.toBeInTheDocument();
   });
 });
+
+describe('cabang percakapan', () => {
+  it('Cabangkan dari sini di jawaban membuka percakapan baru yang disalin sampai pesan itu', async () => {
+    const answer = message({ author: 'assistant', text: 'Katalog dibuat.', runId: RUN_X });
+    const branch = {
+      id: uid(),
+      title: 'Cabang: Toko',
+      surface: 'windows' as const,
+      projectId: null,
+      spaceId: null,
+      pinned: false,
+      archivedAt: null,
+      createdAt: TS,
+      updatedAt: TS,
+    };
+    api.listMessages.mockResolvedValue(
+      page(message({ author: 'user', text: 'Buat katalog', runId: RUN_X }), answer),
+    );
+    api.getRun.mockResolvedValue(run({ id: RUN_X, status: 'completed' }));
+    api.forkConversation.mockResolvedValue(branch);
+    const user = userEvent.setup();
+    const { router } = await renderScreen(<ChatScreen conversationId={CONV} />);
+
+    await user.click(await screen.findByRole('button', { name: copy.chat.fork }));
+
+    await waitFor(() => expect(api.forkConversation).toHaveBeenCalledWith(answer.id));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/chat/' + branch.id));
+    expect(await screen.findByText(copy.chat.forkDone)).toBeInTheDocument();
+  });
+
+  it('galat dari server tampil sebagai pesan dan tetap di percakapan ini', async () => {
+    api.listMessages.mockResolvedValue(
+      page(
+        message({ author: 'user', text: 'a', runId: RUN_X }),
+        message({ author: 'assistant', text: 'b', runId: RUN_X }),
+      ),
+    );
+    api.getRun.mockResolvedValue(run({ id: RUN_X, status: 'completed' }));
+    api.forkConversation.mockRejectedValue(new ApiProblem(409, 'fork_too_long', 'terlalu panjang'));
+    const user = userEvent.setup();
+    const { router } = await renderScreen(<ChatScreen conversationId={CONV} />, '/chat/' + CONV);
+
+    await user.click(await screen.findByRole('button', { name: copy.chat.fork }));
+
+    expect(await screen.findByText(copy.errors.conflict)).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/chat/' + CONV);
+  });
+});
