@@ -5,6 +5,7 @@ import {
   DeleteConversationQuerySchema,
   IdParamsSchema,
   ListConversationsQuerySchema,
+  ListRunsQuerySchema,
   PageQuerySchema,
   RerouteRequestSchema,
   ReviewRequestSchema,
@@ -96,6 +97,8 @@ export const chatRoutes: FastifyPluginCallback<{ chat: ChatService; runs: RunsSe
   });
 
   app.get('/runs/:id', guard, (req) => runs.get(IdParamsSchema.parse(req.params).id));
+
+  app.get('/runs', guard, (req) => runs.list(ListRunsQuerySchema.parse(req.query)));
 
   app.get('/runs/:id/events', guard, (req) => {
     const q = RunEventsQuerySchema.parse(req.query);

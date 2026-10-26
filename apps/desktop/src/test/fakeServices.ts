@@ -55,6 +55,7 @@ export const api: FakeApi = {
   editMessage: fn<'editMessage'>(),
   deleteMessage: fn<'deleteMessage'>(),
   getRun: fn<'getRun'>(),
+  listRuns: fn<'listRuns'>(),
   resolveApproval: fn<'resolveApproval'>(),
   reviewRun: fn<'reviewRun'>(),
   cancelRun: fn<'cancelRun'>(),
@@ -180,6 +181,7 @@ export function resetApi(): void {
   api.listConversations.mockResolvedValue({ items: [], nextBefore: null });
   api.listResearch.mockResolvedValue({ items: [], nextBefore: null });
   api.listSchedules.mockResolvedValue([]);
+  api.listRuns.mockResolvedValue([]);
   api.listMemories.mockResolvedValue([]);
   api.listSpaces.mockResolvedValue([]);
   api.search.mockResolvedValue([]);

@@ -42,6 +42,8 @@ function sectionFor(pathname: string): Section {
         </>
       ),
     };
+  if (pathname.startsWith('/workspace'))
+    return { title: copy.nav.workspace, list: <EmptyState message={copy.workspace.sidebarHint} /> };
   if (pathname.startsWith('/schedules'))
     return { title: copy.nav.schedules, list: <ScheduleList /> };
   if (pathname.startsWith('/research'))

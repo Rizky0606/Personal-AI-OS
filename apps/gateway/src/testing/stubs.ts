@@ -94,6 +94,7 @@ export const unusedFiles: AppDeps['files'] = {
 
 export const unusedRuns: AppDeps['runs'] = {
   get: unused('runs.get'),
+  list: unused('runs.list'),
   events: unused('runs.events'),
   cancel: unused('runs.cancel'),
   resolveApproval: unused('runs.resolveApproval'),

@@ -37,6 +37,7 @@ const DOCUMENTED_ENDPOINTS = [
   'POST /messages/:id/reroute',
   'POST /messages/:id/edit',
   'DELETE /messages/:id',
+  'GET /runs',
   'GET /runs/:id',
   'GET /runs/:id/events',
   'POST /runs/:id/steer',

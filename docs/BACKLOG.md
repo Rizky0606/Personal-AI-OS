@@ -542,6 +542,21 @@ Disusun 2026-10-25 dari perbandingan dengan ChatGPT, Claude, Gemini/NotebookLM, 
 | 34 | Widget dan tile Quick Settings | A15 | Android | Tile "Tanya cepat" dan widget "Catat ide ke kanban" | Tes instrumentasi, cek manual |
 | 35 | Berkas buatan AI (folder kiriman) | - | Gateway, infra, desktop, Android | Hermes menyimpan berkas (zip, PDF, gambar) di folder kiriman per run; gateway menempelkannya ke jawaban dengan tombol Unduh | Tes unit dan integrasi gateway, tes desktop dan Android |
 
+## Rencana fitur lanjutan (Fase 36–43)
+
+Disusun 2026-10-26 dari perbandingan dengan Orca, Pi, Cline, Amp, Goose, dan Vibe Kanban. Urutan: tampilan ruang kerja (36–38), lalu fitur chat dan run (39–43).
+
+| Fase | Fitur | PRD | Sisi | Inti rencana | Verifikasi |
+| --- | --- | --- | --- | --- | --- |
+| 36 | Ruang Kerja multi-run | W24 | Gateway, desktop | `GET /runs` (ringkasan run dengan judul, project, status) dan layar Ruang Kerja: daftar run dengan status live dari WebSocket, pemilihan membuka konteks run itu | Tes integrasi gateway, tes komponen, E2E desktop |
+| 37 | Panel terbagi | W25 | Desktop | Area utama menjadi pohon pane yang bisa dibagi dan diubah ukurannya; tata letak disimpan per project di penyimpanan lokal | Tes unit pohon pane, tes komponen |
+| 38 | Berkas worktree | W26 | Worker, desktop | Worker menyajikan pohon dan isi berkas hanya di dalam worktree; tab Berkas dengan penyorotan, pratinjau, quick-open | Tes worker (path traversal), tes komponen |
+| 39 | Templat prompt | W27 | Gateway, desktop | Tabel templat, `/nama` di composer dan palette, parameter `{{nama}}` | Tes integrasi, tes komponen |
+| 40 | Pendapat kedua | W28 | Gateway, desktop | Endpoint tinjauan diff oleh model lain; temuan menjadi komentar baris | Tes integrasi dengan Hermes tiruan |
+| 41 | Mode rencana | W29 | Gateway, worker, desktop | Run coding fase rencana tanpa izin tulis, tombol Setujui memulai fase kerja | Tes worker dan gateway |
+| 42 | Lanjut dengan ringkasan | W30 | Gateway, desktop | Ringkas percakapan lalu buka percakapan baru berisi ringkasan | Tes integrasi |
+| 43 | Cabang percakapan | W31 | Gateway, desktop | Salin percakapan sampai pesan tertentu sebagai percakapan baru bertaut ke asalnya | Tes integrasi, tes komponen |
+
 **Ditunda sampai ada verifikasi atau keputusan:**
 - Rekam dan ringkas rapat (butuh model transkripsi lewat 9Router atau VPS; cek dulu ketersediaan dan beban VPS ARM).
 - Ringkasan audio dan peta pikiran laporan riset (butuh TTS; peta pikiran bisa memakai Mermaid dari Fase 25).

@@ -20,6 +20,7 @@ const PATHS = [
   '/research',
   '/research/$researchId',
   '/kanban',
+  '/workspace',
   '/quota',
   '/status',
   '/compare',

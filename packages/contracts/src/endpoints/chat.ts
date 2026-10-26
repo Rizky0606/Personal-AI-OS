@@ -5,6 +5,7 @@ import {
   DeleteConversationQuerySchema,
   IdParamsSchema,
   ListConversationsQuerySchema,
+  ListRunsQuerySchema,
   RerouteRequestSchema,
   RerouteResponseSchema,
   ReviewRequestSchema,
@@ -15,6 +16,7 @@ import {
   SendMessageResponseSchema,
   SteerRequestSchema,
   UpdateConversationRequestSchema,
+  WorkspaceRunListSchema,
 } from '../api-schemas.js';
 import { PageQuerySchema, pageOf } from '../common.js';
 import { ApprovalSchema, ConversationSchema, MessageSchema, RunSchema } from '../entities.js';
@@ -128,6 +130,17 @@ export const chatEndpoints: readonly Endpoint[] = [
     params: IdParamsSchema,
     responses: [noContent()],
     errors: [401, 404, 409],
+  },
+  {
+    operationId: 'listRuns',
+    method: 'get',
+    path: '/runs',
+    tag: 'Run',
+    summary: 'Daftar run terbaru (default: coding) dengan judul dan project, untuk Ruang Kerja',
+    auth: true,
+    query: ListRunsQuerySchema,
+    responses: [json(200, 'Daftar run', WorkspaceRunListSchema)],
+    errors: [401],
   },
   {
     operationId: 'getRun',

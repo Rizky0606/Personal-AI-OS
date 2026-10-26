@@ -11,6 +11,7 @@ import {
   SpaceDocumentListSchema,
   SpaceDocumentSchema,
   SpaceListSchema,
+  WorkspaceRunListSchema,
   SpaceSchema,
   MessageSchema,
   ModelListSchema,
@@ -206,6 +207,8 @@ export function createGatewayApi(call: Call) {
       }),
 
     getRun: (id: string) => get(`/runs/${id}`, RunSchema),
+    /** Run coding terbaru dengan judul dan project, untuk Ruang Kerja. */
+    listRuns: async () => (await get('/runs?kind=coding&limit=100', WorkspaceRunListSchema)).items,
     /** Keputusan atas permintaan izin agent; `remember` = selalu izinkan untuk project ini. */
     resolveApproval: (
       runId: string,
