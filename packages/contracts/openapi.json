@@ -4587,6 +4587,85 @@
           }
         }
       },
+      "PromptTemplateList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PromptTemplate"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "PromptTemplate": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]{0,39}$"
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "body",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreatePromptTemplateRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]{0,39}$"
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          }
+        },
+        "required": [
+          "name",
+          "body"
+        ]
+      },
+      "UpdatePromptTemplateRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]{0,39}$"
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          }
+        }
+      },
       "SpaceList": {
         "type": "object",
         "properties": {
@@ -9505,6 +9584,319 @@
         "responses": {
           "204": {
             "description": "Memori dihapus"
+          },
+          "401": {
+            "description": "Belum login atau token tidak berlaku",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token tidak punya scope yang dibutuhkan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tidak ditemukan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/prompt-templates": {
+      "get": {
+        "operationId": "listPromptTemplates",
+        "tags": [
+          "Templat"
+        ],
+        "summary": "Daftar templat prompt, urut nama",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daftar templat",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptTemplateList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Belum login atau token tidak berlaku",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token tidak punya scope yang dibutuhkan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createPromptTemplate",
+        "tags": [
+          "Templat"
+        ],
+        "summary": "Simpan templat prompt",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePromptTemplateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Templat baru",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptTemplate"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Permintaan tidak valid",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Belum login atau token tidak berlaku",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token tidak punya scope yang dibutuhkan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Konflik dengan status saat ini",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/prompt-templates/{id}": {
+      "patch": {
+        "operationId": "updatePromptTemplate",
+        "tags": [
+          "Templat"
+        ],
+        "summary": "Ubah nama atau isi templat",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePromptTemplateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Templat terbaru",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptTemplate"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Permintaan tidak valid",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Belum login atau token tidak berlaku",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token tidak punya scope yang dibutuhkan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tidak ditemukan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Konflik dengan status saat ini",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deletePromptTemplate",
+        "tags": [
+          "Templat"
+        ],
+        "summary": "Hapus templat",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Templat dihapus"
           },
           "401": {
             "description": "Belum login atau token tidak berlaku",

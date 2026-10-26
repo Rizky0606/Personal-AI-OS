@@ -12,6 +12,7 @@ import { createTitleService } from '../modules/chat/title.js';
 import { createDevicesService } from '../modules/devices/service.js';
 import { createOutbox } from '../modules/files/outbox.js';
 import { createMemoryService } from '../modules/memory/service.js';
+import { createTemplateService } from '../modules/templates/service.js';
 import { createSearchService } from '../modules/search/service.js';
 import { createSpacesService } from '../modules/spaces/service.js';
 import { createNineRouterClient } from '../modules/llm/client.js';
@@ -322,6 +323,7 @@ export async function createAuthEnv(
     compare: createCompareService({ client }),
     status,
     memory,
+    templates: createTemplateService({ db }),
     spaces,
     search: createSearchService({ db }),
     worker: { hub: workerHub, relay: workerRelay },

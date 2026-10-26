@@ -565,4 +565,4 @@ Disusun 2026-10-26 dari perbandingan dengan Orca, Pi, Cline, Amp, Goose, dan Vib
 
 ## Ide di luar scope
 
-(kosong)
+- Templat prompt (Fase 39): perintah palette Ctrl+K untuk memasukkan templat ke chat, dan templat di Android (menu `/` di composer).

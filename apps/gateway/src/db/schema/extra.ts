@@ -175,6 +175,19 @@ export const memories = pgTable(
   (t) => [index('memories_created_idx').on(t.createdAt)],
 );
 
+/** Templat prompt (W27): prompt tersimpan yang dipanggil dengan `/nama` di composer. */
+export const promptTemplates = pgTable(
+  'prompt_templates',
+  {
+    id: id(),
+    name: text('name').notNull(),
+    body: text('body').notNull(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [uniqueIndex('prompt_templates_name_idx').on(t.name)],
+);
+
 /** Dokumen di ruang pengetahuan (W21): berkas dari tabel files yang teksnya sudah diindeks. */
 export const spaceDocuments = pgTable(
   'space_documents',

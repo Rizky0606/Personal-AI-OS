@@ -1,6 +1,7 @@
 import type { ModelInfo } from '../api/gateway';
 import { ArrowUp, ChevronDown, Paperclip, Pencil, Square, X } from 'lucide-react';
-import { useEffect, useId, useRef, type KeyboardEvent } from 'react';
+import type { PromptTemplate } from '@aios/contracts';
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { copy } from '../copy';
 import { cn } from '../lib/cn';
 import type { PendingFile } from './useFileAttachments';
@@ -9,6 +10,7 @@ import { Button } from '../ui/Button';
 import { Chip } from '../ui/Chip';
 import { IconButton } from '../ui/IconButton';
 import { RadioMenu } from '../ui/RadioMenu';
+import { slashMatches } from '../templates/vars';
 
 export const AUTO = '__auto__';
 
@@ -36,6 +38,9 @@ export interface ComposerProps {
   files?: readonly PendingFile[];
   onAddFiles?: (files: File[]) => void;
   onRemoveFile?: (id: string) => void;
+  /** Templat prompt untuk menu `/` di awal pesan. Tanpa onUseTemplate menu tidak tampil. */
+  templates?: readonly PromptTemplate[];
+  onUseTemplate?: (template: PromptTemplate) => void;
 }
 
 const MAX_HEIGHT_PX = 192;
@@ -63,6 +68,8 @@ export function Composer({
   files = [],
   onAddFiles,
   onRemoveFile,
+  templates = [],
+  onUseTemplate,
 }: ComposerProps) {
   const field = useRef<HTMLTextAreaElement>(null);
   const picker = useRef<HTMLInputElement>(null);
@@ -79,7 +86,38 @@ export function Composer({
     el.style.height = `${Math.min(el.scrollHeight, MAX_HEIGHT_PX)}px`;
   }, [draft]);
 
+  const [active, setActive] = useState(0);
+  // Draf yang menunya sudah ditutup (Esc atau templat dipilih); menu muncul lagi saat draf berubah.
+  const [dismissed, setDismissed] = useState<string | null>(null);
+  const matches = onUseTemplate && dismissed !== draft ? slashMatches(draft, templates) : [];
+  const current = Math.min(active, Math.max(matches.length - 1, 0));
+
+  function pick(template: PromptTemplate) {
+    setDismissed(draft);
+    setActive(0);
+    onUseTemplate?.(template);
+  }
+
   function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (matches.length > 0 && !event.nativeEvent.isComposing) {
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        setActive(
+          (current + (event.key === 'ArrowDown' ? 1 : matches.length - 1)) % matches.length,
+        );
+        return;
+      }
+      if ((event.key === 'Enter' && !event.shiftKey) || event.key === 'Tab') {
+        event.preventDefault();
+        pick(matches[current]!);
+        return;
+      }
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setDismissed(draft);
+        return;
+      }
+    }
     if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) return;
     event.preventDefault();
     if (!streaming && canSend) onSend();
@@ -158,6 +196,30 @@ export function Composer({
                   >
                     <X size={14} strokeWidth={1.5} aria-hidden="true" />
                   </IconButton>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {matches.length > 0 ? (
+            <ul
+              role="listbox"
+              aria-label={copy.templates.menuLabel}
+              className="flex flex-col overflow-hidden rounded-control border border-border bg-surface-2"
+            >
+              {matches.map((template, i) => (
+                <li
+                  key={template.id}
+                  role="option"
+                  aria-selected={i === current}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => pick(template)}
+                  className={cn(
+                    'flex cursor-pointer items-baseline gap-3 px-3 py-1 text-ui transition-colors duration-[120ms] ease-aios',
+                    i === current ? 'bg-accent-soft' : 'hover:bg-surface',
+                  )}
+                >
+                  <span className="shrink-0 font-mono text-text">/{template.name}</span>
+                  <span className="truncate text-meta text-text-2">{template.body}</span>
                 </li>
               ))}
             </ul>
