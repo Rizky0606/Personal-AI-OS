@@ -3,6 +3,7 @@ import {
   ApprovalParamsSchema,
   CreateConversationRequestSchema,
   DeleteConversationQuerySchema,
+  HandoffRequestSchema,
   IdParamsSchema,
   ListConversationsQuerySchema,
   ListRunsQuerySchema,
@@ -70,6 +71,19 @@ export const chatEndpoints: readonly Endpoint[] = [
     query: DeleteConversationQuerySchema,
     responses: [noContent()],
     errors: [401, 404, 409],
+  },
+  {
+    operationId: 'handoffConversation',
+    method: 'post',
+    path: '/conversations/{id}/handoff',
+    tag: 'Percakapan',
+    summary:
+      'Ringkas percakapan lalu buka percakapan baru berisi ringkasan itu sebagai konteks awal',
+    auth: true,
+    params: IdParamsSchema,
+    body: HandoffRequestSchema,
+    responses: [json(201, 'Percakapan baru', ConversationSchema)],
+    errors: [400, 401, 404, 409, 502],
   },
   {
     operationId: 'listMessages',

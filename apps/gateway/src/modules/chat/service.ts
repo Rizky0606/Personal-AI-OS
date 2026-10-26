@@ -8,8 +8,8 @@ import type {
   SendMessageRequestSchema,
   UpdateConversationRequestSchema,
 } from '@aios/contracts';
-import { TERMINAL_RUN_STATUSES } from '@aios/contracts';
-import { and, desc, eq, gte, isNotNull, isNull, lt, notInArray, sql } from 'drizzle-orm';
+import { HANDOFF_PREFIX, TERMINAL_RUN_STATUSES } from '@aios/contracts';
+import { and, asc, desc, eq, gte, isNotNull, isNull, lt, notInArray, sql } from 'drizzle-orm';
 import type { z } from 'zod';
 import type { Database } from '../../db/client.js';
 import { conversations, messages, projects, runs } from '../../db/schema/index.js';
@@ -190,6 +190,29 @@ export function createChatService(deps: {
    * dibuat sesi baru, dan riwayat yang tersisa (sebelum `beforeId`) dikirim karena sesi lama masih memuat
    * bagian yang dibuang. Percakapan yang belum pernah punya run memakai sesi bawaan `aios-<id>`.
    */
+  /** Pesan menjadi riwayat untuk agent; pesan sistem hanya yang membawa ringkasan lanjutan. */
+  function historyFrom(
+    rows: { author: string; parts: Message['parts'] }[],
+  ): NonNullable<LaunchInput['history']> {
+    return rows.flatMap((row): NonNullable<LaunchInput['history']> => {
+      const content = textOf(row.parts);
+      if (!content) return [];
+      if (row.author === 'system') {
+        return content.startsWith(HANDOFF_PREFIX)
+          ? [
+              { role: 'user', content },
+              {
+                role: 'assistant',
+                content: 'Baik, konteks percakapan sebelumnya sudah saya pahami.',
+              },
+            ]
+          : [];
+      }
+      if (row.author !== 'user' && row.author !== 'assistant') return [];
+      return [{ role: row.author, content }];
+    });
+  }
+
   async function sessionFor(
     conversation: typeof conversations.$inferSelect,
     beforeId?: string,
@@ -201,7 +224,16 @@ export function createChatService(deps: {
       .from(runs)
       .where(eq(runs.conversationId, conversation.id))
       .limit(1);
-    if (!anyRun) return { sessionId: `aios-${conversation.id}`, history: [] };
+    if (!anyRun) {
+      // Percakapan lanjutan: ringkasan dari percakapan sebelumnya menjadi riwayat awal.
+      const seeds = await db
+        .select({ author: messages.author, parts: messages.parts })
+        .from(messages)
+        .where(and(eq(messages.conversationId, conversation.id), eq(messages.author, 'system')))
+        .orderBy(asc(messages.id))
+        .limit(MAX_HISTORY_MESSAGES);
+      return { sessionId: `aios-${conversation.id}`, history: historyFrom(seeds) };
+    }
 
     const rows = await db
       .select({ author: messages.author, parts: messages.parts })
@@ -214,12 +246,10 @@ export function createChatService(deps: {
       )
       .orderBy(desc(messages.id))
       .limit(MAX_HISTORY_MESSAGES);
-    const history = rows.reverse().flatMap((row): NonNullable<LaunchInput['history']> => {
-      const content = textOf(row.parts);
-      if (!content || (row.author !== 'user' && row.author !== 'assistant')) return [];
-      return [{ role: row.author, content }];
-    });
-    return { sessionId: `aios-${conversation.id}-${uuidv7()}`, history };
+    return {
+      sessionId: `aios-${conversation.id}-${uuidv7()}`,
+      history: historyFrom(rows.reverse()),
+    };
   }
 
   /**

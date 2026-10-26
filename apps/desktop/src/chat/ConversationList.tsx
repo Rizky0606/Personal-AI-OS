@@ -56,6 +56,7 @@ export function ConversationList() {
             onRename={(title) => void actions.rename(conversation.id, title)}
             onPin={(pinned) => void actions.setPinned(conversation.id, pinned)}
             onArchive={() => void actions.archive(conversation.id)}
+            onHandoff={() => void actions.handoff(conversation.id)}
             onDelete={() => void actions.remove(conversation.id)}
           />
         ))}

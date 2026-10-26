@@ -12,6 +12,7 @@ import { createTitleService } from '../modules/chat/title.js';
 import { createDevicesService } from '../modules/devices/service.js';
 import { createOutbox } from '../modules/files/outbox.js';
 import { createMemoryService } from '../modules/memory/service.js';
+import { createHandoffService } from '../modules/handoff/service.js';
 import { createOpinionService } from '../modules/opinion/service.js';
 import { createTemplateService } from '../modules/templates/service.js';
 import { createSearchService } from '../modules/search/service.js';
@@ -326,6 +327,7 @@ export async function createAuthEnv(
     memory,
     templates: createTemplateService({ db }),
     opinion: createOpinionService({ client }),
+    handoff: createHandoffService({ db, client }),
     spaces,
     search: createSearchService({ db }),
     worker: { hub: workerHub, relay: workerRelay },

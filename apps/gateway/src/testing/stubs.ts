@@ -60,6 +60,8 @@ export const unusedTemplates: AppDeps['templates'] = {
   remove: unused('templates.remove'),
 };
 
+export const unusedHandoff: AppDeps['handoff'] = { run: unused('handoff.run') };
+
 export const unusedOpinion: AppDeps['opinion'] = { run: unused('opinion.run') };
 
 export const unusedTasks: AppDeps['tasks'] = {

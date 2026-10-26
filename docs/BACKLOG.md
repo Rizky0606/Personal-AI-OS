@@ -565,5 +565,6 @@ Disusun 2026-10-26 dari perbandingan dengan Orca, Pi, Cline, Amp, Goose, dan Vib
 
 ## Ide di luar scope
 
+- Lanjut dengan ringkasan (Fase 42): belum ada di Android, dan ringkasan tidak bisa disunting sebelum percakapan baru dibuka.
 - Mode rencana (Fase 41): rencana yang disetujui belum bisa diedit di tempat; revisi lewat pesan. Android belum punya run coding, jadi tidak ada sakelarnya.
 - Templat prompt (Fase 39): perintah palette Ctrl+K untuk memasukkan templat ke chat, dan templat di Android (menu `/` di composer).

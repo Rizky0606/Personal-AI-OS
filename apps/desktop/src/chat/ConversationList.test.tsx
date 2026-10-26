@@ -109,6 +109,41 @@ describe('ConversationList', () => {
     expect(await screen.findByText(copy.chat.deleted)).toBeInTheDocument();
   });
 
+  it('menu baris: Lanjut dengan ringkasan memanggil server dengan model pilihan dan membuka percakapan baru', async () => {
+    const item = conversation({ title: 'Panjang' });
+    const next = conversation({ title: 'Lanjutan: Panjang' });
+    api.listConversations.mockResolvedValue({ items: [item], nextBefore: null });
+    api.listModels.mockResolvedValue([
+      { id: 'peringkas', label: 'Peringkas', kind: 'model', ownedBy: 'x' },
+    ]);
+    api.handoffConversation.mockResolvedValue(next);
+    const user = userEvent.setup();
+    const { router } = await renderScreen(<ConversationList />);
+
+    await user.click(await screen.findByRole('button', { name: `${copy.chat.menu}: Panjang` }));
+    await user.click(await screen.findByRole('menuitem', { name: copy.chat.handoff.menu }));
+
+    await waitFor(() => expect(api.handoffConversation).toHaveBeenCalledWith(item.id, 'peringkas'));
+    await waitFor(() => expect(router.state.location.pathname).toBe(`/chat/${next.id}`));
+    expect(await screen.findByText(copy.chat.handoff.done)).toBeInTheDocument();
+  });
+
+  it('Lanjut dengan ringkasan tanpa model yang tersedia: pesan galat, tanpa memanggil server', async () => {
+    api.listConversations.mockResolvedValue({
+      items: [conversation({ title: 'Panjang' })],
+      nextBefore: null,
+    });
+    api.listModels.mockResolvedValue([]);
+    const user = userEvent.setup();
+    await renderScreen(<ConversationList />);
+
+    await user.click(await screen.findByRole('button', { name: `${copy.chat.menu}: Panjang` }));
+    await user.click(await screen.findByRole('menuitem', { name: copy.chat.handoff.menu }));
+
+    expect(await screen.findByText(copy.chat.handoff.noModel)).toBeInTheDocument();
+    expect(api.handoffConversation).not.toHaveBeenCalled();
+  });
+
   it('Esc membatalkan ubah judul tanpa memanggil server', async () => {
     const item = conversation({ title: 'Lama' });
     api.listConversations.mockResolvedValue({ items: [item], nextBefore: null });

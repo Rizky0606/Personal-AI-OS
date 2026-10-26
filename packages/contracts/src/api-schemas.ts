@@ -277,6 +277,11 @@ export const SendMessageResponseSchema = z
   .object({ message: MessageSchema, run: RunSchema })
   .meta({ id: 'SendMessageResponse' });
 
+/** Lanjut dengan ringkasan (W30): model yang meringkas percakapan sebelum membuka percakapan baru. */
+export const HandoffRequestSchema = z
+  .object({ model: z.string().min(1) })
+  .meta({ id: 'HandoffRequest' });
+
 export const RerouteRequestSchema = z.object({ role: RoleIdSchema }).meta({ id: 'RerouteRequest' });
 
 export const RerouteResponseSchema = z
