@@ -80,3 +80,6 @@
 {"id":"rev-09","message":"Review dependensi baru yang kutambahkan di package.json, aman atau tidak?","surface":"windows","expect":"reviewer","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
 {"id":"rev-10","message":"Komentari kualitas kode di commit terakhir saja, jangan diubah","surface":"windows","expect":"reviewer","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
 {"id":"rev-11","message":"Periksa apakah konfigurasi CORS di PR ini terlalu longgar","surface":"windows","expect":"reviewer","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"rev-12","message":"ide fitur lain apa yang cocok untuk project ini ke depannya","surface":"windows","expect":"reviewer","project":{"name":"bakso-idola-new","stack":"typescript, react"}}
+{"id":"rev-13","message":"gambarkan struktur folder dan alur utama project ini","surface":"windows","expect":"reviewer","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}
+{"id":"rev-14","message":"bagian kode project ini mana yang paling perlu dirapikan?","surface":"windows","expect":"reviewer","project":{"name":"toko-online","stack":"typescript, react, fastify, postgres"}}

@@ -22,7 +22,7 @@ handoff:
   frontend: mengubah berkas tampilan atau komponen UI di folder project yang terbuka
   backend: mengubah berkas API, database, auth, logika server di folder project yang terbuka
   debugger: memperbaiki error di berkas folder project yang terbuka
-  reviewer: review diff run coding atau pemeriksaan keamanan kode project
+  reviewer: review diff run coding, pemeriksaan keamanan kode project, atau pertanyaan tentang isi dan ide pengembangan project yang terbuka
 examples:
   - apa bedanya TCP dan UDP, jelaskan singkat
   - ingatkan aku strategi belajar yang kita bahas kemarin
@@ -36,6 +36,8 @@ examples:
 not_examples:
   - ubah warna tombol checkout di project web
   - riset bersitasi tentang tren harga GPU tahun ini
+  - fitur apalagi yang bisa ditambahkan di project ini
+  - jelaskan arsitektur project yang sedang terbuka
 ---
 
 # Peran

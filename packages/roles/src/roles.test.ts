@@ -241,7 +241,7 @@ describe('validasi saat memuat', () => {
       t.replace('approval: ask', 'approval: ask\nwarna: merah'),
     );
     edit(join(dir, 'roles', 'reviewer.md'), (t) =>
-      t.replace(/examples:\n( {2}- .*\n){5}/, 'examples:\n  - satu\n  - dua\n'),
+      t.replace(/examples:\n( {2}- .*\n)+/, 'examples:\n  - satu\n  - dua\n'),
     );
     const problems = problemsOf(dir).join('\n');
     expect(problems).toContain('roles/writer.md: id "penulis" harus sama dengan nama file');
