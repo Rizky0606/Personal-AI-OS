@@ -2,7 +2,7 @@ import type { RouterOutput } from '@aios/contracts';
 import type { RolesRegistry } from '../registry.js';
 import { parseRouterOutput } from './output.js';
 import { buildRouterMessages } from './prompt.js';
-import { CONFIDENCE_THRESHOLD, FALLBACK_ROLE, candidateRoles, isContinuation } from './rules.js';
+import { CONFIDENCE_THRESHOLD, candidateRoles, fallbackRole, isContinuation } from './rules.js';
 import type {
   ChatMessage,
   Complete,
@@ -52,6 +52,7 @@ export function createRouter(options: RouterOptions): Router {
         hasProject: input.project !== undefined,
       });
       const allowed = new Set(candidates.map((r) => r.id));
+      const fallback = fallbackRole(candidates);
 
       const result = (
         decision: Partial<RouteDecision> & Pick<RouteDecision, 'role' | 'confidence' | 'reason'>,
@@ -117,9 +118,9 @@ export function createRouter(options: RouterOptions): Router {
           if (signal?.aborted) throw err;
           return result(
             {
-              role: FALLBACK_ROLE,
+              role: fallback,
               confidence: 0,
-              reason: 'Router tidak tersedia, memakai role general.',
+              reason: `Router tidak tersedia, memakai role ${fallback}.`,
             },
             'fallback',
             attempts,
@@ -128,7 +129,7 @@ export function createRouter(options: RouterOptions): Router {
         const parsed = parseRouterOutput(text);
         const checked = parsed.ok ? checkRoles(parsed.value, registry) : parsed;
         if (checked.ok) {
-          return result(finalize(checked.value, allowed, threshold), 'ai', attempts);
+          return result(finalize(checked.value, allowed, threshold, fallback), 'ai', attempts);
         }
         lastError = checked.error;
         conversation = [
@@ -142,9 +143,9 @@ export function createRouter(options: RouterOptions): Router {
       }
       return result(
         {
-          role: FALLBACK_ROLE,
+          role: fallback,
           confidence: 0,
-          reason: `Keluaran router tidak valid (${lastError}), memakai role general.`,
+          reason: `Keluaran router tidak valid (${lastError}), memakai role ${fallback}.`,
         },
         'fallback',
         attempts,
@@ -167,6 +168,7 @@ function finalize(
   output: RouterOutput,
   allowed: ReadonlySet<string>,
   threshold: number,
+  fallback: string,
 ): Pick<RouteDecision, 'role' | 'confidence' | 'reason' | 'needsSplit' | 'subtasks'> {
   let role = output.role;
   let reason = output.reason.trim() || 'Tanpa alasan dari router.';
@@ -175,11 +177,11 @@ function finalize(
   if (!allowed.has(role)) {
     coerced = true;
     reason = `Role ${role} tidak tersedia di konteks ini (tanpa project hanya role Umum). ${reason}`;
-    role = FALLBACK_ROLE;
-  } else if (output.confidence < threshold && role !== FALLBACK_ROLE) {
+    role = fallback;
+  } else if (output.confidence < threshold && role !== fallback) {
     coerced = true;
     reason = `Confidence rendah (${output.confidence.toFixed(2)}) untuk ${role}: ${reason}`;
-    role = FALLBACK_ROLE;
+    role = fallback;
   }
 
   // Pemecahan hanya berlaku bila keputusan utamanya utuh dan ada 2+ sub-tugas pada role yang boleh dipakai.

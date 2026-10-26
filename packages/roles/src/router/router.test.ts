@@ -175,11 +175,9 @@ describe('aturan cepat: surface dan project aktif', () => {
     }
   });
 
-  it('Windows dengan project: semua role, grup Coding didahulukan', () => {
+  it('Windows dengan project: hanya grup Coding', () => {
     const roles = candidateRoles(registry, { surface: 'windows', hasProject: true });
-    expect(roles).toHaveLength(7);
-    expect(roles.slice(0, 4).every((r) => r.group === 'coding')).toBe(true);
-    expect(roles.slice(4).every((r) => r.group === 'umum')).toBe(true);
+    expect(ids(roles).sort()).toEqual(['backend', 'debugger', 'frontend', 'reviewer']);
   });
 
   it('Android dengan project: semua role, grup Umum di depan', () => {
@@ -201,7 +199,9 @@ describe('aturan cepat: surface dan project aktif', () => {
       input({ surface: 'windows', project: PROJECT }),
       candidateRoles(registry, { surface: 'windows', hasProject: true }),
     )[0]!.content;
-    expect(windows.indexOf('- id: backend')).toBeLessThan(windows.indexOf('- id: general'));
+    expect(windows).toContain('- id: backend');
+    expect(windows).not.toContain('- id: general');
+    expect(windows).not.toContain('- id: writer');
     expect(windows).toContain('project=toko-online');
     expect(windows).toContain('stack=typescript, react');
     // Chat project condong ke coding; chat umum tidak membawa aturan itu.
@@ -334,20 +334,20 @@ describe('router AI', () => {
 
   it('needs_split: subtasks dipertahankan bila 2+ dan role-nya boleh', async () => {
     const reply = json({
-      role: 'researcher',
+      role: 'backend',
       needs_split: true,
       subtasks: [
-        { role: 'researcher', title: 'Cari perbandingan pustaka grafik' },
+        { role: 'backend', title: 'Buat endpoint data grafik' },
         { role: 'frontend', title: 'Buat komponen grafik' },
       ],
     });
     const { router } = setup([reply]);
     const result = await router.route(input({ surface: 'windows', project: PROJECT }));
     expect(result.decision).toMatchObject({
-      role: 'researcher',
+      role: 'backend',
       needsSplit: true,
       subtasks: [
-        { role: 'researcher', title: 'Cari perbandingan pustaka grafik' },
+        { role: 'backend', title: 'Buat endpoint data grafik' },
         { role: 'frontend', title: 'Buat komponen grafik' },
       ],
     });

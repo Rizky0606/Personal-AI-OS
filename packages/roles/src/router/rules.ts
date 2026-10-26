@@ -15,17 +15,27 @@ export interface RoleContext {
  * Role yang boleh dipilih di konteks ini.
  * - Tanpa project hanya grup Umum: Android memang begitu (dokumen); di Windows tanpa folder juga begitu
  *   karena role coding butuh worktree project untuk bekerja (asumsi, dicatat di BACKLOG).
- * - Chat per folder project di Windows mendahulukan grup Coding: urutan daftar menaruh coding di depan.
+ * - Chat per folder project di Windows hanya grup Coding: hanya role itu yang membaca folder project,
+ *   jadi pertanyaan tentang project tidak boleh jatuh ke role Umum (server, tanpa akses ke project).
  */
 export function candidateRoles(registry: RolesRegistry, ctx: RoleContext): Role[] {
   const all = [...registry.roles.values()];
+  if (ctx.surface === 'windows' && ctx.hasProject) {
+    const coding = all.filter((r) => r.group === 'coding');
+    if (coding.length > 0) return coding;
+  }
   const allowed = ctx.hasProject ? all : all.filter((r) => r.group === 'umum');
-  const first = ctx.surface === 'windows' && ctx.hasProject ? 'coding' : 'umum';
-  const rank = (r: Role) => (r.group === first ? 0 : 1);
+  const rank = (r: Role) => (r.group === 'umum' ? 0 : 1);
   return allowed
     .map((role, index) => ({ role, index }))
     .sort((a, b) => rank(a.role) - rank(b.role) || a.index - b.index)
     .map((x) => x.role);
+}
+
+/** Role cadangan: `general` bila boleh dipakai, bila tidak role pertama kandidat (chat project Windows). */
+export function fallbackRole(candidates: readonly Role[]): string {
+  if (candidates.some((r) => r.id === FALLBACK_ROLE)) return FALLBACK_ROLE;
+  return candidates[0]?.id ?? FALLBACK_ROLE;
 }
 
 const normalize = (text: string): string =>
