@@ -206,8 +206,10 @@ describe('aturan cepat: surface dan project aktif', () => {
     expect(windows).toContain('stack=typescript, react');
     // Chat project condong ke coding; chat umum tidak membawa aturan itu.
     expect(windows).toContain('Utamakan role grup coding');
+    expect(windows).toContain('Pertanyaan TENTANG project itu sendiri');
     expect(windows).toContain('tetap serbabisa');
     expect(android).not.toContain('Utamakan role grup coding');
+    expect(android).not.toContain('Pertanyaan TENTANG project itu sendiri');
   });
 
   it('model memilih role coding tanpa project: dipaksa general dengan alasan, tidak dianggap JSON salah', async () => {

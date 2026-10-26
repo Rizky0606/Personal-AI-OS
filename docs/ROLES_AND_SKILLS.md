@@ -6,13 +6,13 @@ Setiap pesan diarahkan otomatis ke satu agent role. Role menentukan mesin, model
 
 | Role | Grup | Mesin | Dipakai untuk | Bukan untuk (serahkan ke) | Skill khusus |
 | --- | --- | --- | --- | --- | --- |
-| `general` | Umum | Hermes | Pertanyaan apa pun, percakapan, menulis dan menjelaskan kode di chat (template, contoh, skrip), fallback | Mengubah berkas di folder project (frontend/backend/debugger), riset bersitasi (researcher) | answer-first, clarify-once |
+| `general` | Umum | Hermes | Pertanyaan apa pun, percakapan, menulis dan menjelaskan kode di chat (template, contoh, skrip), fallback | Mengubah berkas di folder project (frontend/backend/debugger), pertanyaan tentang isi project (reviewer; hanya role coding yang bisa membaca folder project), riset bersitasi (researcher) | answer-first, clarify-once |
 | `researcher` | Umum | Research engine + Hermes | Riset bersitasi, perbandingan, fakta terkini | Menulis kode (coding), naskah (writer) | source-verification, citation, fact-vs-opinion |
 | `writer` | Umum | Hermes | Ide konten, script video, naskah, caption, email | Fakta yang belum diverifikasi (researcher) | stop-slop, script-structure, audience-voice |
 | `frontend` | Coding | omp | UI, komponen, styling, aksesibilitas, state klien | API, database, auth (backend) | ui-baseline, a11y-check, ui-states, react-practices |
 | `backend` | Coding | omp | API, auth, logika server, integrasi, migrasi | Tampilan (frontend) | api-design, input-validation, error-handling, safe-migrations |
 | `debugger` | Coding | omp | Error, stack trace, perilaku tak sesuai | Fitur baru (frontend/backend) | reproduce-first, diagnosing-bugs |
-| `reviewer` | Coding | omp | Review diff, keamanan, kualitas | Menulis fitur (frontend/backend) | code-review, security-basics |
+| `reviewer` | Coding | omp | Review diff, keamanan, kualitas, dan pertanyaan tentang isi atau ide pengembangan project yang terbuka (membaca kode, tanpa mengubah) | Menulis fitur (frontend/backend) | code-review, security-basics |
 
 **Menyusul:** `architect`, `database`, `devops`, `tester`, `security`, `analyst`. Tambahkan satu per satu, masing-masing dengan set uji routing sendiri.
 
