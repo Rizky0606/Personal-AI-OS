@@ -80,6 +80,10 @@ export const api: FakeApi = {
   addSpaceDocument: fn<'addSpaceDocument'>(),
   deleteSpaceDocument: fn<'deleteSpaceDocument'>(),
   listSpaceConversations: fn<'listSpaceConversations'>(),
+  listPromptTemplates: fn<'listPromptTemplates'>(),
+  createPromptTemplate: fn<'createPromptTemplate'>(),
+  updatePromptTemplate: fn<'updatePromptTemplate'>(),
+  deletePromptTemplate: fn<'deletePromptTemplate'>(),
   listMemories: fn<'listMemories'>(),
   createMemory: fn<'createMemory'>(),
   updateMemory: fn<'updateMemory'>(),
@@ -186,6 +190,7 @@ export function resetApi(): void {
   api.listSchedules.mockResolvedValue([]);
   api.listRuns.mockResolvedValue([]);
   api.listMemories.mockResolvedValue([]);
+  api.listPromptTemplates.mockResolvedValue([]);
   api.listSpaces.mockResolvedValue([]);
   api.search.mockResolvedValue([]);
   api.listSpaceDocuments.mockResolvedValue([]);

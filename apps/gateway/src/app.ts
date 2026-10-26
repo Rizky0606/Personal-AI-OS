@@ -37,6 +37,8 @@ import type { ResearchService } from './modules/research/service.js';
 import { scheduleRoutes } from './modules/schedules/routes.js';
 import type { ScheduleService } from './modules/schedules/service.js';
 import { memoryRoutes } from './modules/memory/routes.js';
+import { templateRoutes } from './modules/templates/routes.js';
+import type { TemplateService } from './modules/templates/service.js';
 import type { MemoryService } from './modules/memory/service.js';
 import { roleRoutes } from './modules/roles/routes.js';
 import { searchRoutes } from './modules/search/routes.js';
@@ -85,6 +87,7 @@ export interface AppDeps {
   compare: CompareService;
   status: StatusService;
   memory: MemoryService;
+  templates: TemplateService;
   spaces: SpacesService;
   search: SearchService;
   /** Hub koneksi worker dan relay-nya; dibuat di luar karena runner juga memakai relay. */
@@ -114,6 +117,7 @@ export function buildApp({
   compare,
   status,
   memory,
+  templates,
   spaces,
   search,
   worker,
@@ -197,6 +201,7 @@ export function buildApp({
         await protectedScope.register(compareRoutes, { compare });
         await protectedScope.register(statusRoutes, { status });
         await protectedScope.register(memoryRoutes, { memory });
+        await protectedScope.register(templateRoutes, { templates });
         await protectedScope.register(spaceRoutes, { spaces });
         await protectedScope.register(searchRoutes, { search });
         await protectedScope.register(wsRoutes, { ...ws, auth });

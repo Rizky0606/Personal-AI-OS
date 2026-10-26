@@ -64,6 +64,13 @@
       "when": 1792921842271,
       "tag": "0008_project_instructions",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792990173752,
+      "tag": "0009_prompt_templates",
+      "breakpoints": true
     }
   ]
 }

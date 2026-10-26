@@ -77,6 +77,9 @@ export const useWorkspaceRuns = () =>
         : false,
   });
 
+export const usePromptTemplates = () =>
+  useQuery({ queryKey: ['promptTemplates'], queryFn: api.listPromptTemplates });
+
 export const useSchedules = () => useQuery({ queryKey: ['schedules'], queryFn: api.listSchedules });
 
 export const useScheduleRuns = (scheduleId: string) =>

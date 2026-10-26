@@ -6,6 +6,9 @@ import {
   DeviceSchema,
   MEMORY_TEXT_MAX,
   MemorySchema,
+  PROMPT_TEMPLATE_BODY_MAX,
+  PROMPT_TEMPLATE_NAME_RE,
+  PromptTemplateSchema,
   MessagePartInputSchema,
   SpaceDocumentSchema,
   SpaceSchema,
@@ -439,6 +442,21 @@ export const SearchResultSchema = z
   .meta({ id: 'SearchResult' });
 export type SearchResult = z.infer<typeof SearchResultSchema>;
 export const SearchResponseSchema = itemsOf(SearchResultSchema).meta({ id: 'SearchResponse' });
+
+export const PromptTemplateListSchema = itemsOf(PromptTemplateSchema).meta({
+  id: 'PromptTemplateList',
+});
+const TemplateNameSchema = z.string().trim().toLowerCase().regex(PROMPT_TEMPLATE_NAME_RE);
+const TemplateBodySchema = z.string().trim().min(1).max(PROMPT_TEMPLATE_BODY_MAX);
+export const CreatePromptTemplateRequestSchema = z
+  .object({ name: TemplateNameSchema, body: TemplateBodySchema })
+  .meta({ id: 'CreatePromptTemplateRequest' });
+export const UpdatePromptTemplateRequestSchema = z
+  .object({ name: TemplateNameSchema.optional(), body: TemplateBodySchema.optional() })
+  .refine((v) => v.name !== undefined || v.body !== undefined, {
+    message: 'Kirim name atau body.',
+  })
+  .meta({ id: 'UpdatePromptTemplateRequest' });
 
 export const MemoryListSchema = itemsOf(MemorySchema).meta({ id: 'MemoryList' });
 const MemoryTextSchema = z.string().trim().min(1).max(MEMORY_TEXT_MAX);

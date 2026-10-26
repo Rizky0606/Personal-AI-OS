@@ -1,5 +1,7 @@
 import { useState, type DragEvent } from 'react';
 import { apiErrorMessage } from '../api/errors';
+import { usePromptTemplates } from '../api/queries';
+import { useTemplateInsert } from '../templates/useTemplateInsert';
 import { copy } from '../copy';
 import { ErrorBanner } from '../ui/ErrorBanner';
 import { StateView, type ViewState } from '../ui/StateView';
@@ -11,6 +13,8 @@ import { useChatController } from './useChatController';
 
 function ChatView({ conversationId }: { conversationId: string | undefined }) {
   const chat = useChatController(conversationId);
+  const templates = usePromptTemplates();
+  const insert = useTemplateInsert(chat.setDraft);
   const [dragging, setDragging] = useState(false);
   const { status } = chat;
 
@@ -115,7 +119,10 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
         files={chat.files}
         onAddFiles={chat.addFiles}
         onRemoveFile={chat.removeFile}
+        templates={templates.data ?? []}
+        onUseTemplate={insert.use}
       />
+      {insert.dialog}
     </div>
   );
 }

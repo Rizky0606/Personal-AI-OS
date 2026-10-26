@@ -354,6 +354,22 @@ export const AuditLogSchema = z
   .meta({ id: 'AuditLog' });
 export type AuditLog = z.infer<typeof AuditLogSchema>;
 
+/** Nama templat prompt: dipanggil dengan `/nama` di composer, jadi huruf kecil, angka, dan strip. */
+export const PROMPT_TEMPLATE_NAME_RE = /^[a-z0-9][a-z0-9-]{0,39}$/;
+export const PROMPT_TEMPLATE_BODY_MAX = 4000;
+
+/** Prompt tersimpan; `{{parameter}}` di isinya diisi pengguna saat dipakai. */
+export const PromptTemplateSchema = z
+  .object({
+    id: IdSchema,
+    name: z.string().regex(PROMPT_TEMPLATE_NAME_RE),
+    body: z.string().min(1).max(PROMPT_TEMPLATE_BODY_MAX),
+    createdAt: TimestampSchema,
+    updatedAt: TimestampSchema,
+  })
+  .meta({ id: 'PromptTemplate' });
+export type PromptTemplate = z.infer<typeof PromptTemplateSchema>;
+
 /** Batas panjang satu fakta memori; cukup untuk satu atau dua kalimat. */
 export const MEMORY_TEXT_MAX = 500;
 

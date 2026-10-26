@@ -7,6 +7,7 @@ import { useUiStore, type ThemeMode } from '../state/uiStore';
 import { Button } from '../ui/Button';
 import { Chip } from '../ui/Chip';
 import { MemorySection } from '../memory/MemorySection';
+import { TemplatesSection } from '../templates/TemplatesSection';
 import { ListItem } from '../ui/ListItem';
 import { UpdateSection } from '../updater/UpdateSection';
 import { AllowedFolders } from '../worker/AllowedFolders';
@@ -45,6 +46,8 @@ export function SettingsScreen() {
       </section>
 
       <MemorySection />
+
+      <TemplatesSection />
 
       <AllowedFolders />
 

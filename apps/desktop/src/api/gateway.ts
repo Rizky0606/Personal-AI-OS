@@ -7,6 +7,8 @@ import {
   LoginResponseSchema,
   MemoryListSchema,
   MemorySchema,
+  PromptTemplateListSchema,
+  PromptTemplateSchema,
   SearchResponseSchema,
   SpaceDocumentListSchema,
   SpaceDocumentSchema,
@@ -282,6 +284,16 @@ export function createGatewayApi(call: Call) {
       get(`/memories/${id}`, MemorySchema, { method: 'PATCH', body: patch }),
     deleteMemory: async (id: string) => {
       await call(`/memories/${id}`, { method: 'DELETE' });
+    },
+
+    listPromptTemplates: async () =>
+      (await get('/prompt-templates', PromptTemplateListSchema)).items,
+    createPromptTemplate: (input: { name: string; body: string }) =>
+      get('/prompt-templates', PromptTemplateSchema, { method: 'POST', body: input }),
+    updatePromptTemplate: (id: string, patch: { name?: string; body?: string }) =>
+      get(`/prompt-templates/${id}`, PromptTemplateSchema, { method: 'PATCH', body: patch }),
+    deletePromptTemplate: async (id: string) => {
+      await call(`/prompt-templates/${id}`, { method: 'DELETE' });
     },
 
     listSchedules: async () => (await get('/schedules', ScheduleListSchema)).items,

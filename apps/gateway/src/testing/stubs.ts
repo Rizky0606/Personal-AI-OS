@@ -53,6 +53,13 @@ export const unusedMemory: AppDeps['memory'] = {
   promptSection: unused('memory.promptSection'),
 };
 
+export const unusedTemplates: AppDeps['templates'] = {
+  list: unused('templates.list'),
+  create: unused('templates.create'),
+  update: unused('templates.update'),
+  remove: unused('templates.remove'),
+};
+
 export const unusedTasks: AppDeps['tasks'] = {
   list: unused('tasks.list'),
   create: unused('tasks.create'),
