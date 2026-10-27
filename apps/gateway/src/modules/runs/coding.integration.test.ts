@@ -336,6 +336,7 @@ describe('run coding lewat worker', () => {
     expect(second.history?.map((h) => h.role)).toEqual(['user', 'assistant']);
     expect(second.history?.[1]?.content).toBe('Struktur: src/ dan api/.');
     expect(second.prompt).toBe('lanjut ke fitur yang tadi');
+    expect(second.model).toBe('coding-main');
     expect(second.bundle.systemPrompt).toContain('# Project yang sedang dikerjakan');
     expect(second.bundle.systemPrompt).toContain('baca dulu berkas yang relevan');
     fake.close();
