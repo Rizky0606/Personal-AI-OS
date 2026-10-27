@@ -556,6 +556,11 @@ Disusun 2026-10-26 dari perbandingan dengan Orca, Pi, Cline, Amp, Goose, dan Vib
 | 41 | Mode rencana | W29 | Gateway, worker, desktop | Run coding fase rencana tanpa izin tulis, tombol Setujui memulai fase kerja | Tes worker dan gateway |
 | 42 | Lanjut dengan ringkasan | W30 | Gateway, desktop | Ringkas percakapan lalu buka percakapan baru berisi ringkasan | Tes integrasi |
 | 43 | Cabang percakapan | W31 | Gateway, desktop | Salin percakapan sampai pesan tertentu sebagai percakapan baru (judul "Cabang: …") | Tes integrasi, tes komponen |
+| 44 | Chat project berkonteks | W32 | Gateway, worker, adapter | Riwayat percakapan ikut ke agent project (`run.start.history`), konteks project di prompt sistem, run tanpa perubahan langsung `completed`, rilis menunggu CI lulus | Tes integrasi, tes worker |
+| 45 | Web dan tautan | W33 | Gateway, worker | Isi URL di pesan diambil gateway (aman SSRF) untuk chat umum dan project; tool pencarian web untuk omp | Tes integrasi |
+| 46 | Aktivitas file agent | W34 | Desktop | Panel file yang sedang dibaca/diubah agent, badge di tab Berkas, saran lanjutan sebagai tombol | Tes komponen |
+| 47 | Armada agent | W35 | Gateway, worker, desktop | Beberapa tugas berbeda paralel di worktree masing-masing, dipantau di Ruang Kerja, maks. 4 bersamaan | Tes integrasi, tes komponen |
+| 48 | Hapus role dan router | W36 | Semua | Dua agen tetap (umum di server, project di worker) ditentukan oleh ada tidaknya project; kemampuan dipasang lewat skill. Keputusan pemilik: role dihapus, diganti banyak skill | Tes lintas modul |
 
 **Ditunda sampai ada verifikasi atau keputusan:**
 - Rekam dan ringkas rapat (butuh model transkripsi lewat 9Router atau VPS; cek dulu ketersediaan dan beban VPS ARM).

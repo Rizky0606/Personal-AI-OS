@@ -84,6 +84,8 @@ const messageNotFound = () => new AppError(404, 'message_not_found', 'Pesan tida
 const MAX_TITLE_CHARS = 200;
 /** Batas riwayat yang dikirim ulang ke sesi baru setelah percakapan dipotong. */
 const MAX_HISTORY_MESSAGES = 100;
+/** Riwayat yang dikirim ke agent project; sama dengan batas `history` di kontrak run.start. */
+const PROJECT_HISTORY_MESSAGES = 40;
 
 export function createChatService(deps: {
   db: Database;
@@ -211,6 +213,24 @@ export function createChatService(deps: {
       if (row.author !== 'user' && row.author !== 'assistant') return [];
       return [{ role: row.author, content }];
     });
+  }
+
+  /** Giliran sebelum `beforeId` untuk agent project (worker): terbaru dibatasi, kronologis. */
+  function projectHistoryFor(
+    conversationId: string,
+    beforeId: string,
+  ): () => ReturnType<typeof loadProjectHistory> {
+    return () => loadProjectHistory(conversationId, beforeId);
+  }
+
+  async function loadProjectHistory(conversationId: string, beforeId: string) {
+    const rows = await db
+      .select({ author: messages.author, parts: messages.parts })
+      .from(messages)
+      .where(and(eq(messages.conversationId, conversationId), lt(messages.id, beforeId)))
+      .orderBy(desc(messages.id))
+      .limit(PROJECT_HISTORY_MESSAGES);
+    return historyFrom(rows.reverse());
   }
 
   async function sessionFor(
@@ -507,6 +527,7 @@ export function createChatService(deps: {
         prompt: await agentPrompt(conversation, prompt, routingText, options?.context),
         sessionId,
         ...(history.length ? { history } : {}),
+        projectHistory: projectHistoryFor(conversationId, userMessage.id),
         ...(images.length ? { images } : {}),
         projectId: conversation.projectId,
         ...(options?.continueFromRunId ? { continueFromRunId: options.continueFromRunId } : {}),
@@ -643,6 +664,7 @@ export function createChatService(deps: {
         prompt: await agentPrompt(conversation, prompt, prompt),
         sessionId,
         ...(history.length ? { history } : {}),
+        projectHistory: projectHistoryFor(conversation.id, userMessage.id),
         projectId: conversation.projectId,
         resolveRole: makeResolver({
           conversation,

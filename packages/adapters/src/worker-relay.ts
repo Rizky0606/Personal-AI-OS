@@ -139,6 +139,7 @@ export function createWorkerRelayAdapter(options: WorkerRelayOptions): AgentAdap
           model: input.model ?? 'default',
           ...(input.continueFromRunId ? { continueFromRunId: input.continueFromRunId } : {}),
           ...(input.planOnly ? { planOnly: true } : {}),
+          ...(input.history?.length ? { history: [...input.history] } : {}),
         });
       } catch (error) {
         stop();

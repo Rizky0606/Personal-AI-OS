@@ -246,6 +246,10 @@ describe('POST /runs/:id/review', () => {
     await until(async () => (await getRun(revisionId)).status === 'running', 'revisi running');
     expect((await getRun(revisionId)).branch).toBe((await getRun(run.id)).branch);
 
+    fake.emit(revisionId, {
+      type: 'diff.updated',
+      files: [{ path: 'math.test.js', additions: 1, deletions: 0 }],
+    });
     fake.emit(revisionId, { type: 'run.completed', summary: 'Diperbaiki' });
     await until(async () => (await getRun(revisionId)).status === 'needs_review', 'revisi selesai');
   });

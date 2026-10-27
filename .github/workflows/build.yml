@@ -18,6 +18,7 @@ on:
 
 permissions:
   contents: write # membuat tag dan rilis; hanya dipakai job rilis di main
+  actions: read # job ci-lulus membaca hasil workflow CI
 
 # Rilis berurutan: dua push berdekatan tidak berebut nomor versi (Desktop dan Android tetap paralel di dalamnya).
 concurrency:
@@ -63,6 +64,29 @@ jobs:
           echo "code=$code" >> "$GITHUB_OUTPUT"
           echo "publish=$publish" >> "$GITHUB_OUTPUT"
           echo "Versi: $version (versionCode $code), rilis: $publish"
+
+  # Rilis hanya terbit bila CI (tes) untuk commit yang sama lulus; build tetap berjalan paralel selama menunggu.
+  ci-lulus:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - name: Tunggu hasil CI commit ini
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          for _ in $(seq 1 120); do
+            row="$(gh run list --workflow CI --commit "$GITHUB_SHA" --json status,conclusion --jq '.[0] | "\(.status) \(.conclusion)"' || true)"
+            echo "CI: ${row:-belum ada}"
+            case "$row" in
+              "completed success") exit 0 ;;
+              completed*) echo "CI tidak lulus, rilis dibatalkan."; exit 1 ;;
+            esac
+            sleep 20
+          done
+          echo "CI tidak selesai tepat waktu."; exit 1
 
   desktop:
     needs: versi
@@ -194,7 +218,7 @@ jobs:
           if-no-files-found: error
 
   rilis:
-    needs: [versi, desktop, android]
+    needs: [versi, desktop, android, ci-lulus]
     if: needs.versi.outputs.publish == 'true'
     runs-on: ubuntu-24.04
     steps:

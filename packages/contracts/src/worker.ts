@@ -27,6 +27,11 @@ export const RunStartCommandSchema = z.object({
   continueFromRunId: IdSchema.optional(),
   /** Mode rencana: semua permintaan izin (tulis, perintah, jaringan) ditolak worker. */
   planOnly: z.boolean().optional(),
+  /** Giliran sebelumnya di percakapan ini (kronologis); omp memulai proses baru tiap run, jadi tanpa ini ia tidak tahu konteksnya. */
+  history: z
+    .array(z.object({ role: z.enum(['user', 'assistant']), content: z.string() }))
+    .max(40)
+    .optional(),
 });
 
 export const RunSteerCommandSchema = z.object({

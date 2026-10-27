@@ -11,6 +11,7 @@ import { BROWSER_TOOL_PREFIX, MCP_SERVER_NAME } from '../preview/mcp.js';
 import type { PreviewService } from '../preview/service.js';
 import type { TerminalService } from '../terminal/service.js';
 import { COMMIT_INSTRUCTION } from './commit-message.js';
+import { withHistory } from './history.js';
 import { LINK_INSTRUCTION, isLinkFromPrompt } from './links.js';
 import { OmpNotFoundError } from './omp-path.js';
 import { ReviewError, type ReviewService } from './review.js';
@@ -271,7 +272,7 @@ export class RunCoordinator {
       run.handle = await this.deps.adapter.startRun({
         runId,
         messageId: uuidv7(),
-        prompt: cmd.prompt,
+        prompt: withHistory(cmd.prompt, cmd.history),
         systemPrompt:
           cmd.bundle.systemPrompt +
           COMMIT_INSTRUCTION +
