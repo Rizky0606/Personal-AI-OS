@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { ActivityStep } from '../activity/activity';
 import { persist } from 'zustand/middleware';
 import {
   ROOT_ID,
@@ -56,6 +57,12 @@ interface UiState {
   activeRunBranch: string | null;
   /** Run coding yang hasilnya sedang menunggu tinjauan (tab Diff); tidak disimpan. */
   reviewRunId: string | null;
+  /** Langkah tool run terbaru di chat yang terbuka, untuk panel Aktivitas dan penanda di Berkas; tidak disimpan. */
+  agentSteps: ActivityStep[];
+  setAgentSteps: (steps: ActivityStep[]) => void;
+  /** Permintaan membuka berkas di tab Berkas (dari Aktivitas); `nonce` membedakan permintaan yang sama; tidak disimpan. */
+  fileRequest: { path: string; nonce: number } | null;
+  requestFile: (path: string) => void;
   /** Model pilihan untuk pesan berikutnya; null = otomatis (router/combo). Diingat antar sesi. */
   model: string | null;
   setModel: (model: string | null) => void;
@@ -103,6 +110,11 @@ export const useUiStore = create<UiState>()(
       activeProjectId: null,
       activeRunBranch: null,
       reviewRunId: null,
+      agentSteps: [],
+      setAgentSteps: (agentSteps) => set({ agentSteps }),
+      fileRequest: null,
+      requestFile: (path) =>
+        set((s) => ({ fileRequest: { path, nonce: (s.fileRequest?.nonce ?? 0) + 1 } })),
       model: null,
       setModel: (model) => set({ model }),
       activeRole: null,

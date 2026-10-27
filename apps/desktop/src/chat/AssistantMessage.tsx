@@ -11,6 +11,7 @@ import { useToastStore } from '../ui/Toaster';
 import { saveBlob } from '../lib/external';
 import { buildZip, extractCodeFiles, type CodeFile } from './codeArchive';
 import { Markdown } from '../markdown/Markdown';
+import { splitSuggestions } from './suggestions';
 import { ReasoningBlock } from './ReasoningBlock';
 import { RoleChip } from './RoleChip';
 import { ToolStepRow, type ToolStepView } from './ToolStepRow';
@@ -34,6 +35,8 @@ export interface AssistantMessageProps {
   onDelete?: (() => void) | undefined;
   /** Membuka percakapan baru berisi pesan sampai jawaban ini (cabang). */
   onFork?: (() => void) | undefined;
+  /** Mengirim saran lanjutan yang dipilih; hanya diberikan pada jawaban terakhir yang sudah selesai. */
+  onSuggest?: ((text: string) => void) | undefined;
 }
 
 /** Tiga titik yang memudar bergiliran selama jawaban masih ditulis. */
@@ -128,6 +131,7 @@ export function AssistantMessage({
   streaming = false,
   onDelete,
   onFork,
+  onSuggest,
 }: AssistantMessageProps) {
   // Blok kode di jawaban yang sudah selesai bisa diunduh sekaligus sebagai satu zip (struktur folder ikut path).
   const files = useMemo(
@@ -136,6 +140,13 @@ export function AssistantMessage({
         ? []
         : extractCodeFiles(parts.flatMap((p) => (p.type === 'text' ? [p.text] : [])).join('\n\n')),
     [parts, streaming],
+  );
+  // Blok saran tidak ditampilkan sebagai teks jawaban: menjadi tombol bila jawaban sudah selesai.
+  const suggestions = useMemo(
+    () =>
+      splitSuggestions(parts.flatMap((p) => (p.type === 'text' ? [p.text] : [])).join('\n\n'))
+        .suggestions,
+    [parts],
   );
   return (
     <article
@@ -176,11 +187,25 @@ export function AssistantMessage({
         part.type === 'tool' ? (
           <ToolStepRow key={part.id} {...part} />
         ) : part.type === 'text' && part.text ? (
-          <Markdown key={i} source={part.text} />
+          <Markdown key={i} source={splitSuggestions(part.text).body} />
         ) : null,
       )}
       {streaming ? <TypingDots /> : null}
       <GeneratedFiles files={parts.flatMap((p) => (p.type === 'file' ? [p] : []))} />
+      {!streaming && onSuggest && suggestions.length > 0 ? (
+        <div role="group" aria-label={copy.chat.followUps} className="flex flex-wrap gap-2">
+          {suggestions.map((text) => (
+            <button
+              key={text}
+              type="button"
+              onClick={() => onSuggest(text)}
+              className="rounded-control border border-border bg-surface-2 px-3 py-1 text-left text-ui text-text transition-colors duration-[120ms] ease-aios hover:border-border-strong hover:bg-surface"
+            >
+              {text}
+            </button>
+          ))}
+        </div>
+      ) : null}
       {!streaming && files.length > 0 ? (
         <footer className="flex items-center justify-end border-t border-border pt-3">
           <Button

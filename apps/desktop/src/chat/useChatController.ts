@@ -370,6 +370,8 @@ export function useChatController(conversationId: string | undefined) {
     sending,
     streaming,
     send: () => void send(),
+    /** Mengirim teks tertentu (saran lanjutan) tanpa menyentuh draf. */
+    sendText: (text: string) => void send(text),
     stop: () => void stop(),
     reroute: (nextRole: string) => void reroute(nextRole),
     editLast,

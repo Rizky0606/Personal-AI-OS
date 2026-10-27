@@ -339,6 +339,7 @@ describe('run coding lewat worker', () => {
     expect(second.model).toBe('coding-main');
     expect(second.bundle.systemPrompt).toContain('# Project yang sedang dikerjakan');
     expect(second.bundle.systemPrompt).toContain('baca dulu berkas yang relevan');
+    expect(second.bundle.systemPrompt).toContain('[saran]');
     fake.close();
   });
 

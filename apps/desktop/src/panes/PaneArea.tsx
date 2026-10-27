@@ -3,6 +3,7 @@ import { Columns2, Rows2, X } from 'lucide-react';
 import { useRef, type KeyboardEvent, type PointerEvent } from 'react';
 import { copy } from '../copy';
 import { cn } from '../lib/cn';
+import { ActivityPanel } from '../activity/ActivityPanel';
 import { FilesPanel } from '../files/FilesPanel';
 import { PreviewPanel } from '../preview/PreviewPanel';
 import { DiffPanel } from '../review/DiffPanel';
@@ -17,6 +18,7 @@ function PaneContent({ tab }: { tab: PaneTab }) {
   if (tab === 'diff') return <DiffPanel />;
   if (tab === 'preview') return <PreviewPanel />;
   if (tab === 'terminal') return <TerminalPanel />;
+  if (tab === 'activity') return <ActivityPanel />;
   return <FilesPanel />;
 }
 

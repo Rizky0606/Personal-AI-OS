@@ -21,7 +21,7 @@ import {
 import { createAuthEnv, type AuthEnv } from '../../testing/auth-env.js';
 import { startFakeHermes, type FakeHermes } from '../../testing/fake-hermes.js';
 import { startMockServer, type MockServer } from '../../testing/mock-server.js';
-import { SERVER_FILES_RULE } from '../runs/runner.js';
+import { SERVER_FILES_RULE, SUGGEST_RULE } from '../runs/runner.js';
 
 interface RouterCall {
   model: string;
@@ -36,7 +36,7 @@ interface RouterAnswer {
 
 /** Pesan sistem run chat di server: bundel role lalu aturan berkas untuk pemilik. */
 const serverPrompt = (role: string) =>
-  [env.roles.bundle(role).systemPrompt, SERVER_FILES_RULE].join('\n\n');
+  [env.roles.bundle(role).systemPrompt, SUGGEST_RULE, SERVER_FILES_RULE].join('\n\n');
 
 let env: AuthEnv;
 let hermes: FakeHermes;

@@ -83,7 +83,7 @@ describe('Shell', () => {
     expect(screen.getByRole('complementary', { name: copy.shell.sidebar })).toBeInTheDocument();
   });
 
-  it('Ctrl+J membuka panel kanan dengan 4 tab dan lebar yang diingat', async () => {
+  it('Ctrl+J membuka panel kanan dengan 5 tab dan lebar yang diingat', async () => {
     await renderShell();
 
     ctrl('j');
@@ -95,6 +95,7 @@ describe('Shell', () => {
       copy.shell.panels.diff,
       copy.shell.panels.terminal,
       copy.shell.panels.files,
+      copy.shell.panels.activity,
     ]);
 
     // Radix Tabs aktif pada mousedown.

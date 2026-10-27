@@ -129,6 +129,20 @@ export function projectRule(name: string, stack: string): string {
   ].join('\n');
 }
 
+/**
+ * Saran lanjutan: aplikasi menyembunyikan blok ini dari teks jawaban dan menampilkannya sebagai tombol
+ * (format dibaca `splitSuggestions` di desktop).
+ */
+export const SUGGEST_RULE = [
+  '# Saran lanjutan',
+  'Bila ada langkah lanjutan yang masuk akal, tutup jawabanmu dengan blok persis ini: 2 sampai 3 saran pendek (maks. 80 karakter), ditulis sebagai kalimat perintah dari sudut pandang pemilik, tanpa teks apa pun sesudahnya.',
+  '[saran]',
+  '- saran pertama',
+  '- saran kedua',
+  '[/saran]',
+  'Jangan menulis blok ini untuk sapaan, pertanyaan balik, atau jawaban yang sudah tuntas.',
+].join('\n');
+
 export const SERVER_FILES_RULE = [
   '# Berkas untuk pemilik',
   'Kamu berjalan di server yang sistem berkasnya tidak bisa diakses pemilik. Jangan membuat berkas, folder, atau arsip (zip, tar, docx, dan sejenisnya) di server sebagai hasil untuk pemilik, kecuali di folder kiriman bila disebut di bawah, dan jangan pernah menjawab dengan path berkas di server.',
@@ -193,6 +207,7 @@ export function createRunner(deps: RunnerDeps): Runner {
     return [
       bundle,
       project,
+      SUGGEST_RULE,
       onServer ? SERVER_FILES_RULE : '',
       outbox,
       planOnly ? PLAN_RULE : '',
