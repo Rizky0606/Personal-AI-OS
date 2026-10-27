@@ -1,6 +1,6 @@
-export type PaneTab = 'preview' | 'diff' | 'terminal' | 'files' | 'activity';
+export type PaneTab = 'preview' | 'diff' | 'terminal' | 'files' | 'git' | 'activity';
 
-export const PANE_TABS: PaneTab[] = ['preview', 'diff', 'terminal', 'files', 'activity'];
+export const PANE_TABS: PaneTab[] = ['preview', 'diff', 'terminal', 'files', 'git', 'activity'];
 
 export type SplitDirection = 'row' | 'column';
 

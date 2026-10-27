@@ -274,7 +274,9 @@ describe('AddProjectDialog', () => {
 
     expect(await within(dialog).findByText('C:\\Kerja\\aplikasi')).toBeInTheDocument();
     expect(within(dialog).getByLabelText(copy.projects.dialog.name)).toHaveValue('aplikasi');
-    expect(within(dialog).getByLabelText(copy.projects.dialog.branch)).toHaveValue('main');
+    expect(
+      within(dialog).getByRole('button', { name: `${copy.projects.dialog.branch}: main` }),
+    ).toBeInTheDocument();
     expect(api.createProject).not.toHaveBeenCalled();
 
     await user.clear(within(dialog).getByLabelText(copy.projects.dialog.name));
@@ -290,6 +292,43 @@ describe('AddProjectDialog', () => {
     await waitFor(() => expect(workerApi.bind).toHaveBeenCalledWith(P1, 'C:\\Kerja\\aplikasi'));
     expect(await screen.findByText(copy.projects.dialog.registered)).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('branch bawaan dipilih dari branch lokal folder, bukan diketik', async () => {
+    connected();
+    pickFolder.mockResolvedValue('C:\\Kerja\\aplikasi');
+    workerApi.inspect.mockResolvedValue(inspection());
+    api.createProject.mockResolvedValue(project());
+    workerApi.bind.mockResolvedValue({ projectId: P1, path: 'x', available: true });
+    const { user, dialog } = await openDialog();
+
+    await user.click(within(dialog).getByRole('button', { name: copy.projects.dialog.pick }));
+    await user.click(
+      await within(dialog).findByRole('button', { name: `${copy.projects.dialog.branch}: main` }),
+    );
+    await user.click(await screen.findByRole('menuitemradio', { name: 'prod' }));
+    expect(
+      within(dialog).queryByRole('textbox', { name: copy.projects.dialog.branch }),
+    ).not.toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: copy.projects.dialog.register }));
+
+    expect(api.createProject).toHaveBeenCalledWith(
+      expect.objectContaining({ defaultBranch: 'prod' }),
+    );
+  });
+
+  it('folder bukan repo git: branch bawaan tetap bisa diketik', async () => {
+    connected();
+    pickFolder.mockResolvedValue('C:\\Kerja\\aplikasi');
+    workerApi.inspect.mockResolvedValue(
+      inspection({
+        git: { isRepo: false, defaultBranch: null, currentBranch: null, branches: [] },
+      }),
+    );
+    const { user, dialog } = await openDialog();
+
+    await user.click(within(dialog).getByRole('button', { name: copy.projects.dialog.pick }));
+    expect(await within(dialog).findByLabelText(copy.projects.dialog.branch)).toHaveValue('main');
   });
 
   it('path yang dikirim ke server tidak pernah berisi folder lokal', async () => {

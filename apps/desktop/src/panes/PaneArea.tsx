@@ -5,6 +5,7 @@ import { copy } from '../copy';
 import { cn } from '../lib/cn';
 import { ActivityPanel } from '../activity/ActivityPanel';
 import { FilesPanel } from '../files/FilesPanel';
+import { GitPanel } from '../git/GitPanel';
 import { PreviewPanel } from '../preview/PreviewPanel';
 import { DiffPanel } from '../review/DiffPanel';
 import { useUiStore } from '../state/uiStore';
@@ -19,6 +20,7 @@ function PaneContent({ tab }: { tab: PaneTab }) {
   if (tab === 'preview') return <PreviewPanel />;
   if (tab === 'terminal') return <TerminalPanel />;
   if (tab === 'activity') return <ActivityPanel />;
+  if (tab === 'git') return <GitPanel />;
   return <FilesPanel />;
 }
 

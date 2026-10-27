@@ -2,6 +2,9 @@ import {
   FileContentSchema,
   FileListSchema,
   FileMatchesSchema,
+  GitDiffSchema,
+  GitLogSchema,
+  GitStatusSchema,
   FoldersResultSchema,
   ProjectBindingSchema,
   ProjectInspectionSchema,
@@ -12,6 +15,9 @@ import {
   TerminalInfoSchema,
   type FileContent,
   type FileList,
+  type GitDiff,
+  type GitLog,
+  type GitStatus,
   type PreviewInfo,
   type PreviewShot,
   type PreviewTarget,
@@ -82,6 +88,14 @@ export function createWorkerApi(call: WorkerCall) {
     /** Pencarian nama berkas longgar (quick-open); maks 30 hasil. */
     filesFind: async (target: PreviewTarget, query: string): Promise<string[]> =>
       FileMatchesSchema.parse(await call('files.find', { ...target, query })).paths,
+    /** Status git folder project (atau worktree run): branch, ahead/behind, berkas yang berubah. Hanya baca. */
+    gitStatus: async (target: PreviewTarget): Promise<GitStatus> =>
+      GitStatusSchema.parse(await call('git.status', target)),
+    /** Perubahan satu berkas terhadap HEAD (unified diff). */
+    gitDiff: async (target: PreviewTarget, path: string): Promise<GitDiff> =>
+      GitDiffSchema.parse(await call('git.diff', { ...target, path })),
+    gitLog: async (target: PreviewTarget, limit = 20): Promise<GitLog> =>
+      GitLogSchema.parse(await call('git.log', { ...target, limit })),
     reviewRevertFile: async (runId: string, path: string): Promise<ReviewState> =>
       ReviewStateSchema.parse(await call('review.revertFile', { runId, path })),
   };

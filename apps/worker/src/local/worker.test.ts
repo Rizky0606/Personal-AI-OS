@@ -429,6 +429,45 @@ describe('sesi gateway lewat worker', () => {
     client.close();
   });
 
+  it('git.* lokal: status, diff, dan log project terikat; project belum terikat dan path keluar ditolak', async () => {
+    const allowed = path.join(base, 'izin');
+    const app = path.join(allowed, 'repo');
+    await fs.mkdir(path.join(app, 'src'), { recursive: true });
+    const git = (...args: string[]) =>
+      execFileSync('git', ['-c', 'user.name=Uji', '-c', 'user.email=uji@example.com', ...args], {
+        cwd: app,
+      });
+    git('init', '-q', '-b', 'main');
+    await fs.writeFile(path.join(app, 'src', 'a.ts'), 'export const a = 1;\n');
+    git('add', '-A');
+    git('commit', '-q', '-m', 'feat: awal');
+    await fs.writeFile(path.join(app, 'src', 'a.ts'), 'export const a = 2;\n');
+    const client = await Client.login(worker.port, TOKEN);
+    await client.call('folders.add', { path: allowed });
+
+    expect(await client.call('git.status', { projectId: PROJECT })).toMatchObject({
+      ok: false,
+      error: { code: 'preview_unavailable' },
+    });
+
+    await client.call('project.bind', { projectId: PROJECT, path: app });
+    expect(await client.call('git.status', { projectId: PROJECT })).toMatchObject({
+      ok: true,
+      result: { isRepo: true, branch: 'main', files: [{ path: 'src/a.ts', status: 'modified' }] },
+    });
+    const diff = await client.call('git.diff', { projectId: PROJECT, path: 'src/a.ts' });
+    expect(diff).toMatchObject({ ok: true });
+    expect(JSON.stringify(diff)).toContain('+export const a = 2;');
+    expect(await client.call('git.log', { projectId: PROJECT })).toMatchObject({
+      ok: true,
+      result: { commits: [{ subject: 'feat: awal' }] },
+    });
+    expect(
+      await client.call('git.diff', { projectId: PROJECT, path: '../luar.txt' }),
+    ).toMatchObject({ ok: false, error: { code: 'path_not_allowed' } });
+    client.close();
+  });
+
   it('preview.* lokal: belum ada preview dijawab null; project belum terikat dan worktree hilang preview_unavailable', async () => {
     const client = await Client.login(worker.port, TOKEN);
 

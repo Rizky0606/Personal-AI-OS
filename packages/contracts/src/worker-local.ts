@@ -225,6 +225,21 @@ export const LocalRequestSchema = z.discriminatedUnion('method', [
   }),
   z.object({
     id: z.string().min(1),
+    method: z.literal('git.status'),
+    params: PreviewTargetSchema,
+  }),
+  z.object({
+    id: z.string().min(1),
+    method: z.literal('git.diff'),
+    params: PreviewTargetSchema.extend({ path: z.string().min(1).max(1024) }),
+  }),
+  z.object({
+    id: z.string().min(1),
+    method: z.literal('git.log'),
+    params: PreviewTargetSchema.extend({ limit: z.number().int().min(1).max(50).default(20) }),
+  }),
+  z.object({
+    id: z.string().min(1),
     method: z.literal('preview.shot'),
     params: PreviewTargetSchema.extend({
       /** Elemen yang ditangkap; kosong = seluruh viewport. */
@@ -331,6 +346,51 @@ export const FileContentSchema = z.object({
 });
 export type FileContent = z.infer<typeof FileContentSchema>;
 export const FileMatchesSchema = z.object({ paths: z.array(z.string()) });
+
+/** Satu berkas yang berubah menurut `git status`. */
+export const GitFileSchema = z.object({
+  path: z.string(),
+  /** Path lama bila berkas diganti nama. */
+  oldPath: z.string().optional(),
+  status: z.enum(['modified', 'added', 'deleted', 'renamed', 'untracked', 'conflicted']),
+  /** Ada perubahan yang sudah di-stage / belum di-stage. */
+  staged: z.boolean(),
+  unstaged: z.boolean(),
+});
+export type GitFile = z.infer<typeof GitFileSchema>;
+export const MAX_GIT_FILES = 300;
+export const GitStatusSchema = z.object({
+  isRepo: z.boolean(),
+  /** Branch saat ini; null bila HEAD lepas atau bukan repo. */
+  branch: z.string().nullable(),
+  upstream: z.string().nullable(),
+  ahead: z.number().int().nonnegative(),
+  behind: z.number().int().nonnegative(),
+  files: z.array(GitFileSchema),
+  /** Berkas yang berubah lebih banyak daripada batas (300). */
+  truncated: z.boolean(),
+});
+export type GitStatus = z.infer<typeof GitStatusSchema>;
+/** Perubahan satu berkas terhadap HEAD (unified diff). Biner tidak dikirim isinya. */
+export const GitDiffSchema = z.object({
+  path: z.string(),
+  patch: z.string(),
+  binary: z.boolean(),
+  /** Patch dipotong karena terlalu besar. */
+  truncated: z.boolean(),
+});
+export type GitDiff = z.infer<typeof GitDiffSchema>;
+export const GitCommitSchema = z.object({
+  hash: z.string(),
+  shortHash: z.string(),
+  subject: z.string(),
+  author: z.string(),
+  /** ISO 8601. */
+  date: z.string(),
+});
+export type GitCommit = z.infer<typeof GitCommitSchema>;
+export const GitLogSchema = z.object({ commits: z.array(GitCommitSchema) });
+export type GitLog = z.infer<typeof GitLogSchema>;
 
 /** Hasil per metode, untuk validasi di sisi desktop. */
 export const FoldersResultSchema = z.object({ folders: z.array(z.string()) });
