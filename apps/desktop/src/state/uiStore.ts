@@ -63,6 +63,9 @@ interface UiState {
   /** Permintaan membuka berkas di tab Berkas (dari Aktivitas); `nonce` membedakan permintaan yang sama; tidak disimpan. */
   fileRequest: { path: string; nonce: number } | null;
   requestFile: (path: string) => void;
+  /** Cari di web untuk pesan berikutnya (chat umum dan project). Diingat antar sesi. */
+  webSearch: boolean;
+  setWebSearch: (on: boolean) => void;
   /** Model pilihan untuk pesan berikutnya; null = otomatis (router/combo). Diingat antar sesi. */
   model: string | null;
   setModel: (model: string | null) => void;
@@ -110,6 +113,8 @@ export const useUiStore = create<UiState>()(
       activeProjectId: null,
       activeRunBranch: null,
       reviewRunId: null,
+      webSearch: false,
+      setWebSearch: (webSearch) => set({ webSearch }),
       agentSteps: [],
       setAgentSteps: (agentSteps) => set({ agentSteps }),
       fileRequest: null,
@@ -189,6 +194,7 @@ export const useUiStore = create<UiState>()(
         paneTree: s.paneTree,
         activeProjectId: s.activeProjectId,
         model: s.model,
+        webSearch: s.webSearch,
         theme: s.theme,
       }),
       // Nilai tersimpan yang rusak atau di luar batas dikembalikan ke aman.

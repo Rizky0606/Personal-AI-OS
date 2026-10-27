@@ -107,6 +107,8 @@ export interface MessageInput {
   model?: string | undefined;
   /** Run coding hanya membuat rencana (tanpa mengubah berkas). */
   planOnly?: boolean | undefined;
+  /** Cari di web untuk pesan ini; hasilnya ditempel ke prompt agent. */
+  webSearch?: boolean | undefined;
 }
 
 /** Teks (bila ada) lalu lampiran; server menolak pesan tanpa keduanya. */
@@ -119,6 +121,7 @@ function messageBody(input: MessageInput) {
     ...(input.role ? { role: input.role } : {}),
     ...(input.model ? { model: input.model } : {}),
     ...(input.planOnly ? { planOnly: true } : {}),
+    ...(input.webSearch ? { webSearch: true } : {}),
   };
 }
 

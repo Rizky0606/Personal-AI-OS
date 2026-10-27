@@ -44,6 +44,9 @@ export interface ComposerProps {
   /** Mode rencana (hanya di dalam project): tanpa onPlanMode sakelarnya tidak tampil. */
   planMode?: boolean;
   onPlanMode?: (on: boolean) => void;
+  /** Cari di web untuk pesan berikutnya; tanpa onWebSearch sakelarnya tidak tampil. */
+  webSearch?: boolean;
+  onWebSearch?: (on: boolean) => void;
 }
 
 const MAX_HEIGHT_PX = 192;
@@ -75,6 +78,8 @@ export function Composer({
   onUseTemplate,
   planMode = false,
   onPlanMode,
+  webSearch = false,
+  onWebSearch,
 }: ComposerProps) {
   const field = useRef<HTMLTextAreaElement>(null);
   const picker = useRef<HTMLInputElement>(null);
@@ -276,6 +281,15 @@ export function Composer({
                 onClick={() => onPlanMode(!planMode)}
               >
                 {copy.chat.plan.chip}
+              </Chip>
+            ) : null}
+            {onWebSearch ? (
+              <Chip
+                selected={webSearch}
+                title={copy.chat.web.chipHint}
+                onClick={() => onWebSearch(!webSearch)}
+              >
+                {copy.chat.web.chip}
               </Chip>
             ) : null}
             <span className="ml-auto flex items-center gap-1">

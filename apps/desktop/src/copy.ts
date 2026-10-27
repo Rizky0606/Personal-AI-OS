@@ -677,6 +677,11 @@ export const copy = {
     editFailed: 'Pesan belum diubah.',
     deleteMessage: 'Hapus',
     followUps: 'Saran lanjutan',
+    web: {
+      chip: 'Cari di web',
+      chipHint:
+        'Cari informasi di internet untuk pesan berikutnya dan sertakan hasilnya sebagai bahan jawaban. Pilihan ini diingat.',
+    },
     fork: 'Cabangkan dari sini',
     forkDone: 'Cabang percakapan dibuat.',
     remember: 'Ingat',

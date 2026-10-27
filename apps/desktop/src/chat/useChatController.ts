@@ -47,6 +47,8 @@ export function useChatController(conversationId: string | undefined) {
 
   const [draft, setDraft] = useState('');
   const model = useUiStore((s) => s.model);
+  const webSearch = useUiStore((s) => s.webSearch);
+  const setWebSearch = useUiStore((s) => s.setWebSearch);
   const setModel = useUiStore((s) => s.setModel);
   const setActiveRole = useUiStore((s) => s.setActiveRole);
   const [pending, setPending] = useState<string | null>(null);
@@ -160,6 +162,7 @@ export function useChatController(conversationId: string | undefined) {
           files: files.length ? files : undefined,
           model: model ?? undefined,
           planOnly: (options?.plan ?? planFirst) && activeProjectId !== null ? true : undefined,
+          webSearch: webSearch ? true : undefined,
         });
         addMessageToCache(queryClient, id, response.message);
         clearAttachments();
@@ -189,6 +192,8 @@ export function useChatController(conversationId: string | undefined) {
       activeProjectId,
       model,
       planFirst,
+      webSearch,
+      webSearch,
       queryClient,
       navigate,
       fail,
@@ -388,6 +393,8 @@ export function useChatController(conversationId: string | undefined) {
     focusNonce,
     planFirst,
     setPlanFirst,
+    webSearch,
+    setWebSearch,
     awaitingPlanApproval,
     /** Menyetujui rencana: pesan berikutnya dikerjakan sungguhan (tanpa mode rencana). */
     approvePlan: () => {

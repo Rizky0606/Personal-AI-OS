@@ -136,6 +136,8 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
         onRemoveFile={chat.removeFile}
         templates={templates.data ?? []}
         onUseTemplate={insert.use}
+        webSearch={chat.webSearch}
+        onWebSearch={chat.setWebSearch}
         {...(chat.inProject ? { planMode: chat.planFirst, onPlanMode: chat.setPlanFirst } : {})}
       />
       {insert.dialog}
