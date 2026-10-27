@@ -3,6 +3,8 @@ import {
   ApprovalParamsSchema,
   CreateConversationRequestSchema,
   DeleteConversationQuerySchema,
+  FleetRequestSchema,
+  FleetResponseSchema,
   HandoffRequestSchema,
   IdParamsSchema,
   ListConversationsQuerySchema,
@@ -130,6 +132,18 @@ export const chatEndpoints: readonly Endpoint[] = [
     params: IdParamsSchema,
     body: RerouteRequestSchema,
     responses: [json(201, 'Run baru dan koreksi', RerouteResponseSchema)],
+    errors: [400, 401, 404, 409],
+  },
+  {
+    operationId: 'launchFleet',
+    method: 'post',
+    path: '/fleets',
+    tag: 'Run',
+    summary:
+      'Armada agent: mulai beberapa tugas berbeda sekaligus di satu project, masing-masing di percakapan dan worktree sendiri',
+    auth: true,
+    body: FleetRequestSchema,
+    responses: [json(201, 'Percakapan dan run tiap tugas', FleetResponseSchema)],
     errors: [400, 401, 404, 409],
   },
   {

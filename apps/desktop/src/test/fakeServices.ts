@@ -42,6 +42,7 @@ export const api: FakeApi = {
   registerWorker: fn<'registerWorker'>(),
   listProjects: fn<'listProjects'>(),
   createProject: fn<'createProject'>(),
+  launchFleet: fn<'launchFleet'>(),
   listModels: fn<'listModels'>(),
   listRoles: fn<'listRoles'>(),
   listConversations: fn<'listConversations'>(),

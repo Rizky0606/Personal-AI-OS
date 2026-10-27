@@ -275,6 +275,34 @@ export const SendMessageRequestSchema = z
   })
   .meta({ id: 'SendMessageRequest' });
 
+/** Paling banyak tugas dalam satu armada, dan batas run yang sedang berjalan per project. */
+export const MAX_FLEET_TASKS = 4;
+
+/**
+ * Armada agent: beberapa tugas berbeda dimulai bersamaan di satu project; tiap tugas jadi percakapan sendiri dan
+ * run coding sendiri di worktree sendiri.
+ */
+export const FleetRequestSchema = z
+  .object({
+    projectId: IdSchema,
+    tasks: z
+      .array(z.object({ prompt: z.string().trim().min(1).max(4000) }))
+      .min(1)
+      .max(MAX_FLEET_TASKS),
+    /** Semua agent hanya membuat rencana (tanpa mengubah berkas). */
+    planOnly: z.boolean().optional(),
+    model: z.string().min(1).optional(),
+  })
+  .meta({ id: 'FleetRequest' });
+
+export const FleetResponseSchema = z
+  .object({
+    items: z.array(z.object({ conversationId: IdSchema, title: z.string(), run: RunSchema })),
+    /** Tugas yang gagal dimulai (yang lain tetap berjalan). */
+    failed: z.number().int().nonnegative(),
+  })
+  .meta({ id: 'FleetResponse' });
+
 export const SendMessageResponseSchema = z
   .object({ message: MessageSchema, run: RunSchema })
   .meta({ id: 'SendMessageResponse' });
