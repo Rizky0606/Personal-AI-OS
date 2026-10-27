@@ -3,6 +3,7 @@ import { RegistryError } from '@aios/roles';
 import { buildApp } from './app.js';
 import { ConfigError, loadConfig } from './config.js';
 import { createDb } from './db/client.js';
+import { createLinkReader } from './modules/chat/links.js';
 import { createChatService } from './modules/chat/service.js';
 import { createFilesService } from './modules/files/service.js';
 import { createTitleService } from './modules/chat/title.js';
@@ -107,6 +108,8 @@ async function main(): Promise<void> {
     log,
   });
   const spaces = createSpacesService({ db });
+  // Satu pengambil halaman untuk riset dan pembacaan tautan di chat: aturan SSRF dan batas ukurannya sama.
+  const fetchPage = createPageFetcher({ timeoutMs: 10_000 });
   const chat = createChatService({
     db,
     runner,
@@ -115,6 +118,7 @@ async function main(): Promise<void> {
     routing,
     roles,
     spaces,
+    links: createLinkReader({ fetchPage }),
   });
   const runs = createRunsService({ db, store, runner, hub, relay: workerRelay, chat, observer });
   const tasks = createTasksService({
@@ -139,7 +143,7 @@ async function main(): Promise<void> {
     boss,
     llmFor: (runId) => createResearchLlm({ client, usage, runId: () => runId, log }),
     search: createSearxngClient({ baseUrl: config.SEARXNG_URL }),
-    fetchPage: createPageFetcher(),
+    fetchPage,
     renderer: config.BROWSER_EXECUTABLE_PATH
       ? createBrowserRenderer({ executablePath: config.BROWSER_EXECUTABLE_PATH })
       : undefined,

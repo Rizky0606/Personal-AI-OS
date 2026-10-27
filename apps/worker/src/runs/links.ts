@@ -20,5 +20,5 @@ export function isLinkFromPrompt(detail: string, prompt: string): boolean {
 export const LINK_INSTRUCTION = [
   '',
   '# Tautan di pesan',
-  'Bila pesan pemilik berisi tautan (http/https), baca isinya dengan tool fetch lebih dulu, lalu analisis dan jawab berdasarkan isi halaman itu; sebut bila halaman tidak bisa dibuka. Jangan membuka tautan lain yang tidak ditulis pemilik tanpa alasan jelas.',
+  'Isi tautan yang ditulis pemilik sudah diambil sistem dan ditempel di pesan pada bagian "Isi tautan di pesan"; pakai itu sebagai bahan dan sebut sumbernya. Pakai tool fetch hanya bila isi yang ditempel tidak cukup atau tertulis gagal dibuka, dan hanya untuk tautan dari pemilik.',
 ].join('\n');
