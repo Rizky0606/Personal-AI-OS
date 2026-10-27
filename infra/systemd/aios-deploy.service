@@ -1,0 +1,12 @@
+[Unit]
+Description=Deploy otomatis gateway Personal AI OS bila ada rilis baru
+Wants=network-online.target docker.service
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/srv/personal-ai-os/infra/scripts/auto-deploy.sh
+# Pengguna pemilik repo dan anggota grup docker (sama dengan yang menjalankan deploy.sh manual).
+# Butuh sudo tanpa kata sandi untuk `systemctl start aios-backup.service` (backup sebelum deploy), jadi tanpa NoNewPrivileges.
+User=ubuntu
+TimeoutStartSec=30min

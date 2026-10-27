@@ -32,8 +32,22 @@ cat > "$STUBS/git" <<'EOS'
 echo "git $*" >> "$STUB_LOG"
 case "$1" in
   describe) echo v1.0.0 ;;
+  ls-remote) for t in ${STUB_TAGS:-v1.0.0}; do printf 'abc123	refs/tags/%s
+' "$t"; done ;;
   status) [[ "${STUB_DIRTY:-0}" == 1 ]] && echo ' M arsip.ts' ;;
 esac
+exit 0
+EOS
+cat > "$STUBS/sudo" <<'EOS'
+#!/usr/bin/env bash
+echo "sudo $*" >> "$STUB_LOG"
+[[ "${STUB_SUDO_FAIL:-0}" == 1 ]] && exit 1
+exit 0
+EOS
+cat > "$STUBS/fake-deploy" <<'EOS'
+#!/usr/bin/env bash
+echo "deploy $*" >> "$STUB_LOG"
+[[ "${STUB_DEPLOY_FAIL:-0}" == 1 ]] && exit 1
 exit 0
 EOS
 cat > "$STUBS/restic" <<'EOS'
@@ -243,6 +257,31 @@ run_deploy --dry-run --no-backup; code=$?
 [[ $code -eq 0 ]] && pass "dry-run berhasil" || fail "dry-run kode $code"
 expect_no_log '^docker compose (build|up)' "dry-run tidak menjalankan docker compose"
 
+echo "auto-deploy.sh"
+run_auto() {
+  : > "$LOG"
+  PATH="$STUBS:$PATH" STUB_LOG="$LOG" AIOS_REPO="$ROOT/repo" AIOS_DEPLOY_STATE="$ROOT/ad-state"     AIOS_DEPLOY_CMD="$STUBS/fake-deploy" bash "$HERE/auto-deploy.sh" "$@" > "$ROOT/out.txt" 2>&1
+}
+rm -rf "$ROOT/ad-state"
+STUB_TAGS="v1.0.0 v1.0.9 v1.0.10" run_auto; code=$?
+[[ $code -eq 0 ]] && pass "versi baru: berhasil" || { fail "kode keluar $code"; cat "$ROOT/out.txt"; }
+expect_log 'sudo -n systemctl start aios-backup.service' "backup dijalankan lebih dulu"
+expect_log 'deploy --ref v1.0.10 --no-backup' "tag terbaru dipilih urut versi (v1.0.10 > v1.0.9)"
+[[ "$(cat "$ROOT/ad-state/deployed")" == "v1.0.10" ]] && pass "versi terpasang dicatat" || fail "status deployed salah"
+STUB_TAGS="v1.0.0 v1.0.10" run_auto; code=$?
+expect_no_log '^deploy ' "versi sama: tidak deploy lagi"
+STUB_TAGS="v1.0.0 v1.0.10 v1.0.11" STUB_DEPLOY_FAIL=1 run_auto; code=$?
+[[ $code -eq 1 ]] && pass "deploy gagal: kode 1" || fail "kode keluar $code"
+[[ "$(cat "$ROOT/ad-state/failed")" == "v1.0.11" ]] && pass "tag gagal dicatat" || fail "status failed salah"
+[[ "$(cat "$ROOT/ad-state/deployed")" == "v1.0.10" ]] && pass "versi terpasang tetap v1.0.10" || fail "deployed berubah"
+STUB_TAGS="v1.0.0 v1.0.10 v1.0.11" run_auto; code=$?
+[[ $code -eq 0 ]] && expect_no_log '^deploy ' "tag yang pernah gagal tidak diulang" || fail "kode keluar $code"
+STUB_TAGS="v1.0.0 v1.0.10 v1.0.12" run_auto; code=$?
+expect_log 'deploy --ref v1.0.12 --no-backup' "tag lebih baru dicoba setelah yang gagal"
+rm -rf "$ROOT/ad-state"
+STUB_TAGS="v1.0.1" STUB_SUDO_FAIL=1 run_auto; code=$?
+[[ $code -eq 1 ]] && pass "backup tidak jalan: dibatalkan" || fail "kode keluar $code"
+expect_no_log '^deploy ' "tanpa backup tidak deploy"
 echo "loadtest.mjs"
 if node --test "$HERE/make-latest-json.test.mjs" > "$ROOT/out.txt" 2>&1; then pass "latest.json updater"; else fail "uji make-latest-json"; cat "$ROOT/out.txt"; fi
 if node --test "$HERE/loadtest.test.mjs" > "$ROOT/out.txt" 2>&1; then pass "fungsi ringkasan CPU/memori"; else fail "uji fungsi loadtest"; cat "$ROOT/out.txt"; fi
