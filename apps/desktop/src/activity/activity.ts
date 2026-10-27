@@ -11,7 +11,15 @@ export type ToolKind = 'read' | 'edit' | 'search' | 'command' | 'web' | 'other';
 const READ = new Set(['read', 'cat', 'view', 'open']);
 const EDIT = new Set(['write', 'edit', 'patch', 'delete', 'rm', 'notebook', 'multiedit', 'create']);
 const SEARCH = new Set(['grep', 'find', 'ls', 'glob', 'search', 'list', 'tree']);
-const WEB = new Set(['fetch', 'web_search', 'websearch', 'web', 'browser']);
+const WEB = new Set([
+  'fetch',
+  'web_search',
+  'websearch',
+  'web',
+  'browser',
+  'cari_web',
+  'baca_tautan',
+]);
 const COMMAND = new Set(['bash', 'shell', 'sh', 'exec', 'run', 'terminal']);
 
 /** Jenis langkah menurut nama tool; nama tool MCP (`mcp__...`) dan yang tak dikenal jadi `other`. */

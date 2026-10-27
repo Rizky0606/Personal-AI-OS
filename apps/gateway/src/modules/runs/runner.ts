@@ -18,6 +18,7 @@ import {
 import { and, count, eq, inArray, notInArray } from 'drizzle-orm';
 import type { Database } from '../../db/client.js';
 import { approvals, messages, projects, runs } from '../../db/schema/index.js';
+import { uuidv7 } from '../../lib/uuidv7.js';
 import type { EventHub } from './hub.js';
 import type { RunObserver } from './observer.js';
 import type { EventStore } from './store.js';
@@ -31,6 +32,16 @@ export interface ResolvedRole {
   reason: string;
 }
 
+/**
+ * Satu langkah persiapan (membaca tautan, mencari web) yang tampil di chat seperti langkah tool. Mengembalikan hasil
+ * `work`; galat dari `work` menandai langkah gagal lalu dilempar lagi.
+ */
+export type PrepareStep = <T>(
+  name: string,
+  target: string | undefined,
+  work: () => Promise<T>,
+) => Promise<T>;
+
 export interface LaunchInput {
   run: RunRow;
   conversationId: string;
@@ -39,6 +50,12 @@ export interface LaunchInput {
   sessionId: string;
   /** Riwayat untuk sesi Hermes yang baru dibuat setelah percakapan dipotong (lihat StartRunInput.history). */
   history?: StartRunInput['history'];
+  /**
+   * Konteks tambahan yang butuh waktu (isi tautan, hasil pencarian web). Dikerjakan runner setelah run berjalan,
+   * bukan saat pesan dikirim, supaya pengiriman tidak menunggu dan langkahnya terlihat di chat. Hasilnya ditambahkan
+   * ke prompt; galat tidak menggagalkan run.
+   */
+  enrich?: (step: PrepareStep, signal: AbortSignal) => Promise<string>;
   /** Riwayat percakapan untuk run coding di worker: omp memulai proses baru tiap run, jadi selalu dikirim. */
   projectHistory?: () => Promise<NonNullable<StartRunInput['history']>>;
   /** Gambar lampiran pesan ini untuk model vision. */
@@ -256,6 +273,52 @@ export function createRunner(deps: RunnerDeps): Runner {
       deps.observer?.notify(run.id);
     };
 
+    /** Langkah persiapan tampil seperti tool: event dan bagian pesan yang tersimpan. */
+    const prepareStep: PrepareStep = async (name, target, work) => {
+      const toolCallId = uuidv7();
+      const startedAt = Date.now();
+      const part: Extract<MessagePart, { type: 'tool' }> = {
+        type: 'tool',
+        toolCallId,
+        name,
+        ...(target ? { target } : {}),
+        status: 'running',
+      };
+      toolParts.set(toolCallId, part);
+      await emit({ type: 'tool.started', toolCallId, name, ...(target ? { target } : {}) });
+      const finish = async (outcome: 'ok' | 'error' | 'cancelled') => {
+        part.status = outcome;
+        part.durationMs = Date.now() - startedAt;
+        await emit({
+          type: 'tool.finished',
+          toolCallId,
+          status: outcome,
+          durationMs: part.durationMs,
+        });
+      };
+      try {
+        const result = await work();
+        await finish('ok');
+        return result;
+      } catch (error) {
+        await finish(ctl.abort.signal.aborted ? 'cancelled' : 'error');
+        throw error;
+      }
+    };
+
+    /** Prompt akhir: pesan pemilik ditambah konteks persiapan (bila ada); kegagalan persiapan tidak menggagalkan run. */
+    const enrichedPrompt = async (launch: LaunchInput, signal: AbortSignal): Promise<string> => {
+      if (!launch.enrich) return launch.prompt;
+      try {
+        const extra = await launch.enrich(prepareStep, signal);
+        return extra ? `${launch.prompt}\n\n${extra}` : launch.prompt;
+      } catch (error) {
+        if (signal.aborted) throw error;
+        log?.warn({ err: error, runId: run.id }, 'konteks tambahan gagal; run berjalan tanpanya');
+        return launch.prompt;
+      }
+    };
+
     /** Berkas buatan agent (folder kiriman) yang ikut di jawaban, setelah teks. */
     let fileParts: Extract<MessagePart, { type: 'file' }>[] = [];
     const saveText = () =>
@@ -366,12 +429,13 @@ export function createRunner(deps: RunnerDeps): Runner {
         const startAdapter = coding ? deps.workerAdapter! : adapter;
         // "Model otomatis" di run coding: omp memakai combo 9Router milik role (mis. coding-main), bukan nama "default".
         const model = run.model ?? (coding ? deps.roles.get(chosenRole)?.model : undefined);
+        const prompt = await enrichedPrompt(input, ctl.abort.signal);
         let handle: RunHandle | undefined;
         try {
           handle = await startAdapter.startRun({
             runId: run.id,
             messageId: input.assistantMessageId,
-            prompt: input.prompt,
+            prompt,
             // Dihitung per run: perubahan role (mode dev) dan memori berlaku pada run berikutnya.
             systemPrompt: await systemPromptFor(
               chosenRole,

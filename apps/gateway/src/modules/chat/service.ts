@@ -18,6 +18,7 @@ import { uuidv7 } from '../../lib/uuidv7.js';
 import type { FilesService } from '../files/service.js';
 import { describeDecision, type RoutingService } from '../router/service.js';
 import type { LaunchInput, Runner } from '../runs/runner.js';
+import { urlsIn } from './links.js';
 import { toConversationDto, toCorrectionDto, toMessageDto, toRunDto } from './dto.js';
 import type { TitleService } from './title.js';
 
@@ -102,12 +103,13 @@ export function createChatService(deps: {
     contextFor(spaceId: string, question: string): Promise<string>;
   };
   /** Isi tautan di pesan pemilik (W33); tanpa ini tautan hanya dikirim sebagai teks. */
-  links?: { contextFor(text: string): Promise<string> };
+  links?: { contextFor(text: string, signal?: AbortSignal): Promise<string> };
   /** Pencarian web (opsi "Cari di web" di pesan); tanpa ini opsinya dihiraukan. */
   web?: {
     contextFor(
       text: string,
       history?: readonly { role: 'user' | 'assistant'; content: string }[],
+      signal?: AbortSignal,
     ): Promise<string>;
   };
   now?: () => number;
@@ -123,21 +125,47 @@ export function createChatService(deps: {
     prompt: string,
     question: string,
     extra?: string,
-    web?: { conversationId: string; beforeId: string },
   ): Promise<string> {
-    // Ruang, tautan, dan pencarian web tidak saling bergantung: dikerjakan bersamaan.
-    const [space, linked, searched] = await Promise.all([
+    const space =
       conversation.spaceId && deps.spaces
-        ? deps.spaces.contextFor(conversation.spaceId, question)
-        : '',
-      deps.links?.contextFor(prompt).catch(() => '') ?? '',
-      web && deps.web
-        ? loadProjectHistory(web.conversationId, web.beforeId).then((history) =>
-            deps.web!.contextFor(question, history).catch(() => ''),
-          )
-        : '',
-    ]);
-    return [prompt, space, linked, searched, extra ?? ''].filter(Boolean).join('\n\n');
+        ? await deps.spaces.contextFor(conversation.spaceId, question)
+        : '';
+    return [prompt, space, extra ?? ''].filter(Boolean).join('\n\n');
+  }
+
+  const enrichOf = (enrich: LaunchInput['enrich']) => (enrich ? { enrich } : {});
+
+  /**
+   * Konteks yang butuh jaringan (isi tautan di pesan, hasil pencarian web) dikerjakan runner setelah run
+   * berjalan, bukan saat pesan dikirim: pengiriman tidak menunggu, dan langkahnya tampil di chat. Tautan dibaca
+   * dari teks pemilik saja (bukan isi dokumen lampiran).
+   */
+  function enrichFor(
+    ownerText: string,
+    web?: { conversationId: string; beforeId: string },
+  ): LaunchInput['enrich'] {
+    const urls = deps.links ? urlsIn(ownerText) : [];
+    const search = web !== undefined && deps.web !== undefined;
+    if (urls.length === 0 && !search) return undefined;
+    return async (step, signal) => {
+      const [linked, searched] = await Promise.all([
+        urls.length > 0
+          ? step('baca_tautan', urls.join(' ').slice(0, 200), () =>
+              deps.links!.contextFor(ownerText, signal),
+            ).catch(() => '')
+          : '',
+        search
+          ? step('cari_web', ownerText.replace(/\s+/g, ' ').trim().slice(0, 120), async () =>
+              deps.web!.contextFor(
+                ownerText,
+                await loadProjectHistory(web.conversationId, web.beforeId),
+                signal,
+              ),
+            ).catch(() => '')
+          : '',
+      ]);
+      return [linked, searched].filter(Boolean).join('\n\n');
+    };
   }
   const background = new Set<Promise<unknown>>();
 
@@ -547,12 +575,12 @@ export function createChatService(deps: {
         run,
         conversationId,
         assistantMessageId,
-        prompt: await agentPrompt(
-          conversation,
-          prompt,
-          routingText,
-          options?.context,
-          input.webSearch ? { conversationId, beforeId: userMessage.id } : undefined,
+        prompt: await agentPrompt(conversation, prompt, routingText, options?.context),
+        ...enrichOf(
+          enrichFor(
+            routingText,
+            input.webSearch ? { conversationId, beforeId: userMessage.id } : undefined,
+          ),
         ),
         sessionId,
         ...(history.length ? { history } : {}),
