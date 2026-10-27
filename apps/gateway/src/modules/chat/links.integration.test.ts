@@ -11,6 +11,8 @@ let env: AuthEnv;
 let token: string;
 const fetched: string[] = [];
 const searched: { text: string; history: number }[] = [];
+/** Bila diisi, pengambilan halaman menunggu ini (untuk menguji bahwa pengiriman pesan tidak ikut menunggu). */
+let gate: Promise<void> | null = null;
 
 beforeAll(async () => {
   hermes = await startFakeHermes();
@@ -25,8 +27,9 @@ beforeAll(async () => {
       },
     },
     links: createLinkReader({
-      fetchPage: (url) => {
+      fetchPage: async (url) => {
         fetched.push(url);
+        await gate;
         return url.includes('rusak')
           ? Promise.reject(new Error('Halaman menjawab HTTP 404.'))
           : Promise.resolve({
@@ -116,5 +119,85 @@ describe('pencarian web di pesan chat', () => {
     const prompt = await ask('Berapa harga GPU sekarang?');
     expect(searched).toEqual([]);
     expect(prompt).toBe('Berapa harga GPU sekarang?');
+  });
+});
+
+describe('konteks dikerjakan setelah run berjalan', () => {
+  it('pengiriman pesan tidak menunggu halaman; langkah baca_tautan dan cari_web tampil dan tersimpan', async () => {
+    let release!: () => void;
+    gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const conv = ConversationSchema.parse(
+      (await env.post('/conversations', { surface: 'windows' }, token)).json(),
+    );
+    const res = await env.post(
+      `/conversations/${conv.id}/messages`,
+      {
+        parts: [{ type: 'text', text: 'Ringkas https://contoh.dev/lambat dan cari harga GPU' }],
+        role: 'general',
+        webSearch: true,
+      },
+      token,
+    );
+    // Respons kembali sementara halaman masih tertahan.
+    expect(res.statusCode, res.body).toBe(201);
+    const sent = SendMessageResponseSchema.parse(res.json());
+    await new Promise((r) => setTimeout(r, 100));
+    const early = RunSchema.parse((await env.get(`/runs/${sent.run.id}`, token)).json());
+    expect(early.status).not.toBe('completed');
+
+    release();
+    gate = null;
+    const deadline = Date.now() + 20_000;
+    for (;;) {
+      const run = RunSchema.parse((await env.get(`/runs/${sent.run.id}`, token)).json());
+      if (run.status === 'completed' || Date.now() > deadline) break;
+      await new Promise((r) => setTimeout(r, 20));
+    }
+
+    const items = (await env.get(`/conversations/${conv.id}/messages`, token)).json<{
+      items: { author: string; parts: { type: string; name?: string; status?: string }[] }[];
+    }>().items;
+    const tools = items
+      .filter((m) => m.author === 'assistant')
+      .flatMap((m) => m.parts.filter((p) => p.type === 'tool'))
+      .map((p) => [p.name, p.status]);
+    expect(tools).toEqual(
+      expect.arrayContaining([
+        ['baca_tautan', 'ok'],
+        ['cari_web', 'ok'],
+      ]),
+    );
+    const user = hermes.requests
+      .at(-1)
+      ?.body.messages.filter((m) => m.role === 'user')
+      .at(-1);
+    expect(String(user?.content)).toContain('# Isi tautan di pesan');
+    expect(String(user?.content)).toContain('# Hasil pencarian web');
+  });
+
+  it('langkah yang gagal ditandai error tanpa menggagalkan jawaban', async () => {
+    const conv = ConversationSchema.parse(
+      (await env.post('/conversations', { surface: 'windows' }, token)).json(),
+    );
+    const sent = SendMessageResponseSchema.parse(
+      (
+        await env.post(
+          `/conversations/${conv.id}/messages`,
+          { parts: [{ type: 'text', text: 'Cek https://rusak.dev/x' }], role: 'general' },
+          token,
+        )
+      ).json(),
+    );
+    const deadline = Date.now() + 20_000;
+    for (;;) {
+      const run = RunSchema.parse((await env.get(`/runs/${sent.run.id}`, token)).json());
+      if (run.status === 'completed' || Date.now() > deadline) break;
+      await new Promise((r) => setTimeout(r, 20));
+    }
+    expect(RunSchema.parse((await env.get(`/runs/${sent.run.id}`, token)).json()).status).toBe(
+      'completed',
+    );
   });
 });

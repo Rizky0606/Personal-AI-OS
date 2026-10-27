@@ -145,12 +145,13 @@ export async function createAuthEnv(
     /** Masa tunggu relay worker (putus-sambung dan pembatalan) agar tes tidak menunggu puluhan detik. */
     workerRelay?: { disconnectGraceMs?: number; cancelGraceMs?: number };
     /** Pembaca tautan di pesan chat (W33); tanpa ini tautan tidak dibaca. */
-    links?: { contextFor(text: string): Promise<string> };
+    links?: { contextFor(text: string, signal?: AbortSignal): Promise<string> };
     /** Pencarian web untuk pesan dengan `webSearch` (W33); tanpa ini opsinya dihiraukan. */
     web?: {
       contextFor(
         text: string,
         history?: readonly { role: 'user' | 'assistant'; content: string }[],
+        signal?: AbortSignal,
       ): Promise<string>;
     };
     /** Batas run coding paralel per project untuk kartu kanban. */
