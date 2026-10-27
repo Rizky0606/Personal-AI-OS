@@ -225,6 +225,10 @@ describe('run coding lewat worker', () => {
       messageId: '0192f0c4-7a1b-7c2d-a009-000000000000',
       text: 'lulus.',
     });
+    fake.emit(run.id, {
+      type: 'diff.updated',
+      files: [{ path: 'a.ts', additions: 1, deletions: 0 }],
+    });
     fake.emit(run.id, { type: 'run.completed', summary: 'Tes lulus.' });
 
     // Run coding berhenti di needs_review (menunggu tinjauan diff), bukan completed. Baris DB final lebih dulu,
@@ -301,6 +305,49 @@ describe('run coding lewat worker', () => {
 
     fake.emit(run.id, { type: 'message.delta', messageId: MESSAGE_ID, text: '1. Tambah tema.' });
     fake.emit(run.id, { type: 'run.completed', summary: 'Rencana siap.' });
+    await until(async () => (await statusOf(run.id)) === 'completed', 'completed');
+    fake.close();
+  });
+
+  it('run.start membawa riwayat percakapan dan konteks project di prompt sistem', async () => {
+    const { fake, conversationId } = await setup('Worker Riwayat');
+    const first = await startRun(conversationId);
+    await until(() => fake.command('run.start') !== undefined, 'run.start pertama');
+    fake.emit(first.id, {
+      type: 'message.delta',
+      messageId: MESSAGE_ID,
+      text: 'Struktur: src/ dan api/.',
+    });
+    fake.emit(first.id, { type: 'run.completed', summary: 's' });
+    await until(async () => (await statusOf(first.id)) === 'completed', 'completed');
+    await env.runner.idle();
+
+    const res = await env.post(
+      `/conversations/${conversationId}/messages`,
+      { parts: [{ type: 'text', text: 'lanjut ke fitur yang tadi' }], role: 'frontend' },
+      desktop,
+    );
+    expect(res.statusCode, res.body).toBe(201);
+    await until(
+      () => fake.commands.filter((c) => c.type === 'run.start').length === 2,
+      'run.start kedua',
+    );
+    const second = fake.commands.filter((c) => c.type === 'run.start')[1]!;
+    expect(second.history?.map((h) => h.role)).toEqual(['user', 'assistant']);
+    expect(second.history?.[1]?.content).toBe('Struktur: src/ dan api/.');
+    expect(second.prompt).toBe('lanjut ke fitur yang tadi');
+    expect(second.bundle.systemPrompt).toContain('# Project yang sedang dikerjakan');
+    expect(second.bundle.systemPrompt).toContain('baca dulu berkas yang relevan');
+    fake.close();
+  });
+
+  it('run coding tanpa perubahan berkas selesai completed, bukan needs_review', async () => {
+    const { fake, conversationId } = await setup('Worker Tanya');
+    const run = await startRun(conversationId);
+    await until(() => fake.command('run.start') !== undefined, 'run.start');
+    fake.emit(run.id, { type: 'message.delta', messageId: MESSAGE_ID, text: 'Jawaban saja.' });
+    fake.emit(run.id, { type: 'diff.updated', files: [] });
+    fake.emit(run.id, { type: 'run.completed', summary: 'Jawaban saja.' });
     await until(async () => (await statusOf(run.id)) === 'completed', 'completed');
     fake.close();
   });
@@ -470,6 +517,10 @@ describe('run coding lewat worker', () => {
       text: 'fokus ke tes saja',
     });
 
+    fake.emit(run.id, {
+      type: 'diff.updated',
+      files: [{ path: 'a.ts', additions: 1, deletions: 0 }],
+    });
     fake.emit(run.id, { type: 'run.completed', summary: 's' });
     await until(async () => (await statusOf(run.id)) === 'needs_review', 'needs_review');
     await until(() => !env.runner.isActive(run.id), 'runner selesai');
@@ -505,6 +556,10 @@ describe('run coding lewat worker', () => {
     const again = new FakeWorker((fake as unknown as { token: string }).token, fake.deviceId);
     await again.connect();
     again.emit(run.id, { type: 'message.delta', messageId: MESSAGE_ID, text: 'Lanjut.' });
+    again.emit(run.id, {
+      type: 'diff.updated',
+      files: [{ path: 'a.ts', additions: 1, deletions: 0 }],
+    });
     again.emit(run.id, { type: 'run.completed', summary: 'Lanjut.' });
 
     await until(async () => (await statusOf(run.id)) === 'needs_review', 'needs_review');
@@ -515,6 +570,10 @@ describe('run coding lewat worker', () => {
     const { fake, conversationId } = await setup('Worker Review');
     const first = await startRun(conversationId);
     await until(() => fake.command('run.start') !== undefined, 'run.start');
+    fake.emit(first.id, {
+      type: 'diff.updated',
+      files: [{ path: 'a.ts', additions: 1, deletions: 0 }],
+    });
     fake.emit(first.id, { type: 'run.completed', summary: 'selesai' });
     await until(async () => (await statusOf(first.id)) === 'needs_review', 'needs_review');
 

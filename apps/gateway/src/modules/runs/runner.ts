@@ -17,7 +17,7 @@ import {
 } from '@aios/contracts';
 import { and, count, eq, inArray, notInArray } from 'drizzle-orm';
 import type { Database } from '../../db/client.js';
-import { approvals, messages, runs } from '../../db/schema/index.js';
+import { approvals, messages, projects, runs } from '../../db/schema/index.js';
 import type { EventHub } from './hub.js';
 import type { RunObserver } from './observer.js';
 import type { EventStore } from './store.js';
@@ -39,6 +39,8 @@ export interface LaunchInput {
   sessionId: string;
   /** Riwayat untuk sesi Hermes yang baru dibuat setelah percakapan dipotong (lihat StartRunInput.history). */
   history?: StartRunInput['history'];
+  /** Riwayat percakapan untuk run coding di worker: omp memulai proses baru tiap run, jadi selalu dikirim. */
+  projectHistory?: () => Promise<NonNullable<StartRunInput['history']>>;
   /** Gambar lampiran pesan ini untuk model vision. */
   images?: StartRunInput['images'];
   /** Project percakapan ini; wajib untuk role yang berjalan di worker (omp). */
@@ -118,6 +120,15 @@ export const PLAN_RULE = [
   'Tulis rencana bernomor: tujuan, berkas yang akan diubah, langkah kerja, risiko, dan cara memverifikasi. Tanyakan bila ada yang perlu dikonfirmasi. Pemilik akan menyetujui rencana ini sebelum kamu mengerjakannya.',
 ].join('\n');
 
+/** Konteks run coding: folder project adalah dunia kerja agent; pertanyaan tentang project dijawab dari kodenya. */
+export function projectRule(name: string, stack: string): string {
+  return [
+    '# Project yang sedang dikerjakan',
+    `Kamu bekerja di project "${name}"${stack ? ` (stack: ${stack})` : ''}. Folder kerjamu adalah salinan project itu; semua pertanyaan dan permintaan pemilik di percakapan ini mengenai project tersebut kecuali ia jelas membahas hal lain.`,
+    'Sebelum menjawab pertanyaan tentang project (isi kode, arsitektur, ide fitur, masalah, saran), baca dulu berkas yang relevan (struktur folder, README, package.json, kode terkait) lalu jawab berdasarkan apa yang benar-benar ada; sebut nama berkas yang kamu pakai. Untuk pertanyaan dan analisis jangan mengubah berkas. Untuk permintaan perubahan, ubah kodenya langsung. Bila pesan berisi tautan, baca isinya dan pakai sebagai bahan. Pertanyaan umum di luar project boleh dijawab dari pengetahuanmu.',
+  ].join('\n');
+}
+
 export const SERVER_FILES_RULE = [
   '# Berkas untuk pemilik',
   'Kamu berjalan di server yang sistem berkasnya tidak bisa diakses pemilik. Jangan membuat berkas, folder, atau arsip (zip, tar, docx, dan sejenisnya) di server sebagai hasil untuk pemilik, kecuali di folder kiriman bila disebut di bawah, dan jangan pernah menjawab dengan path berkas di server.',
@@ -150,6 +161,12 @@ export function createRunner(deps: RunnerDeps): Runner {
    * Pesan sistem run: bundel role, memori pemilik, lalu aturan project (bila run di project). Bagian tambahan yang
    * gagal dimuat tidak menggagalkan run.
    */
+  async function projectContext(projectId: string): Promise<string> {
+    const [row] = await db.select().from(projects).where(eq(projects.id, projectId));
+    if (!row) return '';
+    return projectRule(row.name, [...row.stack.languages, ...row.stack.frameworks].join(', '));
+  }
+
   async function systemPromptFor(
     roleId: string,
     projectId: string | null,
@@ -171,8 +188,11 @@ export function createRunner(deps: RunnerDeps): Runner {
       ? await extra('aturan project', () => deps.projectRules?.rulesSection(projectId))
       : '';
     const outbox = onServer && deps.outbox ? deps.outbox.promptFor(runId) : '';
+    const project =
+      !onServer && projectId ? await extra('konteks project', () => projectContext(projectId)) : '';
     return [
       bundle,
+      project,
       onServer ? SERVER_FILES_RULE : '',
       outbox,
       planOnly ? PLAN_RULE : '',
@@ -183,6 +203,12 @@ export function createRunner(deps: RunnerDeps): Runner {
       .join('\n\n');
   }
 
+  /** Run coding memakai riwayat percakapan penuh; chat Hermes hanya riwayat sesi baru (bila ada). */
+  async function historyFor(input: LaunchInput, coding: boolean) {
+    const history = coding && input.projectHistory ? await input.projectHistory() : input.history;
+    return history?.length ? { history } : {};
+  }
+
   async function execute(input: LaunchInput, ctl: Active): Promise<void> {
     const { run } = input;
     let status: RunStatus = 'queued';
@@ -191,8 +217,10 @@ export function createRunner(deps: RunnerDeps): Runner {
     let failure: RunError | undefined;
     let completed = false;
     let coding = false;
-    // Run rencana tidak mengubah berkas, jadi tidak ada hasil yang perlu ditinjau: langsung selesai.
-    const reviewable = () => coding && !run.planOnly;
+    // Diff terakhir dari worker. Run rencana dan run coding tanpa perubahan (mis. hanya menjawab pertanyaan)
+    // tidak punya hasil untuk ditinjau: langsung selesai.
+    let changed = false;
+    const reviewable = () => coding && !run.planOnly && changed;
     /** Langkah tool run ini, disimpan sebagai bagian pesan asisten supaya tetap terlihat setelah dimuat ulang. */
     const toolParts = new Map<string, Extract<MessagePart, { type: 'tool' }>>();
 
@@ -336,7 +364,7 @@ export function createRunner(deps: RunnerDeps): Runner {
               planOnly,
             ),
             sessionId: input.sessionId,
-            ...(input.history?.length ? { history: input.history } : {}),
+            ...(await historyFor(input, coding)),
             ...(input.images?.length ? { images: input.images } : {}),
             ...(coding && input.projectId ? { projectId: input.projectId, role: chosenRole } : {}),
             ...(coding && input.continueFromRunId
@@ -406,7 +434,10 @@ export function createRunner(deps: RunnerDeps): Runner {
             status = 'running';
           }
           await emit(event);
-          if (event.type === 'diff.updated') deps.observer?.notify(run.id);
+          if (event.type === 'diff.updated') {
+            changed = event.files.length > 0;
+            deps.observer?.notify(run.id);
+          }
           if (event.type === 'approval.requested' || event.type === 'approval.resolved') {
             await onApproval(event);
           }
