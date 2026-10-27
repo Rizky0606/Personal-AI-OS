@@ -31,6 +31,7 @@ import {
   ScheduleParseResponseSchema,
   ScheduleRunSchema,
   ScheduleSchema,
+  FleetResponseSchema,
   SendMessageResponseSchema,
   TaskBreakdownResponseSchema,
   TaskSchema,
@@ -156,6 +157,22 @@ export function createGatewayApi(call: Call) {
     createProject: (input: CreateProjectInput) =>
       get('/projects', ProjectSchema, { method: 'POST', body: input }),
 
+    /** Armada agent: beberapa tugas berbeda dimulai sekaligus di satu project (maks. 4). */
+    launchFleet: (input: {
+      projectId: string;
+      tasks: { prompt: string }[];
+      planOnly?: boolean | undefined;
+      model?: string | undefined;
+    }) =>
+      get('/fleets', FleetResponseSchema, {
+        method: 'POST',
+        body: {
+          projectId: input.projectId,
+          tasks: input.tasks,
+          ...(input.planOnly ? { planOnly: true } : {}),
+          ...(input.model ? { model: input.model } : {}),
+        },
+      }),
     listModels: async () => (await get('/models', ModelListSchema)).items,
     listRoles: async () => (await get('/roles', RoleListSchema)).items,
 

@@ -1,5 +1,5 @@
 import { useNavigate } from '@tanstack/react-router';
-import { GitBranch, Square } from 'lucide-react';
+import { GitBranch, Rocket, Square } from 'lucide-react';
 import { useState } from 'react';
 import { apiErrorMessage } from '../api/errors';
 import { useWorkspaceRuns } from '../api/queries';
@@ -9,6 +9,8 @@ import { copy } from '../copy';
 import { cn } from '../lib/cn';
 import { relativeTime } from '../lib/time';
 import { Button } from '../ui/Button';
+import { useToastStore } from '../ui/Toaster';
+import { FleetDialog } from './FleetDialog';
 import { StateView, type ViewState } from '../ui/StateView';
 import {
   countRuns,
@@ -31,6 +33,9 @@ export function WorkspaceScreen() {
   const navigate = useNavigate();
   const { busyId, cancel } = useRunCancel();
   const [filter, setFilter] = useState<RunFilter>('all');
+  const [fleetOpen, setFleetOpen] = useState(false);
+  const [stopping, setStopping] = useState(false);
+  const push = useToastStore((s) => s.push);
   const all = query.data ?? [];
   const items = filterRuns(all, filter);
   const counts = countRuns(all);
@@ -44,6 +49,19 @@ export function WorkspaceScreen() {
       : items.length === 0
         ? 'empty'
         : 'content';
+
+  const running = all.filter((i) => isCancellable(i.run.status));
+
+  /** Menghentikan semua run yang masih berjalan; satu per satu supaya galat satu run tidak menghentikan yang lain. */
+  async function stopAll() {
+    setStopping(true);
+    try {
+      for (const item of running) await cancel(item.run.id);
+      push(copy.fleet.stopAllDone(running.length));
+    } finally {
+      setStopping(false);
+    }
+  }
 
   function open(item: WorkspaceRun) {
     if (item.run.conversationId) {
@@ -77,7 +95,20 @@ export function WorkspaceScreen() {
             </button>
           ))}
         </div>
+        <div className="flex items-center gap-2">
+          {running.length > 1 ? (
+            <Button variant="secondary" disabled={stopping} onClick={() => void stopAll()}>
+              <Square size={14} strokeWidth={1.5} aria-hidden="true" />
+              {copy.fleet.stopAll}
+            </Button>
+          ) : null}
+          <Button variant="primary" title={copy.fleet.openHint} onClick={() => setFleetOpen(true)}>
+            <Rocket size={14} strokeWidth={1.5} aria-hidden="true" />
+            {copy.fleet.open}
+          </Button>
+        </div>
       </div>
+      <FleetDialog open={fleetOpen} onOpenChange={setFleetOpen} />
       <StateView
         state={view}
         loadingLabel={copy.workspace.loading}

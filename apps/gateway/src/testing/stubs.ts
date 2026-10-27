@@ -61,6 +61,7 @@ export const unusedTemplates: AppDeps['templates'] = {
 };
 
 export const unusedFork: AppDeps['fork'] = { fork: unused('fork.fork') };
+export const unusedFleets: AppDeps['fleets'] = { launch: unused('fleets.launch') };
 
 export const unusedHandoff: AppDeps['handoff'] = { run: unused('handoff.run') };
 
