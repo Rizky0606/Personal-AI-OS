@@ -55,7 +55,7 @@ describe('pohon pane', () => {
 
   it('tab pane baru jatuh ke tab sumber bila semua tab sudah tampil', () => {
     let tree: PaneNode = root;
-    for (let i = 0; i < 3; i++) tree = splitPane(tree, leaves(tree).at(-1)!.id, 'row', ids());
+    for (let i = 0; i < 4; i++) tree = splitPane(tree, leaves(tree).at(-1)!.id, 'row', ids());
     expect(nextTab(tree, 'files')).toBe('files');
   });
 

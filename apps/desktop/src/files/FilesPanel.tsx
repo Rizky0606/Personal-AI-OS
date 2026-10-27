@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { ChevronDown, ChevronRight, File as FileIcon, Folder, Search } from 'lucide-react';
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { fileActivities } from '../activity/activity';
 import { apiErrorMessage } from '../api/errors';
 import { useOnline } from '../app/hooks';
 import { workerApi } from '../app/services';
@@ -35,6 +36,11 @@ function Directory({
 }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const online = useOnline();
+  const steps = useUiStore((s) => s.agentSteps);
+  const touched = useMemo(
+    () => new Map(fileActivities(steps).map((f) => [f.path, f.action])),
+    [steps],
+  );
   const query = useQuery({
     queryKey: ['worker', 'files', target.projectId, target.runId ?? null, path],
     queryFn: () => workerApi.filesList(target, path),
@@ -84,6 +90,20 @@ function Directory({
                     className="shrink-0 text-text-3"
                   />
                   <span className="truncate text-text">{entry.name}</span>
+                  {touched.has(entry.path) ? (
+                    <span
+                      className={cn(
+                        'ml-auto shrink-0 rounded-badge px-1.5 text-caption',
+                        touched.get(entry.path) === 'edit'
+                          ? 'bg-accent-soft text-text'
+                          : 'bg-surface-2 text-text-2',
+                      )}
+                    >
+                      {touched.get(entry.path) === 'edit'
+                        ? copy.files.touchedEdit
+                        : copy.files.touchedRead}
+                    </span>
+                  ) : null}
                 </button>
               </li>
             );
@@ -237,6 +257,14 @@ export function FilesPanel() {
 
   // Target berganti (project atau run lain): berkas yang terbuka bukan milik target baru.
   useEffect(() => setFile(null), [projectId, runId]);
+  // Berkas yang diminta dari tab Aktivitas.
+  const request = useUiStore((s) => s.fileRequest);
+  useEffect(() => {
+    if (!request) return;
+    setFile(request.path);
+    // Dipakai sekali: membuka tab Berkas nanti tidak membuka ulang berkas lama.
+    useUiStore.setState({ fileRequest: null });
+  }, [request]);
 
   if (!projectId) return <EmptyState message={copy.files.noProject} />;
   if (!connected) return <EmptyState message={copy.files.workerOffline} />;

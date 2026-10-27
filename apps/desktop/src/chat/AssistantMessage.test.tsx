@@ -93,3 +93,43 @@ describe('AssistantMessage: Unduh ZIP', () => {
     expect(screen.queryByRole('button', { name: /ZIP/ })).not.toBeInTheDocument();
   });
 });
+
+describe('saran lanjutan', () => {
+  const body =
+    'Fitur yang bisa ditambah: mode gelap.\n\n[saran]\n- Tambahkan mode gelap\n- Buat tes untuk tema\n[/saran]';
+  const renderWith = (streaming: boolean, onSuggest?: (text: string) => void) =>
+    render(
+      <TooltipProvider>
+        <AssistantMessage
+          parts={[{ type: 'text', text: body }]}
+          role="general"
+          model={null}
+          roles={[]}
+          streaming={streaming}
+          onSuggest={onSuggest}
+        />
+      </TooltipProvider>,
+    );
+
+  it('blok saran tidak tampil sebagai teks; menjadi tombol yang mengirim saran itu', async () => {
+    const onSuggest = vi.fn();
+    const user = userEvent.setup();
+    renderWith(false, onSuggest);
+
+    expect(screen.queryByText(/\[saran\]/)).not.toBeInTheDocument();
+    expect(screen.getByText(/mode gelap\./)).toBeInTheDocument();
+    const group = screen.getByRole('group', { name: copy.chat.followUps });
+    await user.click(within(group).getByRole('button', { name: 'Buat tes untuk tema' }));
+    expect(onSuggest).toHaveBeenCalledWith('Buat tes untuk tema');
+  });
+
+  it('selama jawaban mengalir atau tanpa penanganan: tanpa tombol, blok tetap tersembunyi', () => {
+    const first = renderWith(true, vi.fn());
+    expect(screen.queryByRole('group', { name: copy.chat.followUps })).not.toBeInTheDocument();
+    expect(screen.queryByText(/\[saran\]/)).not.toBeInTheDocument();
+    first.unmount();
+
+    renderWith(false);
+    expect(screen.queryByRole('group', { name: copy.chat.followUps })).not.toBeInTheDocument();
+  });
+});

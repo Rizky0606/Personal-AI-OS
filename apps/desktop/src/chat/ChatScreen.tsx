@@ -1,8 +1,10 @@
-import { useState, type DragEvent } from 'react';
+import { useEffect, useMemo, useState, type DragEvent } from 'react';
 import { apiErrorMessage } from '../api/errors';
 import { usePromptTemplates } from '../api/queries';
 import { useTemplateInsert } from '../templates/useTemplateInsert';
+import { activitySteps } from '../activity/steps';
 import { copy } from '../copy';
+import { useUiStore } from '../state/uiStore';
 import { ErrorBanner } from '../ui/ErrorBanner';
 import { StateView, type ViewState } from '../ui/StateView';
 import { ChatWelcome } from './ChatWelcome';
@@ -18,6 +20,13 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
   const insert = useTemplateInsert(chat.setDraft);
   const [dragging, setDragging] = useState(false);
   const { status } = chat;
+  const setAgentSteps = useUiStore((s) => s.setAgentSteps);
+  const steps = useMemo(() => activitySteps(chat.live, chat.messages), [chat.live, chat.messages]);
+  // Panel Aktivitas dan penanda di tab Berkas membaca langkah agent dari sini; hilang bersama chatnya.
+  useEffect(() => {
+    setAgentSteps(steps);
+    return () => setAgentSteps([]);
+  }, [steps, setAgentSteps]);
 
   const hasContent = chat.messages.length > 0 || chat.pending !== null || chat.live !== undefined;
   const view: ViewState =
@@ -92,6 +101,7 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
               onEditMessage={chat.editMessage}
               onDeleteMessage={chat.deleteMessage}
               onForkMessage={chat.forkMessage}
+              onSuggest={chat.sendText}
               approvals={chat.approvals}
               resolvingApprovals={chat.resolvingApprovals}
               onResolveApproval={chat.resolveApproval}

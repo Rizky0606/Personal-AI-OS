@@ -33,6 +33,8 @@ export interface MessageListProps {
   onDeleteMessage?: (messageId: string) => Promise<boolean>;
   /** Cabangkan percakapan dari jawaban asisten; hanya saat tidak ada jawaban yang berjalan. */
   onForkMessage?: (messageId: string) => void;
+  /** Mengirim saran lanjutan dari jawaban terakhir. */
+  onSuggest?: (text: string) => void;
   /** Permintaan izin agent yang menunggu jawaban pengguna. */
   approvals: PendingApproval[];
   resolvingApprovals: ReadonlySet<string>;
@@ -88,6 +90,7 @@ export function MessageList({
   onEditMessage,
   onDeleteMessage,
   onForkMessage,
+  onSuggest,
   approvals,
   resolvingApprovals,
   onResolveApproval,
@@ -112,6 +115,12 @@ export function MessageList({
   const shown = live
     ? messages.filter((m) => !(m.author === 'assistant' && m.runId === live.runId))
     : messages;
+
+  // Saran lanjutan hanya untuk jawaban paling akhir, selama tidak ada jawaban yang sedang mengalir.
+  const lastAssistantId =
+    streaming || pending
+      ? null
+      : ([...shown].reverse().find((m) => m.author === 'assistant')?.id ?? null);
 
   return (
     <div
@@ -162,6 +171,7 @@ export function MessageList({
               onChangeRole={message.id === rerunnableId ? onReroute : undefined}
               onDelete={modifiable ? () => setToDelete(message.id) : undefined}
               onFork={canModify && onForkMessage ? () => onForkMessage(message.id) : undefined}
+              onSuggest={message.id === lastAssistantId ? onSuggest : undefined}
             />
           ) : message.author === 'system' && isHandoffNote(messageText(message)) ? (
             <HandoffNote key={message.id} text={messageText(message)} />
