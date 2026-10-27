@@ -8,6 +8,7 @@ import { LlmProxy } from './llm/proxy.js';
 import { PreviewService } from './preview/service.js';
 import { resolveWorkDir } from './preview/target.js';
 import { createFilesService } from './files/service.js';
+import { createGitService } from './git/service.js';
 import { TerminalService } from './terminal/service.js';
 import { AllowList } from './paths/allowlist.js';
 import { canonicalize } from './paths/normalize.js';
@@ -145,6 +146,11 @@ export async function startWorker(options: WorkerOptions): Promise<RunningWorker
     resolve: (target) => resolveWorkDir({ bindings, worktrees }, target),
   });
 
+  const git = createGitService({
+    resolve: (target) => resolveWorkDir({ bindings, worktrees }, target),
+    processes,
+  });
+
   const coordinator: RunCoordinator = new RunCoordinator({
     bindings,
     worktrees,
@@ -203,6 +209,7 @@ export async function startWorker(options: WorkerOptions): Promise<RunningWorker
     preview,
     terminal,
     files,
+    git,
     worktrees,
     version: WORKER_VERSION,
     tools,

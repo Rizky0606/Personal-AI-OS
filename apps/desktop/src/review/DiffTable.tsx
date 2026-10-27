@@ -19,6 +19,8 @@ export interface DiffTableProps {
   onSaveComment: (line: number, body: string) => void;
   onCancelComment: () => void;
   onRemoveComment: (line: number) => void;
+  /** Hanya lihat (tab Git): nomor baris tidak bisa dikomentari. */
+  readOnly?: boolean;
 }
 
 interface Shown extends DiffLineData {
@@ -47,9 +49,17 @@ function Code({ html }: { html: string }) {
 }
 
 /** Nomor baris baru; pada baris tambah menjadi tombol untuk memberi komentar. */
-function NewNo({ line, onStart }: { line: Shown; onStart: (n: number) => void }) {
+function NewNo({
+  line,
+  onStart,
+  readOnly = false,
+}: {
+  line: Shown;
+  onStart: (n: number) => void;
+  readOnly?: boolean;
+}) {
   if (line.newNo === null) return <span aria-hidden="true" />;
-  if (line.kind !== 'add') return <span className="text-text-3">{line.newNo}</span>;
+  if (line.kind !== 'add' || readOnly) return <span className="text-text-3">{line.newNo}</span>;
   const n = line.newNo;
   return (
     <button
@@ -99,7 +109,7 @@ function Unified({ hunk, props }: { hunk: ShownHunk; props: DiffTableProps }) {
             )}
           >
             <span className="text-right text-text-3">{line.oldNo ?? ''}</span>
-            <NewNo line={line} onStart={props.onStartComment} />
+            <NewNo line={line} onStart={props.onStartComment} readOnly={props.readOnly === true} />
             <span aria-hidden="true" className="text-text-3">
               {sign[line.kind]}
             </span>
@@ -125,7 +135,7 @@ function Side({
   return (
     <div className={cn('grid grid-cols-[3rem_1.25rem_1fr] gap-x-1 px-1', rowTone[line.kind])}>
       {right ? (
-        <NewNo line={line} onStart={props.onStartComment} />
+        <NewNo line={line} onStart={props.onStartComment} readOnly={props.readOnly === true} />
       ) : (
         <span className="text-right text-text-3">{line.oldNo ?? ''}</span>
       )}

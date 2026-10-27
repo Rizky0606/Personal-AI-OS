@@ -1,7 +1,7 @@
 import type { ProjectInspection } from '@aios/contracts';
 import * as Dialog from '@radix-ui/react-dialog';
 import { useQueryClient } from '@tanstack/react-query';
-import { FolderOpen, X } from 'lucide-react';
+import { ChevronDown, FolderOpen, X } from 'lucide-react';
 import { useState } from 'react';
 import { apiErrorMessage } from '../api/errors';
 import { useOnline } from '../app/hooks';
@@ -11,6 +11,7 @@ import { pickFolder } from '../lib/pickFolder';
 import { Button } from '../ui/Button';
 import { ErrorBanner } from '../ui/ErrorBanner';
 import { IconButton } from '../ui/IconButton';
+import { RadioMenu } from '../ui/RadioMenu';
 import { TextField } from '../ui/TextField';
 import { useToastStore } from '../ui/Toaster';
 import { workerErrorMessage } from '../worker/errors';
@@ -56,6 +57,16 @@ export function AddProjectDialog({ open, onOpenChange }: AddProjectDialogProps) 
     if (!next) reset();
     onOpenChange(next);
   }
+
+  // Repo dengan branch lokal: pilih dari daftar (branch bawaan di atas). Bukan repo: ketik manual.
+  const branchChoices = inspection?.git.isRepo
+    ? [
+        ...new Set([
+          ...(inspection.git.defaultBranch ? [inspection.git.defaultBranch] : []),
+          ...inspection.git.branches,
+        ]),
+      ]
+    : [];
 
   async function inspect(path: string) {
     setError(null);
@@ -208,13 +219,41 @@ export function AddProjectDialog({ open, onOpenChange }: AddProjectDialogProps) 
                 error={fieldErrors.name}
                 onChange={(e) => setName(e.target.value)}
               />
-              <TextField
-                label={d.branch}
-                value={branch}
-                error={fieldErrors.branch}
-                className="font-mono"
-                onChange={(e) => setBranch(e.target.value)}
-              />
+              {branchChoices.length > 0 ? (
+                <div className="flex flex-col gap-1">
+                  <span className="text-meta text-text-2">{d.branch}</span>
+                  <RadioMenu
+                    label={d.branchPick}
+                    value={branch}
+                    onValueChange={setBranch}
+                    options={branchChoices.map((b) => ({ value: b, label: b }))}
+                    trigger={
+                      <button
+                        type="button"
+                        aria-label={`${d.branch}: ${branch}`}
+                        className="flex h-9 w-full items-center justify-between gap-2 rounded-control border border-border bg-surface px-3 font-mono text-ui text-text transition-colors duration-[120ms] ease-aios hover:bg-surface-2"
+                      >
+                        <span className="truncate">{branch}</span>
+                        <ChevronDown
+                          size={14}
+                          strokeWidth={1.5}
+                          aria-hidden="true"
+                          className="shrink-0 text-text-2"
+                        />
+                      </button>
+                    }
+                  />
+                  <span className="text-caption text-text-3">{d.branchHint}</span>
+                </div>
+              ) : (
+                <TextField
+                  label={d.branch}
+                  value={branch}
+                  error={fieldErrors.branch}
+                  className="font-mono"
+                  onChange={(e) => setBranch(e.target.value)}
+                />
+              )}
               <div className="flex justify-end gap-2">
                 <Button
                   variant="secondary"

@@ -9,6 +9,7 @@ import { detectGit } from '../projects/git.js';
 import type { PreviewService } from '../preview/service.js';
 import { resolveWorkDir } from '../preview/target.js';
 import type { FilesService } from '../files/service.js';
+import type { GitService } from '../git/service.js';
 import type { TerminalService } from '../terminal/service.js';
 import type { ReviewService } from '../runs/review.js';
 import type { WorktreeManager } from '../runs/worktree.js';
@@ -22,6 +23,7 @@ export interface HandlerDeps {
   preview: PreviewService;
   terminal: TerminalService;
   files: FilesService;
+  git: GitService;
   worktrees: WorktreeManager;
   version: string;
   /** Info alat di PC; diisi tak-sinkron setelah worker berjalan. */
@@ -41,7 +43,8 @@ export function workerStatus({ link, processes, version, tools }: HandlerDeps): 
 
 /** Menjalankan satu permintaan dari desktop. Galat path dilempar sebagai PathError (dipetakan oleh server). */
 export function createHandler(deps: HandlerDeps): (request: LocalRequest) => Promise<unknown> {
-  const { allowed, bindings, processes, link, review, preview, terminal, files, worktrees } = deps;
+  const { allowed, bindings, processes, link, review, preview, terminal, files, git, worktrees } =
+    deps;
 
   const resolvePreview = (target: { projectId: string; runId?: string | undefined }) =>
     resolveWorkDir({ bindings, worktrees }, target);
@@ -119,6 +122,19 @@ export function createHandler(deps: HandlerDeps): (request: LocalRequest) => Pro
       case 'files.find': {
         const { query, ...target } = request.params;
         return files.find(target, query);
+      }
+
+      case 'git.status':
+        return git.status(request.params);
+
+      case 'git.diff': {
+        const { path, ...target } = request.params;
+        return git.diff(target, path);
+      }
+
+      case 'git.log': {
+        const { limit, ...target } = request.params;
+        return git.log(target, limit);
       }
 
       case 'terminal.open': {
