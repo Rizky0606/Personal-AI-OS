@@ -84,7 +84,7 @@ export interface RunnerDeps {
   /** Bundel role (aturan perilaku + role + skill) yang disuntik sebagai pesan sistem. */
   roles: {
     bundle(roleId: string): { systemPrompt: string };
-    get(roleId: string): { engine: string } | undefined;
+    get(roleId: string): { engine: string; model?: string } | undefined;
   };
   /** Memori pemilik (W17) yang ditambahkan ke pesan sistem setiap run; tanpa ini tidak ada memori. */
   memory?: { promptSection(): Promise<string> };
@@ -349,6 +349,8 @@ export function createRunner(deps: RunnerDeps): Runner {
         // Mode rencana hanya berarti untuk run coding; di chat biasa dihiraukan.
         const planOnly = coding && run.planOnly;
         const startAdapter = coding ? deps.workerAdapter! : adapter;
+        // "Model otomatis" di run coding: omp memakai combo 9Router milik role (mis. coding-main), bukan nama "default".
+        const model = run.model ?? (coding ? deps.roles.get(chosenRole)?.model : undefined);
         let handle: RunHandle | undefined;
         try {
           handle = await startAdapter.startRun({
@@ -371,7 +373,7 @@ export function createRunner(deps: RunnerDeps): Runner {
               ? { continueFromRunId: input.continueFromRunId }
               : {}),
             ...(planOnly ? { planOnly: true } : {}),
-            ...(run.model ? { model: run.model } : {}),
+            ...(model ? { model } : {}),
             signal: ctl.abort.signal,
           });
         } catch (err) {
