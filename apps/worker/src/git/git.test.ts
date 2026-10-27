@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import nodePath from 'node:path';
 import { promisify } from 'node:util';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PathError } from '../paths/normalize.js';
 import { ProcessManager } from '../process/manager.js';
 import { GitActionError, createGitService, parseBranchLine, parseEntry, scrub } from './service.js';
@@ -28,9 +28,19 @@ const service = () =>
   });
 
 beforeEach(async () => {
+  // Layanan git memakai identitas git milik pengguna; runner CI tidak punya konfigurasi global.
+  for (const [key, value] of Object.entries({
+    GIT_AUTHOR_NAME: 'Uji',
+    GIT_AUTHOR_EMAIL: 'uji@example.com',
+    GIT_COMMITTER_NAME: 'Uji',
+    GIT_COMMITTER_EMAIL: 'uji@example.com',
+  })) {
+    vi.stubEnv(key, value);
+  }
   dir = await mkdtemp(nodePath.join(tmpdir(), 'git-root-'));
 });
 afterEach(async () => {
+  vi.unstubAllEnvs();
   await rm(dir, { recursive: true, force: true });
 });
 
