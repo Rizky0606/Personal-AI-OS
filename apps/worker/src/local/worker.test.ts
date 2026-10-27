@@ -35,6 +35,7 @@ beforeEach(async () => {
   });
 });
 afterEach(async () => {
+  vi.unstubAllEnvs();
   await worker.stop();
   await gateway.stop();
   await fs.rm(base, { recursive: true, force: true });
@@ -472,6 +473,11 @@ describe('sesi gateway lewat worker', () => {
     const allowed = path.join(base, 'izin');
     const app = path.join(allowed, 'repo-aksi');
     await fs.mkdir(app, { recursive: true });
+    // Commit lewat layanan worker memakai identitas dari lingkungan (runner CI tidak punya konfigurasi global).
+    vi.stubEnv('GIT_AUTHOR_NAME', 'Uji');
+    vi.stubEnv('GIT_AUTHOR_EMAIL', 'uji@example.com');
+    vi.stubEnv('GIT_COMMITTER_NAME', 'Uji');
+    vi.stubEnv('GIT_COMMITTER_EMAIL', 'uji@example.com');
     const git = (...args: string[]) =>
       execFileSync('git', ['-c', 'user.name=Uji', '-c', 'user.email=uji@example.com', ...args], {
         cwd: app,
