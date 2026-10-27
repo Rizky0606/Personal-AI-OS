@@ -11,6 +11,7 @@ import { BROWSER_TOOL_PREFIX, MCP_SERVER_NAME } from '../preview/mcp.js';
 import type { PreviewService } from '../preview/service.js';
 import type { TerminalService } from '../terminal/service.js';
 import { COMMIT_INSTRUCTION } from './commit-message.js';
+import { LINK_INSTRUCTION, isLinkFromPrompt } from './links.js';
 import { OmpNotFoundError } from './omp-path.js';
 import { ReviewError, type ReviewService } from './review.js';
 import type { ApprovalRules, RuleKind } from './rules.js';
@@ -272,7 +273,10 @@ export class RunCoordinator {
         messageId: uuidv7(),
         prompt: cmd.prompt,
         systemPrompt:
-          cmd.bundle.systemPrompt + COMMIT_INSTRUCTION + (run.mcp ? BROWSER_INSTRUCTION : ''),
+          cmd.bundle.systemPrompt +
+          COMMIT_INSTRUCTION +
+          LINK_INSTRUCTION +
+          (run.mcp ? BROWSER_INSTRUCTION : ''),
         ...(run.mcp
           ? { mcpServers: { [MCP_SERVER_NAME]: { url: run.mcp.url, headers: run.mcp.headers } } }
           : {}),
@@ -322,6 +326,12 @@ export class RunCoordinator {
       }
       // Tool browser worker hanya menyentuh preview localhost run ini: tidak perlu mengganggu pengguna tiap screenshot.
       if (run.mcp && event.detail.startsWith(BROWSER_TOOL_PREFIX)) {
+        run.silent.add(event.approvalId);
+        void run.handle?.resolveApproval(event.approvalId, 'allow').catch(() => undefined);
+        return;
+      }
+      // Tautan yang pemilik tulis sendiri di pesannya boleh dibaca tanpa bertanya lagi.
+      if (event.kind === 'network' && isLinkFromPrompt(event.detail, run.cmd.prompt)) {
         run.silent.add(event.approvalId);
         void run.handle?.resolveApproval(event.approvalId, 'allow').catch(() => undefined);
         return;
