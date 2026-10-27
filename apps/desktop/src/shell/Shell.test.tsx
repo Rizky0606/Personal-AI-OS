@@ -48,16 +48,15 @@ beforeEach(() => {
 });
 
 describe('Shell', () => {
-  it('kerangka final: rail 8 tujuan, sidebar, area utama, dan status bar; panel kanan tertutup', async () => {
+  it('kerangka final: rail 7 tujuan, sidebar, area utama, dan status bar; panel kanan tertutup', async () => {
     await renderShell();
 
     const rail = screen.getByRole('navigation', { name: copy.shell.rail });
     const names = Array.from(rail.querySelectorAll('a')).map((a) => a.getAttribute('aria-label'));
     expect(names).toEqual([
       copy.nav.chat,
-      copy.nav.projects,
-      copy.nav.kanban,
       copy.nav.workspace,
+      copy.nav.kanban,
       copy.nav.schedules,
       copy.nav.research,
       copy.nav.spaces,
@@ -164,7 +163,7 @@ describe('Shell', () => {
       ['3', '/kanban'],
       ['4', '/schedules'],
       ['6', '/settings'],
-      ['2', '/projects'],
+      ['2', '/workspace'],
       ['1', '/'],
     ] as const) {
       ctrl(digit);

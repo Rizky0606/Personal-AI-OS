@@ -131,6 +131,13 @@ describe('percakapan', () => {
     expect(page2.items.map((i) => i.id)).toEqual([a.id]);
     expect(page2.nextBefore).toBeNull();
 
+    const one = await env.get(`/conversations/${b.id}`, token);
+    expect(one.statusCode, one.body).toBe(200);
+    expect(ConversationSchema.parse(one.json()).id).toBe(b.id);
+    expect(
+      (await env.get('/conversations/0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f', token)).statusCode,
+    ).toBe(404);
+
     const patched = await env.app.inject({
       method: 'PATCH',
       url: `/v1/conversations/${b.id}`,

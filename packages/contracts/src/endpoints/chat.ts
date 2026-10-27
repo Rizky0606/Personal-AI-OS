@@ -49,6 +49,17 @@ export const chatEndpoints: readonly Endpoint[] = [
     errors: [400, 401],
   },
   {
+    operationId: 'getConversation',
+    method: 'get',
+    path: '/conversations/{id}',
+    tag: 'Percakapan',
+    summary: 'Satu percakapan (untuk membuka tautan langsung ke percakapan)',
+    auth: true,
+    params: IdParamsSchema,
+    responses: [json(200, 'Percakapan', ConversationSchema)],
+    errors: [401, 404],
+  },
+  {
     operationId: 'updateConversation',
     method: 'patch',
     path: '/conversations/{id}',

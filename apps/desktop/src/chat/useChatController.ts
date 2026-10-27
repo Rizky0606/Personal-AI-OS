@@ -11,6 +11,7 @@ import { copy } from '../copy';
 import { isSettled } from '../realtime/liveRun';
 import { useUiStore } from '../state/uiStore';
 import { useToastStore } from '../ui/Toaster';
+import { goConversation } from './paths';
 import { useFileAttachments } from './useFileAttachments';
 import { useReviewTarget } from './useReviewTarget';
 import {
@@ -147,9 +148,13 @@ export function useChatController(conversationId: string | undefined) {
       setPending(body || files.map((f) => f.name).join(', '));
       if (override === undefined) setDraft('');
       try {
-        const id =
-          conversationId ??
-          (await api.createConversation('windows', activeProjectId ?? undefined)).id;
+        let id = conversationId;
+        if (id === undefined) {
+          const created = await api.createConversation('windows', activeProjectId ?? undefined);
+          // Sudah diketahui: rute tujuan tidak perlu memuatnya lagi (jawaban yang sedang tampil tidak berkedip).
+          queryClient.setQueryData(['conversation', created.id], created);
+          id = created.id;
+        }
         const response = await api.sendMessage(id, {
           text: body,
           files: files.length ? files : undefined,
@@ -163,11 +168,7 @@ export function useChatController(conversationId: string | undefined) {
         setActiveRunId(response.run.id);
         void queryClient.invalidateQueries({ queryKey: ['conversations'] });
         if (conversationId === undefined) {
-          void navigate({
-            to: '/chat/$conversationId',
-            params: { conversationId: id },
-            replace: true,
-          });
+          void goConversation(navigate, { id, projectId: activeProjectId }, true);
         }
       } catch (error) {
         if (override === undefined) setDraft((current) => current || text);
@@ -332,7 +333,7 @@ export function useChatController(conversationId: string | undefined) {
       try {
         const created = await api.forkConversation(messageId);
         await queryClient.invalidateQueries({ queryKey: ['conversations'] });
-        await navigate({ to: '/chat/$conversationId', params: { conversationId: created.id } });
+        await goConversation(navigate, created);
         push(copy.chat.forkDone);
       } catch (error) {
         fail(error);

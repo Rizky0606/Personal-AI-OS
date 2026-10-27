@@ -8,6 +8,7 @@ test('kanban: kartu baru, pindah dengan keyboard, pecah dengan AI, dan Kerjakan 
   await login(page);
 
   await page.keyboard.press('Control+2');
+  await page.getByRole('link', { name: 'Kelola project' }).click();
   await page.getByRole('button', { name: 'Tambah project' }).first().click();
   const add = page.getByRole('dialog', { name: 'Tambah project' });
   await add.getByRole('button', { name: 'Pilih folder' }).click();

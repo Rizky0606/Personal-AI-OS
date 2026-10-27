@@ -35,6 +35,7 @@ export interface ChatService {
     archived?: 'true' | 'false' | undefined;
   }): Promise<Page<Conversation>>;
   createConversation(input: z.infer<typeof CreateConversationRequestSchema>): Promise<Conversation>;
+  getConversation(id: string): Promise<Conversation>;
   updateConversation(
     id: string,
     patch: z.infer<typeof UpdateConversationRequestSchema>,
@@ -409,6 +410,10 @@ export function createChatService(deps: {
         })
         .returning();
       return toConversationDto(row!);
+    },
+
+    async getConversation(id) {
+      return toConversationDto(await getConversation(id));
     },
 
     async updateConversation(id, patch) {

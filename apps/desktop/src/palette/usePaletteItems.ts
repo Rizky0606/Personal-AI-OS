@@ -84,19 +84,13 @@ export function usePaletteItems(open: boolean, close: () => void): PaletteItem[]
         run: done(() => useUiStore.getState().toggleSidebar()),
       },
       { id: 'go-chat', group: 'go', label: copy.nav.chat, hint: 'Ctrl+1', run: go('/') },
-      {
-        id: 'go-projects',
-        group: 'go',
-        label: copy.nav.projects,
-        hint: 'Ctrl+2',
-        run: go('/projects'),
-      },
       { id: 'go-kanban', group: 'go', label: copy.nav.kanban, hint: 'Ctrl+3', run: go('/kanban') },
       {
         id: 'go-workspace',
         group: 'go',
         label: copy.nav.workspace,
-        keywords: 'run paralel agent worktree status',
+        hint: 'Ctrl+2',
+        keywords: 'project ruang kerja run paralel agent worktree status folder',
         run: go('/workspace'),
       },
       {

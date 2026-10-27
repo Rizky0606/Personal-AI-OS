@@ -3,8 +3,9 @@ import { PanelLeftOpen, PanelRight, Plus } from 'lucide-react';
 import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { ConversationList } from '../chat/ConversationList';
 import { ProjectSwitcher } from '../chat/ProjectSwitcher';
+import { goHome } from '../chat/paths';
 import { copy } from '../copy';
-import { ProjectList } from '../projects/ProjectList';
+import { WorkspaceSidebar } from '../workspace/WorkspaceSidebar';
 import { ResearchList } from '../research/ResearchList';
 import { ScheduleList } from '../schedules/ScheduleList';
 import { SpaceList } from '../spaces/SpaceList';
@@ -27,11 +28,12 @@ interface Section {
 }
 
 /** Tujuan Ctrl+1..6, sama dengan urutan rail. */
-const NAV_ROUTES = ['/', '/projects', '/kanban', '/schedules', '/research', '/settings'] as const;
+const NAV_ROUTES = ['/', '/workspace', '/kanban', '/schedules', '/research', '/settings'] as const;
 
 /** Judul bagian dan isi sidebar menurut rute aktif. */
 function sectionFor(pathname: string): Section {
-  if (pathname.startsWith('/projects')) return { title: copy.nav.projects, list: <ProjectList /> };
+  if (pathname.startsWith('/projects'))
+    return { title: copy.workspace.manage, list: <WorkspaceSidebar /> };
   if (pathname.startsWith('/kanban'))
     return {
       title: copy.nav.kanban,
@@ -43,7 +45,7 @@ function sectionFor(pathname: string): Section {
       ),
     };
   if (pathname.startsWith('/workspace'))
-    return { title: copy.nav.workspace, list: <EmptyState message={copy.workspace.sidebarHint} /> };
+    return { title: copy.nav.workspace, list: <WorkspaceSidebar /> };
   if (pathname.startsWith('/schedules'))
     return { title: copy.nav.schedules, list: <ScheduleList /> };
   if (pathname.startsWith('/research'))
@@ -68,12 +70,7 @@ function sectionFor(pathname: string): Section {
     return { title: copy.nav.catalog, list: <EmptyState message={copy.nav.catalog} /> };
   return {
     title: copy.nav.chat,
-    list: (
-      <>
-        <ProjectSwitcher />
-        <ConversationList />
-      </>
-    ),
+    list: <ConversationList />,
     action: { label: copy.chat.newChat, to: '/' },
   };
 }
@@ -97,8 +94,10 @@ export function Shell() {
   useEffect(() => {
     if (newChatSignal === lastSignal.current) return;
     lastSignal.current = newChatSignal;
-    void navigate({ to: '/' });
-  }, [newChatSignal, navigate]);
+    // Di tab Project, chat baru dibuka di project yang sedang dipilih.
+    const inProject = pathname.startsWith('/workspace/');
+    void goHome(navigate, inProject ? useUiStore.getState().activeProjectId : null);
+  }, [newChatSignal, navigate, pathname]);
 
   const actions = useMemo(
     () => ({

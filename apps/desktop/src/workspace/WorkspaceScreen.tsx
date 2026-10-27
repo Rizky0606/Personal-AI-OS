@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { apiErrorMessage } from '../api/errors';
 import { useWorkspaceRuns } from '../api/queries';
 import { useOnline } from '../app/hooks';
+import { goConversation } from '../chat/paths';
 import { copy } from '../copy';
 import { cn } from '../lib/cn';
 import { relativeTime } from '../lib/time';
@@ -46,10 +47,7 @@ export function WorkspaceScreen() {
 
   function open(item: WorkspaceRun) {
     if (item.run.conversationId) {
-      void navigate({
-        to: '/chat/$conversationId',
-        params: { conversationId: item.run.conversationId },
-      });
+      void goConversation(navigate, { id: item.run.conversationId, projectId: item.projectId });
     } else {
       void navigate({ to: '/kanban' });
     }
