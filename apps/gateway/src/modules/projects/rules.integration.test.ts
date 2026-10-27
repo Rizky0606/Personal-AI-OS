@@ -39,7 +39,7 @@ const patch = (url: string, payload: object) =>
 /** Satu giliran chat (role Umum) di project; mengembalikan pesan sistem yang diterima Hermes. */
 async function systemPromptInProject(projectId: string) {
   const conv = ConversationSchema.parse(
-    (await env.post('/conversations', { surface: 'windows', projectId }, token)).json(),
+    (await env.post('/conversations', { surface: 'android', projectId }, token)).json(),
   );
   const sent = SendMessageResponseSchema.parse(
     (

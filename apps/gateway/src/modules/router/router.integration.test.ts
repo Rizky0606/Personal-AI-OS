@@ -326,7 +326,7 @@ describe('chat memakai role yang dipilih router', () => {
           { role: 'frontend', title: 'Buat komponen grafik' },
         ],
       });
-    const conv = await conversation({ surface: 'windows', projectId });
+    const conv = await conversation({ surface: 'android', projectId });
     const { message, run } = await send(conv.id, 'Riset pustaka grafik lalu buatkan komponennya');
     const done = await settle(run.id);
     expect(done.agentRole).toBe('researcher');
@@ -338,7 +338,7 @@ describe('chat memakai role yang dipilih router', () => {
 });
 
 describe('project aktif dan mesin yang belum tersedia', () => {
-  it('chat per folder di Windows: coding didahulukan di prompt; role omp gagal jelas karena worker tidak tersambung', async () => {
+  it('chat per folder di Windows: hanya role coding di prompt; role omp gagal jelas karena worker tidak tersambung', async () => {
     routerAnswer = () => route('frontend', 0.93);
     const conv = await conversation({ surface: 'windows', projectId });
     const { run } = await send(conv.id, 'Tombol simpan kepotong di layar kecil');
@@ -346,9 +346,8 @@ describe('project aktif dan mesin yang belum tersedia', () => {
 
     const [call] = routerCalls;
     expect(call!.system).toContain('project=toko-online, stack=typescript, react, fastify');
-    expect(call!.system.indexOf('- id: backend')).toBeLessThan(
-      call!.system.indexOf('- id: general'),
-    );
+    expect(call!.system).toContain('- id: backend');
+    expect(call!.system).not.toContain('- id: general');
 
     expect(done).toMatchObject({
       status: 'failed',
@@ -373,11 +372,12 @@ describe('project aktif dan mesin yang belum tersedia', () => {
     expect(history.items[1]!.agentRole).toBe('frontend');
   });
 
-  it('role Umum tetap bisa dipakai di dalam project', async () => {
+  it('chat project di Windows tidak memakai role Umum: pilihan Umum dari model jatuh ke role coding', async () => {
     routerAnswer = () => route('writer');
     const conv = await conversation({ surface: 'windows', projectId });
     const done = await settle((await send(conv.id, 'Tulis catatan rilis singkat')).run.id);
-    expect(done).toMatchObject({ status: 'completed', agentRole: 'writer' });
+    expect(done).toMatchObject({ agentRole: 'backend', engine: 'omp', status: 'failed' });
+    expect(hermes.requests).toHaveLength(0);
   });
 });
 
