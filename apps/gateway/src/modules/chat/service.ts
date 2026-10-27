@@ -101,6 +101,8 @@ export function createChatService(deps: {
     exists(id: string): Promise<boolean>;
     contextFor(spaceId: string, question: string): Promise<string>;
   };
+  /** Isi tautan di pesan pemilik (W33); tanpa ini tautan hanya dikirim sebagai teks. */
+  links?: { contextFor(text: string): Promise<string> };
   now?: () => number;
 }): ChatService {
   const { db, runner, files, titles, routing, roles, now = Date.now } = deps;
@@ -119,7 +121,8 @@ export function createChatService(deps: {
       conversation.spaceId && deps.spaces
         ? await deps.spaces.contextFor(conversation.spaceId, question)
         : '';
-    return [prompt, space, extra ?? ''].filter(Boolean).join('\n\n');
+    const linked = (await deps.links?.contextFor(prompt).catch(() => '')) ?? '';
+    return [prompt, space, linked, extra ?? ''].filter(Boolean).join('\n\n');
   }
   const background = new Set<Promise<unknown>>();
 

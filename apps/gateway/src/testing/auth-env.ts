@@ -144,6 +144,8 @@ export async function createAuthEnv(
     heartbeatMs?: number;
     /** Masa tunggu relay worker (putus-sambung dan pembatalan) agar tes tidak menunggu puluhan detik. */
     workerRelay?: { disconnectGraceMs?: number; cancelGraceMs?: number };
+    /** Pembaca tautan di pesan chat (W33); tanpa ini tautan tidak dibaca. */
+    links?: { contextFor(text: string): Promise<string> };
     /** Batas run coding paralel per project untuk kartu kanban. */
     taskMaxParallel?: number;
     rateLimits?: Partial<RateLimits>;
@@ -240,6 +242,7 @@ export async function createAuthEnv(
     routing,
     roles,
     spaces,
+    ...(options.links ? { links: options.links } : {}),
     now,
   });
   const runs = createRunsService({ db, store, runner, hub, relay: workerRelay, chat, observer });
