@@ -569,3 +569,4 @@ Disusun 2026-10-26 dari perbandingan dengan Orca, Pi, Cline, Amp, Goose, dan Vib
 - Lanjut dengan ringkasan (Fase 42): belum ada di Android, dan ringkasan tidak bisa disunting sebelum percakapan baru dibuka.
 - Mode rencana (Fase 41): rencana yang disetujui belum bisa diedit di tempat; revisi lewat pesan. Android belum punya run coding, jadi tidak ada sakelarnya.
 - Templat prompt (Fase 39): perintah palette Ctrl+K untuk memasukkan templat ke chat, dan templat di Android (menu `/` di composer).
+- Tautan di chat project (Fase 44): worker mengizinkan otomatis izin jaringan hanya untuk URL yang persis tertulis di pesan pemilik; pencarian web dan URL lain tetap bertanya. Belum diuji dengan omp asli (apakah tool `fetch` tersedia dan detail izinnya memuat URL); bila ternyata tidak, tautan akan muncul sebagai permintaan izin biasa atau agent menjawab tanpa membacanya.
