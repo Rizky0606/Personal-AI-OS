@@ -8,7 +8,8 @@ import { expect, login, prepare, test } from './fixtures';
  */
 const SCREENS: { name: string; hash: string }[] = [
   { name: 'Chat', hash: '#/' },
-  { name: 'Project', hash: '#/projects' },
+  { name: 'Project', hash: '#/workspace' },
+  { name: 'Kelola project', hash: '#/projects' },
   { name: 'Kanban', hash: '#/kanban' },
   { name: 'Jadwal', hash: '#/schedules' },
   { name: 'Riset', hash: '#/research' },

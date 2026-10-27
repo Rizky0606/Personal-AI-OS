@@ -561,6 +561,7 @@ Disusun 2026-10-26 dari perbandingan dengan Orca, Pi, Cline, Amp, Goose, dan Vib
 | 46 | Aktivitas file agent | W34 | Desktop | Panel file yang sedang dibaca/diubah agent, badge di tab Berkas, saran lanjutan sebagai tombol | Tes komponen |
 | 47 | Armada agent | W35 | Gateway, worker, desktop | Beberapa tugas berbeda paralel di worktree masing-masing, dipantau di Ruang Kerja, maks. 4 bersamaan | Tes integrasi, tes komponen |
 | 48 | Hapus role dan router | W36 | Semua | Dua agen tetap (umum di server, project di worker) ditentukan oleh ada tidaknya project; kemampuan dipasang lewat skill. Keputusan pemilik: role dihapus, diganti banyak skill | Tes lintas modul |
+| 49 | Tab Project terpisah dari Chat | W37 | Desktop, gateway | Tab Chat hanya chat umum; tab Project (gabungan Project dan Ruang Kerja) menampilkan semua project beserta percakapan dan status run, chat sesuai folder project yang dipilih. Rute `/workspace/:projectId/:conversationId`; `GET /conversations/:id` mengarahkan percakapan ke tab yang benar | Tes komponen, E2E |
 
 **Ditunda sampai ada verifikasi atau keputusan:**
 - Rekam dan ringkas rapat (butuh model transkripsi lewat 9Router atau VPS; cek dulu ketersediaan dan beban VPS ARM).
@@ -575,3 +576,4 @@ Disusun 2026-10-26 dari perbandingan dengan Orca, Pi, Cline, Amp, Goose, dan Vib
 - Mode rencana (Fase 41): rencana yang disetujui belum bisa diedit di tempat; revisi lewat pesan. Android belum punya run coding, jadi tidak ada sakelarnya.
 - Templat prompt (Fase 39): perintah palette Ctrl+K untuk memasukkan templat ke chat, dan templat di Android (menu `/` di composer).
 - Tautan di chat project (Fase 44): worker mengizinkan otomatis izin jaringan hanya untuk URL yang persis tertulis di pesan pemilik; pencarian web dan URL lain tetap bertanya. Belum diuji dengan omp asli (apakah tool `fetch` tersedia dan detail izinnya memuat URL); bila ternyata tidak, tautan akan muncul sebagai permintaan izin biasa atau agent menjawab tanpa membacanya.
+- Tab Project (Fase 49): ikhtisar `/workspace` masih berupa daftar run lintas project; belum ada kartu per project atau tampilan beberapa project berdampingan seperti Orca (bisa memakai panel terbagi Fase 37). Pengelolaan project (tambah, lepas folder, aturan, branch) tetap di `/projects`, dibuka dari tombol "Kelola project".

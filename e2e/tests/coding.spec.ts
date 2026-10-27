@@ -11,6 +11,7 @@ test('run coding: izin → diff → terima membuat commit Conventional di branch
 
   // Daftarkan project: pilih folder, izinkan, daftarkan.
   await page.keyboard.press('Control+2');
+  await page.getByRole('link', { name: 'Kelola project' }).click();
   await page.getByRole('button', { name: 'Tambah project' }).first().click();
   const dialog = page.getByRole('dialog', { name: 'Tambah project' });
   await dialog.getByRole('button', { name: 'Pilih folder' }).click();
@@ -18,10 +19,9 @@ test('run coding: izin → diff → terima membuat commit Conventional di branch
   await dialog.getByRole('button', { name: 'Daftarkan project' }).click();
   await expect(page.getByText('Project terdaftar.').first()).toBeVisible();
 
-  // Pilih project di sidebar Chat.
-  await page.keyboard.press('Control+1');
-  await page.getByRole('button', { name: /^Project:/ }).click();
-  await page.getByRole('menuitemradio').filter({ hasNotText: 'Chat umum' }).first().click();
+  // Pilih project di tab Project: chat-nya sesuai folder project itu.
+  await page.keyboard.press('Control+2');
+  await page.getByRole('list', { name: 'Daftar project' }).getByRole('link').first().click();
 
   await page.getByRole('textbox', { name: 'Pesan' }).fill('Tolong tambahkan file catatan e2e.');
   await page.getByRole('button', { name: 'Kirim' }).click();

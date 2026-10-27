@@ -45,6 +45,21 @@ export function ConversationRow({
   const [title, setTitle] = useState(conversation.title);
   const label = conversation.title || copy.chat.untitled;
 
+  const linkClass = 'flex min-w-0 flex-1 items-center gap-2 py-1 pl-3 text-ui text-text';
+  const linkContent = (
+    <>
+      {conversation.pinned ? (
+        <Pin
+          {...icon}
+          aria-label={copy.chat.pinned}
+          aria-hidden={false}
+          className="shrink-0 text-text-3"
+        />
+      ) : null}
+      <span className="truncate">{label}</span>
+    </>
+  );
+
   function commit() {
     setEditing(false);
     const next = title.trim();
@@ -78,22 +93,25 @@ export function ConversationRow({
         active ? 'aios-active-wash before:scale-y-100' : 'before:scale-y-0 hover:bg-surface-2',
       )}
     >
-      <Link
-        to="/chat/$conversationId"
-        params={{ conversationId: conversation.id }}
-        aria-current={active ? 'page' : undefined}
-        className="flex min-w-0 flex-1 items-center gap-2 py-1 pl-3 text-ui text-text"
-      >
-        {conversation.pinned ? (
-          <Pin
-            {...icon}
-            aria-label={copy.chat.pinned}
-            aria-hidden={false}
-            className="shrink-0 text-text-3"
-          />
-        ) : null}
-        <span className="truncate">{label}</span>
-      </Link>
+      {conversation.projectId ? (
+        <Link
+          to="/workspace/$projectId/$conversationId"
+          params={{ projectId: conversation.projectId, conversationId: conversation.id }}
+          aria-current={active ? 'page' : undefined}
+          className={linkClass}
+        >
+          {linkContent}
+        </Link>
+      ) : (
+        <Link
+          to="/chat/$conversationId"
+          params={{ conversationId: conversation.id }}
+          aria-current={active ? 'page' : undefined}
+          className={linkClass}
+        >
+          {linkContent}
+        </Link>
+      )}
       <span className="opacity-0 transition-opacity duration-[120ms] group-focus-within:opacity-100 group-hover:opacity-100">
         <ActionMenu
           trigger={

@@ -23,6 +23,14 @@ export const useConversations = (projectId: string | null) =>
     getNextPageParam: cursor,
   });
 
+/** Satu percakapan, untuk memastikan ia dibuka di tab yang sesuai (umum atau project). */
+export const useConversation = (id: string | undefined) =>
+  useQuery({
+    queryKey: ['conversation', id],
+    queryFn: () => api.getConversation(id!),
+    enabled: id !== undefined,
+  });
+
 export const useMessages = (conversationId: string | undefined) =>
   useInfiniteQuery({
     queryKey: ['messages', conversationId],

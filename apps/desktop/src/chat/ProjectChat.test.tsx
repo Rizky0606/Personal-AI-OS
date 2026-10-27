@@ -90,7 +90,9 @@ describe('chat per project', () => {
     await user.type(field(), 'tambahkan tes{Enter}');
 
     expect(api.createConversation).toHaveBeenCalledWith('windows', PROJECT);
-    await waitFor(() => expect(router.state.location.pathname).toBe(`/chat/${CONV}`));
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe(`/workspace/${PROJECT}/${CONV}`),
+    );
   });
 
   it('chat umum membuat percakapan tanpa project', async () => {

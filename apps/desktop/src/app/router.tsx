@@ -5,7 +5,7 @@ import {
   createRouter,
   useParams,
 } from '@tanstack/react-router';
-import { ChatScreen } from '../chat/ChatScreen';
+import { GeneralChatRoute, ProjectChatRoute } from '../workspace/ProjectRoutes';
 import { CompareScreen } from '../compare/CompareScreen';
 import { StatusScreen } from '../status/StatusScreen';
 import { QuotaScreen } from '../quota/QuotaScreen';
@@ -26,7 +26,19 @@ const rootRoute = createRootRoute({ component: Shell });
 
 function ChatRoute() {
   const { conversationId } = useParams({ from: '/chat/$conversationId' });
-  return <ChatScreen conversationId={conversationId} />;
+  return <GeneralChatRoute conversationId={conversationId} />;
+}
+
+function ProjectRoute() {
+  const { projectId } = useParams({ from: '/workspace/$projectId' });
+  return <ProjectChatRoute projectId={projectId} conversationId={undefined} />;
+}
+
+function ProjectConversationRoute() {
+  const { projectId, conversationId } = useParams({
+    from: '/workspace/$projectId/$conversationId',
+  });
+  return <ProjectChatRoute projectId={projectId} conversationId={conversationId} />;
 }
 
 function ResearchRoute() {
@@ -45,7 +57,11 @@ function ScheduleRoute() {
 }
 
 const routes = [
-  createRoute({ getParentRoute: () => rootRoute, path: '/', component: () => <ChatScreen /> }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/',
+    component: () => <GeneralChatRoute conversationId={undefined} />,
+  }),
   createRoute({
     getParentRoute: () => rootRoute,
     path: '/chat/$conversationId',
@@ -54,6 +70,16 @@ const routes = [
   createRoute({ getParentRoute: () => rootRoute, path: '/projects', component: ProjectsScreen }),
   createRoute({ getParentRoute: () => rootRoute, path: '/kanban', component: KanbanScreen }),
   createRoute({ getParentRoute: () => rootRoute, path: '/workspace', component: WorkspaceScreen }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/workspace/$projectId',
+    component: ProjectRoute,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/workspace/$projectId/$conversationId',
+    component: ProjectConversationRoute,
+  }),
   createRoute({ getParentRoute: () => rootRoute, path: '/schedules', component: SchedulesScreen }),
   createRoute({
     getParentRoute: () => rootRoute,

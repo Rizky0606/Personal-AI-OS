@@ -39,6 +39,10 @@ export const chatRoutes: FastifyPluginCallback<{ chat: ChatService; runs: RunsSe
       .send(await chat.createConversation(CreateConversationRequestSchema.parse(req.body))),
   );
 
+  app.get('/conversations/:id', guard, (req) =>
+    chat.getConversation(IdParamsSchema.parse(req.params).id),
+  );
+
   app.patch('/conversations/:id', guard, (req) =>
     chat.updateConversation(
       IdParamsSchema.parse(req.params).id,

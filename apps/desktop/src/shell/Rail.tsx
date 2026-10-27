@@ -4,7 +4,6 @@ import {
   CalendarClock,
   Folder,
   Kanban,
-  LayoutPanelLeft,
   Library,
   MessageSquare,
   Search,
@@ -16,15 +15,7 @@ import { cn } from '../lib/cn';
 import { Tooltip } from '../ui/Tooltip';
 
 interface RailItem {
-  to:
-    | '/'
-    | '/projects'
-    | '/kanban'
-    | '/workspace'
-    | '/schedules'
-    | '/research'
-    | '/spaces'
-    | '/settings';
+  to: '/' | '/kanban' | '/workspace' | '/schedules' | '/research' | '/spaces' | '/settings';
   label: string;
   icon: ReactNode;
 }
@@ -33,9 +24,8 @@ const ICON = { size: 18, strokeWidth: 1.5, 'aria-hidden': true } as const;
 
 const items: RailItem[] = [
   { to: '/', label: copy.nav.chat, icon: <MessageSquare {...ICON} /> },
-  { to: '/projects', label: copy.nav.projects, icon: <Folder {...ICON} /> },
+  { to: '/workspace', label: copy.nav.workspace, icon: <Folder {...ICON} /> },
   { to: '/kanban', label: copy.nav.kanban, icon: <Kanban {...ICON} /> },
-  { to: '/workspace', label: copy.nav.workspace, icon: <LayoutPanelLeft {...ICON} /> },
   { to: '/schedules', label: copy.nav.schedules, icon: <CalendarClock {...ICON} /> },
   { to: '/research', label: copy.nav.research, icon: <Search {...ICON} /> },
   { to: '/spaces', label: copy.nav.spaces, icon: <Library {...ICON} /> },
@@ -50,6 +40,9 @@ const settings: RailItem = {
 /** Chat aktif di "/" dan di "/chat/<id>"; bagian lain aktif untuk rute turunannya. */
 function isActive(to: string, pathname: string): boolean {
   if (to === '/') return pathname === '/' || pathname.startsWith('/chat');
+  // Pengelolaan project adalah bagian dari tab Project.
+  if (to === '/workspace')
+    return pathname.startsWith('/workspace') || pathname.startsWith('/projects');
   return pathname === to || pathname.startsWith(`${to}/`);
 }
 

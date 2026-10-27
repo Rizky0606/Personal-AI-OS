@@ -85,6 +85,7 @@ export const unusedWorker: AppDeps['worker'] = {
 
 export const unusedChat: AppDeps['chat'] = {
   listConversations: unused('chat.listConversations'),
+  getConversation: unused('chat.getConversation'),
   createConversation: unused('chat.createConversation'),
   updateConversation: unused('chat.updateConversation'),
   archiveConversation: unused('chat.archiveConversation'),

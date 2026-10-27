@@ -161,6 +161,7 @@ export function createGatewayApi(call: Call) {
         `/conversations${query({ before, limit: PAGE_SIZE, projectId })}`,
         ConversationPageSchema,
       ),
+    getConversation: (id: string) => get(`/conversations/${id}`, ConversationSchema),
     createConversation: (surface: Surface = 'windows', projectId?: string, spaceId?: string) =>
       get('/conversations', ConversationSchema, {
         method: 'POST',

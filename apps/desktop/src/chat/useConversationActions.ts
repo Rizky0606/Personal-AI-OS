@@ -7,6 +7,7 @@ import { api } from '../app/services';
 import { copy } from '../copy';
 import { useUiStore } from '../state/uiStore';
 import { useToastStore } from '../ui/Toaster';
+import { goConversation, goHome } from './paths';
 
 /** Ubah judul, sematkan, arsipkan, dan hapus percakapan; daftar disegarkan setelah server menjawab. */
 export function useConversationActions(activeId?: string) {
@@ -33,7 +34,7 @@ export function useConversationActions(activeId?: string) {
     archive: (id: string) =>
       run(async () => {
         await api.archiveConversation(id);
-        if (id === activeId) await navigate({ to: '/' });
+        if (id === activeId) await goHome(navigate, useUiStore.getState().activeProjectId);
       }),
     /** Meringkas percakapan dengan model pilihan (atau model pertama), lalu membuka percakapan lanjutan. */
     handoff: (id: string) =>
@@ -45,13 +46,13 @@ export function useConversationActions(activeId?: string) {
         }
         push(copy.chat.handoff.working, 'info');
         const created = await api.handoffConversation(id, model);
-        await navigate({ to: '/chat/$conversationId', params: { conversationId: created.id } });
+        await goConversation(navigate, created);
         push(copy.chat.handoff.done);
       }),
     remove: (id: string) =>
       run(async () => {
         await api.deleteConversation(id);
-        if (id === activeId) await navigate({ to: '/' });
+        if (id === activeId) await goHome(navigate, useUiStore.getState().activeProjectId);
         push(copy.chat.deleted);
       }),
   };
