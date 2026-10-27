@@ -468,6 +468,44 @@ describe('sesi gateway lewat worker', () => {
     client.close();
   });
 
+  it('aksi git lokal: stage lalu commit berhasil; commit tanpa stage git_failed; project belum terikat ditolak', async () => {
+    const allowed = path.join(base, 'izin');
+    const app = path.join(allowed, 'repo-aksi');
+    await fs.mkdir(app, { recursive: true });
+    const git = (...args: string[]) =>
+      execFileSync('git', ['-c', 'user.name=Uji', '-c', 'user.email=uji@example.com', ...args], {
+        cwd: app,
+      });
+    git('init', '-q', '-b', 'main');
+    await fs.writeFile(path.join(app, 'a.txt'), 'satu\n');
+    git('add', '-A');
+    git('commit', '-q', '-m', 'feat: awal');
+    await fs.writeFile(path.join(app, 'a.txt'), 'dua\n');
+    const client = await Client.login(worker.port, TOKEN);
+    await client.call('folders.add', { path: allowed });
+
+    expect(await client.call('git.stage', { projectId: PROJECT, all: true })).toMatchObject({
+      ok: false,
+      error: { code: 'preview_unavailable' },
+    });
+
+    await client.call('project.bind', { projectId: PROJECT, path: app });
+    expect(
+      await client.call('git.commit', { projectId: PROJECT, message: 'fix: dua' }),
+    ).toMatchObject({ ok: false, error: { code: 'git_failed' } });
+    expect(await client.call('git.stage', { projectId: PROJECT, all: true })).toMatchObject({
+      ok: true,
+    });
+    expect(
+      await client.call('git.commit', { projectId: PROJECT, message: 'fix: dua' }),
+    ).toMatchObject({ ok: true, result: { subject: 'fix: dua' } });
+    expect(await client.call('git.branches', { projectId: PROJECT })).toMatchObject({
+      ok: true,
+      result: { current: 'main', branches: ['main'] },
+    });
+    client.close();
+  });
+
   it('preview.* lokal: belum ada preview dijawab null; project belum terikat dan worktree hilang preview_unavailable', async () => {
     const client = await Client.login(worker.port, TOKEN);
 

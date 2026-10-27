@@ -2,6 +2,9 @@ import {
   FileContentSchema,
   FileListSchema,
   FileMatchesSchema,
+  GitActionResultSchema,
+  GitBranchesSchema,
+  GitCommitSchema,
   GitDiffSchema,
   GitLogSchema,
   GitStatusSchema,
@@ -15,6 +18,9 @@ import {
   TerminalInfoSchema,
   type FileContent,
   type FileList,
+  type GitActionResult,
+  type GitBranches,
+  type GitCommit,
   type GitDiff,
   type GitLog,
   type GitStatus,
@@ -96,6 +102,24 @@ export function createWorkerApi(call: WorkerCall) {
       GitDiffSchema.parse(await call('git.diff', { ...target, path })),
     gitLog: async (target: PreviewTarget, limit = 20): Promise<GitLog> =>
       GitLogSchema.parse(await call('git.log', { ...target, limit })),
+    /** Aksi git di folder project (tidak pernah force). Galat git datang sebagai WorkerCallError `git_failed`. */
+    gitStage: async (projectId: string, paths: string[], all = false): Promise<GitActionResult> =>
+      GitActionResultSchema.parse(await call('git.stage', { projectId, paths, all })),
+    gitUnstage: async (projectId: string, paths: string[], all = false): Promise<GitActionResult> =>
+      GitActionResultSchema.parse(await call('git.unstage', { projectId, paths, all })),
+    /** Membuang perubahan satu berkas; tidak bisa dibatalkan. */
+    gitDiscard: async (projectId: string, path: string): Promise<GitActionResult> =>
+      GitActionResultSchema.parse(await call('git.discard', { projectId, path })),
+    gitCommit: async (projectId: string, message: string): Promise<GitCommit> =>
+      GitCommitSchema.parse(await call('git.commit', { projectId, message })),
+    gitBranches: async (projectId: string): Promise<GitBranches> =>
+      GitBranchesSchema.parse(await call('git.branches', { projectId })),
+    gitCheckout: async (projectId: string, branch: string): Promise<GitActionResult> =>
+      GitActionResultSchema.parse(await call('git.checkout', { projectId, branch })),
+    gitPull: async (projectId: string): Promise<GitActionResult> =>
+      GitActionResultSchema.parse(await call('git.pull', { projectId })),
+    gitPush: async (projectId: string): Promise<GitActionResult> =>
+      GitActionResultSchema.parse(await call('git.push', { projectId })),
     reviewRevertFile: async (runId: string, path: string): Promise<ReviewState> =>
       ReviewStateSchema.parse(await call('review.revertFile', { runId, path })),
   };

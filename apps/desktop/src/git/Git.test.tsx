@@ -6,6 +6,7 @@ import { copy } from '../copy';
 import { useUiStore } from '../state/uiStore';
 import { resetApi, setWorker, workerApi } from '../test/fakeServices';
 import { renderScreen } from '../test/render';
+import { WorkerCallError } from '../worker/localClient';
 
 vi.mock('../app/services', async () => (await import('../test/fakeServices')).fakeServices);
 
@@ -132,5 +133,152 @@ describe('GitPanel', () => {
 
     await user.click(screen.getByRole('button', { name: copy.git.refresh }));
     await waitFor(() => expect(workerApi.gitStatus.mock.calls.length).toBeGreaterThan(before));
+  });
+});
+
+describe('GitPanel: aksi', () => {
+  beforeEach(() => {
+    workerApi.gitBranches.mockResolvedValue({
+      current: 'fitur-login',
+      branches: ['fitur-login', 'main'],
+    });
+    for (const method of [
+      workerApi.gitStage,
+      workerApi.gitUnstage,
+      workerApi.gitDiscard,
+      workerApi.gitCheckout,
+      workerApi.gitPull,
+      workerApi.gitPush,
+    ]) {
+      method.mockResolvedValue({ message: 'ok' });
+    }
+    workerApi.gitCommit.mockResolvedValue({
+      hash: 'b'.repeat(40),
+      shortHash: 'bbbbbbb',
+      subject: 'feat: tambah login',
+      author: 'Rizky',
+      date: '2026-10-27T09:00:00Z',
+    });
+  });
+
+  it('stage per berkas, keluarkan dari stage untuk yang sudah di-stage, dan stage semua', async () => {
+    const user = userEvent.setup();
+    await renderScreen(<GitPanel />);
+
+    await user.click(await screen.findByRole('button', { name: `${copy.git.stage}: src/a.ts` }));
+    expect(workerApi.gitStage).toHaveBeenCalledWith(PROJECT, ['src/a.ts'], false);
+
+    await user.click(screen.getByRole('button', { name: `${copy.git.unstage}: BACA.md` }));
+    expect(workerApi.gitUnstage).toHaveBeenCalledWith(PROJECT, ['BACA.md'], false);
+
+    await user.click(screen.getByRole('button', { name: copy.git.stageAll }));
+    expect(workerApi.gitStage).toHaveBeenCalledWith(PROJECT, [], true);
+
+    await user.click(screen.getByRole('button', { name: copy.git.unstageAll }));
+    expect(workerApi.gitUnstage).toHaveBeenCalledWith(PROJECT, [], true);
+  });
+
+  it('commit: aktif hanya bila ada yang di-stage dan pesan terisi; berhasil mengosongkan pesan dan memberi kabar', async () => {
+    const user = userEvent.setup();
+    await renderScreen(<GitPanel />);
+    const box = await screen.findByRole('textbox', { name: copy.git.commitLabel });
+    const button = screen.getByRole('button', { name: copy.git.commit(1) });
+
+    expect(button).toBeDisabled();
+    await user.type(box, 'feat: tambah login');
+    expect(button).toBeEnabled();
+
+    await user.click(button);
+    expect(workerApi.gitCommit).toHaveBeenCalledWith(PROJECT, 'feat: tambah login');
+    expect(
+      await screen.findByText(copy.git.committed('bbbbbbb', 'feat: tambah login')),
+    ).toBeInTheDocument();
+    await waitFor(() => expect(box).toHaveValue(''));
+  });
+
+  it('commit tanpa berkas yang di-stage tidak bisa dikirim', async () => {
+    workerApi.gitStatus.mockResolvedValue(
+      status({
+        files: [{ path: 'src/a.ts', status: 'modified', staged: false, unstaged: true }],
+      }),
+    );
+    const user = userEvent.setup();
+    await renderScreen(<GitPanel />);
+    await user.type(
+      await screen.findByRole('textbox', { name: copy.git.commitLabel }),
+      'feat: apa saja',
+    );
+    expect(screen.getByRole('button', { name: copy.git.commit(0) })).toBeDisabled();
+    expect(screen.getByText(copy.git.nothingStaged)).toBeInTheDocument();
+  });
+
+  it('galat git (mis. hook menolak) tampil sebagai pesan git, pesan commit tetap ada', async () => {
+    workerApi.gitCommit.mockRejectedValue(
+      new WorkerCallError('git_failed', 'lint gagal: ada galat'),
+    );
+    const user = userEvent.setup();
+    await renderScreen(<GitPanel />);
+    const box = await screen.findByRole('textbox', { name: copy.git.commitLabel });
+    await user.type(box, 'feat: ditolak');
+    await user.click(screen.getByRole('button', { name: copy.git.commit(1) }));
+
+    expect(await screen.findByText('lint gagal: ada galat')).toBeInTheDocument();
+    expect(box).toHaveValue('feat: ditolak');
+  });
+
+  it('buang perubahan meminta konfirmasi; batal tidak membuang, konfirmasi membuang', async () => {
+    const user = userEvent.setup();
+    await renderScreen(<GitPanel />);
+
+    await user.click(
+      await screen.findByRole('button', { name: `${copy.git.discard}: src/baru.ts` }),
+    );
+    let dialog = await screen.findByRole('dialog', { name: copy.git.discardTitle });
+    expect(within(dialog).getByText(copy.git.discardBody('src/baru.ts'))).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: copy.git.cancel }));
+    expect(workerApi.gitDiscard).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: `${copy.git.discard}: src/baru.ts` }));
+    dialog = await screen.findByRole('dialog', { name: copy.git.discardTitle });
+    await user.click(within(dialog).getByRole('button', { name: copy.git.discardConfirm }));
+    expect(workerApi.gitDiscard).toHaveBeenCalledWith(PROJECT, 'src/baru.ts');
+  });
+
+  it('push meminta konfirmasi dengan nama branch dan upstream; pull langsung berjalan', async () => {
+    const user = userEvent.setup();
+    await renderScreen(<GitPanel />);
+
+    await user.click(await screen.findByRole('button', { name: copy.git.pull }));
+    expect(workerApi.gitPull).toHaveBeenCalledWith(PROJECT);
+
+    await user.click(screen.getByRole('button', { name: copy.git.push }));
+    const dialog = await screen.findByRole('dialog', { name: copy.git.pushTitle });
+    expect(
+      within(dialog).getByText(copy.git.pushBody('fitur-login', 'origin/fitur-login')),
+    ).toBeInTheDocument();
+    expect(workerApi.gitPush).not.toHaveBeenCalled();
+    await user.click(within(dialog).getByRole('button', { name: copy.git.pushConfirm }));
+    expect(workerApi.gitPush).toHaveBeenCalledWith(PROJECT);
+  });
+
+  it('tanpa upstream: pull dinonaktifkan, push tetap bisa', async () => {
+    workerApi.gitStatus.mockResolvedValue(status({ upstream: null, ahead: 0 }));
+    await renderScreen(<GitPanel />);
+
+    expect(await screen.findByText(copy.git.noUpstream)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: copy.git.pull })).toBeDisabled();
+    expect(screen.getByRole('button', { name: copy.git.push })).toBeEnabled();
+  });
+
+  it('ganti branch lewat menu branch lokal', async () => {
+    const user = userEvent.setup();
+    await renderScreen(<GitPanel />);
+
+    await user.click(
+      await screen.findByRole('button', { name: `${copy.git.branchPick}: fitur-login` }),
+    );
+    await user.click(await screen.findByRole('menuitemradio', { name: 'main' }));
+    expect(workerApi.gitCheckout).toHaveBeenCalledWith(PROJECT, 'main');
+    expect(await screen.findByText(copy.git.switched('main'))).toBeInTheDocument();
   });
 });
