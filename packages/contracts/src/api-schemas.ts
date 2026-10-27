@@ -270,6 +270,8 @@ export const SendMessageRequestSchema = z
     model: z.string().min(1).optional(),
     /** Run coding hanya membaca dan menulis rencana; izin menulis dan menjalankan perintah ditolak. */
     planOnly: z.boolean().optional(),
+    /** Cari di web untuk pesan ini: hasil pencarian bernomor ditempel ke prompt agent (chat umum dan project). */
+    webSearch: z.boolean().optional(),
   })
   .meta({ id: 'SendMessageRequest' });
 

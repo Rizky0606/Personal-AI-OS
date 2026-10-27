@@ -146,6 +146,13 @@ export async function createAuthEnv(
     workerRelay?: { disconnectGraceMs?: number; cancelGraceMs?: number };
     /** Pembaca tautan di pesan chat (W33); tanpa ini tautan tidak dibaca. */
     links?: { contextFor(text: string): Promise<string> };
+    /** Pencarian web untuk pesan dengan `webSearch` (W33); tanpa ini opsinya dihiraukan. */
+    web?: {
+      contextFor(
+        text: string,
+        history?: readonly { role: 'user' | 'assistant'; content: string }[],
+      ): Promise<string>;
+    };
     /** Batas run coding paralel per project untuk kartu kanban. */
     taskMaxParallel?: number;
     rateLimits?: Partial<RateLimits>;
@@ -243,6 +250,7 @@ export async function createAuthEnv(
     roles,
     spaces,
     ...(options.links ? { links: options.links } : {}),
+    ...(options.web ? { web: options.web } : {}),
     now,
   });
   const runs = createRunsService({ db, store, runner, hub, relay: workerRelay, chat, observer });

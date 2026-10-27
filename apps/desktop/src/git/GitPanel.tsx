@@ -1,6 +1,16 @@
 import type { GitFile } from '@aios/contracts';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, GitBranch, RefreshCw } from 'lucide-react';
+import {
+  ArrowDownToLine,
+  ArrowLeft,
+  ArrowUpFromLine,
+  ChevronDown,
+  GitBranch,
+  Minus,
+  Plus,
+  RefreshCw,
+  Undo2,
+} from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { apiErrorMessage } from '../api/errors';
 import { useOnline } from '../app/hooks';
@@ -10,10 +20,15 @@ import { cn } from '../lib/cn';
 import { relativeTime } from '../lib/time';
 import { DiffTable } from '../review/DiffTable';
 import { useUiStore } from '../state/uiStore';
+import { Button } from '../ui/Button';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { EmptyState } from '../ui/EmptyState';
 import { IconButton } from '../ui/IconButton';
+import { RadioMenu } from '../ui/RadioMenu';
 import { StateView, type ViewState } from '../ui/StateView';
+import { TextArea } from '../ui/TextArea';
 import { useWorker } from '../worker/hooks';
+import { useGitActions } from './useGitActions';
 
 const REFRESH_MS = 5_000;
 const noop = () => undefined;
@@ -101,37 +116,39 @@ function FileChange({
   );
 }
 
-/**
- * Tab Git: branch dan posisinya terhadap upstream, berkas yang berubah di folder project (klik untuk melihat
- * perubahannya baris demi baris), dan commit terbaru. Hanya baca; disegarkan otomatis tiap beberapa detik
- * selama tab terbuka, jadi perubahan dari agent maupun editor langsung terlihat.
- */
-export function GitPanel() {
-  const projectId = useUiStore((s) => s.activeProjectId);
-  const connected = useWorker().local === 'connected';
+/** Tab Git untuk satu project yang terikat dan worker yang tersambung. */
+function GitProject({ projectId }: { projectId: string }) {
   const online = useOnline();
+  const actions = useGitActions(projectId);
   const [selected, setSelected] = useState<string | null>(null);
+  const [message, setMessage] = useState('');
+  const [discardOf, setDiscardOf] = useState<GitFile | null>(null);
+  const [pushOpen, setPushOpen] = useState(false);
   // Project berganti: berkas yang terbuka bukan milik project baru.
   useEffect(() => setSelected(null), [projectId]);
 
-  const enabled = projectId !== null && connected;
   const status = useQuery({
     queryKey: ['worker', 'git', 'status', projectId],
-    queryFn: () => workerApi.gitStatus({ projectId: projectId! }),
-    enabled,
+    queryFn: () => workerApi.gitStatus({ projectId }),
     refetchInterval: REFRESH_MS,
   });
+  const isRepo = status.data?.isRepo === true;
   const log = useQuery({
     queryKey: ['worker', 'git', 'log', projectId],
-    queryFn: () => workerApi.gitLog({ projectId: projectId! }, 15),
-    enabled: enabled && status.data?.isRepo === true,
+    queryFn: () => workerApi.gitLog({ projectId }, 15),
+    enabled: isRepo,
+    refetchInterval: REFRESH_MS * 3,
+  });
+  const branches = useQuery({
+    queryKey: ['worker', 'git', 'branches', projectId],
+    queryFn: () => workerApi.gitBranches(projectId),
+    enabled: isRepo,
     refetchInterval: REFRESH_MS * 3,
   });
   const files = useMemo(() => status.data?.files ?? [], [status.data]);
+  const stagedCount = files.filter((f) => f.staged).length;
   const current = files.find((f) => f.path === selected);
 
-  if (!projectId) return <EmptyState message={copy.git.noProject} />;
-  if (!connected) return <EmptyState message={copy.git.workerOffline} />;
   if (status.data && !status.data.isRepo) return <EmptyState message={copy.git.notRepo} />;
   if (current) {
     return <FileChange projectId={projectId} file={current} onBack={() => setSelected(null)} />;
@@ -147,6 +164,13 @@ export function GitPanel() {
         ? 'empty'
         : 'content';
   const data = status.data;
+  const branchName = data ? (data.branch ?? copy.git.detached) : '';
+  const canCommit = stagedCount > 0 && message.trim().length > 0 && !actions.busy;
+
+  async function commit() {
+    const done = await actions.commit(message.trim());
+    if (done) setMessage('');
+  }
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -157,9 +181,27 @@ export function GitPanel() {
           aria-hidden="true"
           className="shrink-0 text-text-3"
         />
-        <span className="min-w-0 truncate font-mono text-ui text-text">
-          {data ? (data.branch ?? copy.git.detached) : ''}
-        </span>
+        {(branches.data?.branches.length ?? 0) > 1 ? (
+          <RadioMenu
+            label={copy.git.branchPick}
+            value={branches.data?.current ?? ''}
+            onValueChange={(branch) => void actions.checkout(branch)}
+            options={(branches.data?.branches ?? []).map((b) => ({ value: b, label: b }))}
+            trigger={
+              <button
+                type="button"
+                aria-label={`${copy.git.branchPick}: ${branchName}`}
+                disabled={actions.busy}
+                className="flex min-w-0 items-center gap-1 rounded-control px-1 font-mono text-ui text-text transition-colors duration-[120ms] ease-aios hover:bg-surface-2 disabled:opacity-60"
+              >
+                <span className="truncate">{branchName}</span>
+                <ChevronDown size={12} strokeWidth={1.5} aria-hidden="true" className="shrink-0" />
+              </button>
+            }
+          />
+        ) : (
+          <span className="min-w-0 truncate font-mono text-ui text-text">{branchName}</span>
+        )}
         {data?.upstream ? (
           <span className="shrink-0 text-meta text-text-3">
             {[
@@ -172,18 +214,63 @@ export function GitPanel() {
         ) : data?.branch ? (
           <span className="shrink-0 text-meta text-text-3">{copy.git.noUpstream}</span>
         ) : null}
-        <span className="ml-auto">
+        <span className="ml-auto flex shrink-0 items-center gap-1">
+          <IconButton
+            label={copy.git.pull}
+            title={copy.git.pullHint}
+            disabled={actions.busy || !data?.upstream}
+            onClick={() => void actions.pull()}
+          >
+            <ArrowDownToLine size={14} strokeWidth={1.5} aria-hidden="true" />
+          </IconButton>
+          <IconButton
+            label={copy.git.push}
+            title={copy.git.pushHint}
+            disabled={actions.busy || !data?.branch}
+            onClick={() => setPushOpen(true)}
+          >
+            <ArrowUpFromLine size={14} strokeWidth={1.5} aria-hidden="true" />
+          </IconButton>
           <IconButton label={copy.git.refresh} onClick={() => void status.refetch()}>
             <RefreshCw
               size={14}
               strokeWidth={1.5}
               aria-hidden="true"
-              className={cn(status.isFetching && 'animate-aios-breathe')}
+              className={cn((status.isFetching || actions.busy) && 'animate-aios-breathe')}
             />
           </IconButton>
         </span>
       </div>
+
       <div className="min-h-0 flex-1 overflow-auto">
+        <section
+          aria-label={copy.git.commitLabel}
+          className="flex flex-col gap-2 border-b border-border p-3"
+        >
+          <TextArea
+            label={copy.git.commitLabel}
+            rows={2}
+            value={message}
+            disabled={actions.busy}
+            placeholder={copy.git.commitPlaceholder}
+            onChange={(event) => setMessage(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && (event.ctrlKey || event.metaKey) && canCommit) {
+                event.preventDefault();
+                void commit();
+              }
+            }}
+          />
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-caption text-text-3">
+              {stagedCount === 0 && files.length > 0 ? copy.git.nothingStaged : ''}
+            </span>
+            <Button variant="primary" disabled={!canCommit} onClick={() => void commit()}>
+              {actions.busy ? copy.git.working : copy.git.commit(stagedCount)}
+            </Button>
+          </div>
+        </section>
+
         <section aria-label={copy.git.changes(files.length)}>
           <StateView
             state={view}
@@ -194,17 +281,52 @@ export function GitPanel() {
             retryLabel={copy.states.retry}
             onRetry={() => void status.refetch()}
           >
-            <h3 className="px-3 pt-3 pb-1 text-meta font-medium text-text-2">
-              {copy.git.changes(files.length)}
-            </h3>
+            <div className="flex items-center justify-between gap-2 px-3 pt-3 pb-1">
+              <h3 className="text-meta font-medium text-text-2">
+                {copy.git.changes(files.length)}
+              </h3>
+              <span className="flex gap-1">
+                <Button
+                  variant="ghost"
+                  disabled={actions.busy || stagedCount === files.length}
+                  onClick={() => void actions.stage([], true)}
+                >
+                  {copy.git.stageAll}
+                </Button>
+                {stagedCount > 0 ? (
+                  <Button
+                    variant="ghost"
+                    disabled={actions.busy}
+                    onClick={() => void actions.unstage([], true)}
+                  >
+                    {copy.git.unstageAll}
+                  </Button>
+                ) : null}
+              </span>
+            </div>
             <ul>
               {files.map((file) => (
-                <li key={file.path} className="border-b border-border">
+                <li key={file.path} className="group flex items-center border-b border-border">
+                  <IconButton
+                    label={`${file.staged && !file.unstaged ? copy.git.unstage : copy.git.stage}: ${file.path}`}
+                    disabled={actions.busy}
+                    onClick={() =>
+                      void (file.staged && !file.unstaged
+                        ? actions.unstage([file.path])
+                        : actions.stage([file.path]))
+                    }
+                  >
+                    {file.staged && !file.unstaged ? (
+                      <Minus size={14} strokeWidth={1.5} aria-hidden="true" />
+                    ) : (
+                      <Plus size={14} strokeWidth={1.5} aria-hidden="true" />
+                    )}
+                  </IconButton>
                   <button
                     type="button"
                     aria-label={`${copy.git.openDiff}: ${file.path}`}
                     onClick={() => setSelected(file.path)}
-                    className="flex min-h-8 w-full items-center gap-2 px-3 py-1 text-left transition-colors duration-[120ms] ease-aios hover:bg-surface-2"
+                    className="flex min-h-8 min-w-0 flex-1 items-center gap-2 py-1 pr-1 text-left transition-colors duration-[120ms] ease-aios hover:bg-surface-2"
                   >
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-mono text-ui text-text">
@@ -228,6 +350,15 @@ export function GitPanel() {
                       {copy.git.status[file.status]}
                     </span>
                   </button>
+                  <span className="opacity-0 transition-opacity duration-[120ms] group-focus-within:opacity-100 group-hover:opacity-100">
+                    <IconButton
+                      label={`${copy.git.discard}: ${file.path}`}
+                      disabled={actions.busy}
+                      onClick={() => setDiscardOf(file)}
+                    >
+                      <Undo2 size={14} strokeWidth={1.5} aria-hidden="true" />
+                    </IconButton>
+                  </span>
                 </li>
               ))}
             </ul>
@@ -263,6 +394,51 @@ export function GitPanel() {
           )}
         </section>
       </div>
+
+      <ConfirmDialog
+        open={discardOf !== null}
+        onOpenChange={(open) => {
+          if (!open) setDiscardOf(null);
+        }}
+        title={copy.git.discardTitle}
+        body={discardOf ? copy.git.discardBody(discardOf.path) : ''}
+        confirmLabel={copy.git.discardConfirm}
+        cancelLabel={copy.git.cancel}
+        destructive
+        busy={actions.busy}
+        onConfirm={() => {
+          const target = discardOf;
+          setDiscardOf(null);
+          if (target) void actions.discard(target.path);
+        }}
+      />
+      <ConfirmDialog
+        open={pushOpen}
+        onOpenChange={setPushOpen}
+        title={copy.git.pushTitle}
+        body={copy.git.pushBody(data?.branch ?? '', data?.upstream ?? null)}
+        confirmLabel={copy.git.pushConfirm}
+        cancelLabel={copy.git.cancel}
+        busy={actions.busy}
+        onConfirm={() => {
+          setPushOpen(false);
+          void actions.push();
+        }}
+      />
     </div>
   );
+}
+
+/**
+ * Tab Git: branch (bisa ganti), posisi terhadap upstream, pull dan push, berkas yang berubah (stage, lihat
+ * perubahan baris demi baris, buang), kotak commit, dan commit terbaru. Disegarkan otomatis tiap beberapa detik
+ * selama tab terbuka, jadi perubahan dari agent maupun editor langsung terlihat. Aksi hanya untuk folder
+ * project, tidak pernah force, dan yang merusak atau keluar (buang, push) meminta konfirmasi.
+ */
+export function GitPanel() {
+  const projectId = useUiStore((s) => s.activeProjectId);
+  const connected = useWorker().local === 'connected';
+  if (!projectId) return <EmptyState message={copy.git.noProject} />;
+  if (!connected) return <EmptyState message={copy.git.workerOffline} />;
+  return <GitProject projectId={projectId} />;
 }

@@ -3060,6 +3060,9 @@
           },
           "planOnly": {
             "type": "boolean"
+          },
+          "webSearch": {
+            "type": "boolean"
           }
         },
         "required": [

@@ -103,6 +103,13 @@ export function createChatService(deps: {
   };
   /** Isi tautan di pesan pemilik (W33); tanpa ini tautan hanya dikirim sebagai teks. */
   links?: { contextFor(text: string): Promise<string> };
+  /** Pencarian web (opsi "Cari di web" di pesan); tanpa ini opsinya dihiraukan. */
+  web?: {
+    contextFor(
+      text: string,
+      history?: readonly { role: 'user' | 'assistant'; content: string }[],
+    ): Promise<string>;
+  };
   now?: () => number;
 }): ChatService {
   const { db, runner, files, titles, routing, roles, now = Date.now } = deps;
@@ -116,13 +123,21 @@ export function createChatService(deps: {
     prompt: string,
     question: string,
     extra?: string,
+    web?: { conversationId: string; beforeId: string },
   ): Promise<string> {
-    const space =
+    // Ruang, tautan, dan pencarian web tidak saling bergantung: dikerjakan bersamaan.
+    const [space, linked, searched] = await Promise.all([
       conversation.spaceId && deps.spaces
-        ? await deps.spaces.contextFor(conversation.spaceId, question)
-        : '';
-    const linked = (await deps.links?.contextFor(prompt).catch(() => '')) ?? '';
-    return [prompt, space, linked, extra ?? ''].filter(Boolean).join('\n\n');
+        ? deps.spaces.contextFor(conversation.spaceId, question)
+        : '',
+      deps.links?.contextFor(prompt).catch(() => '') ?? '',
+      web && deps.web
+        ? loadProjectHistory(web.conversationId, web.beforeId).then((history) =>
+            deps.web!.contextFor(question, history).catch(() => ''),
+          )
+        : '',
+    ]);
+    return [prompt, space, linked, searched, extra ?? ''].filter(Boolean).join('\n\n');
   }
   const background = new Set<Promise<unknown>>();
 
@@ -532,7 +547,13 @@ export function createChatService(deps: {
         run,
         conversationId,
         assistantMessageId,
-        prompt: await agentPrompt(conversation, prompt, routingText, options?.context),
+        prompt: await agentPrompt(
+          conversation,
+          prompt,
+          routingText,
+          options?.context,
+          input.webSearch ? { conversationId, beforeId: userMessage.id } : undefined,
+        ),
         sessionId,
         ...(history.length ? { history } : {}),
         projectHistory: projectHistoryFor(conversationId, userMessage.id),

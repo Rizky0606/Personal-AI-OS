@@ -95,6 +95,63 @@ describe('chat per project', () => {
     );
   });
 
+  it('Cari di web: sakelar tampil di chat umum dan project, diingat, dan dikirim bersama pesan', async () => {
+    api.createConversation.mockResolvedValue({
+      id: CONV,
+      title: '',
+      surface: 'windows',
+      projectId: null,
+      spaceId: null,
+      pinned: false,
+      archivedAt: null,
+      createdAt: TS,
+      updatedAt: TS,
+    });
+    api.sendMessage.mockResolvedValue({
+      message: message({ author: 'user', text: 'x', runId: RUN_X }),
+      run: run({ id: RUN_X }),
+    });
+    const user = userEvent.setup();
+    await renderScreen(<ChatScreen />);
+
+    const chip = await screen.findByRole('button', { name: copy.chat.web.chip });
+    expect(chip).toHaveAttribute('aria-pressed', 'false');
+    await user.click(chip);
+    expect(useUiStore.getState().webSearch).toBe(true);
+
+    await user.type(field(), 'berita GPU terbaru{Enter}');
+    expect(api.sendMessage).toHaveBeenCalledWith(
+      CONV,
+      expect.objectContaining({ text: 'berita GPU terbaru', webSearch: true }),
+    );
+  });
+
+  it('tanpa sakelar Cari di web, pesan tidak membawa webSearch', async () => {
+    api.createConversation.mockResolvedValue({
+      id: CONV,
+      title: '',
+      surface: 'windows',
+      projectId: null,
+      spaceId: null,
+      pinned: false,
+      archivedAt: null,
+      createdAt: TS,
+      updatedAt: TS,
+    });
+    api.sendMessage.mockResolvedValue({
+      message: message({ author: 'user', text: 'x', runId: RUN_X }),
+      run: run({ id: RUN_X }),
+    });
+    const user = userEvent.setup();
+    await renderScreen(<ChatScreen />);
+
+    await user.type(field(), 'halo{Enter}');
+    expect(api.sendMessage).toHaveBeenCalledWith(
+      CONV,
+      expect.objectContaining({ webSearch: undefined }),
+    );
+  });
+
   it('chat umum membuat percakapan tanpa project', async () => {
     api.createConversation.mockResolvedValue({
       id: CONV,

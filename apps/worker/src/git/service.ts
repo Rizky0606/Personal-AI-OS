@@ -1,5 +1,8 @@
 import {
   MAX_GIT_FILES,
+  type GitActionResult,
+  type GitBranches,
+  type GitCommit,
   type GitDiff,
   type GitFile,
   type GitLog,
@@ -24,7 +27,41 @@ export interface GitService {
   status(target: PreviewTarget): Promise<GitStatus>;
   diff(target: PreviewTarget, path: string): Promise<GitDiff>;
   log(target: PreviewTarget, limit: number): Promise<GitLog>;
+  /** Aksi (mengubah repo): hanya folder project, tanpa force. Galat git menjadi GitActionError. */
+  stage(projectId: string, paths: string[], all: boolean): Promise<GitActionResult>;
+  unstage(projectId: string, paths: string[], all: boolean): Promise<GitActionResult>;
+  discard(projectId: string, path: string): Promise<GitActionResult>;
+  commit(projectId: string, message: string): Promise<GitCommit>;
+  branches(projectId: string): Promise<GitBranches>;
+  checkout(projectId: string, branch: string): Promise<GitActionResult>;
+  pull(projectId: string): Promise<GitActionResult>;
+  push(projectId: string): Promise<GitActionResult>;
 }
+
+/** Aksi git yang gagal; pesannya keluaran git yang sudah dibersihkan, aman ditampilkan. Kode: `git_failed`. */
+export class GitActionError extends Error {
+  readonly code = 'git_failed' as const;
+  constructor(message: string) {
+    super(message);
+    this.name = 'GitActionError';
+  }
+}
+
+const ACTION_TIMEOUT_MS = 30_000;
+/** Commit menjalankan hook, push/pull menunggu jaringan. */
+const SLOW_ACTION_TIMEOUT_MS = 90_000;
+const MAX_ACTION_BYTES = 64 * 1024;
+const MAX_MESSAGE_CHARS = 500;
+
+/** Kredensial di URL (`https://user:token@host`) dibuang dari pesan yang ditampilkan. */
+export function scrub(text: string): string {
+  return text.replace(/(\w+:\/\/)[^/@\s]+@/g, '$1***@').trim();
+}
+
+const summarize = (stdout: string, stderr: string): string => {
+  const text = scrub([stdout, stderr].filter((t) => t.trim().length > 0).join('\n'));
+  return text.length > MAX_MESSAGE_CHARS ? `${text.slice(0, MAX_MESSAGE_CHARS)}…` : text;
+};
 
 const NOT_A_REPO = 'Folder ini bukan repo git.';
 
@@ -104,6 +141,55 @@ export function createGitService({ resolve, processes }: GitDeps): GitService {
   async function isRepo(cwd: string): Promise<boolean> {
     const r = await git(cwd, ['rev-parse', '--is-inside-work-tree'], 1024);
     return r.code === 0 && !r.spawnError && r.stdout.trim() === 'true';
+  }
+
+  /** Perintah yang mengubah repo: tanpa prompt kredensial (juga GUI Git Credential Manager). */
+  async function act(cwd: string, args: string[], timeoutMs = ACTION_TIMEOUT_MS, ok = [0]) {
+    const r = await processes.run('git', ['-c', 'core.quotepath=false', ...args], {
+      cwd,
+      timeoutMs,
+      maxOutputBytes: MAX_ACTION_BYTES,
+      env: { ...process.env, GIT_TERMINAL_PROMPT: '0', GCM_INTERACTIVE: 'never', LC_ALL: 'C' },
+    });
+    if (r.spawnError)
+      throw new GitActionError('Git tidak bisa dijalankan. Pastikan git terpasang.');
+    if (r.timedOut) throw new GitActionError('Git terlalu lama menjawab dan dihentikan.');
+    if (r.code === null || !ok.includes(r.code)) {
+      throw new GitActionError(summarize(r.stderr, r.stdout) || 'Git gagal tanpa pesan.');
+    }
+    return { stdout: r.stdout, stderr: r.stderr, code: r.code };
+  }
+
+  async function projectRepo(projectId: string): Promise<string> {
+    const { cwd } = await resolve({ projectId });
+    if (!(await isRepo(cwd))) throw new PathError('invalid_request', NOT_A_REPO);
+    return cwd;
+  }
+
+  const hasHead = async (cwd: string) =>
+    (await git(cwd, ['rev-parse', '--verify', '-q', 'HEAD'], 1024)).code === 0;
+
+  async function localBranches(cwd: string): Promise<GitBranches> {
+    const list = await git(
+      cwd,
+      [
+        'for-each-ref',
+        '--count=200',
+        '--sort=-committerdate',
+        '--format=%(refname:short)',
+        'refs/heads',
+      ],
+      MAX_STATUS_BYTES,
+    );
+    const current = await git(cwd, ['symbolic-ref', '--short', '-q', 'HEAD'], 1024);
+    const name = current.stdout.trim();
+    return {
+      current: current.code === 0 && name.length > 0 ? name : null,
+      branches: list.stdout
+        .split('\n')
+        .map((b) => b.trim())
+        .filter(Boolean),
+    };
   }
 
   function safePath(path: string): string {
@@ -200,6 +286,102 @@ export function createGitService({ resolve, processes }: GitDeps): GitService {
             : [];
         });
       return { commits };
+    },
+
+    async stage(projectId, paths, all) {
+      const cwd = await projectRepo(projectId);
+      if (all) await act(cwd, ['add', '-A']);
+      else if (paths.length > 0) await act(cwd, ['add', '--', ...paths.map(safePath)]);
+      else throw new GitActionError('Pilih berkas yang akan di-stage.');
+      return { message: all ? 'Semua perubahan di-stage.' : `${paths.length} berkas di-stage.` };
+    },
+
+    async unstage(projectId, paths, all) {
+      const cwd = await projectRepo(projectId);
+      const targets = all ? ['.'] : paths.map(safePath);
+      if (targets.length === 0) {
+        throw new GitActionError('Pilih berkas yang akan dikeluarkan dari stage.');
+      }
+      // Repo tanpa commit belum punya HEAD untuk dipulihkan: cukup keluarkan dari indeks.
+      if (await hasHead(cwd)) await act(cwd, ['restore', '--staged', '--', ...targets]);
+      else await act(cwd, ['rm', '-r', '--cached', '-q', '--ignore-unmatch', '--', ...targets]);
+      return {
+        message: all
+          ? 'Semua berkas dikeluarkan dari stage.'
+          : `${targets.length} berkas dikeluarkan dari stage.`,
+      };
+    },
+
+    async discard(projectId, path) {
+      const cwd = await projectRepo(projectId);
+      const rel = safePath(path);
+      const tracked = (await git(cwd, ['ls-files', '--error-unmatch', '--', rel], 1024)).code === 0;
+      if (!tracked) {
+        // Berkas baru yang belum dilacak: hapus berkas itu saja (bukan folder lain).
+        await act(cwd, ['clean', '-f', '--', rel]);
+      } else if (await hasHead(cwd)) {
+        await act(cwd, ['restore', '--source=HEAD', '--staged', '--worktree', '--', rel]);
+      } else {
+        await act(cwd, ['rm', '-f', '--cached', '-q', '--', rel]);
+      }
+      return { message: `Perubahan ${rel} dibuang.` };
+    },
+
+    async commit(projectId, message) {
+      const cwd = await projectRepo(projectId);
+      // Kode keluar 1 = ada yang di-stage; 0 = tidak ada.
+      const staged = await act(cwd, ['diff', '--cached', '--quiet'], ACTION_TIMEOUT_MS, [0, 1]);
+      if (staged.code === 0 && (await hasHead(cwd))) {
+        throw new GitActionError('Tidak ada perubahan yang di-stage. Stage berkas dulu.');
+      }
+      await act(cwd, ['commit', '-m', message], SLOW_ACTION_TIMEOUT_MS);
+      const last = await this.log({ projectId }, 1);
+      const commit = last.commits[0];
+      if (!commit) throw new GitActionError('Commit selesai tetapi tidak terbaca.');
+      return commit;
+    },
+
+    async branches(projectId) {
+      return localBranches(await projectRepo(projectId));
+    },
+
+    async checkout(projectId, branch) {
+      const cwd = await projectRepo(projectId);
+      const { branches } = await localBranches(cwd);
+      // Hanya branch lokal yang ada: nama bebas tidak pernah sampai ke git.
+      if (!branches.includes(branch)) {
+        throw new GitActionError(`Branch "${branch}" tidak ada di folder ini.`);
+      }
+      const r = await act(cwd, ['switch', branch]);
+      return { message: summarize(r.stdout, r.stderr) || `Pindah ke ${branch}.` };
+    },
+
+    async pull(projectId) {
+      const cwd = await projectRepo(projectId);
+      const r = await act(cwd, ['pull', '--ff-only'], SLOW_ACTION_TIMEOUT_MS);
+      return { message: summarize(r.stdout, r.stderr) || 'Sudah terbaru.' };
+    },
+
+    async push(projectId) {
+      const cwd = await projectRepo(projectId);
+      const remotes = (await act(cwd, ['remote'])).stdout
+        .split('\n')
+        .map((r) => r.trim())
+        .filter(Boolean);
+      if (remotes.length === 0) {
+        throw new GitActionError('Project ini belum punya remote untuk di-push.');
+      }
+      const { current } = await localBranches(cwd);
+      if (!current) throw new GitActionError('HEAD lepas: pindah ke sebuah branch dulu.');
+      const upstream = await git(
+        cwd,
+        ['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'],
+        1024,
+      );
+      const remote = remotes.includes('origin') ? 'origin' : (remotes[0] ?? 'origin');
+      const args = upstream.code === 0 ? ['push'] : ['push', '-u', remote, current];
+      const r = await act(cwd, args, SLOW_ACTION_TIMEOUT_MS);
+      return { message: summarize(r.stdout, r.stderr) || `${current} di-push.` };
     },
   };
 }

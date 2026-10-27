@@ -5,6 +5,7 @@ import { ConfigError, loadConfig } from './config.js';
 import { createDb } from './db/client.js';
 import { createLinkReader } from './modules/chat/links.js';
 import { createChatService } from './modules/chat/service.js';
+import { createWebContext } from './modules/chat/web.js';
 import { createFilesService } from './modules/files/service.js';
 import { createTitleService } from './modules/chat/title.js';
 import { createAuthService } from './modules/auth/service.js';
@@ -119,6 +120,11 @@ async function main(): Promise<void> {
     roles,
     spaces,
     links: createLinkReader({ fetchPage }),
+    web: createWebContext({
+      search: createSearxngClient({ baseUrl: config.SEARXNG_URL }),
+      fetchPage,
+      complete: createRouterComplete(client, config.ROUTER_MODEL),
+    }),
   });
   const runs = createRunsService({ db, store, runner, hub, relay: workerRelay, chat, observer });
   const tasks = createTasksService({

@@ -238,6 +238,63 @@ export const LocalRequestSchema = z.discriminatedUnion('method', [
     method: z.literal('git.log'),
     params: PreviewTargetSchema.extend({ limit: z.number().int().min(1).max(50).default(20) }),
   }),
+  /*
+   * Aksi git: hanya untuk folder project (bukan worktree run), tidak pernah force. Galat git dikembalikan sebagai
+   * `git_failed` dengan pesan git yang sudah dibersihkan dari kredensial.
+   */
+  z.object({
+    id: z.string().min(1),
+    method: z.literal('git.stage'),
+    /** `all` men-stage semua perubahan; bila tidak, hanya `paths`. */
+    params: z.object({
+      projectId: IdSchema,
+      paths: z.array(z.string().min(1).max(1024)).max(300).default([]),
+      all: z.boolean().default(false),
+    }),
+  }),
+  z.object({
+    id: z.string().min(1),
+    method: z.literal('git.unstage'),
+    params: z.object({
+      projectId: IdSchema,
+      paths: z.array(z.string().min(1).max(1024)).max(300).default([]),
+      all: z.boolean().default(false),
+    }),
+  }),
+  z.object({
+    id: z.string().min(1),
+    method: z.literal('git.discard'),
+    /** Membuang perubahan satu berkas (berkas baru yang belum dilacak dihapus). Tidak bisa dibatalkan. */
+    params: z.object({ projectId: IdSchema, path: z.string().min(1).max(1024) }),
+  }),
+  z.object({
+    id: z.string().min(1),
+    method: z.literal('git.commit'),
+    params: z.object({ projectId: IdSchema, message: z.string().trim().min(1).max(2000) }),
+  }),
+  z.object({
+    id: z.string().min(1),
+    method: z.literal('git.branches'),
+    params: z.object({ projectId: IdSchema }),
+  }),
+  z.object({
+    id: z.string().min(1),
+    method: z.literal('git.checkout'),
+    /** Hanya ke branch lokal yang sudah ada. */
+    params: z.object({ projectId: IdSchema, branch: z.string().min(1).max(255) }),
+  }),
+  z.object({
+    id: z.string().min(1),
+    method: z.literal('git.pull'),
+    /** `git pull --ff-only`. */
+    params: z.object({ projectId: IdSchema }),
+  }),
+  z.object({
+    id: z.string().min(1),
+    method: z.literal('git.push'),
+    /** Push branch saat ini ke upstream-nya (tanpa upstream: ke origin dengan -u). Tanpa force. */
+    params: z.object({ projectId: IdSchema }),
+  }),
   z.object({
     id: z.string().min(1),
     method: z.literal('preview.shot'),
@@ -391,6 +448,15 @@ export const GitCommitSchema = z.object({
 export type GitCommit = z.infer<typeof GitCommitSchema>;
 export const GitLogSchema = z.object({ commits: z.array(GitCommitSchema) });
 export type GitLog = z.infer<typeof GitLogSchema>;
+
+/** Hasil aksi git: ringkasan keluaran git (dipotong). */
+export const GitActionResultSchema = z.object({ message: z.string() });
+export type GitActionResult = z.infer<typeof GitActionResultSchema>;
+export const GitBranchesSchema = z.object({
+  current: z.string().nullable(),
+  branches: z.array(z.string()),
+});
+export type GitBranches = z.infer<typeof GitBranchesSchema>;
 
 /** Hasil per metode, untuk validasi di sisi desktop. */
 export const FoldersResultSchema = z.object({ folders: z.array(z.string()) });

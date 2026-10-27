@@ -10,11 +10,20 @@ let hermes: FakeHermes;
 let env: AuthEnv;
 let token: string;
 const fetched: string[] = [];
+const searched: { text: string; history: number }[] = [];
 
 beforeAll(async () => {
   hermes = await startFakeHermes();
   env = await createAuthEnv(inject('testDatabaseUrl'), {
     hermesUrl: hermes.url,
+    web: {
+      contextFor: (text, history = []) => {
+        searched.push({ text, history: history.length });
+        return Promise.resolve(
+          '# Hasil pencarian web\n\n## [1] https://berita.dev/gpu — Harga GPU',
+        );
+      },
+    },
     links: createLinkReader({
       fetchPage: (url) => {
         fetched.push(url);
@@ -41,7 +50,7 @@ afterAll(async () => {
   await hermes.close();
 });
 
-async function ask(text: string): Promise<string> {
+async function ask(text: string, webSearch?: boolean): Promise<string> {
   const conv = ConversationSchema.parse(
     (await env.post('/conversations', { surface: 'windows' }, token)).json(),
   );
@@ -50,7 +59,7 @@ async function ask(text: string): Promise<string> {
     (
       await env.post(
         `/conversations/${conv.id}/messages`,
-        { parts: [{ type: 'text', text }], role: 'general' },
+        { parts: [{ type: 'text', text }], role: 'general', ...(webSearch ? { webSearch } : {}) },
         token,
       )
     ).json(),
@@ -89,5 +98,23 @@ describe('tautan di pesan chat', () => {
     const prompt = await ask('Halo, apa kabar?');
     expect(fetched).toEqual([]);
     expect(prompt).toBe('Halo, apa kabar?');
+  });
+});
+
+describe('pencarian web di pesan chat', () => {
+  it('webSearch: hasil pencarian ditempel ke prompt dengan pesan dan riwayat sebagai bahan kueri', async () => {
+    searched.length = 0;
+    const prompt = await ask('Berapa harga GPU sekarang?', true);
+    expect(searched).toEqual([{ text: 'Berapa harga GPU sekarang?', history: 0 }]);
+    expect(prompt).toContain('Berapa harga GPU sekarang?');
+    expect(prompt).toContain('# Hasil pencarian web');
+    expect(prompt).toContain('## [1] https://berita.dev/gpu');
+  });
+
+  it('tanpa webSearch tidak ada pencarian', async () => {
+    searched.length = 0;
+    const prompt = await ask('Berapa harga GPU sekarang?');
+    expect(searched).toEqual([]);
+    expect(prompt).toBe('Berapa harga GPU sekarang?');
   });
 });

@@ -12,6 +12,7 @@ import {
   type WorkerStatus,
 } from '@aios/contracts';
 import { WebSocketServer, type WebSocket } from 'ws';
+import { GitActionError } from '../git/service.js';
 import { PathError } from '../paths/normalize.js';
 import { PreviewError } from '../preview/service.js';
 import { ReviewError } from '../runs/review.js';
@@ -151,7 +152,8 @@ export class LocalServer {
         error instanceof PathError ||
         error instanceof ReviewError ||
         error instanceof PreviewError ||
-        error instanceof TerminalError
+        error instanceof TerminalError ||
+        error instanceof GitActionError
       ) {
         this.send(socket, failure(request.data.id, error.code, error.message));
       } else {

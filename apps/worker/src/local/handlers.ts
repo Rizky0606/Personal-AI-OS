@@ -137,6 +137,30 @@ export function createHandler(deps: HandlerDeps): (request: LocalRequest) => Pro
         return git.log(target, limit);
       }
 
+      case 'git.stage':
+        return git.stage(request.params.projectId, request.params.paths, request.params.all);
+
+      case 'git.unstage':
+        return git.unstage(request.params.projectId, request.params.paths, request.params.all);
+
+      case 'git.discard':
+        return git.discard(request.params.projectId, request.params.path);
+
+      case 'git.commit':
+        return git.commit(request.params.projectId, request.params.message);
+
+      case 'git.branches':
+        return git.branches(request.params.projectId);
+
+      case 'git.checkout':
+        return git.checkout(request.params.projectId, request.params.branch);
+
+      case 'git.pull':
+        return git.pull(request.params.projectId);
+
+      case 'git.push':
+        return git.push(request.params.projectId);
+
       case 'terminal.open': {
         const { cols, rows, ...target } = request.params;
         return terminal.open(target, { cols, rows });
