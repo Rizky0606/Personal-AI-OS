@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { apiErrorMessage } from '../api/errors';
+import { skillsOfPacks } from './skillPacks';
 import { useMessages, useModels, useRoles } from '../api/queries';
 import { useLiveRun, useOnline, useRunFailure } from '../app/hooks';
 import { api, runs } from '../app/services';
@@ -49,6 +50,8 @@ export function useChatController(conversationId: string | undefined) {
   const model = useUiStore((s) => s.model);
   const webSearch = useUiStore((s) => s.webSearch);
   const setWebSearch = useUiStore((s) => s.setWebSearch);
+  const skillPacks = useUiStore((s) => s.skillPacks);
+  const setSkillPacks = useUiStore((s) => s.setSkillPacks);
   const setModel = useUiStore((s) => s.setModel);
   const setActiveRole = useUiStore((s) => s.setActiveRole);
   const [pending, setPending] = useState<string | null>(null);
@@ -163,8 +166,10 @@ export function useChatController(conversationId: string | undefined) {
           model: model ?? undefined,
           planOnly: (options?.plan ?? planFirst) && activeProjectId !== null ? true : undefined,
           webSearch: webSearch ? true : undefined,
+          skills: skillsOfPacks(skillPacks),
         });
         addMessageToCache(queryClient, id, response.message);
+        setSkillPacks([]);
         clearAttachments();
         if (override === undefined) attach.clear();
         runs.track(response.run.id);
@@ -193,7 +198,8 @@ export function useChatController(conversationId: string | undefined) {
       model,
       planFirst,
       webSearch,
-      webSearch,
+      skillPacks,
+      setSkillPacks,
       queryClient,
       navigate,
       fail,
@@ -380,6 +386,8 @@ export function useChatController(conversationId: string | undefined) {
     setPlanFirst,
     webSearch,
     setWebSearch,
+    skillPacks,
+    setSkillPacks,
     awaitingPlanApproval,
     /** Menyetujui rencana: pesan berikutnya dikerjakan sungguhan (tanpa mode rencana). */
     approvePlan: () => {

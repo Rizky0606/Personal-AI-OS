@@ -66,6 +66,9 @@ interface UiState {
   /** Cari di web untuk pesan berikutnya (chat umum dan project). Diingat antar sesi. */
   webSearch: boolean;
   setWebSearch: (on: boolean) => void;
+  /** Paket skill tambahan untuk pesan berikutnya (selain pilihan otomatis dari kata kunci); tidak disimpan. */
+  skillPacks: string[];
+  setSkillPacks: (ids: string[]) => void;
   /** Model pilihan untuk pesan berikutnya; null = otomatis (router/combo). Diingat antar sesi. */
   model: string | null;
   setModel: (model: string | null) => void;
@@ -115,6 +118,8 @@ export const useUiStore = create<UiState>()(
       reviewRunId: null,
       webSearch: false,
       setWebSearch: (webSearch) => set({ webSearch }),
+      skillPacks: [],
+      setSkillPacks: (skillPacks) => set({ skillPacks }),
       agentSteps: [],
       setAgentSteps: (agentSteps) => set({ agentSteps }),
       fileRequest: null,
