@@ -4,6 +4,7 @@ import { usePromptTemplates } from '../api/queries';
 import { useTemplateInsert } from '../templates/useTemplateInsert';
 import { activitySteps } from '../activity/steps';
 import { copy } from '../copy';
+import { packOptions } from './skillPacks';
 import { useUiStore } from '../state/uiStore';
 import { ErrorBanner } from '../ui/ErrorBanner';
 import { StateView, type ViewState } from '../ui/StateView';
@@ -136,6 +137,9 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
         onUseTemplate={insert.use}
         webSearch={chat.webSearch}
         onWebSearch={chat.setWebSearch}
+        skillPacks={chat.skillPacks}
+        onSkillPacks={chat.setSkillPacks}
+        skillOptions={packOptions(chat.inProject)}
         {...(chat.inProject ? { planMode: chat.planFirst, onPlanMode: chat.setPlanFirst } : {})}
       />
       {insert.dialog}

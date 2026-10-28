@@ -735,6 +735,20 @@ export const copy = {
       chipHint:
         'Cari informasi di internet untuk pesan berikutnya dan sertakan hasilnya sebagai bahan jawaban. Pilihan ini diingat.',
     },
+    skills: {
+      chip: 'Skill',
+      chipActive: (n: number) => `Skill (${n})`,
+      label: 'Skill tambahan',
+      hint: 'Skill dipilih otomatis dari isi pesan. Centang paket untuk menambahkannya ke pesan berikutnya.',
+      packs: {
+        debugging: 'Debugging',
+        frontend: 'Tampilan (frontend)',
+        backend: 'Server (backend)',
+        review: 'Review dan keamanan',
+        research: 'Riset bersitasi',
+        writing: 'Menulis',
+      },
+    },
     fork: 'Cabangkan dari sini',
     forkDone: 'Cabang percakapan dibuat.',
     remember: 'Ingat',

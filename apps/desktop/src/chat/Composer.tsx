@@ -9,6 +9,7 @@ import type { ContextAttachment } from '../state/uiStore';
 import { Button } from '../ui/Button';
 import { Chip } from '../ui/Chip';
 import { IconButton } from '../ui/IconButton';
+import { CheckboxMenu, type CheckboxOption } from '../ui/CheckboxMenu';
 import { RadioMenu } from '../ui/RadioMenu';
 import { slashMatches } from '../templates/vars';
 
@@ -47,6 +48,10 @@ export interface ComposerProps {
   /** Cari di web untuk pesan berikutnya; tanpa onWebSearch sakelarnya tidak tampil. */
   webSearch?: boolean;
   onWebSearch?: (on: boolean) => void;
+  /** Paket skill tambahan untuk pesan berikutnya; tanpa onSkillPacks menunya tidak tampil. */
+  skillPacks?: readonly string[];
+  onSkillPacks?: (ids: string[]) => void;
+  skillOptions?: CheckboxOption[];
 }
 
 const MAX_HEIGHT_PX = 192;
@@ -80,6 +85,9 @@ export function Composer({
   onPlanMode,
   webSearch = false,
   onWebSearch,
+  skillPacks = [],
+  onSkillPacks,
+  skillOptions = [],
 }: ComposerProps) {
   const field = useRef<HTMLTextAreaElement>(null);
   const picker = useRef<HTMLInputElement>(null);
@@ -291,6 +299,22 @@ export function Composer({
               >
                 {copy.chat.web.chip}
               </Chip>
+            ) : null}
+            {onSkillPacks ? (
+              <CheckboxMenu
+                label={copy.chat.skills.label}
+                values={skillPacks}
+                onValuesChange={onSkillPacks}
+                options={skillOptions}
+                trigger={
+                  <Chip selected={skillPacks.length > 0} title={copy.chat.skills.hint}>
+                    {skillPacks.length > 0
+                      ? copy.chat.skills.chipActive(skillPacks.length)
+                      : copy.chat.skills.chip}
+                    <ChevronDown size={12} strokeWidth={1.5} aria-hidden="true" className="ml-1" />
+                  </Chip>
+                }
+              />
             ) : null}
             <span className="ml-auto flex items-center gap-1">
               {onAddFiles ? (

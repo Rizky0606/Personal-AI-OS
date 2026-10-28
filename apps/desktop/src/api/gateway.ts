@@ -109,6 +109,8 @@ export interface MessageInput {
   planOnly?: boolean | undefined;
   /** Cari di web untuk pesan ini; hasilnya ditempel ke prompt agent. */
   webSearch?: boolean | undefined;
+  /** Skill tambahan untuk pesan ini (menang atas pemilihan otomatis). */
+  skills?: readonly string[] | undefined;
 }
 
 /** Teks (bila ada) lalu lampiran; server menolak pesan tanpa keduanya. */
@@ -122,6 +124,7 @@ function messageBody(input: MessageInput) {
     ...(input.model ? { model: input.model } : {}),
     ...(input.planOnly ? { planOnly: true } : {}),
     ...(input.webSearch ? { webSearch: true } : {}),
+    ...(input.skills?.length ? { skills: [...input.skills] } : {}),
   };
 }
 

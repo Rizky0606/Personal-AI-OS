@@ -152,6 +152,45 @@ describe('chat per project', () => {
     );
   });
 
+  it('menu Skill: paket tampilan dan server tidak ditawarkan di chat umum; pilihan dikirim sekali lalu dikosongkan', async () => {
+    api.createConversation.mockResolvedValue({
+      id: CONV,
+      title: '',
+      surface: 'windows',
+      projectId: null,
+      spaceId: null,
+      pinned: false,
+      archivedAt: null,
+      createdAt: TS,
+      updatedAt: TS,
+    });
+    api.sendMessage.mockResolvedValue({
+      message: message({ author: 'user', text: 'x', runId: RUN_X }),
+      run: run({ id: RUN_X }),
+    });
+    const user = userEvent.setup();
+    await renderScreen(<ChatScreen />);
+
+    await user.click(
+      await screen.findByRole('button', { name: new RegExp(copy.chat.skills.chip) }),
+    );
+    expect(
+      screen.queryByRole('menuitemcheckbox', { name: copy.chat.skills.packs.frontend }),
+    ).toBeNull();
+    await user.click(
+      await screen.findByRole('menuitemcheckbox', { name: copy.chat.skills.packs.review }),
+    );
+    expect(useUiStore.getState().skillPacks).toEqual(['review']);
+    await user.keyboard('{Escape}');
+
+    await user.type(field(), 'cek ini{Enter}');
+    expect(api.sendMessage).toHaveBeenCalledWith(
+      CONV,
+      expect.objectContaining({ skills: ['code-review', 'security-basics'] }),
+    );
+    expect(useUiStore.getState().skillPacks).toEqual([]);
+  });
+
   it('chat umum membuat percakapan tanpa project', async () => {
     api.createConversation.mockResolvedValue({
       id: CONV,
