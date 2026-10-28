@@ -2,8 +2,6 @@ import type {
   Conversation,
   CreateConversationRequestSchema,
   Message,
-  RerouteRequestSchema,
-  RerouteResponseSchema,
   Run,
   SendMessageRequestSchema,
   UpdateConversationRequestSchema,
@@ -19,7 +17,7 @@ import type { FilesService } from '../files/service.js';
 import { describeDecision, type RoutingService } from '../router/service.js';
 import type { LaunchInput, Runner } from '../runs/runner.js';
 import { urlsIn } from './links.js';
-import { toConversationDto, toCorrectionDto, toMessageDto, toRunDto } from './dto.js';
+import { toConversationDto, toMessageDto, toRunDto } from './dto.js';
 import type { TitleService } from './title.js';
 
 export interface Page<T> {
@@ -61,11 +59,6 @@ export interface ChatService {
       context?: string;
     },
   ): Promise<{ message: Message; run: Run }>;
-  /** Mengganti role pesan terakhir, mencatat koreksi, dan menjalankan ulang dengan role baru. */
-  reroute(
-    messageId: string,
-    input: z.infer<typeof RerouteRequestSchema>,
-  ): Promise<z.infer<typeof RerouteResponseSchema>>;
   /**
    * Mengubah pesan pengguna: pesan itu dan semua sesudahnya dibuang, lalu teks baru dikirim. Agent memulai
    * sesi baru dengan riwayat yang tersisa, jadi bagian yang dibuang tidak lagi diingat.
@@ -213,27 +206,6 @@ export function createChatService(deps: {
     }
   }
 
-  /** Role pada giliran terakhir yang sudah diputuskan; dasar aturan "pesan lanjutan". */
-  async function previousRoleOf(conversationId: string): Promise<string | null> {
-    const [row] = await db
-      .select({ agentRole: runs.agentRole })
-      .from(runs)
-      .where(and(eq(runs.conversationId, conversationId), isNotNull(runs.agentRole)))
-      .orderBy(desc(runs.id))
-      .limit(1);
-    return row?.agentRole ?? null;
-  }
-
-  async function latestUserMessage(conversationId: string) {
-    const [row] = await db
-      .select()
-      .from(messages)
-      .where(and(eq(messages.conversationId, conversationId), eq(messages.author, 'user')))
-      .orderBy(desc(messages.id))
-      .limit(1);
-    return row;
-  }
-
   /**
    * Sesi Hermes untuk giliran berikutnya. Percakapan yang dipotong (edit/hapus pesan) tidak punya sesi:
    * dibuat sesi baru, dan riwayat yang tersisa (sebelum `beforeId`) dikirim karena sesi lama masih memuat
@@ -374,8 +346,8 @@ export function createChatService(deps: {
   }
 
   /**
-   * Fungsi yang dijalankan runner pada status `routing`: memutuskan role (router atau pilihan manual),
-   * menyimpannya ke routing_decisions, lalu menetapkan role pada run dan pesan asisten.
+   * Fungsi yang dijalankan runner pada status `routing`: menentukan agent dan skill dengan aturan tetap,
+   * menyimpannya ke routing_decisions, lalu menetapkan agent pada run dan pesan asisten.
    */
   function makeResolver(args: {
     conversation: typeof conversations.$inferSelect;
@@ -383,31 +355,30 @@ export function createChatService(deps: {
     userMessageId: string;
     assistantMessageId: string;
     prompt: string;
-    previousRole: string | null;
-    manualRole?: string;
+    skills?: readonly string[] | undefined;
+    skillsOff?: readonly string[] | undefined;
   }): LaunchInput['resolveRole'] {
-    return async (signal) => {
-      const result = await routing.route(
-        {
-          message: args.prompt,
-          surface: args.conversation.surface,
-          projectId: args.conversation.projectId,
-          conversationId: args.conversation.id,
-          beforeMessageId: args.userMessageId,
-          previousRole: args.previousRole,
-          ...(args.manualRole ? { manualRole: args.manualRole } : {}),
-        },
-        signal,
-      );
-      const { role, confidence } = result.decision;
+    return async () => {
+      const result = routing.route({
+        message: args.prompt,
+        surface: args.conversation.surface,
+        projectId: args.conversation.projectId,
+        ...(args.skills ? { skills: args.skills } : {}),
+        ...(args.skillsOff ? { skillsOff: args.skillsOff } : {}),
+      });
       await routing.record(args.userMessageId, result);
-      const engine = roles.get(role)?.engine === 'omp' ? 'omp' : 'hermes';
-      await db.update(runs).set({ agentRole: role, engine }).where(eq(runs.id, args.runId));
+      const engine = roles.get(result.agent)?.engine === 'omp' ? 'omp' : 'hermes';
+      await db.update(runs).set({ agentRole: result.agent, engine }).where(eq(runs.id, args.runId));
       await db
         .update(messages)
-        .set({ agentRole: role })
+        .set({ agentRole: result.agent })
         .where(eq(messages.id, args.assistantMessageId));
-      return { role, confidence, reason: describeDecision(result) };
+      return {
+        role: result.agent,
+        confidence: 1,
+        reason: describeDecision(result),
+        skills: result.skills,
+      };
     };
   }
 
@@ -520,16 +491,13 @@ export function createChatService(deps: {
         throw new AppError(409, 'conversation_archived', 'Percakapan sudah diarsipkan.');
       }
       const { parts, prompt, routingText, images } = await composeInput(input);
-      // Pilihan manual diperiksa sekarang (400) agar tidak baru gagal setelah run dimulai.
-      if (input.role) routing.assertRoleAllowed(input.role, conversation);
       await assertNoActiveRun(conversationId);
 
-      const previousRole = await previousRoleOf(conversationId);
       const { sessionId, history } = await sessionFor(conversation);
       const model = input.model ?? null;
 
       const { run, userMessage, assistantMessageId } = await db.transaction(async (tx) => {
-        // Role belum diketahui: router memutuskannya pada status `routing` di dalam run.
+        // Agent belum diketahui: ditentukan pada status `routing` di dalam run.
         const [runRow] = await tx
           .insert(runs)
           .values({
@@ -594,8 +562,8 @@ export function createChatService(deps: {
           userMessageId: userMessage.id,
           assistantMessageId,
           prompt: routingText,
-          previousRole,
-          ...(input.role ? { manualRole: input.role } : {}),
+          skills: input.skills,
+          skillsOff: input.skillsOff,
         }),
       });
 
@@ -608,135 +576,6 @@ export function createChatService(deps: {
       return { message: toMessageDto(userMessage), run: toRunDto(run) };
     },
 
-    async reroute(messageId, { role }) {
-      const [found] = await db.select().from(messages).where(eq(messages.id, messageId));
-      if (!found) throw new AppError(404, 'message_not_found', 'Pesan tidak ditemukan.');
-
-      // Klien biasanya memegang pesan asisten (chip role di atasnya); yang dikoreksi adalah pesan user yang dirutekan.
-      let userMessage = found.author === 'user' ? found : undefined;
-      if (found.author === 'assistant' && found.runId) {
-        [userMessage] = await db
-          .select()
-          .from(messages)
-          .where(
-            and(
-              eq(messages.conversationId, found.conversationId),
-              eq(messages.author, 'user'),
-              eq(messages.runId, found.runId),
-            ),
-          );
-        // Pesan asisten hasil reroute tidak punya pesan user dengan runId yang sama: pakai pesan user terakhir.
-        userMessage ??= await latestUserMessage(found.conversationId);
-      }
-      if (!userMessage) {
-        throw new AppError(
-          400,
-          'message_not_reroutable',
-          'Hanya pesan pengguna atau jawaban asisten yang bisa dirutekan ulang.',
-        );
-      }
-
-      const conversation = await getConversation(userMessage.conversationId);
-      if (conversation.archivedAt) {
-        throw new AppError(409, 'conversation_archived', 'Percakapan sudah diarsipkan.');
-      }
-      const latest = await latestUserMessage(conversation.id);
-      if (latest?.id !== userMessage.id) {
-        throw new AppError(
-          409,
-          'not_latest_message',
-          'Hanya pesan terakhir di percakapan yang bisa dirutekan ulang.',
-        );
-      }
-      routing.assertRoleAllowed(role, conversation);
-
-      const prompt = textOf(userMessage.parts);
-      let decision = await routing.latestDecision(userMessage.id);
-      const fromRole = decision?.role ?? (await previousRoleOf(conversation.id)) ?? 'general';
-      if (fromRole === role) {
-        throw new AppError(400, 'same_role', `Pesan ini sudah dijawab dengan role "${role}".`);
-      }
-
-      // Jawaban role lama yang masih berjalan dihentikan dulu; transkrip Hermes harus berurutan.
-      const [lastRun] = await db
-        .select({ id: runs.id })
-        .from(runs)
-        .where(eq(runs.conversationId, conversation.id))
-        .orderBy(desc(runs.id))
-        .limit(1);
-      if (lastRun && runner.isActive(lastRun.id)) await runner.cancel(lastRun.id);
-      await assertNoActiveRun(conversation.id);
-
-      // Koreksi merujuk keputusan router. Bila tidak pernah tercatat (run gagal sebelum routing), buat catatannya.
-      decision ??= await routing.record(userMessage.id, {
-        decision: {
-          role: fromRole,
-          confidence: 0,
-          reason: 'Keputusan awal tidak tercatat.',
-          needsSplit: false,
-          subtasks: [],
-        },
-        source: 'fallback',
-        attempts: 0,
-        latencyMs: 0,
-      });
-      const correction = await routing.addCorrection({
-        decisionId: decision.id,
-        fromRole,
-        toRole: role,
-        messageText: prompt,
-      });
-
-      const { sessionId, history } = await sessionFor(conversation, userMessage.id);
-      const { run, assistantMessageId } = await db.transaction(async (tx) => {
-        const [runRow] = await tx
-          .insert(runs)
-          .values({
-            kind: 'chat',
-            engine: 'hermes',
-            model: userMessage.model,
-            conversationId: conversation.id,
-          })
-          .returning();
-        const assistantMessageId = uuidv7();
-        await tx.insert(messages).values({
-          id: assistantMessageId,
-          conversationId: conversation.id,
-          author: 'assistant',
-          parts: [{ type: 'text', text: '' }],
-          model: userMessage.model,
-          runId: runRow!.id,
-        });
-        await tx
-          .update(conversations)
-          .set({ hermesSessionId: sessionId, updatedAt: new Date(now()) })
-          .where(eq(conversations.id, conversation.id));
-        return { run: runRow!, assistantMessageId };
-      });
-
-      runner.launch({
-        run,
-        conversationId: conversation.id,
-        assistantMessageId,
-        prompt: await agentPrompt(conversation, prompt, prompt),
-        sessionId,
-        ...(history.length ? { history } : {}),
-        projectHistory: projectHistoryFor(conversation.id, userMessage.id),
-        projectId: conversation.projectId,
-        resolveRole: makeResolver({
-          conversation,
-          runId: run.id,
-          userMessageId: userMessage.id,
-          assistantMessageId,
-          prompt,
-          previousRole: null,
-          manualRole: role,
-        }),
-      });
-
-      return { run: toRunDto(run), correction: toCorrectionDto(correction) };
-    },
-
     async editMessage(messageId, input) {
       const { message, conversation } = await editableMessage(messageId);
       if (message.author !== 'user') {
@@ -744,7 +583,6 @@ export function createChatService(deps: {
       }
       // Pesan baru diperiksa dulu agar percakapan tidak terpotong lalu gagal terkirim.
       await composeInput(input);
-      if (input.role) routing.assertRoleAllowed(input.role, conversation);
       await truncateFrom(message);
       return service.sendMessage(conversation.id, input);
     },

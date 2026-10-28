@@ -335,33 +335,6 @@ class ChatViewModelTest {
     }
 
     @Test
-    fun `ganti role memanggil reroute pada jawaban terakhir lalu mengikuti run baru`() = runVmTest { r ->
-        openC1(r)
-
-        r.vm.reroute("writer")
-        runCurrent()
-
-        assertEquals(listOf("m0a" to "writer"), r.repo.rerouteCalls)
-        assertEquals("r2", r.ui.live?.runId)
-        val conn = r.conn.also { it.open() }
-        runCurrent()
-        assertEquals(listOf("run:r2" to 0L), conn.subscribes())
-    }
-
-    @Test
-    fun `ganti role ditolak saat jawaban sedang mengalir`() = runVmTest { r ->
-        openC1(r)
-        type(r, "Halo")
-        r.conn.open()
-        runCurrent()
-
-        r.vm.reroute("writer")
-        runCurrent()
-
-        assertTrue(r.repo.rerouteCalls.isEmpty())
-    }
-
-    @Test
     fun `membuka percakapan dengan run yang masih berjalan melanjutkan streaming dari awal`() = runVmTest { r ->
         r.repo.put("c1", message("u1", "user", "tanya", "r9"), message("a1", AUTHOR_ASSISTANT, "", "r9", "general"))
         r.repo.runs["r9"] = run("r9", "running")

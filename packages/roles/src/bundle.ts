@@ -47,6 +47,8 @@ export interface Bundle {
 export interface BundleOptions {
   skillsBudget?: number;
   bundleBudget?: number;
+  /** Skill spesialis tambahan untuk permintaan ini (hasil `selectSkills`), setelah skill milik agent. */
+  extraSkills?: readonly string[];
 }
 
 /**
@@ -57,7 +59,11 @@ export interface BundleOptions {
 export function buildBundle(
   registry: RolesRegistry,
   roleId: string,
-  { skillsBudget = SKILLS_TOKEN_BUDGET, bundleBudget = BUNDLE_TOKEN_BUDGET }: BundleOptions = {},
+  {
+    skillsBudget = SKILLS_TOKEN_BUDGET,
+    bundleBudget = BUNDLE_TOKEN_BUDGET,
+    extraSkills = [],
+  }: BundleOptions = {},
 ): Bundle {
   const role = registry.roles.get(roleId);
   if (!role) throw new UnknownRoleError(roleId);
@@ -83,7 +89,7 @@ export function buildBundle(
     included.push(id);
     skillTokens += estimateTokens(text);
   }
-  for (const id of role.skills) {
+  for (const id of new Set([...role.skills, ...extraSkills])) {
     if ((CORE_SKILLS as readonly string[]).includes(id)) continue;
     const text = section(id);
     if (!text) continue;

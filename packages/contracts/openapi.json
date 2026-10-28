@@ -2465,81 +2465,6 @@
           "skills"
         ]
       },
-      "RouteDecision": {
-        "type": "object",
-        "properties": {
-          "role": {
-            "type": "string",
-            "pattern": "^[a-z][a-z0-9-]*$"
-          },
-          "confidence": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 1
-          },
-          "reason": {
-            "type": "string"
-          },
-          "needsSplit": {
-            "type": "boolean"
-          },
-          "subtasks": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "role": {
-                  "type": "string",
-                  "pattern": "^[a-z][a-z0-9-]*$"
-                },
-                "title": {
-                  "type": "string",
-                  "minLength": 1
-                }
-              },
-              "required": [
-                "role",
-                "title"
-              ]
-            }
-          }
-        },
-        "required": [
-          "role",
-          "confidence",
-          "reason",
-          "needsSplit",
-          "subtasks"
-        ]
-      },
-      "RoutePreviewRequest": {
-        "type": "object",
-        "properties": {
-          "message": {
-            "type": "string",
-            "minLength": 1
-          },
-          "surface": {
-            "type": "string",
-            "enum": [
-              "android",
-              "windows"
-            ]
-          },
-          "projectId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "previousRole": {
-            "type": "string",
-            "pattern": "^[a-z][a-z0-9-]*$"
-          }
-        },
-        "required": [
-          "message",
-          "surface"
-        ]
-      },
       "ConversationPage": {
         "type": "object",
         "properties": {
@@ -3050,9 +2975,21 @@
             },
             "minItems": 1
           },
-          "role": {
-            "type": "string",
-            "pattern": "^[a-z][a-z0-9-]*$"
+          "skills": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "maxItems": 12
+          },
+          "skillsOff": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "maxItems": 12
           },
           "model": {
             "type": "string",
@@ -3067,69 +3004,6 @@
         },
         "required": [
           "parts"
-        ]
-      },
-      "RerouteResponse": {
-        "type": "object",
-        "properties": {
-          "run": {
-            "$ref": "#/components/schemas/Run"
-          },
-          "correction": {
-            "$ref": "#/components/schemas/RoutingCorrection"
-          }
-        },
-        "required": [
-          "run",
-          "correction"
-        ]
-      },
-      "RoutingCorrection": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "decisionId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "fromRole": {
-            "type": "string",
-            "pattern": "^[a-z][a-z0-9-]*$"
-          },
-          "toRole": {
-            "type": "string",
-            "pattern": "^[a-z][a-z0-9-]*$"
-          },
-          "messageExcerpt": {
-            "type": "string"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "id",
-          "decisionId",
-          "fromRole",
-          "toRole",
-          "messageExcerpt",
-          "createdAt"
-        ]
-      },
-      "RerouteRequest": {
-        "type": "object",
-        "properties": {
-          "role": {
-            "type": "string",
-            "pattern": "^[a-z][a-z0-9-]*$"
-          }
-        },
-        "required": [
-          "role"
         ]
       },
       "FleetResponse": {
@@ -5835,91 +5709,6 @@
         }
       }
     },
-    "/route/preview": {
-      "post": {
-        "operationId": "previewRoute",
-        "tags": [
-          "Role"
-        ],
-        "summary": "Uji router tanpa menjalankan agent",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RoutePreviewRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Keputusan router",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RouteDecision"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Permintaan tidak valid",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Belum login atau token tidak berlaku",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Token tidak punya scope yang dibutuhkan",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Tidak ditemukan",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Terlalu banyak permintaan",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/conversations": {
       "get": {
         "operationId": "listConversations",
@@ -6632,112 +6421,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SendMessageResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Permintaan tidak valid",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Belum login atau token tidak berlaku",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Token tidak punya scope yang dibutuhkan",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Tidak ditemukan",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Konflik dengan status saat ini",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Terlalu banyak permintaan",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/messages/{id}/reroute": {
-      "post": {
-        "operationId": "rerouteMessage",
-        "tags": [
-          "Pesan"
-        ],
-        "summary": "Ganti role lalu jalankan ulang, dicatat sebagai koreksi",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "required": true,
-            "name": "id",
-            "in": "path"
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RerouteRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Run baru dan koreksi",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RerouteResponse"
                 }
               }
             }

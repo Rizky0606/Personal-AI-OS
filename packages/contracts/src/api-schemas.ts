@@ -17,7 +17,6 @@ import {
   ResearchDepthSchema,
   ResearchJobSchema,
   ResearchSourceSchema,
-  RoutingCorrectionSchema,
   RunKindSchema,
   RunSchema,
   ScheduleNotifySchema,
@@ -197,39 +196,6 @@ export const RoleInfoSchema = z
   .meta({ id: 'RoleInfo' });
 export const RoleListSchema = itemsOf(RoleInfoSchema).meta({ id: 'RoleList' });
 
-const SubtaskSchema = z.object({ role: RoleIdSchema, title: z.string().min(1) });
-
-export const RoutePreviewRequestSchema = z
-  .object({
-    message: z.string().min(1),
-    surface: SurfaceSchema,
-    projectId: IdSchema.optional(),
-    previousRole: RoleIdSchema.optional(),
-  })
-  .meta({ id: 'RoutePreviewRequest' });
-
-export const RouteDecisionSchema = z
-  .object({
-    role: RoleIdSchema,
-    confidence: z.number().min(0).max(1),
-    reason: z.string(),
-    needsSplit: z.boolean(),
-    subtasks: z.array(SubtaskSchema),
-  })
-  .meta({ id: 'RouteDecision' });
-
-/** Keluaran JSON model router (ROLES_AND_SKILLS.md), divalidasi di gateway. Snake case sesuai prompt router. */
-export const RouterOutputSchema = z
-  .object({
-    role: RoleIdSchema,
-    confidence: z.number().min(0).max(1),
-    reason: z.string(),
-    needs_split: z.boolean(),
-    subtasks: z.array(SubtaskSchema),
-  })
-  .meta({ id: 'RouterOutput' });
-export type RouterOutput = z.infer<typeof RouterOutputSchema>;
-
 /* Percakapan dan pesan */
 
 export const ListConversationsQuerySchema = z.object({
@@ -265,8 +231,10 @@ export const UpdateConversationRequestSchema = z
 export const SendMessageRequestSchema = z
   .object({
     parts: z.array(MessagePartInputSchema).min(1),
-    /** Memilih role manual; tanpa ini router yang memutuskan. */
-    role: RoleIdSchema.optional(),
+    /** Skill spesialis tambahan untuk pesan ini; menang atas pemilihan otomatis dari kata kunci. */
+    skills: z.array(z.string().min(1)).max(12).optional(),
+    /** Skill yang dicabut untuk pesan ini, walau cocok dengan kata kunci. */
+    skillsOff: z.array(z.string().min(1)).max(12).optional(),
     model: z.string().min(1).optional(),
     /** Run coding hanya membaca dan menulis rencana; izin menulis dan menjalankan perintah ditolak. */
     planOnly: z.boolean().optional(),
@@ -311,12 +279,6 @@ export const SendMessageResponseSchema = z
 export const HandoffRequestSchema = z
   .object({ model: z.string().min(1) })
   .meta({ id: 'HandoffRequest' });
-
-export const RerouteRequestSchema = z.object({ role: RoleIdSchema }).meta({ id: 'RerouteRequest' });
-
-export const RerouteResponseSchema = z
-  .object({ run: RunSchema, correction: RoutingCorrectionSchema })
-  .meta({ id: 'RerouteResponse' });
 
 /* Run */
 

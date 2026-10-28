@@ -172,12 +172,6 @@ data class SendMessageRequest(
 data class SendMessageResponse(val message: Message, val run: Run)
 
 @Serializable
-data class RerouteRequest(val role: String)
-
-@Serializable
-data class RerouteResponse(val run: Run)
-
-@Serializable
 data class ModelInfo(
     val id: String,
     val label: String,

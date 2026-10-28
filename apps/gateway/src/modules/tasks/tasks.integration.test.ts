@@ -222,9 +222,9 @@ describe('kartu kanban: papan dan urutan', () => {
     expect(general.statusCode).toBe(400);
     expect(ProblemSchema.parse(general.json()).code).toBe('role_not_coding');
     const okRole = TaskSchema.parse(
-      (await patch(`/tasks/${a.id}`, { agentRole: 'frontend' })).json(),
+      (await patch(`/tasks/${a.id}`, { agentRole: 'project' })).json(),
     );
-    expect(okRole.agentRole).toBe('frontend');
+    expect(okRole.agentRole).toBe('project');
 
     const missing = '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f';
     expect((await env.get(`/projects/${missing}/tasks`, desktop)).statusCode).toBe(404);
@@ -254,13 +254,13 @@ describe('Kerjakan dengan AI', () => {
     const running = await runTask(card.id);
     expect(running.status).toBe('running');
     expect(running.runId).not.toBeNull();
-    // Role belum dipilih dan router tidak terjangkau di tes: role coding bawaan terisi dan tampil di chip.
-    expect(running.agentRole).toBe('backend');
+    // Role belum dipilih: agent project terisi dan tampil di chip.
+    expect(running.agentRole).toBe('project');
 
     const runId = await started(fake, projectId, card.id);
     const start = fake.starts().find((c) => c.runId === runId)!;
     expect(start.prompt).toBe('Tambah tombol\n\nDi header.\n\n- rata kanan');
-    expect(start.bundle.role).toBe('backend');
+    expect(start.bundle.role).toBe('project');
     const [run] = await env.database.handle.db.select().from(runs).where(eq(runs.id, runId));
     expect(run).toMatchObject({ taskId: card.id, kind: 'coding', engine: 'omp' });
 
@@ -297,12 +297,12 @@ describe('Kerjakan dengan AI', () => {
     expect((await env.post(`/tasks/${done.id}/run`, {}, desktop)).statusCode).toBe(409);
   });
 
-  it('role yang dipilih pada kartu dipakai apa adanya', async () => {
+  it('role kartu yang tersimpan dipakai apa adanya', async () => {
     const { fake, projectId } = await setup('Role Kartu');
-    const card = await create(projectId, 'Ubah gaya', { agentRole: 'frontend' });
+    const card = await create(projectId, 'Ubah gaya', { agentRole: 'project' });
     await runTask(card.id);
     const runId = await started(fake, projectId, card.id);
-    expect(fake.starts().find((c) => c.runId === runId)?.bundle.role).toBe('frontend');
+    expect(fake.starts().find((c) => c.runId === runId)?.bundle.role).toBe('project');
   });
 
   it('run gagal atau dibatalkan mengembalikan kartu ke Todo dan mengirim notifikasi error', async () => {
@@ -348,7 +348,7 @@ describe('Kerjakan dengan AI', () => {
 
   it('tolak dengan komentar: kartu tetap Running dengan run revisi, lalu kembali ke Review', async () => {
     const { fake, projectId } = await setup('Revisi');
-    const card = await create(projectId, 'Perlu revisi', { agentRole: 'frontend' });
+    const card = await create(projectId, 'Perlu revisi', { agentRole: 'project' });
     await runTask(card.id);
     const first = await started(fake, projectId, card.id);
     await finish(fake, first);
@@ -378,7 +378,7 @@ describe('Kerjakan dengan AI', () => {
 
   it('tolak tanpa komentar mengembalikan kartu ke Todo', async () => {
     const { fake, projectId } = await setup('Tolak');
-    const card = await create(projectId, 'Akan ditolak', { agentRole: 'backend' });
+    const card = await create(projectId, 'Akan ditolak', { agentRole: 'project' });
     await runTask(card.id);
     const runId = await started(fake, projectId, card.id);
     await finish(fake, runId);
@@ -394,7 +394,7 @@ describe('Kerjakan dengan AI', () => {
 describe('start ulang gateway', () => {
   it('kartu yang tertinggal di Running disamakan dengan status run-nya', async () => {
     const { fake, projectId } = await setup('Restart');
-    const card = await create(projectId, 'Tertinggal', { agentRole: 'backend' });
+    const card = await create(projectId, 'Tertinggal', { agentRole: 'project' });
     await runTask(card.id);
     const runId = await started(fake, projectId, card.id);
     await finish(fake, runId);
@@ -418,9 +418,9 @@ describe('start ulang gateway', () => {
 describe('batas run paralel', () => {
   it('dua kartu berjalan paralel; yang ketiga mengantre lalu dimulai saat ada slot', async () => {
     const { fake, projectId } = await setup('Paralel');
-    const a = await create(projectId, 'Kartu A', { agentRole: 'frontend' });
-    const b = await create(projectId, 'Kartu B', { agentRole: 'backend' });
-    const c = await create(projectId, 'Kartu C', { agentRole: 'backend' });
+    const a = await create(projectId, 'Kartu A', { agentRole: 'project' });
+    const b = await create(projectId, 'Kartu B', { agentRole: 'project' });
+    const c = await create(projectId, 'Kartu C', { agentRole: 'project' });
 
     const ra = await runTask(a.id);
     const rb = await runTask(b.id);
@@ -465,9 +465,9 @@ describe('batas run paralel', () => {
 
   it('kartu antrean boleh dipindah keluar dari Running (batal menunggu)', async () => {
     const { fake, projectId } = await setup('Batal Antre');
-    const one = await create(projectId, 'Satu', { agentRole: 'backend' });
-    const two = await create(projectId, 'Dua', { agentRole: 'backend' });
-    const three = await create(projectId, 'Tiga', { agentRole: 'backend' });
+    const one = await create(projectId, 'Satu', { agentRole: 'project' });
+    const two = await create(projectId, 'Dua', { agentRole: 'project' });
+    const three = await create(projectId, 'Tiga', { agentRole: 'project' });
     await runTask(one.id);
     await runTask(two.id);
     const queued = await runTask(three.id);
@@ -484,9 +484,9 @@ describe('batas run paralel', () => {
     const first = await setup('Project Satu');
     const second = await setup('Project Dua');
     const cards = [
-      await create(first.projectId, 'P1-A', { agentRole: 'backend' }),
-      await create(first.projectId, 'P1-B', { agentRole: 'backend' }),
-      await create(second.projectId, 'P2-A', { agentRole: 'backend' }),
+      await create(first.projectId, 'P1-A', { agentRole: 'project' }),
+      await create(first.projectId, 'P1-B', { agentRole: 'project' }),
+      await create(second.projectId, 'P2-A', { agentRole: 'project' }),
     ];
     for (const card of cards) expect((await runTask(card.id)).runId).not.toBeNull();
   });

@@ -12,8 +12,7 @@
     "lint": "eslint . && prettier --check .",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
-    "format": "prettier --write .",
-    "eval:routing": "pnpm --filter @aios/roles eval:routing"
+    "format": "prettier --write ."
   },
   "devDependencies": {
     "@aios/config": "workspace:*",

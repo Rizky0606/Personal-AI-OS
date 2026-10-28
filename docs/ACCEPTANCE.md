@@ -15,7 +15,7 @@ Sebuah tahap dianggap selesai hanya bila semua kotaknya tercentang. Checklist in
 
 - [ ] Chat streaming tidak kehilangan event setelah koneksi diputus
 - [ ] 7 role valid dan bundel tiap role di bawah anggaran token
-- [ ] `pnpm eval:routing` minimal 90% _(belum: butuh 9Router dengan model nyata)_
+- [x] Router model dihapus (Fase 48): agent dipilih dari ada tidaknya project, skill dari kata kunci; tidak ada eval routing
 - [ ] Laporan riset punya rujukan di setiap paragraf faktual
 - [ ] Jadwal berjalan tepat waktu dan tidak dobel; notifikasi uji sampai ke HP _(belum: notifikasi butuh Firebase dan perangkat nyata)_
 
@@ -50,7 +50,7 @@ Sebuah tahap dianggap selesai hanya bila semua kotaknya tercentang. Checklist in
 | --- | --- | --- |
 | Protokol omp atau Hermes berubah saat update | Adapter rusak | Versi dikunci, tes adapter dengan transkrip nyata, upgrade satu per satu |
 | omp tidak bisa menerima role tanpa menulis file | Worktree kotor | Fallback pesan sistem pertama; verifikasi di Fase 0 |
-| Router salah pilih role | Jawaban melenceng | Chip koreksi, koreksi masuk prompt router, eval 90% |
+| Skill spesialis tidak termuat | Jawaban kurang tajam | Pola kata kunci lebar; pengguna menambah skill lewat `skills[]` |
 | RAM VPS 12 GB penuh saat riset mendalam + banyak run | Layanan lambat | Batas paralelisme job, Chromium hanya saat perlu, swap, tes beban di Fase 23 |
 | Kuota provider habis | Run gagal | Combo fallback di 9Router, dasbor kuota, error yang jelas |
 | Agent menjalankan perintah berbahaya | Kerusakan data PC | Worktree, daftar folder, approval wajib, batas waktu run |

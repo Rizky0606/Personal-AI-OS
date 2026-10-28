@@ -128,7 +128,6 @@ class FakeChatRepo : ChatRepository {
     )
 
     val sendCalls = mutableListOf<Triple<String, String, String?>>()
-    val rerouteCalls = mutableListOf<Pair<String, String>>()
     val cancelCalls = mutableListOf<String>()
     var refreshCalls = 0
     var createCalls = 0
@@ -249,12 +248,6 @@ class FakeChatRepo : ChatRepository {
         val list = stored.value[conversationId].orEmpty()
         val index = list.indexOfFirst { it.id == fromId }
         if (index >= 0) stored.value = stored.value + (conversationId to list.take(index))
-    }
-
-    override suspend fun reroute(messageId: String, role: String): Run {
-        rerouteCalls += messageId to role
-        runs["r2"] = run("r2", "queued")
-        return runs.getValue("r2")
     }
 
     override suspend fun run(id: String): Run = runs[id] ?: throw IOException("run tidak ada")

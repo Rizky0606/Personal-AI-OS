@@ -212,20 +212,6 @@ export function useChatController(conversationId: string | undefined) {
   const lastAssistant = [...messages].reverse().find((m) => m.author === 'assistant');
   const lastUser = [...messages].reverse().find((m) => m.author === 'user');
 
-  const reroute = useCallback(
-    async (nextRole: string) => {
-      if (!lastAssistant || streaming) return;
-      try {
-        const response = await api.rerouteMessage(lastAssistant.id, nextRole);
-        runs.track(response.run.id);
-        setActiveRunId(response.run.id);
-      } catch (error) {
-        fail(error, `${copy.chat.rerouteFailed} ${apiErrorMessage(error, online)}`);
-      }
-    },
-    [lastAssistant, streaming, fail, online],
-  );
-
   /** Keputusan atas permintaan izin agent; status run berubah lewat event, bukan dari sini. */
   const resolveApproval = useCallback(
     async (approvalId: string, decision: 'allow' | 'deny', remember: boolean) => {
@@ -378,7 +364,6 @@ export function useChatController(conversationId: string | undefined) {
     /** Mengirim teks tertentu (saran lanjutan) tanpa menyentuh draf. */
     sendText: (text: string) => void send(text),
     stop: () => void stop(),
-    reroute: (nextRole: string) => void reroute(nextRole),
     editLast,
     resendLast,
     canEditLast: lastUser !== undefined && !sending && !streaming,

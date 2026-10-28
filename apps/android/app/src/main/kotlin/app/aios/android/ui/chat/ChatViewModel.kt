@@ -397,23 +397,6 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    /** Mengganti role jawaban terakhir lalu menjalankan ulang. Server hanya menerima untuk pesan terakhir. */
-    fun reroute(role: String) {
-        val message = state.value.lastAssistantMessage ?: return
-        if (state.value.busy) return
-        viewModelScope.launch {
-            try {
-                val run = repo.reroute(message.id, role)
-                state.update { it.copy(runError = null) }
-                observeRun(run.id)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                notices.trySend(ChatEvent.Notice(e.toApiError(connectivity.isConnected()).messageRes))
-            }
-        }
-    }
-
     fun loadOlder() {
         val id = state.value.conversationId ?: return
         if (!state.value.hasMore || state.value.loadingOlder) return

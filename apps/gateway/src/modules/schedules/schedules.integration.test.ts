@@ -185,7 +185,7 @@ describe('CRUD jadwal', () => {
     ['zona salah', { timezone: 'WIB' }, 'invalid_timezone'],
     ['role tanpa nama', { target: 'role' }, 'agent_role_required'],
     ['role tidak ada', { target: 'role', agentRole: 'tukang-sulap' }, 'unknown_role'],
-    ['role coding', { target: 'role', agentRole: 'frontend' }, 'role_not_schedulable'],
+    ['role coding', { target: 'role', agentRole: 'project' }, 'role_not_schedulable'],
   ])('menolak %s dengan 400 dan tidak menyimpan apa pun', async (_n, extra, code) => {
     const res = await env.post('/schedules', body(extra), token);
     expect([res.statusCode, problem(res).code]).toEqual([400, code]);
@@ -243,7 +243,7 @@ describe('CRUD jadwal', () => {
 
 describe('run-now: hasil tersimpan sebagai pesan dan notifikasi dikirim', () => {
   it('target chat: run Hermes dengan role, pesan user+assistant di percakapan jadwal, riwayat succeeded, push judul+ID', async () => {
-    const s = await create({ agentRole: 'writer', target: 'role' });
+    const s = await create({ agentRole: 'general', target: 'role' });
     const res = await env.post(`/schedules/${s.id}/run-now`, {}, token);
     expect(res.statusCode, res.body).toBe(201);
     const run = RunSchema.parse(res.json());
@@ -257,7 +257,7 @@ describe('run-now: hasil tersimpan sebagai pesan dan notifikasi dikirim', () => 
     const msgs = await conversationMessages(s.conversationId!);
     expect(msgs.map((m) => [m.author, m.agentRole])).toEqual([
       ['user', null],
-      ['assistant', 'writer'],
+      ['assistant', 'general'],
     ]);
     expect(msgs[0]!.parts).toEqual([{ type: 'text', text: 'Ringkas agenda hari ini.' }]);
     expect(msgs[1]!.parts).toEqual([{ type: 'text', text: 'Ringkasan hari ini.' }]);
@@ -313,7 +313,7 @@ describe('run-now: hasil tersimpan sebagai pesan dan notifikasi dikirim', () => 
     const s = await create();
     await db()
       .update(schedules)
-      .set({ target: 'role', agentRole: 'frontend' })
+      .set({ target: 'role', agentRole: 'project' })
       .where(eq(schedules.id, s.id));
     const res = await env.post(`/schedules/${s.id}/run-now`, {}, token);
     expect([res.statusCode, problem(res).code]).toEqual([400, 'role_not_schedulable']);

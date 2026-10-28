@@ -16,14 +16,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import app.aios.android.R
 import app.aios.android.data.api.ModelInfo
-import app.aios.android.data.api.RoleInfo
 import app.aios.android.ui.components.AiosIcon
 import app.aios.android.ui.components.AiosListItem
 import app.aios.android.ui.theme.AiosTheme
 import app.aios.ui.tokens.Tokens
-
-/** Role yang bisa dijalankan dari ponsel: bukan role coding (engine omp butuh worker Windows). */
-fun selectableRoles(roles: List<RoleInfo>): List<RoleInfo> = roles.filter { it.engine != "omp" }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,24 +37,6 @@ fun ModelSheet(models: List<ModelInfo>, selected: String?, onSelect: (String?) -
             }
             items(models, key = { it.id }) { model ->
                 PickRow(model.label, model.id.takeIf { it != model.label }, selected == model.id) { onSelect(model.id) }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun RoleSheet(roles: List<RoleInfo>, current: String?, onSelect: (String) -> Unit, onDismiss: () -> Unit) {
-    SheetFrame(title = stringResource(R.string.chat_role_picker_title), onDismiss = onDismiss) {
-        Text(
-            text = stringResource(R.string.chat_role_picker_hint),
-            style = AiosTheme.type.meta,
-            color = AiosTheme.colors.text2,
-            modifier = Modifier.padding(horizontal = Tokens.Space.s16, vertical = Tokens.Space.s8)
-        )
-        LazyColumn {
-            items(selectableRoles(roles), key = { it.id }) { role ->
-                PickRow(role.name, role.model.ifBlank { null }, role.id == current) { onSelect(role.id) }
             }
         }
     }

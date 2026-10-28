@@ -37,28 +37,22 @@ describe('GET /roles', () => {
     expect((await env.get('/roles', worker)).statusCode).toBe(403);
   });
 
-  it('mengembalikan 7 role awal berurutan sesuai kontrak, dengan skill inti di depan', async () => {
+  it('mengembalikan agent tetap berurutan sesuai kontrak, dengan skill inti di depan', async () => {
     const res = await env.get('/roles', token);
     expect(res.statusCode).toBe(200);
     const { items } = RoleListSchema.parse(res.json());
     expect(items.map((r) => r.id)).toEqual([...INITIAL_ROLE_IDS]);
 
-    const frontend = items.find((r) => r.id === 'frontend')!;
-    expect(frontend).toMatchObject({
-      name: 'Frontend',
+    const project = items.find((r) => r.id === 'project')!;
+    expect(project).toMatchObject({
+      name: 'Project',
       group: 'coding',
       engine: 'omp',
       model: 'coding-main',
       fallbackModel: 'coding-cheap',
       approval: 'ask',
     });
-    expect(frontend.skills).toEqual([
-      ...CORE_SKILLS,
-      'ui-baseline',
-      'a11y-check',
-      'ui-states',
-      'react-practices',
-    ]);
+    expect(project.skills).toEqual([...CORE_SKILLS]);
     // Isi prompt tidak ikut ke klien.
     expect(JSON.stringify(items)).not.toContain('Definition of done');
   });
@@ -162,7 +156,7 @@ describe('memuat dan hot-reload', () => {
       expect(await until(() => errors.length > 0)).toBe(true);
       expect(JSON.stringify(errors[0])).toContain('roles/general.md');
       expect(roles.bundle('general').systemPrompt).toContain('CATATAN-BARU');
-      expect(roles.list().map((r) => r.id)).toHaveLength(7);
+      expect(roles.list().map((r) => r.id)).toHaveLength(INITIAL_ROLE_IDS.length);
 
       // Diperbaiki: pulih sendiri.
       const reloads = info.length;

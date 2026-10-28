@@ -54,7 +54,6 @@ export const api: FakeApi = {
   uploadFile: fn<'uploadFile'>(),
   forkConversation: fn<'forkConversation'>(),
   getConversation: fn<'getConversation'>(),
-  rerouteMessage: fn<'rerouteMessage'>(),
   editMessage: fn<'editMessage'>(),
   deleteMessage: fn<'deleteMessage'>(),
   getRun: fn<'getRun'>(),

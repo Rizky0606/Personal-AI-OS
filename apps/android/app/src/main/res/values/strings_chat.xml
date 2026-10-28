@@ -47,7 +47,6 @@
     <string name="chat_reasoning">Penalaran</string>
     <string name="chat_expand">Buka</string>
     <string name="chat_collapse">Tutup</string>
-    <string name="chat_role_label">Role %1$s. Ketuk untuk memilih role lain.</string>
     <string name="chat_edit_last">Edit</string>
     <string name="chat_resend_last">Kirim ulang</string>
     <string name="chat_message_menu">Menu pesan</string>
@@ -97,7 +96,5 @@
     <string name="chat_model_picker_title">Model</string>
     <string name="chat_model_picker_auto_hint">Otomatis memakai model bawaan role yang dipilih router.</string>
     <string name="chat_model_label">Model: %1$s. Ketuk untuk mengganti.</string>
-    <string name="chat_role_picker_title">Ganti role</string>
-    <string name="chat_role_picker_hint">Jawaban dibuat ulang dengan role ini. Hanya jawaban terakhir yang bisa diganti.</string>
     <string name="chat_error_offline_send">Sedang offline. Pesan belum terkirim; sambungkan internet lalu kirim lagi.</string>
 </resources>

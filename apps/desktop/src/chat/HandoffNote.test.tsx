@@ -22,12 +22,10 @@ const list = (messages: ReturnType<typeof message>[]) => (
     approvals={[]}
     resolvingApprovals={new Set()}
     onResolveApproval={() => undefined}
-    onReroute={() => undefined}
     onResendLast={() => undefined}
     hasMore={false}
     loadingOlder={false}
     onLoadOlder={() => undefined}
-    rerunnableId={null}
     editableUserId={null}
   />
 );

@@ -113,7 +113,7 @@ async function setup(name: string, { connect = true } = {}) {
 async function startRun(conversationId: string, text = 'tambahkan tes untuk fungsi add') {
   const res = await env.post(
     `/conversations/${conversationId}/messages`,
-    { parts: [{ type: 'text', text }], role: 'frontend' },
+    { parts: [{ type: 'text', text }] },
     desktop,
   );
   expect(res.statusCode, res.body).toBe(201);
@@ -124,6 +124,26 @@ const getRun = async (id: string) =>
   RunSchema.parse((await env.get(`/runs/${id}`, desktop)).json());
 const statusOf = async (id: string) => (await getRun(id)).status;
 const problem = (res: { json(): unknown }) => ProblemSchema.parse(res.json());
+
+describe('skill di run coding', () => {
+  it('skill spesialis dipilih dari kata kunci dan masuk ke bundel yang dikirim ke worker', async () => {
+    const { fake, conversationId } = await setup('Worker Skill');
+    const run = await startRun(
+      conversationId,
+      'ubah komponen tombol checkout dan perbaiki error-nya',
+    );
+
+    await until(() => fake.command('run.start') !== undefined, 'run.start di worker');
+    const { systemPrompt } = fake.command('run.start')!.bundle;
+    expect(systemPrompt).toContain('## ui-baseline');
+    expect(systemPrompt).toContain('## diagnosing-bugs');
+    expect(systemPrompt).not.toContain('## api-design');
+    const reason = (await env.get(`/runs/${run.id}/events`, desktop)).body;
+    expect(reason).toContain('Agent project dengan skill');
+    fake.emit(run.id, { type: 'run.completed', summary: 's' });
+    await until(async () => (await statusOf(run.id)) !== 'running', 'run selesai');
+  });
+});
 
 describe('run coding lewat worker', () => {
   it('alur lengkap: run.start ke worker, minta izin, izinkan, selesai di needs_review dengan branch kerja', async () => {
@@ -136,10 +156,10 @@ describe('run coding lewat worker', () => {
       runId: run.id,
       projectId: project.id,
       prompt: 'tambahkan tes untuk fungsi add',
-      bundle: { role: 'frontend' },
+      bundle: { role: 'project' },
     });
     expect(start.bundle.systemPrompt).toContain('Aturan perilaku agent');
-    expect(start.bundle.systemPrompt).toContain('frontend');
+    expect(start.bundle.systemPrompt).toContain('Project');
     // Run coding menulis berkas di folder project di PC: tanpa aturan berkas server.
     expect(start.bundle.systemPrompt).not.toContain('# Berkas untuk pemilik');
 
@@ -290,7 +310,7 @@ describe('run coding lewat worker', () => {
     const { fake, conversationId } = await setup('Worker Rencana');
     const res = await env.post(
       `/conversations/${conversationId}/messages`,
-      { parts: [{ type: 'text', text: 'rencanakan dark mode' }], role: 'frontend', planOnly: true },
+      { parts: [{ type: 'text', text: 'rencanakan dark mode' }], planOnly: true },
       desktop,
     );
     expect(res.statusCode, res.body).toBe(201);
@@ -324,7 +344,7 @@ describe('run coding lewat worker', () => {
 
     const res = await env.post(
       `/conversations/${conversationId}/messages`,
-      { parts: [{ type: 'text', text: 'lanjut ke fitur yang tadi' }], role: 'frontend' },
+      { parts: [{ type: 'text', text: 'lanjut ke fitur yang tadi' }] },
       desktop,
     );
     expect(res.statusCode, res.body).toBe(201);

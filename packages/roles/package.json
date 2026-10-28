@@ -5,8 +5,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run --passWithNoTests",
-    "eval:routing": "tsc -p tsconfig.build.json && node dist/eval/cli.js"
+    "test": "vitest run --passWithNoTests"
   },
   "devDependencies": {
     "@aios/config": "workspace:*",

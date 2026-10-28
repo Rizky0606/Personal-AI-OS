@@ -10,7 +10,6 @@ import app.aios.android.data.api.InputPart
 import app.aios.android.data.api.Message
 import app.aios.android.data.api.MessagePart
 import app.aios.android.data.api.ModelInfo
-import app.aios.android.data.api.RerouteRequest
 import app.aios.android.data.api.RoleInfo
 import app.aios.android.data.api.Run
 import app.aios.android.data.api.SURFACE_ANDROID
@@ -84,8 +83,6 @@ interface ChatRepository {
 
     /** Menghapus pesan beserta semua pesan sesudahnya. */
     suspend fun deleteMessage(conversationId: String, messageId: String)
-
-    suspend fun reroute(messageId: String, role: String): Run
 
     suspend fun run(id: String): Run
 
@@ -216,9 +213,6 @@ class RoomChatRepository(
         if (!response.isSuccessful) throw HttpException(response)
         dao.deleteMessagesFrom(conversationId, messageId)
     }
-
-    override suspend fun reroute(messageId: String, role: String): Run =
-        api.reroute(messageId, RerouteRequest(role)).run
 
     override suspend fun run(id: String): Run = api.getRun(id)
 

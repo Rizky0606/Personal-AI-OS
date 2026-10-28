@@ -7,7 +7,6 @@ import {
   ListConversationsQuerySchema,
   ListRunsQuerySchema,
   PageQuerySchema,
-  RerouteRequestSchema,
   ReviewRequestSchema,
   RunEventsQuerySchema,
   SendMessageRequestSchema,
@@ -69,17 +68,6 @@ export const chatRoutes: FastifyPluginCallback<{ chat: ChatService; runs: RunsSe
         await chat.sendMessage(
           IdParamsSchema.parse(req.params).id,
           SendMessageRequestSchema.parse(req.body),
-        ),
-      ),
-  );
-
-  app.post('/messages/:id/reroute', guard, async (req, reply) =>
-    reply
-      .code(201)
-      .send(
-        await chat.reroute(
-          IdParamsSchema.parse(req.params).id,
-          RerouteRequestSchema.parse(req.body),
         ),
       ),
   );

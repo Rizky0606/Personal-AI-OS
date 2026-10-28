@@ -21,9 +21,6 @@ export interface MessageListProps {
   live: LiveRun | undefined;
   /** Pesan kegagalan run terakhir, bila ada. */
   failure: string | null;
-  /** Jawaban asisten terakhir: satu-satunya yang chip rolenya bisa diganti. */
-  rerunnableId: string | null;
-  onReroute: (role: string) => void;
   /** Pesan pengguna terakhir yang boleh dikirim ulang (null saat jawaban berjalan). */
   editableUserId?: string | null;
   onResendLast?: () => void;
@@ -82,8 +79,6 @@ export function MessageList({
   pending,
   live,
   failure,
-  rerunnableId,
-  onReroute,
   editableUserId = null,
   onResendLast,
   canModify = false,
@@ -168,7 +163,6 @@ export function MessageList({
               role={message.agentRole}
               model={message.model}
               roles={roles}
-              onChangeRole={message.id === rerunnableId ? onReroute : undefined}
               onDelete={modifiable ? () => setToDelete(message.id) : undefined}
               onFork={canModify && onForkMessage ? () => onForkMessage(message.id) : undefined}
               onSuggest={message.id === lastAssistantId ? onSuggest : undefined}

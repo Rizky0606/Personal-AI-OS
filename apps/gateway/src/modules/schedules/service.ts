@@ -406,7 +406,7 @@ export function createScheduleService(deps: ScheduleServiceDeps): ScheduleServic
         const { context, compare } = await contextFor(row, conversationId);
         const { run } = await deps.chat.sendMessage(
           conversationId,
-          { parts: [{ type: 'text', text: row.prompt }], role },
+          { parts: [{ type: 'text', text: row.prompt }] },
           context ? { context } : undefined,
         );
         await db

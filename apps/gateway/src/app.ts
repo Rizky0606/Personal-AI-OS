@@ -24,8 +24,6 @@ import type { ModelsService } from './modules/llm/models.js';
 import { LLM_PREFIX, llmProxyRoutes } from './modules/llm/proxy.js';
 import { catalogRoutes } from './modules/llm/routes.js';
 import type { QuotaService, UsageRecorder } from './modules/llm/usage.js';
-import { routerRoutes } from './modules/router/routes.js';
-import type { RoutingService } from './modules/router/service.js';
 import { projectRoutes } from './modules/projects/routes.js';
 import type { ProjectsService } from './modules/projects/service.js';
 import { taskRoutes } from './modules/tasks/routes.js';
@@ -87,7 +85,6 @@ export interface AppDeps {
   files: FilesService;
   runs: RunsService;
   roles: RolesService;
-  routing: RoutingService;
   research: ResearchService;
   schedules: ScheduleService;
   projects: ProjectsService;
@@ -121,7 +118,6 @@ export function buildApp({
   files,
   runs,
   roles,
-  routing,
   research,
   schedules,
   projects,
@@ -209,7 +205,6 @@ export function buildApp({
         await protectedScope.register(chatRoutes, { chat, runs });
         await protectedScope.register(fileRoutes, { files });
         await protectedScope.register(roleRoutes, { roles });
-        await protectedScope.register(routerRoutes, { routing });
         await protectedScope.register(researchRoutes, { research });
         await protectedScope.register(scheduleRoutes, { schedules });
         await protectedScope.register(projectRoutes, { projects });

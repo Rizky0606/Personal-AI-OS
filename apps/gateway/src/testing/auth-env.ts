@@ -24,7 +24,6 @@ import { createModelsService } from '../modules/llm/models.js';
 import { createQuotaService, createUsageRecorder } from '../modules/llm/usage.js';
 import { createRouterComplete } from '../modules/router/complete.js';
 import { createRoutingService } from '../modules/router/service.js';
-import { type RoutingService } from '../modules/router/service.js';
 import { PgBoss } from 'pg-boss';
 import { createFcmClient, type ServiceAccount } from '../modules/push/fcm.js';
 import { createPushService, type PushService } from '../modules/push/service.js';
@@ -73,7 +72,6 @@ export interface AuthEnv {
   totpSecret: string;
   runner: Runner;
   roles: RolesService;
-  routing: RoutingService;
   research: ResearchService;
   schedules: ScheduleService;
   projects: ReturnType<typeof createProjectsService>;
@@ -211,11 +209,7 @@ export async function createAuthEnv(
     projectRules: projects,
     ...(outbox ? { outbox } : {}),
   });
-  const routing = createRoutingService({
-    db,
-    roles,
-    complete: createRouterComplete(client, 'router-fast'),
-  });
+  const routing = createRoutingService({ db, roles });
   const usage = createUsageRecorder(db);
   const boss =
     options.research || options.schedules
@@ -260,7 +254,6 @@ export async function createAuthEnv(
     db,
     hub,
     chat,
-    routing,
     roles,
     breakdown: createTaskBreakdown({
       complete: createRouterComplete(client, 'router-fast'),
@@ -331,7 +324,6 @@ export async function createAuthEnv(
     files,
     runs,
     roles,
-    routing,
     research,
     schedules,
     projects,
@@ -388,7 +380,6 @@ export async function createAuthEnv(
     totpSecret,
     runner,
     roles,
-    routing,
     research,
     schedules,
     projects,

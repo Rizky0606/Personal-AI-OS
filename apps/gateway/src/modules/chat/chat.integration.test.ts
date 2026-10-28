@@ -301,7 +301,7 @@ describe('kirim pesan dan run', () => {
     expect((await finalRun(third.run.id)).status).toBe('completed');
   });
 
-  it('validasi: lampiran, pesan kosong, role lain, percakapan diarsipkan, percakapan tak ada', async () => {
+  it('validasi: lampiran, pesan kosong, percakapan diarsipkan, percakapan tak ada', async () => {
     const conv = await createConversation();
     const post = (body: object, id = conv.id) =>
       env.post(`/conversations/${id}/messages`, body, token);
@@ -320,12 +320,6 @@ describe('kirim pesan dan run', () => {
       'empty_message',
     );
     expect((await post({ parts: [] })).statusCode).toBe(400);
-    expect(
-      problem(await post({ parts: [{ type: 'text', text: 'x' }], role: 'backend' })).code,
-    ).toBe('role_not_allowed');
-    expect(
-      problem(await post({ parts: [{ type: 'text', text: 'x' }], role: 'tukang-sulap' })).code,
-    ).toBe('unknown_role');
     await env.del(`/conversations/${conv.id}`, token);
     expect(problem(await post({ parts: [{ type: 'text', text: 'x' }] })).code).toBe(
       'conversation_archived',

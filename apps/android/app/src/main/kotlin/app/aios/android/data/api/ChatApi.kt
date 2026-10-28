@@ -59,9 +59,6 @@ interface ChatApi {
     @POST("files")
     suspend fun uploadFile(@Part file: MultipartBody.Part): FileRecord
 
-    @POST("messages/{id}/reroute")
-    suspend fun reroute(@Path("id") messageId: String, @Body body: RerouteRequest): RerouteResponse
-
     @GET("runs/{id}")
     suspend fun getRun(@Path("id") id: String): Run
 

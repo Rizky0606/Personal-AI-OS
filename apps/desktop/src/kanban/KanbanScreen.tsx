@@ -117,7 +117,6 @@ function Board({ projectId, projectName }: { projectId: string; projectName: str
             run: (task) => void actions.run(task.id),
             edit: (task) => setDialog({ kind: 'task', task }),
             move: (task, placement) => void actions.move(task.id, placement),
-            role: (task, role) => void actions.setRole(task.id, role),
             cancelRun: (runId) => void actions.cancelRun(runId),
           }}
         />
@@ -129,7 +128,6 @@ function Board({ projectId, projectName }: { projectId: string; projectName: str
           open
           onOpenChange={(open) => !open && setDialog(null)}
           task={dialog.task}
-          roles={roles.data ?? []}
           onSave={async (input) => {
             if (dialog.task) await actions.edit(dialog.task.id, input);
             else {

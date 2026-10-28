@@ -1,11 +1,5 @@
-import type { Approval, Conversation, Message, Run, RoutingCorrection } from '@aios/contracts';
-import type {
-  approvals,
-  conversations,
-  messages,
-  routingCorrections,
-  runs,
-} from '../../db/schema/index.js';
+import type { Approval, Conversation, Message, Run } from '@aios/contracts';
+import type { approvals, conversations, messages, runs } from '../../db/schema/index.js';
 
 /** `hermes_session_id` tidak diekspos ke klien (entities.ts). */
 export function toConversationDto(row: typeof conversations.$inferSelect): Conversation {
@@ -63,16 +57,5 @@ export function toRunDto(row: typeof runs.$inferSelect): Run {
     planOnly: row.planOnly && row.kind === 'coding',
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
-  };
-}
-
-export function toCorrectionDto(row: typeof routingCorrections.$inferSelect): RoutingCorrection {
-  return {
-    id: row.id,
-    decisionId: row.decisionId,
-    fromRole: row.fromRole,
-    toRole: row.toRole,
-    messageExcerpt: row.messageExcerpt,
-    createdAt: row.createdAt.toISOString(),
   };
 }

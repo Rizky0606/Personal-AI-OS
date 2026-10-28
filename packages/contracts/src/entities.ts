@@ -333,18 +333,6 @@ export const RoutingDecisionSchema = z
   .meta({ id: 'RoutingDecision' });
 export type RoutingDecision = z.infer<typeof RoutingDecisionSchema>;
 
-export const RoutingCorrectionSchema = z
-  .object({
-    id: IdSchema,
-    decisionId: IdSchema,
-    fromRole: RoleIdSchema,
-    toRole: RoleIdSchema,
-    messageExcerpt: z.string(),
-    createdAt: TimestampSchema,
-  })
-  .meta({ id: 'RoutingCorrection' });
-export type RoutingCorrection = z.infer<typeof RoutingCorrectionSchema>;
-
 export const AuditLogSchema = z
   .object({
     id: IdSchema,

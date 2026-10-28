@@ -10,7 +10,6 @@ import {
   ProjectSchema,
   ResearchJobSchema,
   ResearchSourceSchema,
-  RoutingCorrectionSchema,
   RoutingDecisionSchema,
   RunSchema,
   RunStatusSchema,
@@ -46,7 +45,6 @@ const DOCUMENTED_TABLES = [
   'research_sources',
   'files',
   'routing_decisions',
-  'routing_corrections',
   'audit_log',
   'memories',
   'prompt_templates',
@@ -59,7 +57,7 @@ describe('skema Drizzle', () => {
   /** Tabel internal gateway yang tidak ada di "Model data inti" karena tidak diekspos lewat API. */
   const INTERNAL_TABLES = ['owner_account'];
 
-  it('memuat 22 tabel "Model data inti" ditambah tabel internal yang disebut eksplisit', () => {
+  it('memuat tabel "Model data inti" ditambah tabel internal yang disebut eksplisit', () => {
     expect(tables.map((t) => getTableName(t)).sort()).toEqual(
       [...DOCUMENTED_TABLES, ...INTERNAL_TABLES].sort(),
     );
@@ -89,7 +87,6 @@ describe('skema Drizzle', () => {
     ['ResearchSource', schema.researchSources, ResearchSourceSchema, []],
     ['FileRecord', schema.files, FileRecordSchema, ['content']],
     ['RoutingDecision', schema.routingDecisions, RoutingDecisionSchema, []],
-    ['RoutingCorrection', schema.routingCorrections, RoutingCorrectionSchema, []],
     ['AuditLog', schema.auditLog, AuditLogSchema, []],
   ];
 
