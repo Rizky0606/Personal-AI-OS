@@ -27,7 +27,6 @@ import {
   unusedWorker,
   unusedSchedules,
   unusedRoles,
-  unusedRouting,
   unusedRuns,
   unusedWs,
 } from './testing/stubs.js';
@@ -81,7 +80,6 @@ function makeApp(logLevel: 'silent' | 'info' = 'silent', logStream?: NodeJS.Writ
     search: unusedSearch,
     status: unusedStatus,
     worker: unusedWorker,
-    routing: unusedRouting,
     ws: unusedWs,
     ...(logStream ? { logStream } : {}),
   });

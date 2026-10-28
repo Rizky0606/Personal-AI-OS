@@ -227,7 +227,7 @@ describe('panel izin inline', () => {
     act(() => {
       emit(`run:${RUN_X}`, {
         type: 'route.decided',
-        role: 'frontend',
+        role: 'project',
         confidence: 0.9,
         reason: 'x',
       });
@@ -389,7 +389,7 @@ describe('status bar: project dan branch', () => {
     act(() => {
       emit(`run:${RUN_X}`, {
         type: 'route.decided',
-        role: 'frontend',
+        role: 'project',
         confidence: 0.9,
         reason: 'x',
       });

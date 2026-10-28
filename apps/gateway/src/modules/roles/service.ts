@@ -20,8 +20,8 @@ export interface RolesService {
   get(id: string): Role | undefined;
   /** Registri saat ini (berubah bila hot-reload); dipakai router. */
   registry(): RolesRegistry;
-  /** System prompt untuk role itu: aturan perilaku + role + skill inti + skill khusus. */
-  bundle(roleId: string): Bundle;
+  /** System prompt untuk agent itu: aturan perilaku + agent + skill inti + skill khusus (milik agent dan `extraSkills`). */
+  bundle(roleId: string, extraSkills?: readonly string[]): Bundle;
   close(): void;
 }
 
@@ -102,7 +102,8 @@ export function createRolesService(options: RolesServiceOptions = {}): RolesServ
     registry: () => registry,
     has: (id) => registry.roles.has(id),
     get: (id) => registry.roles.get(id),
-    bundle: (roleId) => buildBundle(registry, roleId),
+    bundle: (roleId, extraSkills) =>
+      buildBundle(registry, roleId, extraSkills ? { extraSkills } : {}),
     close() {
       clearTimeout(timer);
       for (const w of watchers) w.close();

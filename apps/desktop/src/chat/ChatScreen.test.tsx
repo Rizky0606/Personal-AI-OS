@@ -138,13 +138,18 @@ describe('ChatScreen: kirim dan alirkan jawaban', () => {
 
     act(() => {
       emit(`run:${RUN_1}`, { type: 'run.status', status: 'running' });
-      emit(`run:${RUN_1}`, { type: 'route.decided', role: 'writer', confidence: 0.8, reason: 'x' });
+      emit(`run:${RUN_1}`, {
+        type: 'route.decided',
+        role: 'general',
+        confidence: 0.8,
+        reason: 'x',
+      });
       emit(`run:${RUN_1}`, { type: 'message.delta', messageId: RUN_2, text: 'Ringkasan ' });
       emit(`run:${RUN_1}`, { type: 'message.delta', messageId: RUN_2, text: 'singkat.' });
     });
 
     expect(await screen.findByText('Ringkasan singkat.')).toBeInTheDocument();
-    expect(screen.getByText('Penulis')).toBeInTheDocument();
+    expect(screen.getByText('Umum')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: copy.chat.stop }));
     expect(api.cancelRun).toHaveBeenCalledWith(RUN_1);
@@ -401,23 +406,6 @@ describe('ChatScreen: ubah pesan terakhir dan jalankan ulang', () => {
 
     expect(api.deleteMessage).not.toHaveBeenCalled();
     expect(screen.getByText('Jawaban lama')).toBeInTheDocument();
-  });
-
-  it('chip role pada jawaban terakhir menjalankan ulang dengan role lain', async () => {
-    const data = history();
-    api.listMessages.mockResolvedValue(data);
-    api.getRun.mockResolvedValue(run({ id: RUN_1, status: 'completed' }));
-    api.rerouteMessage.mockResolvedValue({ run: run({ id: RUN_2 }), correction: {} as never });
-    const user = userEvent.setup();
-    await renderScreen(<ChatScreen conversationId={CONV} />);
-
-    const answer = (await screen.findByText('Jawaban lama')).closest('article')!;
-    await user.click(
-      within(answer).getByRole('button', { name: new RegExp(copy.chat.role.rerun) }),
-    );
-    await user.click(await screen.findByRole('menuitemradio', { name: 'Penulis' }));
-
-    expect(api.rerouteMessage).toHaveBeenCalledWith(data.items[1]?.id, 'writer');
   });
 
   it('melanjutkan jawaban yang masih berjalan saat percakapan dibuka', async () => {

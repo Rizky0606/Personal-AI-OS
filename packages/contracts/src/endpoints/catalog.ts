@@ -6,8 +6,6 @@ import {
   ModelListSchema,
   QuotaSchema,
   RoleListSchema,
-  RouteDecisionSchema,
-  RoutePreviewRequestSchema,
 } from '../api-schemas.js';
 import { json, type Endpoint } from '../endpoint.js';
 
@@ -63,16 +61,5 @@ export const catalogEndpoints: readonly Endpoint[] = [
     auth: true,
     responses: [json(200, 'Daftar role', RoleListSchema)],
     errors: [401],
-  },
-  {
-    operationId: 'previewRoute',
-    method: 'post',
-    path: '/route/preview',
-    tag: 'Role',
-    summary: 'Uji router tanpa menjalankan agent',
-    auth: true,
-    body: RoutePreviewRequestSchema,
-    responses: [json(200, 'Keputusan router', RouteDecisionSchema)],
-    errors: [400, 401, 404],
   },
 ];

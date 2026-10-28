@@ -28,7 +28,6 @@ export interface AssistantMessageProps {
   role: string | null;
   model: string | null;
   roles: RoleInfo[];
-  onChangeRole?: ((role: string) => void) | undefined;
   /** Jawaban masih mengalir. */
   streaming?: boolean;
   /** Meminta konfirmasi hapus jawaban ini beserta sesudahnya. */
@@ -127,7 +126,6 @@ export function AssistantMessage({
   role,
   model,
   roles,
-  onChangeRole,
   streaming = false,
   onDelete,
   onFork,
@@ -156,12 +154,7 @@ export function AssistantMessage({
       <header className="flex items-center gap-2">
         <BotAvatar streaming={streaming} />
         <span className="text-ui font-semibold text-text">{copy.chat.assistantName}</span>
-        <RoleChip
-          role={role}
-          roles={roles}
-          active={streaming}
-          {...(onChangeRole ? { onChange: onChangeRole } : {})}
-        />
+        <RoleChip role={role} roles={roles} active={streaming} />
         {model ? (
           <span className="rounded-badge bg-surface-2 px-1.5 py-0.5 font-mono text-caption text-text-2">
             {model}

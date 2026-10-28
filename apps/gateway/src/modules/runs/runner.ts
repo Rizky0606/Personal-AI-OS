@@ -30,6 +30,8 @@ export interface ResolvedRole {
   role: string;
   confidence: number;
   reason: string;
+  /** Skill spesialis yang dimuat untuk run ini (hasil pemilihan kata kunci), di luar skill inti dan skill agent. */
+  skills?: readonly string[];
 }
 
 /**
@@ -64,7 +66,7 @@ export interface LaunchInput {
   projectId: string | null;
   /** Revisi setelah komentar review: melanjutkan worktree dan branch run ini. */
   continueFromRunId?: string | undefined;
-  /** Memutuskan role (router atau pilihan manual) dan menyimpannya; dipanggil pada status `routing`. */
+  /** Menentukan agent dan skill (aturan tetap, tanpa model) dan menyimpannya; dipanggil pada status `routing`. */
   resolveRole(signal: AbortSignal): Promise<ResolvedRole>;
 }
 
@@ -100,7 +102,7 @@ export interface RunnerDeps {
   observer?: RunObserver;
   /** Bundel role (aturan perilaku + role + skill) yang disuntik sebagai pesan sistem. */
   roles: {
-    bundle(roleId: string): { systemPrompt: string };
+    bundle(roleId: string, extraSkills?: readonly string[]): { systemPrompt: string };
     get(roleId: string): { engine: string; model?: string } | undefined;
   };
   /** Memori pemilik (W17) yang ditambahkan ke pesan sistem setiap run; tanpa ini tidak ada memori. */
@@ -204,8 +206,9 @@ export function createRunner(deps: RunnerDeps): Runner {
     onServer: boolean,
     runId: string,
     planOnly = false,
+    skills: readonly string[] = [],
   ): Promise<string> {
-    const bundle = deps.roles.bundle(roleId).systemPrompt;
+    const bundle = deps.roles.bundle(roleId, skills).systemPrompt;
     const extra = async (name: string, load: () => Promise<string> | undefined) => {
       try {
         return (await load()) ?? '';
@@ -382,7 +385,7 @@ export function createRunner(deps: RunnerDeps): Runner {
             failure = {
               code: 'project_required',
               message:
-                'Role coding hanya bisa dipakai di percakapan project. Pilih project di aplikasi desktop lalu mulai chat dari sana.',
+                'Agent project hanya bisa dipakai di percakapan project. Pilih project di aplikasi desktop lalu mulai chat dari sana.',
               retryable: false,
             };
           } else if (!deps.workerAdapter) {
@@ -415,7 +418,7 @@ export function createRunner(deps: RunnerDeps): Runner {
         } else {
           failure = {
             code: 'engine_unavailable',
-            message: `Role ${decision.role} berjalan di worker Windows (omp) yang belum tersedia. Pilih role lain atau jalankan dari aplikasi desktop.`,
+            message: `Agent ${decision.role} berjalan di worker Windows (omp) yang belum tersedia. Jalankan dari aplikasi desktop.`,
             retryable: false,
           };
         }
@@ -443,6 +446,7 @@ export function createRunner(deps: RunnerDeps): Runner {
               !coding,
               run.id,
               planOnly,
+              decision.skills,
             ),
             sessionId: input.sessionId,
             ...(await historyFor(input, coding)),

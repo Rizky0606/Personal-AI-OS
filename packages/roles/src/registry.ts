@@ -2,6 +2,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse as parseYaml } from 'yaml';
+import { GENERAL_AGENT, PROJECT_AGENT } from './agents.js';
 import type { ZodType } from 'zod';
 import {
   CORE_SKILLS,
@@ -23,9 +24,6 @@ export interface Role {
   approval: RoleFrontmatter['approval'];
   /** Skill yang tertulis di frontmatter, sesuai urutan. */
   skills: string[];
-  handoff: Record<string, string>;
-  examples: string[];
-  notExamples: string[];
   /** Isi markdown (di luar frontmatter): menjadi bagian system prompt. */
   body: string;
   file: string;
@@ -147,9 +145,6 @@ export function loadRegistry(dir: string = ROLES_PACKAGE_DIR): RolesRegistry {
         fallbackModel: meta.fallback_model ?? null,
         approval: meta.approval,
         skills: meta.skills,
-        handoff: meta.handoff,
-        examples: meta.examples,
-        notExamples: meta.not_examples,
         body: parts.body,
         file: label,
       });
@@ -162,18 +157,13 @@ export function loadRegistry(dir: string = ROLES_PACKAGE_DIR): RolesRegistry {
   for (const core of CORE_SKILLS) {
     if (!skills.has(core)) problems.push(`skill inti "${core}" tidak ada`);
   }
-  if (roles.size > 0 && !roles.has('general')) {
-    problems.push('role "general" wajib ada: dipakai router sebagai cadangan');
+  for (const required of [GENERAL_AGENT, PROJECT_AGENT]) {
+    if (roles.size > 0 && !roles.has(required)) problems.push(`agent "${required}" wajib ada`);
   }
   for (const role of roles.values()) {
     for (const skill of role.skills) {
       if (!skills.has(skill))
         problems.push(`${role.file}: merujuk skill "${skill}" yang tidak ada`);
-    }
-    for (const target of Object.keys(role.handoff)) {
-      if (target === role.id) problems.push(`${role.file}: handoff ke dirinya sendiri`);
-      else if (!roles.has(target))
-        problems.push(`${role.file}: handoff ke role "${target}" yang tidak ada`);
     }
   }
 

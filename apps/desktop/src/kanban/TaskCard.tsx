@@ -18,7 +18,7 @@ import {
 
 export interface TaskCardProps {
   task: Task;
-  /** Semua role; kartu hanya menawarkan role coding. */
+  /** Daftar agent, untuk nama yang ditampilkan di chip. */
   roles: RoleInfo[];
   /** Kartu ini sedang diseret. */
   dragging: boolean;
@@ -27,7 +27,6 @@ export interface TaskCardProps {
   onEdit: (task: Task) => void;
   onMoveTo: (task: Task, status: Task['status']) => void;
   onStep: (task: Task, direction: Direction) => void;
-  onRole: (task: Task, role: string) => void;
   onCancelRun: (runId: string) => void;
   onDragStart: (event: DragEvent, task: Task) => void;
   onDragEnd: () => void;
@@ -67,7 +66,6 @@ export function TaskCard({
   onEdit,
   onMoveTo,
   onStep,
-  onRole,
   onCancelRun,
   onDragStart,
   onDragEnd,
@@ -163,11 +161,7 @@ export function TaskCard({
 
       <div className="flex flex-wrap items-center gap-2">
         {task.agentRole ? (
-          <RoleChip
-            role={task.agentRole}
-            roles={roles.filter((r) => r.engine === 'omp')}
-            {...(locked ? {} : { onChange: (role: string) => onRole(task, role) })}
-          />
+          <RoleChip role={task.agentRole} roles={roles} />
         ) : (
           <span className="inline-flex h-6 items-center rounded-badge bg-surface-2 px-2 text-meta text-text-3">
             {copy.kanban.role.auto}

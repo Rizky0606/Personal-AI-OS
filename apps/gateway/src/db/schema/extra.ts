@@ -139,17 +139,6 @@ export const routingDecisions = pgTable(
   (t) => [index('routing_decisions_message_idx').on(t.messageId)],
 );
 
-export const routingCorrections = pgTable('routing_corrections', {
-  id: id(),
-  decisionId: uuid('decision_id')
-    .notNull()
-    .references(() => routingDecisions.id, { onDelete: 'cascade' }),
-  fromRole: text('from_role').notNull(),
-  toRole: text('to_role').notNull(),
-  messageExcerpt: text('message_excerpt').notNull(),
-  createdAt: createdAt(),
-});
-
 export const auditLog = pgTable(
   'audit_log',
   {

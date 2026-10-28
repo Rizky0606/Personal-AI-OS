@@ -115,7 +115,7 @@ describe('KanbanScreen: papan', () => {
         title: 'Tombol baru',
         status: 'review',
         runId: RUN,
-        agentRole: 'frontend',
+        agentRole: 'project',
         branch: 'aios/abcd1234',
         diffStat: { files: 2, additions: 12, deletions: 3 },
       }),
@@ -125,7 +125,7 @@ describe('KanbanScreen: papan', () => {
     const review = await column('review', 1);
     expect(within(review).getByText('+12 −3')).toBeInTheDocument();
     expect(within(review).getByText('aios/abcd1234')).toBeInTheDocument();
-    expect(within(review).getByText('Frontend')).toBeInTheDocument();
+    expect(within(review).getByText('Project')).toBeInTheDocument();
     expect(within(review).getByText(`${copy.kanban.status.review}:`)).toBeInTheDocument();
     await column('backlog', 1);
     await column('todo', 1);
@@ -166,7 +166,7 @@ describe('KanbanScreen: papan', () => {
 
   it('kartu yang sedang dikerjakan terkunci: tidak bisa diseret, tersedia hentikan run, dan hanya dilihat', async () => {
     api.listTasks.mockResolvedValue([
-      task({ title: 'Sedang jalan', status: 'running', runId: RUN, agentRole: 'frontend' }),
+      task({ title: 'Sedang jalan', status: 'running', runId: RUN, agentRole: 'project' }),
     ]);
     api.cancelRun.mockResolvedValue({} as never);
     const user = userEvent.setup();
@@ -311,24 +311,6 @@ describe('KanbanScreen: memindahkan kartu', () => {
     expect(api.updateTask).toHaveBeenCalledWith(a.id, { status: 'done', position: 0 });
     expect(await screen.findByText('Kartu sedang dikerjakan.')).toBeInTheDocument();
   });
-
-  it('mengganti role lewat chip kartu memanggil updateTask', async () => {
-    const a = task({ title: 'Ganti role', status: 'todo', agentRole: 'frontend' });
-    api.listTasks.mockResolvedValue([a]);
-    api.updateTask.mockResolvedValue(a);
-    const user = userEvent.setup();
-    await renderScreen(<KanbanScreen />, '/kanban');
-
-    await user.click(await screen.findByRole('button', { name: new RegExp(copy.chat.role.label) }));
-    // Hanya role coding yang ditawarkan.
-    expect(screen.queryByRole('menuitemradio', { name: 'Umum' })).toBeNull();
-    await user.click(await screen.findByRole('menuitemradio', { name: 'Frontend' }));
-
-    // Memilih role yang sama tidak mengubah apa pun di server tetapi tetap sah; role dikirim apa adanya.
-    await waitFor(() =>
-      expect(api.updateTask).toHaveBeenCalledWith(a.id, { agentRole: 'frontend' }),
-    );
-  });
 });
 
 describe('KanbanScreen: kartu baru dan pecah dengan AI', () => {
@@ -362,9 +344,9 @@ describe('KanbanScreen: kartu baru dan pecah dengan AI', () => {
   it('pecah dengan AI: mengusulkan kartu, pengguna memilih, hanya yang dipilih disimpan berurutan', async () => {
     api.listTasks.mockResolvedValue([task({ title: 'Ada', status: 'todo' })]);
     api.breakdownTasks.mockResolvedValue([
-      { title: 'Halaman login', body: 'Form email dan sandi', agentRole: 'frontend' },
+      { title: 'Halaman login', body: 'Form email dan sandi', agentRole: 'project' },
       { title: 'Catatan rilis', body: '', agentRole: null },
-      { title: 'Endpoint login', body: '', agentRole: 'frontend' },
+      { title: 'Endpoint login', body: '', agentRole: 'project' },
     ]);
     api.createTask.mockResolvedValue(task());
     const user = userEvent.setup();

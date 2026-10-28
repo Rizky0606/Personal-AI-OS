@@ -103,12 +103,7 @@ async function main(): Promise<void> {
     ...(outbox ? { outbox } : {}),
     log,
   });
-  const routing = createRoutingService({
-    db,
-    roles,
-    complete: createRouterComplete(client, config.ROUTER_MODEL),
-    log,
-  });
+  const routing = createRoutingService({ db, roles });
   const spaces = createSpacesService({ db });
   // Satu pengambil halaman untuk riset dan pembacaan tautan di chat: aturan SSRF dan batas ukurannya sama.
   const fetchPage = createPageFetcher({ timeoutMs: 10_000 });
@@ -132,7 +127,6 @@ async function main(): Promise<void> {
     db,
     hub,
     chat,
-    routing,
     roles,
     breakdown: createTaskBreakdown({
       complete: createRouterComplete(client, config.TASK_MODEL),
@@ -197,7 +191,6 @@ async function main(): Promise<void> {
     files,
     runs,
     roles,
-    routing,
     research,
     schedules,
     projects,

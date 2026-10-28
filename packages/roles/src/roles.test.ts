@@ -9,6 +9,7 @@ import {
   CORE_SKILLS,
   ROLES_PACKAGE_DIR,
   RegistryError,
+  SKILL_PACKS,
   SKILLS_TOKEN_BUDGET,
   UnknownRoleError,
   buildBundle,
@@ -19,41 +20,25 @@ import {
 
 const registry = loadRegistry();
 
-/** Tabel "Role awal (7)" di ROLES_AND_SKILLS.md: grup, mesin, dan skill khusus. */
+/** Agent di ROLES_AND_SKILLS.md: grup, mesin, dan skill milik agent itu sendiri (di luar skill inti). */
 const SPEC: Record<string, { group: string; engine: string; skills: string[] }> = {
   general: { group: 'umum', engine: 'hermes', skills: ['answer-first', 'clarify-once'] },
+  project: { group: 'coding', engine: 'omp', skills: [] },
   researcher: {
     group: 'umum',
     engine: 'research',
     skills: ['source-verification', 'citation', 'fact-vs-opinion'],
   },
-  writer: {
-    group: 'umum',
-    engine: 'hermes',
-    skills: ['stop-slop', 'script-structure', 'audience-voice'],
-  },
-  frontend: {
-    group: 'coding',
-    engine: 'omp',
-    skills: ['ui-baseline', 'a11y-check', 'ui-states', 'react-practices'],
-  },
-  backend: {
-    group: 'coding',
-    engine: 'omp',
-    skills: ['api-design', 'input-validation', 'error-handling', 'safe-migrations'],
-  },
-  debugger: { group: 'coding', engine: 'omp', skills: ['reproduce-first', 'diagnosing-bugs'] },
-  reviewer: { group: 'coding', engine: 'omp', skills: ['code-review', 'security-basics'] },
 };
 
-describe('isi role dan skill di repo', () => {
-  it('memuat tepat 7 role awal', () => {
+describe('isi agent dan skill di repo', () => {
+  it('memuat tepat agent yang ditetapkan', () => {
     expect([...registry.roles.keys()].sort()).toEqual([...INITIAL_ROLE_IDS].sort());
     expect(Object.keys(SPEC).sort()).toEqual([...INITIAL_ROLE_IDS].sort());
   });
 
   it.each(Object.entries(SPEC))(
-    'role %s: frontmatter lengkap dan sesuai tabel dokumen',
+    'agent %s: frontmatter lengkap dan sesuai tabel dokumen',
     (id, spec) => {
       const role = registry.roles.get(id)!;
       expect(RoleIdSchema.safeParse(role.id).success).toBe(true);
@@ -61,21 +46,16 @@ describe('isi role dan skill di repo', () => {
       expect(role.name).not.toBe('');
       expect(role.model).not.toBe('');
       expect(role.fallbackModel).not.toBeNull();
-      // Skill inti ada di frontmatter; skill khusus persis seperti di tabel.
       expect(role.skills.filter((s) => (CORE_SKILLS as readonly string[]).includes(s))).toEqual([
         ...CORE_SKILLS,
       ]);
       expect(role.skills.filter((s) => !(CORE_SKILLS as readonly string[]).includes(s))).toEqual(
         spec.skills,
       );
-      expect(role.examples.length).toBeGreaterThanOrEqual(5);
-      expect(role.notExamples.length).toBeGreaterThanOrEqual(2);
-      expect(Object.keys(role.handoff).length).toBeGreaterThan(0);
-      for (const target of Object.keys(role.handoff)) expect(registry.roles.has(target)).toBe(true);
     },
   );
 
-  it('isi role memuat bagian Peran, Cara kerja, Definition of done, dan Format output', () => {
+  it('isi agent memuat bagian Peran, Cara kerja, Definition of done, dan Format output', () => {
     for (const role of registry.roles.values()) {
       for (const heading of [
         '# Peran',
@@ -88,31 +68,14 @@ describe('isi role dan skill di repo', () => {
     }
   });
 
-  it('role coding bertanya sebelum mengubah; role baca-saja boleh auto-safe', () => {
-    for (const id of ['frontend', 'backend', 'debugger']) {
-      expect(registry.roles.get(id)!.approval).toBe('ask');
-    }
-    expect(registry.roles.get('reviewer')!.approval).toBe('auto-safe');
+  it('agent project bertanya sebelum mengubah (approval ask)', () => {
+    expect(registry.roles.get('project')!.approval).toBe('ask');
   });
 
-  it('contoh tidak dobel antar role, supaya router tidak mendapat sinyal bertentangan', () => {
-    const owner = new Map<string, string>();
-    for (const role of registry.roles.values()) {
-      for (const example of role.examples) {
-        expect(owner.get(example), example).toBeUndefined();
-        owner.set(example, role.id);
-      }
-    }
-    for (const role of registry.roles.values()) {
-      for (const notExample of role.notExamples) {
-        expect(owner.get(notExample), `non-contoh ${notExample}`).not.toBe(role.id);
-      }
-    }
-  });
-
-  it('semua skill (5 inti + khusus yang dirujuk) ada, ringkas, dan berbentuk checklist', () => {
+  it('setiap skill dimuat oleh inti, agent, atau paket skill; tidak ada yang yatim', () => {
     const referenced = new Set<string>(CORE_SKILLS);
     for (const spec of Object.values(SPEC)) for (const s of spec.skills) referenced.add(s);
+    for (const pack of SKILL_PACKS) for (const s of pack.skills) referenced.add(s);
     expect([...registry.skills.keys()].sort()).toEqual([...referenced].sort());
     for (const skill of registry.skills.values()) {
       expect(skill.description.length, skill.id).toBeGreaterThan(10);
@@ -137,7 +100,7 @@ describe('isi role dan skill di repo', () => {
 });
 
 describe('bundel system prompt', () => {
-  it.each([...registry.roles.keys()])('role %s: di bawah anggaran dan semua bagian ada', (id) => {
+  it.each([...registry.roles.keys()])('agent %s: di bawah anggaran dan semua bagian ada', (id) => {
     const bundle = buildBundle(registry, id);
     const role = registry.roles.get(id)!;
 
@@ -156,22 +119,34 @@ describe('bundel system prompt', () => {
     for (const skill of bundle.skills) {
       expect(bundle.systemPrompt).toContain(registry.skills.get(skill)!.body);
     }
-    // Urutan: aturan perilaku, role, skill inti, skill khusus.
     const at = (text: string) => bundle.systemPrompt.indexOf(text);
     expect(at('# Aturan perilaku agent')).toBe(0);
     expect(at('# Aturan perilaku agent')).toBeLessThan(at(`# Peran: ${role.name}`));
     expect(at(`# Peran: ${role.name}`)).toBeLessThan(at('# Skill inti'));
-    expect(at('# Skill inti')).toBeLessThan(at('# Skill khusus'));
   });
 
-  it('role tidak memuat skill role lain', () => {
-    const general = buildBundle(registry, 'general').systemPrompt;
-    expect(general).not.toContain(registry.skills.get('ui-baseline')!.body);
-    expect(general).not.toContain('## code-review');
+  it('skill spesialis hanya masuk bila diminta lewat extraSkills, tanpa dobel', () => {
+    const plain = buildBundle(registry, 'project').systemPrompt;
+    expect(plain).not.toContain(registry.skills.get('ui-baseline')!.body);
+
+    const withUi = buildBundle(registry, 'project', {
+      extraSkills: ['ui-baseline', 'a11y-check', 'ui-baseline', 'skill-hantu'],
+    });
+    expect(withUi.skills).toEqual([...CORE_SKILLS, 'ui-baseline', 'a11y-check']);
+    expect(withUi.systemPrompt).toContain(registry.skills.get('ui-baseline')!.body);
+    expect(withUi.systemPrompt.match(/## ui-baseline/g)).toHaveLength(1);
+  });
+
+  it('semua paket skill sekaligus tetap di bawah anggaran bundel', () => {
+    const extraSkills = SKILL_PACKS.flatMap((p) => p.skills);
+    const bundle = buildBundle(registry, 'project', { extraSkills });
+    // Bila tidak muat, yang dilewati utuh dan dilaporkan; bundel tidak boleh melebihi anggaran.
+    expect(bundle.tokens.skills).toBeLessThanOrEqual(SKILLS_TOKEN_BUDGET);
   });
 
   it('anggaran sempit: skill inti tetap masuk, skill khusus yang tidak muat dilewati utuh', () => {
-    const tight = buildBundle(registry, 'frontend', { skillsBudget: 900 });
+    const extraSkills = ['ui-baseline', 'a11y-check', 'ui-states', 'react-practices'];
+    const tight = buildBundle(registry, 'project', { skillsBudget: 900, extraSkills });
     expect(tight.skills.slice(0, 5)).toEqual([...CORE_SKILLS]);
     expect(tight.omittedSkills.length).toBeGreaterThan(0);
     for (const id of tight.omittedSkills) {
@@ -179,21 +154,13 @@ describe('bundel system prompt', () => {
     }
     expect(tight.tokens.skills).toBeLessThanOrEqual(900);
     expect(tight.overBudget).toBe(false);
-    // Skill inti tidak pernah dibuang; bila anggaran lebih kecil darinya, bundel ditandai melebihi anggaran.
-    const tiny = buildBundle(registry, 'frontend', { skillsBudget: 100 });
+    const tiny = buildBundle(registry, 'project', { skillsBudget: 100, extraSkills });
     expect(tiny.skills).toEqual([...CORE_SKILLS]);
     expect(tiny.overBudget).toBe(true);
   });
 
-  it('role yang tidak ada: UnknownRoleError', () => {
+  it('agent yang tidak ada: UnknownRoleError', () => {
     expect(() => buildBundle(registry, 'tukang-sulap')).toThrow(UnknownRoleError);
-  });
-
-  it('ukuran bundel tiap role (untuk dipantau)', () => {
-    const sizes = Object.fromEntries(
-      [...registry.roles.keys()].map((id) => [id, buildBundle(registry, id).tokens.total]),
-    );
-    expect(Math.max(...Object.values(sizes))).toBeLessThanOrEqual(BUNDLE_TOKEN_BUDGET);
   });
 });
 
@@ -223,36 +190,32 @@ describe('validasi saat memuat', () => {
   };
 
   it('salinan utuh lolos (sandbox sehat)', () => {
-    expect(loadRegistry(sandbox()).roles.size).toBe(7);
+    expect(loadRegistry(sandbox()).roles.size).toBe(INITIAL_ROLE_IDS.length);
   });
 
-  it('role merujuk skill yang tidak ada: gagal dengan menyebut file dan skill-nya', () => {
+  it('agent merujuk skill yang tidak ada: gagal dengan menyebut file dan skill-nya', () => {
     const dir = sandbox();
-    edit(join(dir, 'roles', 'frontend.md'), (t) => t.replace('react-practices', 'skill-hantu'));
+    edit(join(dir, 'roles', 'general.md'), (t) => t.replace('clarify-once', 'skill-hantu'));
     expect(problemsOf(dir)).toEqual([
-      'roles/frontend.md: merujuk skill "skill-hantu" yang tidak ada',
+      'roles/general.md: merujuk skill "skill-hantu" yang tidak ada',
     ]);
   });
 
-  it('id tidak sama dengan nama file, field asing, dan contoh kurang: semua dilaporkan sekaligus', () => {
+  it('id tidak sama dengan nama file dan field asing: semua dilaporkan sekaligus', () => {
     const dir = sandbox();
-    edit(join(dir, 'roles', 'writer.md'), (t) => t.replace('id: writer', 'id: penulis'));
-    edit(join(dir, 'roles', 'debugger.md'), (t) =>
+    edit(join(dir, 'roles', 'researcher.md'), (t) => t.replace('id: researcher', 'id: peneliti'));
+    edit(join(dir, 'roles', 'project.md'), (t) =>
       t.replace('approval: ask', 'approval: ask\nwarna: merah'),
     );
-    edit(join(dir, 'roles', 'reviewer.md'), (t) =>
-      t.replace(/examples:\n( {2}- .*\n)+/, 'examples:\n  - satu\n  - dua\n'),
-    );
     const problems = problemsOf(dir).join('\n');
-    expect(problems).toContain('roles/writer.md: id "penulis" harus sama dengan nama file');
-    expect(problems).toMatch(/roles\/debugger\.md: .*warna/);
-    expect(problems).toMatch(/roles\/reviewer\.md: examples/);
+    expect(problems).toContain('roles/researcher.md: id "peneliti" harus sama dengan nama file');
+    expect(problems).toMatch(/roles\/project\.md: .*warna/);
   });
 
   it('enum salah, YAML rusak, frontmatter hilang, dan isi kosong', () => {
     const dir = sandbox();
     edit(join(dir, 'roles', 'general.md'), (t) => t.replace('engine: hermes', 'engine: gpt'));
-    edit(join(dir, 'roles', 'backend.md'), (t) => t.replace('name: Backend', 'name: [Backend'));
+    edit(join(dir, 'roles', 'project.md'), (t) => t.replace('name: Project', 'name: [Project'));
     writeFileSync(join(dir, 'roles', 'baru.md'), '# tanpa frontmatter\n');
     edit(
       join(dir, 'skills', 'citation', 'SKILL.md'),
@@ -260,31 +223,37 @@ describe('validasi saat memuat', () => {
     );
     const problems = problemsOf(dir);
     expect(problems.some((p) => p.startsWith('roles/general.md: engine'))).toBe(true);
-    expect(problems.some((p) => p.startsWith('roles/backend.md: YAML tidak valid'))).toBe(true);
+    expect(problems.some((p) => p.startsWith('roles/project.md: YAML tidak valid'))).toBe(true);
     expect(problems).toContain(
       'roles/baru.md: frontmatter (--- ... ---) tidak ditemukan di awal file',
     );
     expect(problems).toContain('skills/citation/SKILL.md: isi skill kosong');
   });
 
-  it('skill inti hilang, nama skill tidak sama dengan folder, handoff ke role yang tidak ada', () => {
+  it('skill inti hilang dan nama skill tidak sama dengan folder', () => {
     const dir = sandbox();
     rmSync(join(dir, 'skills', 'scope-guard'), { recursive: true });
     edit(join(dir, 'skills', 'stop-slop', 'SKILL.md'), (t) =>
       t.replace('name: stop-slop', 'name: stop-sloppy'),
     );
-    edit(join(dir, 'roles', 'debugger.md'), (t) => t.replace('  frontend:', '  arsitek:'));
     const problems = problemsOf(dir);
     expect(problems).toContain('skill inti "scope-guard" tidak ada');
     expect(problems).toContain(
       'skills/stop-slop/SKILL.md: name "stop-sloppy" harus sama dengan nama folder',
     );
-    expect(problems).toContain('roles/debugger.md: handoff ke role "arsitek" yang tidak ada');
-    // Role yang merujuk skill inti yang hilang ikut dilaporkan.
-    expect(problems.filter((p) => p.includes('"scope-guard" yang tidak ada')).length).toBe(7);
+    // Agent yang merujuk skill inti yang hilang ikut dilaporkan.
+    expect(problems.filter((p) => p.includes('"scope-guard" yang tidak ada')).length).toBe(
+      INITIAL_ROLE_IDS.length,
+    );
   });
 
-  it('skill tanpa SKILL.md, folder kosong, dan skill dobel di frontmatter role', () => {
+  it('agent umum dan project wajib ada', () => {
+    const dir = sandbox();
+    rmSync(join(dir, 'roles', 'project.md'));
+    expect(problemsOf(dir)).toContain('agent "project" wajib ada');
+  });
+
+  it('skill tanpa SKILL.md, folder kosong, dan skill dobel di frontmatter agent', () => {
     const dir = sandbox();
     mkdirSync(join(dir, 'skills', 'kosong'));
     edit(join(dir, 'roles', 'general.md'), (t) => t.replace('clarify-once', 'answer-first'));
@@ -304,7 +273,7 @@ describe('validasi saat memuat', () => {
   });
 
   it('splitFrontmatter menerima CRLF dan BOM', () => {
-    const text = '\uFEFF---\r\nname: x\r\n---\r\nisi\r\nbaris dua';
+    const text = '﻿---\r\nname: x\r\n---\r\nisi\r\nbaris dua';
     expect(splitFrontmatter(text)).toEqual({ data: { name: 'x' }, body: 'isi\r\nbaris dua' });
   });
 });

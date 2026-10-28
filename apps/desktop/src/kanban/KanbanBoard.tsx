@@ -19,7 +19,6 @@ export interface BoardActions {
   run: (task: Task) => void;
   edit: (task: Task) => void;
   move: (task: Task, placement: Placement) => void;
-  role: (task: Task, role: string) => void;
   cancelRun: (runId: string) => void;
 }
 
@@ -99,7 +98,6 @@ export function KanbanBoard({ tasks, roles, actions }: KanbanBoardProps) {
                 onEdit={actions.edit}
                 onMoveTo={(t, target) => actions.move(t, dropPlacement(board, t.id, target))}
                 onStep={step}
-                onRole={actions.role}
                 onCancelRun={actions.cancelRun}
                 onDragStart={onDragStart}
                 onDragEnd={() => setDragging(null)}

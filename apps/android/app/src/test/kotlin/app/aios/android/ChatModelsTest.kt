@@ -113,7 +113,7 @@ class ChatModelsTest {
     }
 
     @Test
-    fun `daftar item - pesan live menggantikan placeholder kosong dan chip reroute hanya di jawaban terakhir`() {
+    fun `daftar item - pesan live menggantikan placeholder kosong dan hanya pesan terakhir yang bisa diedit`() {
         val state = ChatUiState(
             conversationId = "c1",
             messages = listOf(
@@ -130,7 +130,6 @@ class ChatModelsTest {
         assertEquals("sedang", assistants[1].text)
         assertEquals("writer", assistants[1].role)
         assertTrue(assistants[1].streaming)
-        assertEquals(listOf(false, false), assistants.map { it.canReroute })
 
         val done =
             buildChatItems(
@@ -139,7 +138,6 @@ class ChatModelsTest {
                     messages = state.messages.dropLast(1) + message("a2", "assistant", "selesai", "r2", "general")
                 )
             )
-        assertEquals(listOf(false, true), done.filterIsInstance<ChatItem.Assistant>().map { it.canReroute })
         assertEquals(listOf(false, true), done.filterIsInstance<ChatItem.User>().map { it.canEdit })
     }
 

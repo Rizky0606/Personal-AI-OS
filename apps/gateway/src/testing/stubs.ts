@@ -93,7 +93,6 @@ export const unusedChat: AppDeps['chat'] = {
   deleteConversation: unused('chat.deleteConversation'),
   listMessages: unused('chat.listMessages'),
   sendMessage: unused('chat.sendMessage'),
-  reroute: unused('chat.reroute'),
   editMessage: unused('chat.editMessage'),
   deleteMessage: unused('chat.deleteMessage'),
   exists: unused('chat.exists'),
@@ -126,17 +125,6 @@ export const unusedWs: AppDeps['ws'] = {
   },
   store: { append: unused('store.append'), list: unused('store.list'), head: unused('store.head') },
   exists: { run: unused('ws.exists.run'), conversation: unused('ws.exists.conversation') },
-};
-
-export const unusedRouting: AppDeps['routing'] = {
-  route: unused('routing.route'),
-  preview: unused('routing.preview'),
-  assertRoleAllowed: () => {
-    throw new Error('routing.assertRoleAllowed tidak dipakai di tes ini');
-  },
-  record: unused('routing.record'),
-  latestDecision: unused('routing.latestDecision'),
-  addCorrection: unused('routing.addCorrection'),
 };
 
 export const unusedResearch: AppDeps['research'] = {

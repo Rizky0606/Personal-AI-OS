@@ -24,7 +24,6 @@ import {
   CompareResponseSchema,
   QuotaSchema,
   StatusSchema,
-  RerouteResponseSchema,
   ReviewResponseSchema,
   RoleListSchema,
   RunSchema,
@@ -231,12 +230,6 @@ export function createGatewayApi(call: Call) {
     /** Cabangkan percakapan dari pesan ini: pesan sampai di sini disalin ke percakapan baru. */
     forkConversation: (messageId: string) =>
       get(`/messages/${messageId}/fork`, ConversationSchema, { method: 'POST', body: {} }),
-    rerouteMessage: (messageId: string, role: string) =>
-      get(`/messages/${messageId}/reroute`, RerouteResponseSchema, {
-        method: 'POST',
-        body: { role },
-      }),
-
     getRun: (id: string) => get(`/runs/${id}`, RunSchema),
     /** Run coding terbaru dengan judul dan project, untuk Ruang Kerja. */
     listRuns: async () => (await get('/runs?kind=coding&limit=100', WorkspaceRunListSchema)).items,

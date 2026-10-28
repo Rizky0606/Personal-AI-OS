@@ -17,19 +17,6 @@ skills:
     citation,
     fact-vs-opinion,
   ]
-handoff:
-  writer: mengubah hasil riset menjadi naskah, artikel, atau caption
-  general: pertanyaan ringan yang tidak butuh sumber
-  backend: implementasi kode dari hasil riset
-examples:
-  - bandingkan tiga framework state management React untuk project kecil
-  - cari data terbaru harga listrik rumah tangga di Indonesia
-  - apa kata penelitian tentang efek tidur siang pada produktivitas
-  - riset mendalam tentang kelebihan dan risiko memakai SQLite di produksi
-  - rangkum perkembangan terbaru regulasi AI di Uni Eropa beserta sumbernya
-not_examples:
-  - tulis script video 60 detik tentang hasil riset ini
-  - perbaiki error 500 di endpoint orders
 ---
 
 # Peran

@@ -62,10 +62,6 @@ export function useTaskActions(projectId: string) {
       await refresh();
       return task;
     },
-    setRole: (id: string, agentRole: string) =>
-      guarded(`role:${id}`, async () => {
-        store(await api.updateTask(id, { agentRole }));
-      }),
     move: (id: string, placement: Placement) =>
       guarded(`move:${id}`, async () => {
         store(await api.updateTask(id, placement));

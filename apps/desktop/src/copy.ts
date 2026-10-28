@@ -697,7 +697,7 @@ export const copy = {
     conversation: 'Percakapan',
     messages: 'Pesan',
     loadingMessages: 'Memuat pesan',
-    emptyThread: 'Tulis pesan di bawah. Role dipilih otomatis, bisa diganti lewat chip role.',
+    emptyThread: 'Tulis pesan di bawah. Agent dan skill dipilih otomatis.',
     loadOlder: 'Muat pesan lebih lama',
     composerLabel: 'Pesan',
     plan: {
@@ -747,7 +747,6 @@ export const copy = {
     offlineSend: 'Tidak ada koneksi. Pesan belum terkirim; sambungkan lalu kirim lagi.',
     sendFailed: 'Pesan belum terkirim. Teks dikembalikan ke kolom pesan.',
     stopFailed: 'Belum bisa menghentikan jawaban. Coba lagi.',
-    rerouteFailed: 'Belum bisa menjalankan ulang dengan role itu.',
     runFailed: 'Jawaban gagal.',
     suggestionsLabel: 'Saran',
     suggestions: [
@@ -814,7 +813,6 @@ export const copy = {
       auto: 'Role otomatis',
       label: 'Role',
       pick: 'Pilih role',
-      rerun: 'Jalankan ulang dengan role',
     },
     model: { auto: 'Model otomatis', label: 'Model', pick: 'Pilih model' },
     reasoning: 'Penalaran',
@@ -1134,7 +1132,7 @@ export const copy = {
     dequeue: 'Keluar dari antrean',
     cardMenu: (title: string) => `Menu kartu ${title}`,
     cardHint: 'Alt + panah menggeser kartu',
-    role: { label: 'Role', change: 'Ganti role kartu', auto: 'Router memilih' },
+    role: { label: 'Role', auto: 'Otomatis' },
     started: 'Kartu mulai dikerjakan.',
     queuedToast: 'Slot run penuh. Kartu menunggu giliran.',
     moved: 'Kartu dipindah.',

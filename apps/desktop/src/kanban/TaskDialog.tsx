@@ -1,8 +1,7 @@
 import type { Task } from '@aios/contracts';
 import * as Dialog from '@radix-ui/react-dialog';
-import { ChevronDown, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useState } from 'react';
-import type { RoleInfo } from '../api/gateway';
 import { useOnline } from '../app/hooks';
 import { copy } from '../copy';
 import { taskErrorMessage } from './errors';
@@ -10,19 +9,15 @@ import { Markdown } from '../markdown/Markdown';
 import { Button } from '../ui/Button';
 import { ErrorBanner } from '../ui/ErrorBanner';
 import { IconButton } from '../ui/IconButton';
-import { RadioMenu } from '../ui/RadioMenu';
 import { TextArea } from '../ui/TextArea';
 import { TextField } from '../ui/TextField';
 import { isEditable, isQueued } from './board';
-
-const AUTO = '__router__';
 
 export interface TaskDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Kartu yang diubah; kosong = kartu baru. */
   task?: Task | undefined;
-  roles: RoleInfo[];
   onSave: (input: { title: string; body: string; agentRole: string | null }) => Promise<void>;
 }
 
@@ -30,19 +25,16 @@ export interface TaskDialogProps {
  * Kartu baru atau ubah kartu. Deskripsi Markdown dengan pratinjau. Kartu yang sedang dikerjakan atau
  * menunggu tinjauan hanya bisa dilihat.
  */
-export function TaskDialog({ open, onOpenChange, task, roles, onSave }: TaskDialogProps) {
+export function TaskDialog({ open, onOpenChange, task, onSave }: TaskDialogProps) {
   const online = useOnline();
   const [title, setTitle] = useState(task?.title ?? '');
   const [body, setBody] = useState(task?.body ?? '');
-  const [role, setRole] = useState<string>(task?.agentRole ?? AUTO);
   const [preview, setPreview] = useState(false);
   const [titleError, setTitleError] = useState<string | undefined>();
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const d = copy.kanban.dialog;
   const readOnly = task !== undefined && (!isEditable(task) || isQueued(task));
-  const codingRoles = roles.filter((r) => r.engine === 'omp');
-  const roleName = codingRoles.find((r) => r.id === role)?.name ?? copy.kanban.role.auto;
 
   async function save() {
     if (saving) return;
@@ -57,7 +49,7 @@ export function TaskDialog({ open, onOpenChange, task, roles, onSave }: TaskDial
       await onSave({
         title: title.trim(),
         body,
-        agentRole: role === AUTO ? null : role,
+        agentRole: task?.agentRole ?? null,
       });
       onOpenChange(false);
     } catch (e) {
@@ -119,32 +111,7 @@ export function TaskDialog({ open, onOpenChange, task, roles, onSave }: TaskDial
           )}
 
           <div className="flex items-center justify-between gap-3">
-            <RadioMenu
-              label={copy.kanban.role.change}
-              value={role}
-              onValueChange={setRole}
-              options={[
-                { value: AUTO, label: copy.kanban.role.auto },
-                ...codingRoles.map((r) => ({ value: r.id, label: r.name })),
-              ]}
-              trigger={
-                <button
-                  type="button"
-                  disabled={readOnly}
-                  aria-label={`${copy.kanban.role.label}: ${roleName}`}
-                  className="flex h-8 items-center gap-2 rounded-control border border-border bg-surface px-2 text-ui text-text transition-colors duration-[120ms] ease-aios hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <span>{roleName}</span>
-                  <ChevronDown
-                    size={14}
-                    strokeWidth={1.5}
-                    aria-hidden="true"
-                    className="text-text-2"
-                  />
-                </button>
-              }
-            />
-            <div className="flex gap-2">
+            <div className="ml-auto flex gap-2">
               {readOnly ? null : (
                 <Button variant="secondary" onClick={() => setPreview((p) => !p)}>
                   {preview ? d.write : d.preview}

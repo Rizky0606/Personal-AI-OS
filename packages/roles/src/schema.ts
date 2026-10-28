@@ -28,10 +28,6 @@ export const RoleFrontmatterSchema = z
     fallback_model: nonEmpty.optional(),
     approval: z.enum(['ask', 'auto-safe']),
     skills: z.array(SkillIdSchema).min(1),
-    handoff: z.record(RoleIdSchema, nonEmpty).default({}),
-    /** Router memakai 5 contoh dan 2 non-contoh per role. */
-    examples: z.array(nonEmpty).min(5),
-    not_examples: z.array(nonEmpty).min(2),
   })
   .refine((r) => new Set(r.skills).size === r.skills.length, {
     path: ['skills'],

@@ -65,7 +65,6 @@ fun ChatScreen(viewModel: ChatViewModel, snackbar: SnackbarHostState) {
     val context = LocalContext.current
     val copiedText = stringResource(R.string.chat_copied)
     var modelSheet by remember { mutableStateOf(false) }
-    var roleSheet by remember { mutableStateOf(false) }
     var toDelete by remember { mutableStateOf<String?>(null) }
     var toRemember by remember { mutableStateOf<String?>(null) }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
@@ -138,7 +137,6 @@ fun ChatScreen(viewModel: ChatViewModel, snackbar: SnackbarHostState) {
                     onDelete = { toDelete = it },
                     onRemember = { toRemember = it },
                     onDownload = viewModel::downloadFile,
-                    onRoleClick = { roleSheet = true },
                     onCopied = { /* umpan balik lewat snackbar di bawah */ },
                     copiedText = copiedText,
                     snackbar = snackbar
@@ -187,17 +185,6 @@ fun ChatScreen(viewModel: ChatViewModel, snackbar: SnackbarHostState) {
     toRemember?.let { text ->
         RememberDialog(initial = text, snackbar = snackbar, onDismiss = { toRemember = null })
     }
-    if (roleSheet) {
-        RoleSheet(
-            roles = ui.roles,
-            current = ui.lastAssistantMessage?.agentRole,
-            onSelect = {
-                viewModel.reroute(it)
-                roleSheet = false
-            },
-            onDismiss = { roleSheet = false }
-        )
-    }
 }
 
 @Composable
@@ -212,7 +199,6 @@ private fun MessageList(
     onDelete: (String) -> Unit,
     onRemember: (String) -> Unit,
     onDownload: FileDownload,
-    onRoleClick: () -> Unit,
     onCopied: () -> Unit,
     copiedText: String,
     snackbar: SnackbarHostState
@@ -246,7 +232,6 @@ private fun MessageList(
                     onDelete = onDelete,
                     onRemember = onRemember,
                     onDownload = onDownload,
-                    onRoleClick = onRoleClick,
                     onCopied = {
                         copiedTick++
                         onCopied()
@@ -279,7 +264,6 @@ private fun ChatRow(
     onDelete: (String) -> Unit,
     onRemember: (String) -> Unit,
     onDownload: FileDownload,
-    onRoleClick: () -> Unit,
     onCopied: () -> Unit
 ) {
     when (item) {
@@ -295,7 +279,6 @@ private fun ChatRow(
         is ChatItem.Assistant -> AssistantMessageRow(
             item = item,
             roleName = roleName,
-            onRoleClick = onRoleClick,
             onCopied = onCopied,
             onDelete = onDelete,
             onDownload = onDownload

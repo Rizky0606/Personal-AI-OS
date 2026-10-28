@@ -8,21 +8,14 @@ export type Id = z.infer<typeof IdSchema>;
 export const TimestampSchema = z.iso.datetime();
 export type Timestamp = z.infer<typeof TimestampSchema>;
 
-/** ID role. Role ditambah lewat file di packages/roles, jadi bukan enum tertutup. */
+/** ID agent (dulu role). Didefinisikan lewat file di packages/roles, jadi bukan enum tertutup. */
 export const RoleIdSchema = z
   .string()
   .regex(/^[a-z][a-z0-9-]*$/, 'role id: huruf kecil, angka, tanda hubung');
 export type RoleId = z.infer<typeof RoleIdSchema>;
 
-export const INITIAL_ROLE_IDS = [
-  'general',
-  'researcher',
-  'writer',
-  'frontend',
-  'backend',
-  'debugger',
-  'reviewer',
-] as const;
+/** Agent tetap: umum (server), project (worker), dan peneliti (khusus fitur riset, tidak dipilih per pesan). */
+export const INITIAL_ROLE_IDS = ['general', 'project', 'researcher'] as const;
 
 export const SurfaceSchema = z.enum(['android', 'windows']);
 export type Surface = z.infer<typeof SurfaceSchema>;

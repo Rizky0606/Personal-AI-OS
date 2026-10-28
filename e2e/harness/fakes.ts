@@ -10,7 +10,7 @@ import {
 import { mockLlm } from '../../apps/worker/src/testing/mock-llm.js';
 
 /**
- * Layanan eksternal palsu untuk E2E: Hermes (jawaban chat mengalir), 9Router (router role, judul, jadwal,
+ * Layanan eksternal palsu untuk E2E: Hermes (jawaban chat mengalir), 9Router (judul, jadwal,
  * pemecah kartu, riset, dan model coding berskrip), SearXNG, dan halaman web sumber riset.
  */
 export interface Fakes {
@@ -119,21 +119,6 @@ export async function startFakes(): Promise<Fakes> {
       const system = textOf(body.messages.find((m) => m.role === 'system')?.content);
       const user = textOf(body.messages.findLast((m) => m.role === 'user')?.content);
 
-      if (system.includes('Kamu router')) {
-        const coding = /catatan|tombol|kode|file/i.test(user);
-        return json(
-          res,
-          completion(
-            JSON.stringify({
-              role: coding ? 'frontend' : 'general',
-              confidence: 0.92,
-              reason: 'Dipilih oleh router uji.',
-              needs_split: false,
-              subtasks: [],
-            }),
-          ),
-        );
-      }
       if (system.includes('pengurai jadwal')) {
         return json(
           res,
@@ -156,8 +141,8 @@ export async function startFakes(): Promise<Fakes> {
           completion(
             JSON.stringify({
               items: [
-                { title: 'Buat halaman login', body: 'Form email dan sandi', role: 'frontend' },
-                { title: 'Endpoint login', body: '', role: 'backend' },
+                { title: 'Buat halaman login', body: 'Form email dan sandi', role: 'project' },
+                { title: 'Endpoint login', body: '', role: 'project' },
                 { title: 'Tulis catatan rilis', body: '', role: null },
               ],
             }),

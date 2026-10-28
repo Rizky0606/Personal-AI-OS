@@ -16,7 +16,7 @@ test('chat: jawaban mengalir bertahap, role terlihat, judul otomatis, dan riwaya
   await expect(log.getByText(/^Halo!/)).toBeVisible();
   await expect(log.getByText(config.hermesAnswer)).toBeVisible();
 
-  // Pesan pengguna dan chip role (router memilih Umum).
+  // Pesan pengguna dan chip role (agent umum).
   await expect(log.getByText('Halo, tolong jelaskan apa itu closure.')).toBeVisible();
   await expect(log.getByText('Umum').first()).toBeVisible();
 

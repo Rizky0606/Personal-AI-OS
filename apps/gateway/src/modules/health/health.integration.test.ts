@@ -28,7 +28,6 @@ import {
   unusedWorker,
   unusedSchedules,
   unusedRoles,
-  unusedRouting,
   unusedRuns,
   unusedWs,
 } from '../../testing/stubs.js';
@@ -125,7 +124,6 @@ async function makeApp(setup: Setup = {}) {
     search: unusedSearch,
     status: unusedStatus,
     worker: unusedWorker,
-    routing: unusedRouting,
     ws: unusedWs,
     health: createHealthService({
       config,

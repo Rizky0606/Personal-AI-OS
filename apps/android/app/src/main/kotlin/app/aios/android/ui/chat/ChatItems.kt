@@ -32,8 +32,6 @@ sealed interface ChatItem {
         val role: String?,
         val model: String?,
         val streaming: Boolean,
-        /** Chip role bisa diketuk (reroute) hanya pada jawaban terakhir yang sudah selesai. */
-        val canReroute: Boolean,
         /** Menu Hapus tersedia (jawaban tersimpan dan tidak ada run berjalan). */
         val canModify: Boolean = false,
         /** Berkas buatan agent (folder kiriman) yang bisa diunduh. */
@@ -59,7 +57,6 @@ sealed interface ChatItem {
 fun buildChatItems(state: ChatUiState): List<ChatItem> {
     val live = state.live
     val lastUserId = state.lastUserMessage?.id
-    val lastAssistantId = state.lastAssistantMessage?.id
     val items = ArrayList<ChatItem>(state.messages.size + 3)
     var liveShown = false
 
@@ -84,7 +81,6 @@ fun buildChatItems(state: ChatUiState): List<ChatItem> {
                         role = message.agentRole,
                         model = message.model,
                         streaming = false,
-                        canReroute = message.id == lastAssistantId && !state.busy,
                         canModify = !state.busy,
                         files = message.parts.filterIsInstance<MessagePart.File>()
                     )
@@ -107,8 +103,7 @@ private fun liveItem(id: String, live: LiveRun, persisted: Message?) = ChatItem.
     tools = live.tools,
     role = live.role ?: persisted?.agentRole,
     model = persisted?.model,
-    streaming = !live.finished,
-    canReroute = false
+    streaming = !live.finished
 )
 
 private fun MessagePart.Tool.toStep() = ToolStep(toolCallId, name, target, status, durationMs)

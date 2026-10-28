@@ -26,7 +26,7 @@ Produk ini adalah satu asisten AI pribadi dengan dua wajah: Windows untuk kerja 
 
 | ID | Fitur | Prioritas | Keterangan singkat |
 | --- | --- | --- | --- |
-| W1 | Chat umum | P0 | Chat dengan router role, pilih model, lampiran |
+| W1 | Chat umum | P0 | Chat dengan agent umum dan skill otomatis, pilih model, lampiran |
 | W2 | Chat per folder project | P0 | Agent bekerja di folder terpilih via adapter omp |
 | W3 | Run di git worktree | P0 | Satu worktree per run atau kartu, tidak menyentuh branch kerja |
 | W4 | Review diff | P0 | Diff per file, komentar per baris dikirim balik ke agent, terima atau tolak |
@@ -62,7 +62,7 @@ Produk ini adalah satu asisten AI pribadi dengan dua wajah: Windows untuk kerja 
 
 | ID | Fitur | Prioritas | Keterangan singkat |
 | --- | --- | --- | --- |
-| A1 | Chat | P0 | Streaming, router role, pilih model, lampiran gambar dan file |
+| A1 | Chat | P0 | Streaming, agent umum dan skill otomatis, pilih model, lampiran gambar dan file |
 | A2 | Deep research | P0 | Berjalan di VPS, laporan bersitasi, progres terlihat |
 | A3 | Jadwal | P1 | Lihat, buat, jeda, riwayat run |
 | A4 | Notifikasi | P1 | Riset atau jadwal selesai |
@@ -87,7 +87,7 @@ Produk ini adalah satu asisten AI pribadi dengan dua wajah: Windows untuk kerja 
 
 ## Alur pengguna utama
 
-1. **Chat umum (Android atau Windows):** ketik pesan, router memilih role, jawaban mengalir, chip role bisa diganti.
+1. **Chat umum (Android atau Windows):** ketik pesan, server memilih skill dari isi pesan, jawaban mengalir.
 2. **Tugas coding (Windows):** pilih folder, tulis tugas atau klik kartu kanban, agent bekerja di worktree, minta izin bila perlu, hasil diff ditinjau, lalu terima.
 3. **Riset (Android):** tulis pertanyaan, rencana riset tampil, job jalan di VPS, notifikasi saat laporan siap.
 4. **Jadwal:** tulis dalam bahasa alami ("setiap Senin 07.00 ringkas berita AI"), sistem mengusulkan cron dan prompt, pengguna konfirmasi.

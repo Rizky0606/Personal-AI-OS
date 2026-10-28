@@ -45,7 +45,7 @@ Hermes, omp, dan research engine memanggil model hanya lewat 9Router. Port semua
 
 | Komponen | Lokasi | Tanggung jawab | Teknologi |
 | --- | --- | --- | --- |
-| Backend gateway | VPS | Auth, REST, WebSocket, router role, registri role dan skill, orkestrasi run, scheduler, research engine, proxy model terautentikasi | Node 22, TypeScript, Fastify, Zod, Drizzle ORM, pg-boss |
+| Backend gateway | VPS | Auth, REST, WebSocket, pemilih agent dan skill, registri agent dan skill, orkestrasi run, scheduler, research engine, proxy model terautentikasi | Node 22, TypeScript, Fastify, Zod, Drizzle ORM, pg-boss |
 | PostgreSQL 16 | VPS (Docker) | Sumber kebenaran: chat, run, kanban, jadwal, riset, log routing; antrean job | Postgres + pg-boss |
 | Hermes | VPS | Agent umum, memori jangka panjang, tool web dan browse | API server kompatibel OpenAI di 127.0.0.1:8642 |
 | 9Router | VPS | Semua panggilan model, fallback, kuota | 127.0.0.1:20128/v1 |
@@ -100,7 +100,7 @@ export interface RunHandle {
 
 ## Alur utama
 
-1. **Chat umum:** klien kirim pesan, gateway menjalankan router, adapter Hermes mengalirkan jawaban, event disimpan dan disiarkan lewat WebSocket.
+1. **Chat umum:** klien kirim pesan, gateway memilih agent dan skill, adapter Hermes mengalirkan jawaban, event disimpan dan disiarkan lewat WebSocket.
 2. **Run coding:** klien Windows membuat run, gateway menetapkan role, worker membuat worktree dan menjalankan omp, approval ditanyakan di aplikasi Windows, hasil berupa diff menunggu review.
 3. **Deep research:** gateway membuat job, research engine merencanakan sub-pertanyaan, mencari lewat SearXNG, membaca halaman, lalu menyusun laporan bersitasi.
 4. **Jadwal:** pg-boss memicu job sesuai cron, menjalankan prompt di Hermes atau research engine, menyimpan hasil, lalu mengirim notifikasi.

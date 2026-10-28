@@ -114,7 +114,7 @@ const getRun = async (id: string) =>
 async function reviewable(fake: FakeWorker, conversationId: string, text = 'tambahkan tes') {
   const sent = await env.post(
     `/conversations/${conversationId}/messages`,
-    { parts: [{ type: 'text', text }], role: 'frontend' },
+    { parts: [{ type: 'text', text }] },
     desktop,
   );
   expect(sent.statusCode, sent.body).toBe(201);
@@ -241,7 +241,7 @@ describe('POST /runs/:id/review', () => {
     expect(start.prompt).toBe(bundleComments(comments));
     expect(start.prompt).toContain('- src/math.js:12 — Pakai === bukan ==');
     expect(start.prompt).toContain('- math.test.js:3 — Tambah kasus negatif');
-    expect(start.bundle.role).toBe('frontend');
+    expect(start.bundle.role).toBe('project');
     // Branch yang sama dengan run sebelumnya.
     await until(async () => (await getRun(revisionId)).status === 'running', 'revisi running');
     expect((await getRun(revisionId)).branch).toBe((await getRun(run.id)).branch);

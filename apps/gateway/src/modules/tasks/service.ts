@@ -9,13 +9,13 @@ import type {
   TaskStatus,
   UpdateTaskRequestSchema,
 } from '@aios/contracts';
+import { PROJECT_AGENT } from '@aios/roles';
 import { and, asc, count, desc, eq, isNotNull, isNull } from 'drizzle-orm';
 import type { z } from 'zod';
 import type { Database } from '../../db/client.js';
 import { projects, runEvents, runs, tasks } from '../../db/schema/index.js';
 import { AppError } from '../../errors.js';
 import type { ChatService } from '../chat/service.js';
-import type { RoutingService } from '../router/service.js';
 import type { EventHub } from '../runs/hub.js';
 import type { TaskBreakdown } from './breakdown.js';
 
@@ -42,7 +42,6 @@ export interface TasksService {
 }
 
 export const DEFAULT_MAX_PARALLEL = 2;
-const FALLBACK_CODING_ROLE = 'backend';
 /** Kolom yang boleh dituju pengguna dengan seret; Running dan Review hanya diisi sistem. */
 const USER_COLUMNS: TaskStatus[] = ['backlog', 'todo', 'done'];
 
@@ -90,7 +89,6 @@ export function createTasksService(deps: {
   db: Database;
   hub: Pick<EventHub, 'publishLive'>;
   chat: Pick<ChatService, 'createConversation' | 'sendMessage'>;
-  routing: Pick<RoutingService, 'preview'>;
   roles: {
     get(roleId: string): { engine: string } | undefined;
     list(): { id: string; engine: string }[];
@@ -100,7 +98,7 @@ export function createTasksService(deps: {
   maxParallel?: number;
   log?: { warn: (obj: object, msg: string) => void; error: (obj: object, msg: string) => void };
 }): TasksService {
-  const { db, hub, chat, routing, roles, breakdown, log } = deps;
+  const { db, hub, chat, roles, breakdown, log } = deps;
   const maxParallel = Math.max(1, deps.maxParallel ?? DEFAULT_MAX_PARALLEL);
 
   /** Pekerjaan dengan kunci yang sama berjalan berurutan (per project untuk slot, per kartu untuk sinkronisasi). */
@@ -206,25 +204,6 @@ export function createTasksService(deps: {
     return row?.n ?? 0;
   }
 
-  /** Role kartu bila belum dipilih: router menebak, tetapi hasilnya harus role coding. */
-  async function pickRole(task: TaskRow): Promise<string> {
-    const fallback =
-      roles.get(FALLBACK_CODING_ROLE)?.engine === 'omp'
-        ? FALLBACK_CODING_ROLE
-        : (roles.list().find((r) => r.engine === 'omp')?.id ?? FALLBACK_CODING_ROLE);
-    try {
-      const { decision } = await routing.preview({
-        message: promptOf(task),
-        surface: 'windows',
-        projectId: task.projectId,
-      });
-      return roles.get(decision.role)?.engine === 'omp' ? decision.role : fallback;
-    } catch (err) {
-      log?.warn({ err, taskId: task.id }, 'router gagal memilih role kartu; memakai role bawaan');
-      return fallback;
-    }
-  }
-
   /** Percakapan kartu: dipakai ulang bila kartu pernah dikerjakan, supaya riwayatnya satu. */
   async function conversationFor(task: TaskRow): Promise<string> {
     const [previous] = await db
@@ -244,13 +223,12 @@ export function createTasksService(deps: {
 
   /** Memulai run coding untuk kartu. Dipanggil di dalam kunci project. */
   async function launch(task: TaskRow, model?: string): Promise<TaskRow> {
-    const role = task.agentRole ?? (await pickRole(task));
+    const role = task.agentRole ?? PROJECT_AGENT;
     const conversationId = await conversationFor(task);
     const { run } = await chat.sendMessage(
       conversationId,
       {
         parts: [{ type: 'text', text: promptOf(task) }],
-        role,
         ...(model ? { model } : {}),
       },
       { taskId: task.id },

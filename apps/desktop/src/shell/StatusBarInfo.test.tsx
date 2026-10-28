@@ -31,7 +31,7 @@ describe('StatusBar: role, model, dan kuota', () => {
   });
 
   it('menampilkan nama role aktif, label model pilihan, dan ringkasan kuota', async () => {
-    useUiStore.setState({ activeRole: 'frontend', model: 'combo/fast' });
+    useUiStore.setState({ activeRole: 'project', model: 'combo/fast' });
     api.getQuota.mockResolvedValue({
       source: 'ninerouter',
       totals: { requests: 5, inputTokens: 12_000, outputTokens: 300, costUsd: 0.5 },
@@ -40,7 +40,7 @@ describe('StatusBar: role, model, dan kuota', () => {
     });
     await renderScreen(<StatusBar />);
 
-    expect(await screen.findByText('Frontend')).toBeInTheDocument();
+    expect(await screen.findByText('Project')).toBeInTheDocument();
     expect(screen.getByText('Cepat')).toBeInTheDocument();
     expect(
       await screen.findByText(copy.status.quotaSummary('12,3 rb', '$0,50')),

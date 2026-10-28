@@ -315,7 +315,6 @@ private fun BotAvatar(streaming: Boolean) {
 fun AssistantMessageRow(
     item: ChatItem.Assistant,
     roleName: (String) -> String,
-    onRoleClick: () -> Unit,
     onCopied: () -> Unit,
     onDelete: (String) -> Unit = {},
     onDownload: FileDownload = { _, _ -> }
@@ -344,14 +343,7 @@ fun AssistantMessageRow(
                     color = colors.text
                 )
                 item.role?.let { role ->
-                    val name = roleName(role)
-                    val description = stringResource(R.string.chat_role_label, name)
-                    AiosChip(
-                        text = name,
-                        selected = item.streaming,
-                        onClick = if (item.canReroute) onRoleClick else null,
-                        modifier = Modifier.semantics { if (item.canReroute) contentDescription = description }
-                    )
+                    AiosChip(text = roleName(role), selected = item.streaming)
                 }
                 item.model?.let {
                     Text(
