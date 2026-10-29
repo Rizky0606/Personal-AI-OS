@@ -55,12 +55,15 @@ export function StatusBar() {
   const modelLabel = modelId
     ? (models?.find((m) => m.id === modelId)?.label ?? modelId)
     : copy.status.model;
-  const quotaLabel = quota
-    ? copy.status.quotaSummary(
-        formatTokens(quota.totals.inputTokens + quota.totals.outputTokens),
-        formatCost(quota.totals.costUsd),
-      )
-    : copy.status.quota;
+  // Panel kuota hanya bila ada pemakaian; biaya hanya bila tercatat (> 0). Tanpa data: tidak ada "$0,00".
+  const totals = quota?.totals;
+  const tokens = totals ? totals.inputTokens + totals.outputTokens : 0;
+  const quotaLabel =
+    totals && (totals.requests > 0 || tokens > 0)
+      ? totals.costUsd > 0
+        ? copy.status.quotaSummary(formatTokens(tokens), formatCost(totals.costUsd))
+        : copy.status.quotaTokens(formatTokens(tokens))
+      : null;
   // Selama run coding berjalan: branch kerja agent; selain itu branch bawaan project.
   const projectLabel = project
     ? `${project.name} · ${runBranch ?? project.defaultBranch}`
@@ -91,13 +94,15 @@ export function StatusBar() {
           />
           {copy.workerStatus[worker]}
         </span>
-        <Link
-          to="/quota"
-          title={copy.status.quotaLabel}
-          className="underline-offset-2 hover:text-text hover:underline"
-        >
-          {quotaLabel}
-        </Link>
+        {quotaLabel ? (
+          <Link
+            to="/quota"
+            title={copy.status.quotaLabel}
+            className="underline-offset-2 hover:text-text hover:underline"
+          >
+            {quotaLabel}
+          </Link>
+        ) : null}
         <span role="status" className="flex items-center gap-2">
           <span
             aria-hidden="true"
