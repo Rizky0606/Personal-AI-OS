@@ -6,8 +6,8 @@ Aplikasi punya **dua agent tetap**. Yang membedakannya hanya ada tidaknya projec
 
 | Agent | Grup | Mesin | Dipakai untuk | Skill milik agent |
 | --- | --- | --- | --- | --- |
-| `general` | Umum | Hermes (server) | Chat umum di tab Chat dan semua chat Android: pertanyaan apa pun, menulis dan menjelaskan kode di chat, tidak terikat folder project | answer-first, clarify-once |
-| `project` | Coding | omp (worker Windows) | Chat per folder project di tab Project dan run kartu kanban: membaca, mencari, menjawab, dan mengubah kode di folder project itu (worktree run) | (hanya skill inti) |
+| `general` | Umum | Hermes (server) | Chat umum di tab Chat dan semua chat Android: pertanyaan apa pun, menulis dan menjelaskan kode di chat, tidak terikat folder project | answer-first, clarify-once, find-skills |
+| `project` | Coding | omp (worker Windows) | Chat per folder project di tab Project dan run kartu kanban: membaca, mencari, menjawab, dan mengubah kode di folder project itu (worktree run) | find-skills (selain skill inti) |
 | `researcher` | Umum | Research engine + Hermes | Hanya fitur Riset dan jadwal riset; tidak pernah dipilih untuk pesan chat | source-verification, citation, fact-vs-opinion |
 
 **Aturan pemilihan agent** (`pickAgent`, `packages/roles/src/agents.ts`; tanpa model dan tanpa jaringan): `surface = windows` dan ada project → `project`; selain itu → `general`. Android dengan atau tanpa project tetap `general` karena tidak punya akses ke folder.
