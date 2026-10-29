@@ -22,6 +22,8 @@ export interface HermesAdapterOptions {
   /** Tanpa byte selama ini dianggap macet (Hermes mengirim keepalive tiap 10 detik). */
   idleTimeoutMs?: number;
   fetch?: typeof fetch;
+  /** Jam untuk durasi tool (diinjeksi di tes). */
+  now?: () => number;
 }
 
 export const HERMES_DEFAULT_MODEL = 'hermes-agent';
@@ -38,6 +40,30 @@ type Abort = 'cancelled' | 'connect_timeout' | 'idle_timeout';
 
 const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
+
+const firstString = (...values: unknown[]): string | undefined =>
+  values.find((v): v is string => typeof v === 'string' && v !== '');
+
+/**
+ * Status di payload `hermes.tool.progress`. Bentuk payload BELUM terverifikasi dengan rekaman nyata:
+ * dasarnya dokumentasi Hermes (event hanya untuk awal tool) dan issue NousResearch/hermes-agent#16588
+ * (`toolCallId`, `tool`/`name`, `status: running | completed`, `input`, `output`). Yang tidak cocok diabaikan.
+ */
+const TOOL_RUNNING: Record<string, true> = {
+  running: true,
+  started: true,
+  start: true,
+  in_progress: true,
+};
+const TOOL_DONE: Record<string, true> = {
+  completed: true,
+  complete: true,
+  done: true,
+  finished: true,
+  success: true,
+  ok: true,
+};
+const TOOL_FAILED: Record<string, true> = { error: true, failed: true, failure: true };
 
 function statusError(status: number): AdapterError {
   if (status === 401 || status === 403) {
@@ -68,6 +94,7 @@ export function createHermesAdapter(options: HermesAdapterOptions): AgentAdapter
     connectTimeoutMs = 30_000,
     idleTimeoutMs = 60_000,
     fetch: doFetch = fetch,
+    now = Date.now,
   } = options;
   const url = `${options.baseUrl.replace(/\/+$/, '')}/v1/chat/completions`;
 
@@ -157,12 +184,71 @@ export function createHermesAdapter(options: HermesAdapterOptions): AgentAdapter
         let finish: string | undefined;
         let failure: string | undefined;
         let done = false;
+        // Tool yang sedang berjalan: toolCallId -> waktu mulai. Hermes tidak mengirim durasi, jadi dihitung di sini.
+        const openTools = new Map<string, number>();
+        let anonymousTools = 0;
+        const closeTools = (status: 'ok' | 'error' | 'cancelled'): AgentEvent[] => {
+          const closed = [...openTools].map(([toolCallId, startedAt]): AgentEvent => ({
+            type: 'tool.finished',
+            toolCallId,
+            status,
+            durationMs: Math.max(0, now() - startedAt),
+          }));
+          openTools.clear();
+          return closed;
+        };
+        const onToolProgress = (data: string): AgentEvent[] => {
+          let payload: unknown;
+          try {
+            payload = JSON.parse(data);
+          } catch {
+            return [];
+          }
+          if (!isRecord(payload)) return [];
+          const name = firstString(payload.tool, payload.name);
+          const status = firstString(payload.status)?.toLowerCase() ?? 'running';
+          const realId = firstString(payload.toolCallId, payload.tool_call_id, payload.id);
+          if (TOOL_DONE[status] || TOOL_FAILED[status]) {
+            if (!realId || !openTools.has(realId)) return [];
+            const startedAt = openTools.get(realId) ?? now();
+            openTools.delete(realId);
+            const output = firstString(payload.output, payload.result);
+            return [
+              ...(output
+                ? [
+                    {
+                      type: 'tool.output' as const,
+                      toolCallId: realId,
+                      chunk: output.length > 8000 ? `${output.slice(0, 7999)}…` : output,
+                      stream: 'stdout' as const,
+                    },
+                  ]
+                : []),
+              {
+                type: 'tool.finished',
+                toolCallId: realId,
+                status: TOOL_FAILED[status] ? 'error' : 'ok',
+                durationMs: Math.max(0, now() - startedAt),
+              },
+            ];
+          }
+          if (!TOOL_RUNNING[status] || !name) return [];
+          // Tanpa ID dari Hermes (event lama hanya penanda mulai): ID dibuat adapter, unik per run.
+          const toolCallId = realId ?? `hermes-tool-${++anonymousTools}`;
+          if (openTools.has(toolCallId)) return []; // pembaruan progres untuk panggilan yang sama
+          openTools.set(toolCallId, now());
+          const target = firstString(payload.target, payload.label, payload.preview);
+          return [{ type: 'tool.started', toolCallId, name, ...(target ? { target } : {}) }];
+        };
         try {
           armIdle();
           for await (const msg of parseSse(res.body)) {
             armIdle();
-            // Event bernama (mis. hermes.tool.progress) belum dipetakan: bentuk payload-nya belum terverifikasi.
-            if (msg.event && msg.event !== 'message') continue;
+            // Event bernama: hanya hermes.tool.progress yang dipetakan; yang lain dilewati tanpa efek.
+            if (msg.event && msg.event !== 'message') {
+              if (msg.event === 'hermes.tool.progress') yield* onToolProgress(msg.data);
+              continue;
+            }
             if (msg.data === '[DONE]') {
               done = true;
               break;
@@ -196,7 +282,11 @@ export function createHermesAdapter(options: HermesAdapterOptions): AgentAdapter
             }
           }
         } catch {
-          if (reason === 'cancelled') return;
+          if (reason === 'cancelled') {
+            yield* closeTools('cancelled');
+            return;
+          }
+          yield* closeTools('error');
           yield errorEvent(
             reason === 'idle_timeout'
               ? new AdapterError('hermes_stalled', 'Hermes berhenti mengirim data.', true)
@@ -206,7 +296,13 @@ export function createHermesAdapter(options: HermesAdapterOptions): AgentAdapter
         } finally {
           clearTimeout(idleTimer);
         }
-        if (reason === 'cancelled') return;
+        if (reason === 'cancelled') {
+          yield* closeTools('cancelled');
+          return;
+        }
+        if (finish === 'error' || failure || finish === 'cancelled' || (!finish && !done)) {
+          yield* closeTools('error');
+        }
 
         if (finish === 'error' || failure) {
           // Pesan dari Hermes (mis. admission_conflict) hanya kode pendek, bukan isi percakapan.
@@ -226,6 +322,7 @@ export function createHermesAdapter(options: HermesAdapterOptions): AgentAdapter
           return;
         }
 
+        yield* closeTools('ok');
         yield {
           type: 'message.completed',
           messageId: input.messageId,

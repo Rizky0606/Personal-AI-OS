@@ -153,16 +153,45 @@ describe('adapter Hermes: mapping ke AgentEvent', () => {
       );
       res.end('data: [DONE]\n\n');
     });
-    const events = await collect({ baseUrl: hermes.url });
+    let t = 1_000;
+    const events = await collect({ baseUrl: hermes.url, now: () => (t += 250) });
     const usage = { inputTokens: 8, outputTokens: 3, reasoningTokens: 1 };
     expect(events).toEqual([
+      // Event awal tanpa ID dari Hermes: adapter memberi ID dan menutupnya ok saat jawaban selesai.
+      { type: 'tool.started', toolCallId: 'hermes-tool-1', name: 'web_search' },
       { type: 'reasoning.delta', messageId: MESSAGE_ID, text: 'mikir' },
       { type: 'message.delta', messageId: MESSAGE_ID, text: 'Halo ' },
       { type: 'message.delta', messageId: MESSAGE_ID, text: 'dunia' },
+      { type: 'tool.finished', toolCallId: 'hermes-tool-1', status: 'ok', durationMs: 250 },
       { type: 'message.completed', messageId: MESSAGE_ID, usage },
       { type: 'run.completed', summary: 'Halo dunia', usage },
     ]);
     for (const e of events) expect(AgentEventSchema.safeParse(e).success).toBe(true);
+  });
+
+  it('event bernama, JSON rusak, dan bentuk chunk tak dikenal diabaikan: tidak ada event error, jawaban tetap selesai', async () => {
+    const hermes = await mockHermes((_req, res) => {
+      sseHead(res);
+      res.write('event: hermes.event_masa_depan\ndata: {"x":1}\n\n');
+      res.write('event: hermes.tool.progress\ndata: bukan json\n\n');
+      res.write('data: bukan json\n\n');
+      res.write('data: [1,2,3]\n\n');
+      res.write('data: {"choices":"bukan array"}\n\n');
+      res.write(
+        `data: ${JSON.stringify({ choices: [{ delta: { tool_calls: [{ id: 'x' }] } }] })}\n\n`,
+      );
+      res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: 123 } }] })}\n\n`);
+      res.write(chunk({ content: 'ok' }, 'stop'));
+      res.end('data: [DONE]\n\n');
+    });
+
+    const events = await collect({ baseUrl: hermes.url });
+
+    expect(events.map((e) => e.type)).toEqual([
+      'message.delta',
+      'message.completed',
+      'run.completed',
+    ]);
   });
 
   it('chunk SSE terpotong di tengah baris dan CRLF tetap terbaca utuh', async () => {
@@ -263,6 +292,167 @@ describe('adapter Hermes: kegagalan', () => {
     const events = await collect({ baseUrl: hermes.url, idleTimeoutMs: 60 });
     expect(events.map((e) => e.type)).toEqual(['message.delta', 'error']);
     expect(events[1]).toMatchObject({ code: 'hermes_stalled', retryable: true });
+  });
+});
+
+/**
+ * Pemetaan hermes.tool.progress. BENTUK PAYLOAD DI SINI DARI ISSUE NousResearch/hermes-agent#16588 DAN
+ * DOKUMENTASI, BUKAN REKAMAN NYATA (belum ada tangkapan Hermes; lihat docs/ADAPTER_EVENTS.md). Tes ini
+ * mengunci perilaku adapter terhadap bentuk itu; rekaman nyata dibandingkan lewat hermes.replay.test.ts.
+ */
+describe('adapter Hermes: hermes.tool.progress → tool.*', () => {
+  const progress = (payload: object) =>
+    `event: hermes.tool.progress\ndata: ${JSON.stringify(payload)}\n\n`;
+  const clockOpts = () => {
+    let t = 1_000;
+    return { now: () => (t += 250) };
+  };
+
+  it('running lalu completed dengan toolCallId yang sama: tool.started, tool.output, tool.finished ok dengan durasi dari selisih waktu', async () => {
+    const hermes = await mockHermes((_req, res) => {
+      sseHead(res);
+      res.write(
+        progress({
+          toolCallId: 'call_t1',
+          tool: 'terminal',
+          status: 'running',
+          input: { command: 'ls' },
+        }),
+      );
+      res.write(progress({ toolCallId: 'call_t1', tool: 'terminal', status: 'running' }));
+      res.write(
+        progress({
+          toolCallId: 'call_t1',
+          tool: 'terminal',
+          status: 'completed',
+          output: 'a.txt\n',
+        }),
+      );
+      res.write(chunk({ content: 'selesai' }, 'stop'));
+      res.end('data: [DONE]\n\n');
+    });
+
+    const events = await collect({ baseUrl: hermes.url, ...clockOpts() });
+
+    expect(events.map((e) => e.type)).toEqual([
+      'tool.started',
+      'tool.output',
+      'tool.finished',
+      'message.delta',
+      'message.completed',
+      'run.completed',
+    ]);
+    expect(events[0]).toEqual({ type: 'tool.started', toolCallId: 'call_t1', name: 'terminal' });
+    expect(events[1]).toEqual({
+      type: 'tool.output',
+      toolCallId: 'call_t1',
+      chunk: 'a.txt\n',
+      stream: 'stdout',
+    });
+    // mulai di waktu 1250, selesai di 1500 (jam palsu naik 250 tiap dibaca).
+    expect(events[2]).toEqual({
+      type: 'tool.finished',
+      toolCallId: 'call_t1',
+      status: 'ok',
+      durationMs: 250,
+    });
+    for (const e of events) expect(AgentEventSchema.safeParse(e).success).toBe(true);
+  });
+
+  it('status gagal menjadi tool.finished error; completed untuk ID yang tak pernah dimulai diabaikan', async () => {
+    const hermes = await mockHermes((_req, res) => {
+      sseHead(res);
+      res.write(progress({ toolCallId: 'call_x', tool: 'terminal', status: 'running' }));
+      res.write(progress({ toolCallId: 'call_x', tool: 'terminal', status: 'failed' }));
+      res.write(progress({ toolCallId: 'tak-dikenal', tool: 'terminal', status: 'completed' }));
+      res.write(chunk({ content: 'ok' }, 'stop'));
+      res.end('data: [DONE]\n\n');
+    });
+
+    const events = await collect({ baseUrl: hermes.url, ...clockOpts() });
+
+    expect(events.filter((e) => e.type.startsWith('tool.'))).toEqual([
+      { type: 'tool.started', toolCallId: 'call_x', name: 'terminal' },
+      { type: 'tool.finished', toolCallId: 'call_x', status: 'error', durationMs: 250 },
+    ]);
+  });
+
+  it('event awal tanpa ID (hanya penanda mulai): ID dibuat adapter, unik per panggilan, dan ditutup ok sebelum jawaban selesai', async () => {
+    const hermes = await mockHermes((_req, res) => {
+      sseHead(res);
+      res.write(progress({ tool: 'web_search', label: 'cari berita' }));
+      res.write(progress({ tool: 'web_search', label: 'cari lagi' }));
+      res.write(chunk({ content: 'hasil' }, 'stop'));
+      res.end('data: [DONE]\n\n');
+    });
+
+    const events = await collect({ baseUrl: hermes.url, ...clockOpts() });
+
+    const started = events.filter((e) => e.type === 'tool.started');
+    expect(started).toEqual([
+      {
+        type: 'tool.started',
+        toolCallId: 'hermes-tool-1',
+        name: 'web_search',
+        target: 'cari berita',
+      },
+      {
+        type: 'tool.started',
+        toolCallId: 'hermes-tool-2',
+        name: 'web_search',
+        target: 'cari lagi',
+      },
+    ]);
+    expect(events.map((e) => e.type)).toEqual([
+      'tool.started',
+      'tool.started',
+      'message.delta',
+      'tool.finished',
+      'tool.finished',
+      'message.completed',
+      'run.completed',
+    ]);
+    expect(events.filter((e) => e.type === 'tool.finished')).toEqual([
+      { type: 'tool.finished', toolCallId: 'hermes-tool-1', status: 'ok', durationMs: 500 },
+      { type: 'tool.finished', toolCallId: 'hermes-tool-2', status: 'ok', durationMs: 500 },
+    ]);
+  });
+
+  it('cancel saat tool berjalan: tool.finished cancelled, lalu aliran berakhir tanpa error', async () => {
+    const hermes = await mockHermes((_req, res) => {
+      sseHead(res);
+      res.write(progress({ toolCallId: 'call_c', tool: 'terminal', status: 'running' }));
+    });
+    const handle = await createHermesAdapter({ baseUrl: hermes.url, ...clockOpts() }).startRun({
+      runId: RUN_ID,
+      messageId: MESSAGE_ID,
+      prompt: 'panjang',
+    });
+
+    const seen: AgentEvent[] = [];
+    for await (const e of handle.events) {
+      seen.push(e);
+      if (e.type === 'tool.started') await handle.cancel();
+    }
+
+    expect(seen).toEqual([
+      { type: 'tool.started', toolCallId: 'call_c', name: 'terminal' },
+      { type: 'tool.finished', toolCallId: 'call_c', status: 'cancelled', durationMs: 250 },
+    ]);
+  });
+
+  it('stream putus saat tool berjalan: tool.finished error mendahului event error', async () => {
+    const hermes = await mockHermes((_req, res) => {
+      sseHead(res);
+      res.write(progress({ toolCallId: 'call_d', tool: 'terminal', status: 'running' }), () =>
+        res.destroy(),
+      );
+    });
+
+    const events = await collect({ baseUrl: hermes.url, ...clockOpts() });
+
+    expect(events.map((e) => e.type)).toEqual(['tool.started', 'tool.finished', 'error']);
+    expect(events[1]).toMatchObject({ toolCallId: 'call_d', status: 'error' });
   });
 });
 
