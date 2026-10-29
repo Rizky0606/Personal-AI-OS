@@ -589,3 +589,9 @@ Disusun 2026-10-26 dari perbandingan dengan Orca, Pi, Cline, Amp, Goose, dan Vib
 - Konteks tautan dan pencarian web (Fase 45/51) dikerjakan runner setelah run berjalan (`LaunchInput.enrich`): pengiriman pesan tidak menunggu, dan langkahnya (`baca_tautan`, `cari_web`) tampil di chat dan tersimpan di pesan. Kueri pencarian yang dibuat model belum ditampilkan (langkah memuat cuplikan pesan pemilik).
 - Armada agent (Fase 47): belum ada pengelompokan armada (tiap tugas berdiri sendiri; tidak ada tabel `fleets` atau `runs.fleet_id`), tampilan kartu per agent dengan berkas yang sedang disentuh, dan pembanding hasil antar-agent. Batas 4 agent per project tetap (konstanta, belum bisa diatur). Peluncuran berurutan: tugas ke-4 mulai beberapa saat setelah tugas pertama, tetapi respons kembali setelah semuanya dimulai.
 - Hapus role dan router (Fase 48): pemilih skill di komposer sudah ada di desktop (menu Skill: tambah paket untuk satu pesan; belum ada UI untuk mencabut skill otomatis, `skillsOff`) tetapi belum di Android, skill spesialis belum bisa dilihat per pesan selain lewat alasan `route.decided`, jadwal target `role` dan pemecah tugas kanban masih memakai daftar agent, dan skill baru (mis. arsitektur, database, devops, tes) dapat ditambahkan sebagai paket di `SKILL_PACKS`. Kode Android diubah tanpa kompilasi lokal (tidak ada JDK); diverifikasi CI.
+
+## Temuan Sesi 0 (baseline, lihat `docs/BASELINE.md`)
+
+- [ ] `e2e/.stack.json` terlacak git tetapi ditulis ulang tiap run e2e; pertimbangkan `.gitignore` dan hapus dari indeks.
+- [ ] `apps/worker/src/preview/preview.test.ts` ("mendeteksi skrip dev…") gagal sekali saat suite penuh dengan beban tinggi (`devUrl` 127.0.0.1, bukan localhost), lulus saat diulang; selidiki bila muncul lagi di CI.
+- [ ] Dengan `CI=true` di shell lokal, tes integrasi gateway gagal tanpa petunjuk perbaikan; tambahkan hint "kosongkan `CI` atau isi `TEST_DATABASE_URL`" pada pesan di `src/testing/db.ts`.
