@@ -71,6 +71,8 @@ export function ReviewView({ runId }: { runId: string }) {
             ? 'empty'
             : 'content';
 
+  const refresh = () => void queryClient.invalidateQueries({ queryKey: reviewKey(runId) });
+
   const saveComment = (path: string, line: number, body: string) => {
     setComments((current) => [
       ...current.filter((c) => commentKey(c) !== commentKey({ path, line })),
@@ -162,7 +164,12 @@ export function ReviewView({ runId }: { runId: string }) {
             errorMessage={query.isError ? workerErrorMessage(query.error) : ''}
             offlineMessage={copy.review.workerOffline}
             retryLabel={copy.review.retry}
-            onRetry={() => void queryClient.invalidateQueries({ queryKey: reviewKey(runId) })}
+            emptyAction={
+              <Button variant="secondary" onClick={refresh}>
+                {copy.review.refresh}
+              </Button>
+            }
+            onRetry={refresh}
           >
             {state ? (
               <div className="flex flex-col gap-3 p-3">
@@ -209,6 +216,7 @@ export function ReviewView({ runId }: { runId: string }) {
               checkpoints={state.checkpoints}
               busy={busy}
               onRestore={(id) => void actions.restore(id)}
+              onRefresh={refresh}
             />
           ) : null}
         </Tabs.Content>

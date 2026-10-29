@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Quota } from '../api/gateway';
@@ -56,6 +56,36 @@ describe('QuotaScreen', () => {
     expect(days.map((d) => d.textContent)).toEqual(['2026-10-22', '2026-10-21']);
   });
 
+  it('biaya tidak tercatat (semua 0): kolom dan total Biaya disembunyikan, tanpa "$0,00"', async () => {
+    api.getQuota.mockResolvedValue({
+      source: 'runs',
+      totals: { requests: 42, inputTokens: 120_000, outputTokens: 30_500, costUsd: 0 },
+      byModel: quota.byModel.map((m) => ({ ...m, costUsd: 0 })),
+      byDay: quota.byDay.map((d) => ({ ...d, costUsd: 0 })),
+    });
+    await renderScreen(<QuotaScreen />, '/quota');
+
+    expect(await screen.findByText('42')).toBeInTheDocument();
+    expect(screen.queryByText(copy.quota.columns.cost)).not.toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: copy.quota.columns.cost })).toBeNull();
+    expect(screen.queryByText(/\$/)).not.toBeInTheDocument();
+    // Token tetap tampil.
+    expect(screen.getByText('120.000')).toBeInTheDocument();
+  });
+
+  it('biaya tercatat di salah satu baris: kolom Biaya tampil', async () => {
+    api.getQuota.mockResolvedValue({
+      ...quota,
+      totals: { ...quota.totals, costUsd: 0.5 },
+      byModel: quota.byModel.map((m) => ({ ...m, costUsd: 0 })),
+      byDay: quota.byDay.map((d) => ({ ...d, costUsd: 0 })),
+    });
+    await renderScreen(<QuotaScreen />, '/quota');
+
+    expect(await screen.findByText('$0,50')).toBeInTheDocument();
+    expect(screen.getAllByText(copy.quota.columns.cost).length).toBeGreaterThan(0);
+  });
+
   it('sumber dari ringkasan run diberi catatan', async () => {
     api.getQuota.mockResolvedValue({ ...quota, source: 'runs' });
     await renderScreen(<QuotaScreen />, '/quota');
@@ -71,12 +101,14 @@ describe('QuotaScreen', () => {
     });
     const empty = await renderScreen(<QuotaScreen />, '/quota');
     expect(await screen.findByText(copy.quota.empty)).toBeInTheDocument();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: copy.chat.startConversation }));
+    await waitFor(() => expect(empty.router.state.location.pathname).toBe('/'));
     empty.unmount();
 
     api.getQuota.mockReset();
     api.getQuota.mockRejectedValueOnce(new ApiProblem(500, 'internal_error', 'x'));
     api.getQuota.mockResolvedValue(quota);
-    const user = userEvent.setup();
     const error = await renderScreen(<QuotaScreen />, '/quota');
     await user.click(await screen.findByRole('button', { name: copy.states.retry }));
     expect(await screen.findByText(copy.quota.source.ninerouter)).toBeInTheDocument();

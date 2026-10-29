@@ -1,4 +1,4 @@
-import { Link, useParams } from '@tanstack/react-router';
+import { Link, useNavigate, useParams } from '@tanstack/react-router';
 import { apiErrorMessage } from '../api/errors';
 import { useResearchList } from '../api/queries';
 import { useOnline } from '../app/hooks';
@@ -13,6 +13,7 @@ export function ResearchList() {
   const query = useResearchList();
   const online = useOnline();
   const params = useParams({ strict: false });
+  const navigate = useNavigate();
   const items = query.data?.pages.flatMap((page) => page.items) ?? [];
 
   const view: ViewState = query.isPending
@@ -34,6 +35,11 @@ export function ResearchList() {
       offlineMessage={copy.states.offline}
       retryLabel={copy.states.retry}
       onRetry={() => void query.refetch()}
+      emptyAction={
+        <Button variant="secondary" onClick={() => void navigate({ to: '/research' })}>
+          {copy.research.startResearch}
+        </Button>
+      }
     >
       <nav aria-label={copy.research.listLabel}>
         {items.map((job) => {

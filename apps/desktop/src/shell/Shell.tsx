@@ -10,8 +10,8 @@ import { ResearchList } from '../research/ResearchList';
 import { ScheduleList } from '../schedules/ScheduleList';
 import { SpaceList } from '../spaces/SpaceList';
 import { useUiStore } from '../state/uiStore';
-import { EmptyState } from '../ui/EmptyState';
 import { IconButton } from '../ui/IconButton';
+import { InfoNote } from '../ui/InfoNote';
 import { CommandPalette } from './CommandPalette';
 import { routeForSlot } from './navRoutes';
 import { Rail } from './Rail';
@@ -38,7 +38,7 @@ function sectionFor(pathname: string): Section {
       list: (
         <>
           <ProjectSwitcher to="/kanban" allowGeneral={false} />
-          <EmptyState message={copy.kanban.sidebarHint} />
+          <InfoNote message={copy.kanban.sidebarHint} />
         </>
       ),
     };
@@ -56,16 +56,16 @@ function sectionFor(pathname: string): Section {
   if (pathname.startsWith('/status'))
     return {
       title: copy.status.page.title,
-      list: <EmptyState message={copy.status.page.sidebar} />,
+      list: <InfoNote message={copy.status.page.sidebar} />,
     };
   if (pathname.startsWith('/quota'))
-    return { title: copy.quota.title, list: <EmptyState message={copy.quota.empty} /> };
+    return { title: copy.quota.title, list: <InfoNote message={copy.quota.empty} /> };
   if (pathname.startsWith('/compare'))
-    return { title: copy.compare.title, list: <EmptyState message={copy.compare.intro} /> };
+    return { title: copy.compare.title, list: <InfoNote message={copy.compare.intro} /> };
   if (pathname.startsWith('/settings'))
-    return { title: copy.nav.settings, list: <EmptyState message={copy.settings.shortcuts} /> };
+    return { title: copy.nav.settings, list: <InfoNote message={copy.settings.shortcuts} /> };
   if (pathname.startsWith('/dev'))
-    return { title: copy.nav.catalog, list: <EmptyState message={copy.nav.catalog} /> };
+    return { title: copy.nav.catalog, list: <InfoNote message={copy.nav.catalog} /> };
   return {
     title: copy.nav.chat,
     list: <ConversationList />,

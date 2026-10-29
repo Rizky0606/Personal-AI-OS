@@ -7,6 +7,7 @@ import { copy } from '../copy';
 import { cn } from '../lib/cn';
 import { formatDateTime } from '../lib/time';
 import { IconButton } from '../ui/IconButton';
+import { Button } from '../ui/Button';
 import { StateView, type ViewState } from '../ui/StateView';
 import { useWorker } from '../worker/hooks';
 
@@ -95,6 +96,11 @@ export function StatusScreen() {
         offlineMessage={copy.states.offline}
         retryLabel={copy.states.retry}
         onRetry={() => void query.refetch()}
+        emptyAction={
+          <Button variant="secondary" onClick={() => void query.refetch()}>
+            {p.refresh}
+          </Button>
+        }
       >
         {status ? (
           <div className="flex flex-col gap-6 p-4">

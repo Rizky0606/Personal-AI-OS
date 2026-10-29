@@ -186,3 +186,38 @@ describe('FilesPanel', () => {
     expect(await screen.findByRole('tree')).toBeInTheDocument();
   });
 });
+
+describe('FilesPanel: aksi keadaan kosong', () => {
+  it.each([
+    ['tanpa project', null, 'connected', copy.states.pickProject, '/workspace'],
+    ['worker offline', PROJECT, 'off', copy.states.viewStatus, '/status'],
+  ] as const)(
+    '%s: tombol menuju layar yang memperbaikinya',
+    async (_n, project, local, label, path) => {
+      useUiStore.setState({ activeProjectId: project });
+      setWorker({ local, status: null });
+      const user = userEvent.setup();
+      const { router } = await renderScreen(<FilesPanel />);
+      await user.click(await screen.findByRole('button', { name: label }));
+      await waitFor(() => expect(router.state.location.pathname).toBe(path));
+    },
+  );
+
+  it('folder kosong: tombol Muat ulang membaca daftar lagi', async () => {
+    workerApi.filesList.mockResolvedValue({ path: '', entries: [], truncated: false });
+    const user = userEvent.setup();
+    await renderScreen(<FilesPanel />);
+    await user.click(await screen.findByRole('button', { name: copy.files.refresh }));
+    await waitFor(() => expect(workerApi.filesList).toHaveBeenCalledTimes(2));
+  });
+
+  it('berkas kosong: tombol Tutup berkas kembali ke pohon', async () => {
+    workerApi.filesRead.mockResolvedValue(text('README.md', ''));
+    const user = userEvent.setup();
+    await renderScreen(<FilesPanel />);
+    await user.click(await screen.findByRole('button', { name: 'README.md' }));
+    expect(await screen.findByText(copy.files.emptyFile)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: copy.files.closeFile }));
+    expect(await screen.findByRole('tree', { name: copy.files.tree })).toBeVisible();
+  });
+});

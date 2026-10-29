@@ -1,4 +1,4 @@
-import { useParams } from '@tanstack/react-router';
+import { useNavigate, useParams } from '@tanstack/react-router';
 import { useMemo } from 'react';
 import { apiErrorMessage } from '../api/errors';
 import { useConversations } from '../api/queries';
@@ -17,6 +17,7 @@ export function ConversationList() {
   const online = useOnline();
   const params = useParams({ strict: false });
   const activeId = params.conversationId;
+  const navigate = useNavigate();
   const actions = useConversationActions(activeId);
 
   const items = useMemo(() => {
@@ -46,6 +47,17 @@ export function ConversationList() {
       offlineMessage={copy.states.offline}
       retryLabel={copy.states.retry}
       onRetry={() => void query.refetch()}
+      emptyAction={
+        <Button
+          variant="secondary"
+          onClick={() => {
+            useUiStore.getState().requestNewChat();
+            void navigate({ to: '/' });
+          }}
+        >
+          {copy.chat.startConversation}
+        </Button>
+      }
     >
       <nav aria-label={copy.chat.listLabel}>
         {items.map((conversation) => (

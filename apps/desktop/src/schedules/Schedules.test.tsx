@@ -11,6 +11,7 @@ import { renderScreen } from '../test/render';
 vi.mock('../app/services', async () => (await import('../test/fakeServices')).fakeServices);
 
 const { SchedulesScreen } = await import('./SchedulesScreen');
+const { ScheduleList } = await import('./ScheduleList');
 const { ScheduleDetailScreen } = await import('./ScheduleDetailScreen');
 
 const SCHEDULE = '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f';
@@ -89,6 +90,16 @@ describe('SchedulesScreen: tabel', () => {
 
     expect(await screen.findByText(copy.schedules.empty)).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: copy.schedules.newSchedule })).toHaveLength(1);
+  });
+
+  it('sidebar kosong: Buat jadwal membuka dialog jadwal baru', async () => {
+    const user = userEvent.setup();
+    await renderScreen(<ScheduleList />, '/schedules');
+
+    await user.click(await screen.findByRole('button', { name: copy.schedules.create }));
+    expect(
+      await screen.findByRole('dialog', { name: copy.schedules.dialog.title }),
+    ).toBeInTheDocument();
   });
 
   it('error dengan Coba lagi, dan offline', async () => {
@@ -288,5 +299,28 @@ describe('ScheduleDetailScreen: riwayat dan aksi', () => {
     await renderScreen(<ScheduleDetailScreen scheduleId={SCHEDULE} />, `/schedules/${SCHEDULE}`);
 
     expect(await screen.findByText(copy.errors.notFound)).toBeInTheDocument();
+  });
+
+  it('jadwal yang tidak ada: Lihat jadwal membuka tabel jadwal', async () => {
+    api.listSchedules.mockResolvedValue([]);
+    const user = userEvent.setup();
+    const { router } = await renderScreen(
+      <ScheduleDetailScreen scheduleId={SCHEDULE} />,
+      `/schedules/${SCHEDULE}`,
+    );
+
+    await user.click(await screen.findByRole('button', { name: copy.schedules.detail.viewAll }));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/schedules'));
+  });
+
+  it('riwayat kosong: Jalankan sekarang di keadaan kosong menjalankan jadwal', async () => {
+    api.listSchedules.mockResolvedValue([schedule()]);
+    api.runScheduleNow.mockResolvedValue(run());
+    const user = userEvent.setup();
+    await renderScreen(<ScheduleDetailScreen scheduleId={SCHEDULE} />, `/schedules/${SCHEDULE}`);
+
+    const empty = (await screen.findByText(copy.schedules.detail.historyEmpty)).parentElement!;
+    await user.click(within(empty).getByRole('button', { name: copy.schedules.detail.runNow }));
+    expect(api.runScheduleNow).toHaveBeenCalledWith(SCHEDULE);
   });
 });

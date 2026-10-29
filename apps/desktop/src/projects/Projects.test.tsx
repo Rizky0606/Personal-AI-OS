@@ -14,6 +14,7 @@ const pickFolder = vi.hoisted(() => vi.fn());
 vi.mock('../lib/pickFolder', () => ({ pickFolder }));
 
 const { ProjectsScreen } = await import('./ProjectsScreen');
+const { ProjectList } = await import('./ProjectList');
 
 const WORKER = '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f';
 const OTHER_WORKER = '0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e90';
@@ -227,6 +228,18 @@ describe('ProjectsScreen: daftar', () => {
     expect(await screen.findByText(copy.projects.empty)).toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent(copy.projects.workerOff);
     expect(screen.getByRole('button', { name: copy.projects.add })).toBeDisabled();
+  });
+
+  it('daftar ringkas kosong: tombol Tambah project membuka dialog tambah project', async () => {
+    connected();
+    const user = userEvent.setup();
+    await renderScreen(<ProjectList />, '/projects');
+
+    await user.click(await screen.findByRole('button', { name: copy.projects.add }));
+
+    expect(
+      await screen.findByRole('dialog', { name: copy.projects.dialog.title }),
+    ).toBeInTheDocument();
   });
 
   it('error dengan Coba lagi, dan offline', async () => {

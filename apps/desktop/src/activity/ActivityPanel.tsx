@@ -1,8 +1,10 @@
+import { useNavigate } from '@tanstack/react-router';
 import { FileDiff, FileText, Loader } from 'lucide-react';
 import { useMemo } from 'react';
 import { copy } from '../copy';
 import { cn } from '../lib/cn';
 import { useUiStore } from '../state/uiStore';
+import { Button } from '../ui/Button';
 import { EmptyState } from '../ui/EmptyState';
 import { currentStep, fileActivities, otherSteps } from './activity';
 
@@ -11,6 +13,7 @@ import { currentStep, fileActivities, otherSteps } from './activity';
  * disentuh di atas), dan langkah lain seperti pencarian dan perintah. Datanya dari langkah tool pesan terbaru.
  */
 export function ActivityPanel() {
+  const navigate = useNavigate();
   const steps = useUiStore((s) => s.agentSteps);
   const requestFile = useUiStore((s) => s.requestFile);
   const openPanel = useUiStore((s) => s.openPanel);
@@ -18,7 +21,24 @@ export function ActivityPanel() {
   const others = useMemo(() => otherSteps(steps), [steps]);
   const now = currentStep(steps);
 
-  if (steps.length === 0) return <EmptyState message={copy.activity.empty} />;
+  if (steps.length === 0) {
+    return (
+      <EmptyState
+        message={copy.activity.empty}
+        action={
+          <Button
+            variant="secondary"
+            onClick={() => {
+              useUiStore.getState().requestNewChat();
+              void navigate({ to: '/' });
+            }}
+          >
+            {copy.activity.start}
+          </Button>
+        }
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4 p-3">

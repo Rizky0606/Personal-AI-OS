@@ -1,6 +1,6 @@
 import type { Memory } from '@aios/contracts';
 import { MEMORY_TEXT_MAX } from '@aios/contracts';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { apiErrorMessage } from '../api/errors';
 import { useMemories } from '../api/queries';
 import { useOnline } from '../app/hooks';
@@ -22,6 +22,7 @@ export function MemorySection() {
   const online = useOnline();
   const actions = useMemoryActions();
   const [draft, setDraft] = useState('');
+  const draftRef = useRef<HTMLTextAreaElement>(null);
   const [toDelete, setToDelete] = useState<Memory | null>(null);
   const items = query.data ?? [];
   const m = copy.memory;
@@ -55,6 +56,7 @@ export function MemorySection() {
           label={m.addLabel}
           hint={m.counter(draft.trim().length, MEMORY_TEXT_MAX)}
           value={draft}
+          ref={draftRef}
           rows={2}
           maxLength={MEMORY_TEXT_MAX}
           placeholder={m.placeholder}
@@ -82,6 +84,11 @@ export function MemorySection() {
         state={view}
         loadingLabel={m.loading}
         emptyMessage={m.empty}
+        emptyAction={
+          <Button variant="secondary" onClick={() => draftRef.current?.focus()}>
+            {m.addAction}
+          </Button>
+        }
         errorMessage={query.isError ? apiErrorMessage(query.error, online) : ''}
         offlineMessage={copy.states.offline}
         retryLabel={copy.states.retry}

@@ -73,6 +73,16 @@ describe('KanbanScreen: keadaan layar', () => {
     expect(await screen.findByText(copy.kanban.noProject)).toBeInTheDocument();
   });
 
+  it('tanpa project aktif: tombol Pilih project membuka layar Project', async () => {
+    useUiStore.setState({ activeProjectId: null });
+    const user = userEvent.setup();
+    const { router } = await renderScreen(<KanbanScreen />, '/kanban');
+
+    await user.click(await screen.findByRole('button', { name: copy.kanban.pickProject }));
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/workspace'));
+  });
+
   it('memuat: menampilkan skeleton berlabel', async () => {
     api.listTasks.mockReturnValue(new Promise(() => undefined));
     await renderScreen(<KanbanScreen />, '/kanban');

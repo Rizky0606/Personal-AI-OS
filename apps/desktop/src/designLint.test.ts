@@ -232,7 +232,7 @@ describe('lint desain', () => {
         expect(px, `blur(${arg})`).toBeLessThanOrEqual(BLUR_MAX_PX);
       }
     }
-    const users = sources.filter((s) => /\baios-blur\b/.test(s.text) && /\.tsx$/.test(s.file));
+    const users = sources.filter((s) => /\baios-blur\b/.test(s.text) && s.file.endsWith('.tsx'));
     expect(users.map((s) => s.file).filter((f) => !FLOATING_LAYERS.includes(f))).toEqual([]);
     // Tidak pernah di belakang teks isi jawaban.
     expect(
@@ -262,7 +262,7 @@ describe('lint desain', () => {
     const allowed =
       /^rounded(?:-(?:t|r|b|l|tl|tr|br|bl|s|e|ss|se|es|ee))?-(?:badge|control|panel|sheet|sm|md|lg|xl|full|none)$/;
     const bad = sources
-      .filter((s) => /\.tsx$/.test(s.file))
+      .filter((s) => s.file.endsWith('.tsx'))
       .flatMap(({ file, text }) =>
         [...text.matchAll(/(?<![\w-])rounded[\w[\]./%-]*/g)]
           .map((m) => m[0])

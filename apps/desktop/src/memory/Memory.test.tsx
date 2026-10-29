@@ -45,6 +45,14 @@ describe('MemorySection', () => {
     await waitFor(() => expect(screen.getByRole('textbox', { name: m.addLabel })).toHaveValue(''));
   });
 
+  it('kosong: tombol aksi memindahkan fokus ke kolom tulis memori', async () => {
+    const user = userEvent.setup();
+    await renderScreen(<MemorySection />);
+    await user.click(await screen.findByRole('button', { name: m.addAction }));
+
+    expect(screen.getByRole('textbox', { name: m.addLabel })).toHaveFocus();
+  });
+
   it('daftar: sakelar menonaktifkan, Ubah menyimpan teks baru, Hapus minta konfirmasi', async () => {
     const user = userEvent.setup();
     const item = memory();

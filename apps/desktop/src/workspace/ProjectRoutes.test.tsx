@@ -151,6 +151,16 @@ describe('WorkspaceSidebar', () => {
     expect(await screen.findByText(copy.projects.empty)).toBeInTheDocument();
   });
 
+  it('tanpa project: tombol Tambah project membuka layar Project', async () => {
+    api.listProjects.mockResolvedValue([]);
+    const user = userEvent.setup();
+    const { router } = await renderScreen(<WorkspaceSidebar />, '/workspace');
+
+    await user.click(await screen.findByRole('button', { name: copy.projects.add }));
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/projects'));
+  });
+
   it('project yang sedang dikerjakan agent diberi penanda status', async () => {
     const { run } = await import('../test/fixtures');
     api.listRuns.mockResolvedValue([

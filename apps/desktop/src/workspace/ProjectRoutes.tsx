@@ -4,7 +4,7 @@ import { useConversation } from '../api/queries';
 import { ChatScreen } from '../chat/ChatScreen';
 import { copy } from '../copy';
 import { useUiStore } from '../state/uiStore';
-import { StateView } from '../ui/StateView';
+import { SkeletonList } from '../ui/Skeleton';
 import { useProjects } from '../worker/hooks';
 
 /** Menyetel konteks project aktif sebelum layar digambar; panel berkas, preview, dan kanban memakainya. */
@@ -16,17 +16,7 @@ function useActiveProject(projectId: string | null) {
 }
 
 function LoadingConversation() {
-  return (
-    <StateView
-      state="loading"
-      loadingLabel={copy.chat.listLoading}
-      emptyMessage=""
-      offlineMessage={copy.states.offline}
-      retryLabel={copy.states.retry}
-    >
-      {null}
-    </StateView>
-  );
+  return <SkeletonList label={copy.chat.listLoading} />;
 }
 
 /** Chat di tab Chat: selalu umum, tidak terikat folder project. */

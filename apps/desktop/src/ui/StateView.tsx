@@ -1,5 +1,5 @@
 import { WifiOff } from 'lucide-react';
-import type { ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import { Button } from './Button';
 import { EmptyState } from './EmptyState';
 import { ErrorBanner } from './ErrorBanner';
@@ -15,7 +15,8 @@ export interface StateViewProps {
   offlineMessage: string;
   retryLabel: string;
   onRetry?: () => void;
-  emptyAction?: ReactNode;
+  /** Wajib: aksi relevan di keadaan kosong (buat, tambah, mulai, muat ulang). */
+  emptyAction: ReactElement;
   children?: ReactNode;
 }
 

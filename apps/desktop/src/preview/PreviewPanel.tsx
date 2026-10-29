@@ -4,6 +4,7 @@ import { openExternal } from '../lib/external';
 import { useUiStore } from '../state/uiStore';
 import { Button } from '../ui/Button';
 import { EmptyState } from '../ui/EmptyState';
+import { PickProjectButton, WorkerStatusButton } from '../ui/EmptyActions';
 import { ErrorBanner } from '../ui/ErrorBanner';
 import { SkeletonList } from '../ui/Skeleton';
 import { useToastStore } from '../ui/Toaster';
@@ -64,8 +65,10 @@ export function PreviewPanel() {
     [target, addAttachment, push, p.attached],
   );
 
-  if (!target) return <EmptyState message={p.noProject} />;
-  if (!preview.workerConnected) return <EmptyState message={p.workerOffline} />;
+  if (!target) return <EmptyState message={p.noProject} action={<PickProjectButton />} />;
+  if (!preview.workerConnected) {
+    return <EmptyState message={p.workerOffline} action={<WorkerStatusButton />} />;
+  }
   if (preview.loading) return <SkeletonList rows={3} label={p.loading} />;
 
   const scope = target.runId ? p.target.run : p.target.project;

@@ -1,5 +1,6 @@
 import type { Task } from '@aios/contracts';
 import { Plus, Sparkles } from 'lucide-react';
+import { useNavigate } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';
 import type { TaskProposal } from '../api/gateway';
 import { useRoles, useTasks } from '../api/queries';
@@ -23,13 +24,21 @@ type Dialog = { kind: 'task'; task?: Task } | { kind: 'breakdown' } | null;
 export function KanbanScreen() {
   const projectId = useUiStore((s) => s.activeProjectId);
   const projects = useProjects();
+  const navigate = useNavigate();
   const project = projects.data?.find((p) => p.id === projectId);
 
   if (!projectId || (projects.isSuccess && !project)) {
     return (
       <div className="flex flex-col">
         <Header title={copy.kanban.title} />
-        <EmptyState message={copy.kanban.noProject} />
+        <EmptyState
+          message={copy.kanban.noProject}
+          action={
+            <Button variant="secondary" onClick={() => void navigate({ to: '/workspace' })}>
+              {copy.kanban.pickProject}
+            </Button>
+          }
+        />
       </div>
     );
   }

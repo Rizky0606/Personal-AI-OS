@@ -115,6 +115,16 @@ describe('ChatScreen: memuat riwayat', () => {
     expect(field()).toHaveFocus();
     expect(api.sendMessage).not.toHaveBeenCalled();
   });
+
+  it('percakapan lama tanpa pesan: Mulai menulis memindahkan fokus ke kolom pesan', async () => {
+    api.listMessages.mockResolvedValue(page());
+    const user = userEvent.setup();
+    await renderScreen(<ChatScreen conversationId={CONV} />);
+
+    await user.click(await screen.findByRole('button', { name: copy.chat.startWriting }));
+
+    await waitFor(() => expect(field()).toHaveFocus());
+  });
 });
 
 describe('ChatScreen: kirim dan alirkan jawaban', () => {

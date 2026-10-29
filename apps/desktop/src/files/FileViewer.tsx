@@ -64,7 +64,9 @@ export function FileViewer({
       ? online
         ? 'error'
         : 'offline'
-      : 'content';
+      : data?.kind === 'text' && data.content === ''
+        ? 'empty'
+        : 'content';
 
   function attach() {
     if (data?.kind !== 'text') return;
@@ -97,11 +99,16 @@ export function FileViewer({
         <StateView
           state={view}
           loadingLabel={copy.files.loading}
-          emptyMessage=""
+          emptyMessage={copy.files.emptyFile}
           errorMessage={query.isError ? apiErrorMessage(query.error, online) : ''}
           offlineMessage={copy.states.offline}
           retryLabel={copy.states.retry}
           onRetry={() => void query.refetch()}
+          emptyAction={
+            <Button variant="secondary" onClick={onBack}>
+              {copy.files.closeFile}
+            </Button>
+          }
         >
           {data?.kind === 'image' ? (
             <div className="flex justify-center p-4">

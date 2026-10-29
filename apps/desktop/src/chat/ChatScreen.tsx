@@ -7,6 +7,7 @@ import { copy } from '../copy';
 import { packOptions } from './skillPacks';
 import { useUiStore } from '../state/uiStore';
 import { ErrorBanner } from '../ui/ErrorBanner';
+import { Button } from '../ui/Button';
 import { StateView, type ViewState } from '../ui/StateView';
 import { ChatWelcome } from './ChatWelcome';
 import { Composer } from './Composer';
@@ -87,6 +88,11 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
             offlineMessage={copy.states.offline}
             retryLabel={copy.states.retry}
             onRetry={() => void status.refetch()}
+            emptyAction={
+              <Button variant="secondary" onClick={() => chat.prefill(chat.draft)}>
+                {copy.chat.startWriting}
+              </Button>
+            }
           >
             <MessageList
               messages={chat.messages}

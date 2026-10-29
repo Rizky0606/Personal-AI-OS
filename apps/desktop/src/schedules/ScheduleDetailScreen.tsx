@@ -1,4 +1,4 @@
-import { Link } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { ArrowLeft } from 'lucide-react';
 import { useState } from 'react';
 import { apiErrorMessage } from '../api/errors';
@@ -26,6 +26,7 @@ export function ScheduleDetailScreen({ scheduleId }: { scheduleId: string }) {
   const schedulesQuery = useSchedules();
   const runsQuery = useScheduleRuns(scheduleId);
   const { busy, setEnabled, setNotify, runNow, remove } = useScheduleActions();
+  const navigate = useNavigate();
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const schedule = schedulesQuery.data?.find((s) => s.id === scheduleId);
@@ -57,6 +58,11 @@ export function ScheduleDetailScreen({ scheduleId }: { scheduleId: string }) {
         state={view}
         loadingLabel={copy.schedules.loading}
         emptyMessage={copy.errors.notFound}
+        emptyAction={
+          <Button variant="secondary" onClick={() => void navigate({ to: '/schedules' })}>
+            {d.viewAll}
+          </Button>
+        }
         errorMessage={schedulesQuery.isError ? apiErrorMessage(schedulesQuery.error, online) : ''}
         offlineMessage={copy.states.offline}
         retryLabel={copy.states.retry}
@@ -157,7 +163,18 @@ export function ScheduleDetailScreen({ scheduleId }: { scheduleId: string }) {
                   {apiErrorMessage(runsQuery.error, online)}
                 </p>
               ) : runs.length === 0 ? (
-                <EmptyState message={d.historyEmpty} />
+                <EmptyState
+                  message={d.historyEmpty}
+                  action={
+                    <Button
+                      variant="secondary"
+                      disabled={busy === `run:${schedule.id}`}
+                      onClick={() => void runNow(schedule.id)}
+                    >
+                      {d.runNow}
+                    </Button>
+                  }
+                />
               ) : (
                 <table aria-label={d.history} className="w-full border-collapse">
                   <thead>

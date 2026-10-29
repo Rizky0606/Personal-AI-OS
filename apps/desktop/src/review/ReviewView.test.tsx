@@ -505,3 +505,31 @@ describe('Tinjau perubahan: pendapat kedua', () => {
     expect(api.reviewOpinion).not.toHaveBeenCalled();
   });
 });
+
+describe('Tinjau perubahan: aksi keadaan kosong', () => {
+  it('tanpa run: tombol Buka papan kartu menuju /kanban', async () => {
+    useUiStore.getState().setReviewRunId(null);
+    const user = userEvent.setup();
+    const { router } = await renderScreen(<DiffPanel />);
+    await user.click(await screen.findByRole('button', { name: copy.review.openKanban }));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/kanban'));
+  });
+
+  it('tidak ada perubahan: tombol Muat ulang membaca tinjauan lagi', async () => {
+    workerApi.reviewGet.mockResolvedValue(state({ files: [], checkpoints: [] }));
+    const user = userEvent.setup();
+    await renderScreen(<DiffPanel />);
+    await user.click(await screen.findByRole('button', { name: copy.review.refresh }));
+    await waitFor(() => expect(workerApi.reviewGet).toHaveBeenCalledTimes(2));
+  });
+
+  it('tanpa checkpoint: tombol Muat ulang di tab Checkpoint membaca tinjauan lagi', async () => {
+    workerApi.reviewGet.mockResolvedValue(state({ checkpoints: [] }));
+    const user = userEvent.setup();
+    await open();
+    await user.click(screen.getByRole('tab', { name: new RegExp(copy.review.tabs.checkpoints) }));
+    await screen.findByText(copy.review.checkpoints.empty);
+    await user.click(screen.getByRole('button', { name: copy.review.refresh }));
+    await waitFor(() => expect(workerApi.reviewGet).toHaveBeenCalledTimes(2));
+  });
+});

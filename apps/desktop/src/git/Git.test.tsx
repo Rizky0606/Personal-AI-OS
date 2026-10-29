@@ -282,3 +282,49 @@ describe('GitPanel: aksi', () => {
     expect(await screen.findByText(copy.git.switched('main'))).toBeInTheDocument();
   });
 });
+
+describe('GitPanel: aksi keadaan kosong', () => {
+  it.each([
+    ['tanpa project', null, 'connected', copy.states.pickProject, '/workspace'],
+    ['worker offline', PROJECT, 'off', copy.states.viewStatus, '/status'],
+  ] as const)(
+    '%s: tombol menuju layar yang memperbaikinya',
+    async (_n, project, local, label, path) => {
+      useUiStore.setState({ activeProjectId: project });
+      setWorker({ local, status: null });
+      const user = userEvent.setup();
+      const { router } = await renderScreen(<GitPanel />);
+      await user.click(await screen.findByRole('button', { name: label }));
+      await waitFor(() => expect(router.state.location.pathname).toBe(path));
+    },
+  );
+
+  it.each([
+    ['bukan repo git', () => status({ isRepo: false, branch: null, files: [] }), copy.git.notRepo],
+    ['repo bersih', () => status({ files: [], ahead: 0 }), copy.git.clean],
+  ])('%s: tombol Muat ulang membaca status lagi', async (_n, make, message) => {
+    workerApi.gitStatus.mockResolvedValue(make());
+    const user = userEvent.setup();
+    await renderScreen(<GitPanel />);
+    await screen.findByText(message);
+    const before = workerApi.gitStatus.mock.calls.length;
+    await user.click(screen.getByRole('button', { name: copy.git.reload }));
+    await waitFor(() => expect(workerApi.gitStatus.mock.calls.length).toBeGreaterThan(before));
+  });
+
+  it('berkas tanpa perbedaan teks: tombol Muat ulang membaca diff lagi', async () => {
+    workerApi.gitDiff.mockResolvedValue({
+      path: 'src/a.ts',
+      patch: '',
+      binary: false,
+      truncated: false,
+    });
+    const user = userEvent.setup();
+    await renderScreen(<GitPanel />);
+    await user.click(await screen.findByRole('button', { name: `${copy.git.openDiff}: src/a.ts` }));
+    await screen.findByText(copy.git.noDiff);
+    const before = workerApi.gitDiff.mock.calls.length;
+    await user.click(screen.getByRole('button', { name: copy.git.reload }));
+    await waitFor(() => expect(workerApi.gitDiff.mock.calls.length).toBeGreaterThan(before));
+  });
+});

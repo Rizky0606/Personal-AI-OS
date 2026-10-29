@@ -33,6 +33,7 @@ export const copy = {
     panelEmpty: 'Belum ada isi. Panel ini dipakai saat project dan run coding tersedia.',
   },
   git: {
+    reload: 'Muat ulang',
     noProject: 'Buka sebuah project di tab Project untuk melihat status git-nya.',
     workerOffline:
       'Worker di PC ini belum tersambung, jadi status git belum bisa dibaca. Tunggu sebentar lalu coba lagi.',
@@ -98,6 +99,7 @@ export const copy = {
     historyLabel: 'Commit terbaru',
   },
   activity: {
+    start: 'Mulai percakapan',
     empty: 'Belum ada aktivitas agent. Kirim pesan di project agar langkah agent muncul di sini.',
     now: 'Sedang dikerjakan',
     idle: 'Agent tidak sedang bekerja.',
@@ -110,6 +112,9 @@ export const copy = {
     noFiles: 'Belum ada berkas yang dibaca atau diubah.',
   },
   files: {
+    refresh: 'Muat ulang',
+    emptyFile: 'Berkas ini kosong.',
+    closeFile: 'Tutup berkas',
     noProject: 'Buka sebuah project di tab Project untuk menjelajahi berkasnya.',
     touchedRead: 'dibaca agent',
     touchedEdit: 'diubah agent',
@@ -147,7 +152,6 @@ export const copy = {
     offline: 'Offline',
     project: 'Chat umum',
     model: 'Model otomatis',
-    quota: 'Kuota -',
     statusColumn: 'Status',
     page: {
       title: 'Status sistem',
@@ -193,6 +197,7 @@ export const copy = {
       },
     },
     quotaSummary: (tokens: string, cost: string) => `Kuota ${tokens} token · ${cost}`,
+    quotaTokens: (tokens: string) => `Kuota ${tokens} token`,
     quotaLabel: 'Buka halaman Kuota',
   },
   workerStatus: {
@@ -225,6 +230,8 @@ export const copy = {
     },
   },
   states: {
+    pickProject: 'Pilih project',
+    viewStatus: 'Lihat status',
     loading: 'Memuat',
     retry: 'Coba lagi',
     offline: 'Offline. Tampilan memakai data terakhir.',
@@ -258,6 +265,10 @@ export const copy = {
     conversationsEmpty: 'Belum ada percakapan.',
     untitled: 'Percakapan tanpa judul',
     newChat: 'Chat baru di ruang ini',
+    createNew: 'Buat ruang baru',
+    pickDocument: 'Pilih dokumen',
+    startChat: 'Mulai percakapan',
+    viewAll: 'Lihat ruang',
     delete: 'Hapus ruang',
     deleteTitle: 'Hapus ruang ini?',
     deleteBody:
@@ -282,6 +293,7 @@ export const copy = {
     removed: 'Templat dihapus.',
     loading: 'Memuat templat',
     empty: 'Belum ada templat. Simpan prompt yang sering dipakai di atas.',
+    createAction: 'Buat templat',
     listLabel: 'Daftar templat prompt',
     edit: 'Ubah',
     saveEdit: 'Simpan perubahan',
@@ -309,6 +321,7 @@ export const copy = {
     removed: 'Memori dihapus.',
     loading: 'Memuat memori',
     empty: 'Belum ada memori. Tambahkan di atas, atau pilih Ingat pada pesan Anda di chat.',
+    addAction: 'Tambah memori',
     listLabel: 'Daftar memori',
     edit: 'Ubah',
     editLabel: 'Ubah memori',
@@ -514,6 +527,8 @@ export const copy = {
     alwaysHint: 'Hanya untuk perintah yang persis sama di project ini.',
   },
   review: {
+    refresh: 'Muat ulang',
+    openKanban: 'Buka papan kartu',
     title: 'Tinjau perubahan',
     ready: 'Hasil run siap ditinjau. Periksa perubahannya, lalu terima atau kembalikan ke agent.',
     open: 'Tinjau perubahan',
@@ -645,6 +660,8 @@ export const copy = {
     empty:
       'Belum ada run coding. Kerjakan kartu kanban dengan AI atau mulai chat di sebuah project.',
     emptyFilter: 'Tidak ada run di kategori ini.',
+    openKanban: 'Buka kanban',
+    showAll: 'Tampilkan semua run',
     sidebarHint: 'Semua run coding, dengan status yang diperbarui otomatis.',
     open: 'Buka',
     stop: 'Hentikan',
@@ -668,6 +685,8 @@ export const copy = {
     listLabel: 'Percakapan',
     listEmpty: 'Belum ada percakapan. Tulis pesan untuk memulai.',
     listLoading: 'Memuat percakapan',
+    startConversation: 'Mulai percakapan',
+    startWriting: 'Mulai menulis',
     loadMore: 'Muat lebih banyak',
     untitled: 'Percakapan baru',
     pinned: 'Disematkan',
@@ -862,6 +881,8 @@ export const copy = {
     listLoading: 'Memuat riset',
     loadMore: 'Muat lebih banyak',
     newResearch: 'Riset baru',
+    startResearch: 'Buat riset',
+    backToList: 'Kembali ke riset',
     form: {
       title: 'Riset baru',
       question: 'Pertanyaan riset',
@@ -911,6 +932,7 @@ export const copy = {
   schedules: {
     title: 'Jadwal',
     newSchedule: 'Jadwal baru',
+    create: 'Buat jadwal',
     empty:
       'Belum ada jadwal. Tulis kapan dan apa yang dikerjakan, misalnya "setiap Senin 07.00 ringkas berita AI".',
     loading: 'Memuat jadwal',
@@ -959,6 +981,7 @@ export const copy = {
     },
     detail: {
       back: 'Kembali ke jadwal',
+      viewAll: 'Lihat jadwal',
       runNow: 'Jalankan sekarang',
       runStarted: 'Jadwal dijalankan.',
       enable: 'Aktifkan',
@@ -1112,6 +1135,7 @@ export const copy = {
     board: 'Papan kartu',
     sidebarHint: 'Pilih project untuk melihat papan kartunya.',
     noProject: 'Pilih project di sidebar untuk melihat papan kartunya.',
+    pickProject: 'Pilih project',
     loading: 'Memuat kartu…',
     empty: 'Belum ada kartu. Tulis tugas pertama atau minta AI memecah sebuah ide.',
     newTask: 'Kartu baru',

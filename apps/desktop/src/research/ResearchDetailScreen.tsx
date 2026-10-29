@@ -1,3 +1,4 @@
+import { useNavigate } from '@tanstack/react-router';
 import { useEffect, useMemo } from 'react';
 import { apiErrorMessage } from '../api/errors';
 import { useResearchJob } from '../api/queries';
@@ -20,6 +21,7 @@ import { useResearchActions } from './useResearchActions';
 export function ResearchDetailScreen({ researchId }: { researchId: string }) {
   const query = useResearchJob(researchId);
   const online = useOnline();
+  const navigate = useNavigate();
   const { busy, cancel, exportReport } = useResearchActions();
   const job = query.data;
   const running = job?.status === 'queued' || job?.status === 'running';
@@ -74,6 +76,11 @@ export function ResearchDetailScreen({ researchId }: { researchId: string }) {
       offlineMessage={copy.states.offline}
       retryLabel={copy.states.retry}
       onRetry={() => void query.refetch()}
+      emptyAction={
+        <Button variant="secondary" onClick={() => void navigate({ to: '/research' })}>
+          {copy.research.backToList}
+        </Button>
+      }
     >
       {job ? (
         <div className="mx-auto flex max-w-[calc(72ch+4rem)] flex-col gap-6 px-8 py-6">

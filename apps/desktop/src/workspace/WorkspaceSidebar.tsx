@@ -1,4 +1,4 @@
-import { Link, useParams } from '@tanstack/react-router';
+import { Link, useNavigate, useParams } from '@tanstack/react-router';
 import { ChevronRight, Plus, Settings2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { apiErrorMessage } from '../api/errors';
@@ -8,6 +8,7 @@ import { ConversationRow } from '../chat/ConversationRow';
 import { useConversationActions } from '../chat/useConversationActions';
 import { copy } from '../copy';
 import { cn } from '../lib/cn';
+import { Button } from '../ui/Button';
 import { IconButton } from '../ui/IconButton';
 import { StateView, type ViewState } from '../ui/StateView';
 import { useProjects } from '../worker/hooks';
@@ -123,6 +124,7 @@ export function WorkspaceSidebar() {
   const runs = useWorkspaceRuns();
   const online = useOnline();
   const params = useParams({ strict: false });
+  const navigate = useNavigate();
   const list = projects.data ?? [];
   const view: ViewState = projects.isPending
     ? 'loading'
@@ -141,6 +143,12 @@ export function WorkspaceSidebar() {
           state={view}
           loadingLabel={copy.projects.loading}
           emptyMessage={copy.projects.empty}
+          emptyAction={
+            <Button variant="secondary" onClick={() => void navigate({ to: '/projects' })}>
+              <Plus size={14} strokeWidth={1.5} aria-hidden="true" />
+              {copy.projects.add}
+            </Button>
+          }
           errorMessage={projects.isError ? apiErrorMessage(projects.error, online) : ''}
           offlineMessage={copy.states.offline}
           retryLabel={copy.states.retry}

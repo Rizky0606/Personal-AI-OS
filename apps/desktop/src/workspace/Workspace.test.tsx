@@ -81,6 +81,28 @@ describe('WorkspaceScreen', () => {
     expect(api.cancelRun).toHaveBeenCalledWith(RUN_1);
   });
 
+  it('tanpa run: tombol Buka kanban pindah ke papan kartu', async () => {
+    api.listRuns.mockResolvedValue([]);
+    const user = userEvent.setup();
+    const { router } = await renderScreen(<WorkspaceScreen />, '/workspace');
+
+    await user.click(await screen.findByRole('button', { name: copy.workspace.openKanban }));
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/kanban'));
+  });
+
+  it('filter tanpa hasil: tombol Tampilkan semua run mengembalikan seluruh daftar', async () => {
+    api.listRuns.mockResolvedValue([entry({ id: RUN_1, status: 'running' }, 'Masih jalan')]);
+    const user = userEvent.setup();
+    await renderScreen(<WorkspaceScreen />, '/workspace');
+    await screen.findByText('Masih jalan');
+
+    await user.click(screen.getByRole('button', { name: /Selesai/ }));
+    await user.click(await screen.findByRole('button', { name: copy.workspace.showAll }));
+
+    expect(await screen.findByText('Masih jalan')).toBeInTheDocument();
+  });
+
   it('kosong, error dengan Coba lagi, dan offline', async () => {
     api.listRuns.mockResolvedValueOnce([]);
     const view = await renderScreen(<WorkspaceScreen />, '/workspace');

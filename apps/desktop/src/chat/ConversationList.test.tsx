@@ -6,6 +6,7 @@ import { ApiProblem } from '../auth/authSession';
 import { copy } from '../copy';
 import { CONV, TS, uid } from '../test/fixtures';
 import { api, resetApi } from '../test/fakeServices';
+import { useUiStore } from '../state/uiStore';
 import { renderScreen } from '../test/render';
 
 vi.mock('../app/services', async () => (await import('../test/fakeServices')).fakeServices);
@@ -64,6 +65,17 @@ describe('ConversationList', () => {
     api.listConversations.mockRejectedValue(new ApiProblem(0, 'network', 'x'));
     await renderScreen(<ConversationList />);
     expect(await screen.findByText(copy.states.offline)).toBeInTheDocument();
+  });
+
+  it('kosong: Mulai percakapan meminta chat baru dan membuka layar chat', async () => {
+    const user = userEvent.setup();
+    const view = await renderScreen(<ConversationList />, '/status');
+    const before = useUiStore.getState().newChatSignal;
+
+    await user.click(await screen.findByRole('button', { name: copy.chat.startConversation }));
+
+    expect(useUiStore.getState().newChatSignal).toBe(before + 1);
+    await waitFor(() => expect(view.router.state.location.pathname).toBe('/'));
   });
 
   it('menu baris: sematkan, ubah judul, arsipkan', async () => {

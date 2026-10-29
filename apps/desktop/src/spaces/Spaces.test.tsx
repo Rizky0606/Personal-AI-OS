@@ -76,6 +76,16 @@ describe('SpacesScreen dan SpaceList', () => {
   });
 });
 
+describe('SpaceList kosong', () => {
+  it('Buat ruang baru membawa ke formulir ruang', async () => {
+    const user = userEvent.setup();
+    api.listSpaces.mockResolvedValue([]);
+    const { router } = await renderScreen(<SpaceList />, '/');
+    await user.click(await screen.findByRole('button', { name: s.createNew }));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/spaces'));
+  });
+});
+
 describe('SpaceDetailScreen', () => {
   it('dokumen dan percakapan ruang tampil; unggah berkas mengindeksnya; chat baru terikat ruang', async () => {
     const user = userEvent.setup();
@@ -139,5 +149,39 @@ describe('SpaceDetailScreen', () => {
     await renderScreen(<SpaceDetailScreen spaceId={SPACE} />, `/spaces/${SPACE}`);
     expect(await screen.findByText(s.documentsEmpty)).toBeInTheDocument();
     expect(screen.getByText(s.conversationsEmpty)).toBeInTheDocument();
+  });
+
+  it('ruang kosong: Pilih dokumen membuka pemilih berkas, Mulai percakapan membuat chat ruang', async () => {
+    const user = userEvent.setup();
+    api.listSpaces.mockResolvedValue([space({ documentCount: 0 })]);
+    api.createConversation.mockResolvedValue(conversation);
+    const { router } = await renderScreen(
+      <SpaceDetailScreen spaceId={SPACE} />,
+      `/spaces/${SPACE}`,
+    );
+    const input = await waitFor(() => {
+      const el = document.querySelector<HTMLInputElement>('input[type="file"]');
+      expect(el).not.toBeNull();
+      return el!;
+    });
+    const clicked = vi.fn();
+    input.addEventListener('click', clicked);
+    await user.click(await screen.findByRole('button', { name: s.pickDocument }));
+    expect(clicked).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole('button', { name: s.startChat }));
+    expect(api.createConversation).toHaveBeenCalledWith('windows', undefined, SPACE);
+    await waitFor(() => expect(router.state.location.pathname).toBe(`/chat/${CONV}`));
+  });
+
+  it('ruang tidak ada: Lihat ruang membuka daftar ruang', async () => {
+    const user = userEvent.setup();
+    api.listSpaces.mockResolvedValue([]);
+    const { router } = await renderScreen(
+      <SpaceDetailScreen spaceId={SPACE} />,
+      `/spaces/${SPACE}`,
+    );
+    await user.click(await screen.findByRole('button', { name: s.viewAll }));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/spaces'));
   });
 });

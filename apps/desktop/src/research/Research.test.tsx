@@ -15,6 +15,7 @@ vi.mock('../lib/external', () => ({ openExternal, saveBlob }));
 
 const { ResearchDetailScreen } = await import('./ResearchDetailScreen');
 const { ResearchFormScreen } = await import('./ResearchFormScreen');
+const { ResearchList } = await import('./ResearchList');
 
 const JOB = '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f';
 
@@ -152,6 +153,17 @@ describe('ResearchDetailScreen', () => {
     await renderScreen(<ResearchDetailScreen researchId={JOB} />);
 
     expect(await screen.findByText(copy.states.offline)).toBeInTheDocument();
+  });
+});
+
+describe('ResearchList kosong', () => {
+  it('Buat riset membuka formulir riset baru', async () => {
+    const user = userEvent.setup();
+    const view = await renderScreen(<ResearchList />, '/status');
+
+    await user.click(await screen.findByRole('button', { name: copy.research.startResearch }));
+
+    await waitFor(() => expect(view.router.state.location.pathname).toBe('/research'));
   });
 });
 

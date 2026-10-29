@@ -183,3 +183,20 @@ describe('TerminalPanel', () => {
     expect(workerApi.terminalClose).not.toHaveBeenCalled();
   });
 });
+
+describe('TerminalPanel: aksi keadaan kosong', () => {
+  it.each([
+    ['tanpa project', null, 'connected', copy.states.pickProject, '/workspace'],
+    ['worker offline', PROJECT, 'off', copy.states.viewStatus, '/status'],
+  ] as const)(
+    '%s: tombol menuju layar yang memperbaikinya',
+    async (_n, project, local, label, path) => {
+      useUiStore.setState({ activeProjectId: project });
+      setWorker({ local, status: null });
+      const user = userEvent.setup();
+      const { router } = await renderScreen(<TerminalPanel />);
+      await user.click(await screen.findByRole('button', { name: label }));
+      await waitFor(() => expect(router.state.location.pathname).toBe(path));
+    },
+  );
+});

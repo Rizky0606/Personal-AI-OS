@@ -1,9 +1,10 @@
-import { Link, useParams } from '@tanstack/react-router';
+import { Link, useNavigate, useParams } from '@tanstack/react-router';
 import { apiErrorMessage } from '../api/errors';
 import { useSpaces } from '../api/queries';
 import { useOnline } from '../app/hooks';
 import { copy } from '../copy';
 import { cn } from '../lib/cn';
+import { Button } from '../ui/Button';
 import { StateView, type ViewState } from '../ui/StateView';
 
 /** Daftar ruang di sidebar beserta jumlah dokumennya. */
@@ -11,6 +12,7 @@ export function SpaceList() {
   const query = useSpaces();
   const online = useOnline();
   const params = useParams({ strict: false });
+  const navigate = useNavigate();
   const items = query.data ?? [];
   const s = copy.spaces;
 
@@ -29,6 +31,11 @@ export function SpaceList() {
       state={view}
       loadingLabel={s.loading}
       emptyMessage={s.empty}
+      emptyAction={
+        <Button variant="secondary" onClick={() => void navigate({ to: '/spaces' })}>
+          {s.createNew}
+        </Button>
+      }
       errorMessage={query.isError ? apiErrorMessage(query.error, online) : ''}
       offlineMessage={copy.states.offline}
       retryLabel={copy.states.retry}

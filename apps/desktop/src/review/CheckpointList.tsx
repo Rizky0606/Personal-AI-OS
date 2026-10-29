@@ -9,6 +9,7 @@ export interface CheckpointListProps {
   checkpoints: Checkpoint[];
   busy: boolean;
   onRestore: (checkpointId: string) => void;
+  onRefresh: () => void;
 }
 
 const time = (iso: string) =>
@@ -19,9 +20,20 @@ const time = (iso: string) =>
   });
 
 /** Checkpoint dibuat otomatis setelah setiap langkah agent yang mengubah file; kembali ke mana pun dari daftar ini. */
-export function CheckpointList({ checkpoints, busy, onRestore }: CheckpointListProps) {
+export function CheckpointList({ checkpoints, busy, onRestore, onRefresh }: CheckpointListProps) {
   const [target, setTarget] = useState<{ id: string; label: string } | null>(null);
-  if (checkpoints.length === 0) return <EmptyState message={copy.review.checkpoints.empty} />;
+  if (checkpoints.length === 0) {
+    return (
+      <EmptyState
+        message={copy.review.checkpoints.empty}
+        action={
+          <Button variant="secondary" onClick={onRefresh}>
+            {copy.review.refresh}
+          </Button>
+        }
+      />
+    );
+  }
 
   const entries = [
     ...[...checkpoints].reverse().map((c) => ({ id: c.id, label: c.label, ts: c.ts })),

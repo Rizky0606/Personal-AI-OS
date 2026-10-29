@@ -8,7 +8,9 @@ import { workerApi } from '../app/services';
 import { copy } from '../copy';
 import { cn } from '../lib/cn';
 import { useUiStore } from '../state/uiStore';
+import { Button } from '../ui/Button';
 import { EmptyState } from '../ui/EmptyState';
+import { PickProjectButton, WorkerStatusButton } from '../ui/EmptyActions';
 import { StateView, type ViewState } from '../ui/StateView';
 import { useWorker } from '../worker/hooks';
 import { FileViewer } from './FileViewer';
@@ -64,6 +66,11 @@ function Directory({
       offlineMessage={copy.states.offline}
       retryLabel={copy.states.retry}
       onRetry={() => void query.refetch()}
+      emptyAction={
+        <Button variant="secondary" onClick={() => void query.refetch()}>
+          {copy.files.refresh}
+        </Button>
+      }
     >
       <ul
         role={depth === 0 ? 'tree' : 'group'}
@@ -266,8 +273,12 @@ export function FilesPanel() {
     useUiStore.setState({ fileRequest: null });
   }, [request]);
 
-  if (!projectId) return <EmptyState message={copy.files.noProject} />;
-  if (!connected) return <EmptyState message={copy.files.workerOffline} />;
+  if (!projectId) {
+    return <EmptyState message={copy.files.noProject} action={<PickProjectButton />} />;
+  }
+  if (!connected) {
+    return <EmptyState message={copy.files.workerOffline} action={<WorkerStatusButton />} />;
+  }
   const target: FilesTarget = { projectId, ...(runId ? { runId } : {}) };
 
   return (

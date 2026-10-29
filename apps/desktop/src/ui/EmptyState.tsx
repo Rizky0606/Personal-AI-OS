@@ -1,9 +1,12 @@
-import type { ReactNode } from 'react';
+import type { ReactElement } from 'react';
 
 export interface EmptyStateProps {
   message: string;
-  /** Satu tombol aksi bila ada yang bisa dilakukan. */
-  action?: ReactNode;
+  /**
+   * Wajib: satu tombol aksi yang relevan (buat, tambah, mulai, muat ulang, buka pengaturan).
+   * Keadaan kosong tanpa jalan keluar tidak boleh ada; teks petunjuk biasa memakai InfoNote.
+   */
+  action: ReactElement;
 }
 
 /** Satu kalimat tentang apa yang bisa dilakukan, plus satu aksi; tanpa ilustrasi. */

@@ -26,6 +26,7 @@ import { EmptyState } from '../ui/EmptyState';
 import { IconButton } from '../ui/IconButton';
 import { RadioMenu } from '../ui/RadioMenu';
 import { StateView, type ViewState } from '../ui/StateView';
+import { PickProjectButton, WorkerStatusButton } from '../ui/EmptyActions';
 import { TextArea } from '../ui/TextArea';
 import { useWorker } from '../worker/hooks';
 import { useGitActions } from './useGitActions';
@@ -64,7 +65,9 @@ function FileChange({
       ? online
         ? 'error'
         : 'offline'
-      : 'content';
+      : query.data && !query.data.binary && !query.data.patch
+        ? 'empty'
+        : 'content';
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -86,6 +89,11 @@ function FileChange({
           offlineMessage={copy.states.offline}
           retryLabel={copy.states.retry}
           onRetry={() => void query.refetch()}
+          emptyAction={
+            <Button variant="secondary" onClick={() => void query.refetch()}>
+              {copy.git.reload}
+            </Button>
+          }
         >
           {query.data?.binary ? (
             <p className="p-3 text-ui text-text-2">{copy.git.binary}</p>
@@ -107,9 +115,7 @@ function FileChange({
                 <p className="p-2 text-meta text-text-3">{copy.git.diffTruncated}</p>
               ) : null}
             </>
-          ) : (
-            <p className="p-3 text-ui text-text-2">{copy.git.noDiff}</p>
-          )}
+          ) : null}
         </StateView>
       </div>
     </div>
@@ -149,7 +155,18 @@ function GitProject({ projectId }: { projectId: string }) {
   const stagedCount = files.filter((f) => f.staged).length;
   const current = files.find((f) => f.path === selected);
 
-  if (status.data && !status.data.isRepo) return <EmptyState message={copy.git.notRepo} />;
+  if (status.data && !status.data.isRepo) {
+    return (
+      <EmptyState
+        message={copy.git.notRepo}
+        action={
+          <Button variant="secondary" onClick={() => void status.refetch()}>
+            {copy.git.reload}
+          </Button>
+        }
+      />
+    );
+  }
   if (current) {
     return <FileChange projectId={projectId} file={current} onBack={() => setSelected(null)} />;
   }
@@ -280,6 +297,11 @@ function GitProject({ projectId }: { projectId: string }) {
             offlineMessage={copy.states.offline}
             retryLabel={copy.states.retry}
             onRetry={() => void status.refetch()}
+            emptyAction={
+              <Button variant="secondary" onClick={() => void status.refetch()}>
+                {copy.git.reload}
+              </Button>
+            }
           >
             <div className="flex items-center justify-between gap-2 px-3 pt-3 pb-1">
               <h3 className="text-meta font-medium text-text-2">
@@ -438,7 +460,11 @@ function GitProject({ projectId }: { projectId: string }) {
 export function GitPanel() {
   const projectId = useUiStore((s) => s.activeProjectId);
   const connected = useWorker().local === 'connected';
-  if (!projectId) return <EmptyState message={copy.git.noProject} />;
-  if (!connected) return <EmptyState message={copy.git.workerOffline} />;
+  if (!projectId) {
+    return <EmptyState message={copy.git.noProject} action={<PickProjectButton />} />;
+  }
+  if (!connected) {
+    return <EmptyState message={copy.git.workerOffline} action={<WorkerStatusButton />} />;
+  }
   return <GitProject projectId={projectId} />;
 }

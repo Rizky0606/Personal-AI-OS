@@ -1,4 +1,4 @@
-import { Link } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { ArrowLeft, FileText, MessageSquarePlus, Upload } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { apiErrorMessage } from '../api/errors';
@@ -21,6 +21,7 @@ export function SpaceDetailScreen({ spaceId }: { spaceId: string }) {
   const docsQuery = useSpaceDocuments(spaceId);
   const chatsQuery = useSpaceConversations(spaceId);
   const actions = useSpaceActions();
+  const navigate = useNavigate();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const picker = useRef<HTMLInputElement>(null);
   const s = copy.spaces;
@@ -55,6 +56,11 @@ export function SpaceDetailScreen({ spaceId }: { spaceId: string }) {
         state={view}
         loadingLabel={s.loading}
         emptyMessage={copy.errors.notFound}
+        emptyAction={
+          <Button variant="secondary" onClick={() => void navigate({ to: '/spaces' })}>
+            {s.viewAll}
+          </Button>
+        }
         errorMessage={spacesQuery.isError ? apiErrorMessage(spacesQuery.error, online) : ''}
         offlineMessage={copy.states.offline}
         retryLabel={copy.states.retry}
@@ -119,7 +125,18 @@ export function SpaceDetailScreen({ spaceId }: { spaceId: string }) {
                   {apiErrorMessage(docsQuery.error, online)}
                 </p>
               ) : docs.length === 0 ? (
-                <EmptyState message={s.documentsEmpty} />
+                <EmptyState
+                  message={s.documentsEmpty}
+                  action={
+                    <Button
+                      variant="secondary"
+                      disabled={!online || uploading}
+                      onClick={() => picker.current?.click()}
+                    >
+                      {s.pickDocument}
+                    </Button>
+                  }
+                />
               ) : (
                 <ul
                   aria-label={s.documents}
@@ -160,7 +177,18 @@ export function SpaceDetailScreen({ spaceId }: { spaceId: string }) {
                 {s.conversations}
               </h3>
               {chats.length === 0 ? (
-                <EmptyState message={s.conversationsEmpty} />
+                <EmptyState
+                  message={s.conversationsEmpty}
+                  action={
+                    <Button
+                      variant="secondary"
+                      disabled={!online || actions.busy === 'chat'}
+                      onClick={() => void actions.newChat(space.id)}
+                    >
+                      {s.startChat}
+                    </Button>
+                  }
+                />
               ) : (
                 <ul className="flex flex-col">
                   {chats.map((chat) => (

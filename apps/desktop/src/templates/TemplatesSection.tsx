@@ -1,5 +1,5 @@
 import { PROMPT_TEMPLATE_BODY_MAX, type PromptTemplate } from '@aios/contracts';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { apiErrorMessage } from '../api/errors';
 import { usePromptTemplates } from '../api/queries';
 import { useOnline } from '../app/hooks';
@@ -20,6 +20,7 @@ export function TemplatesSection() {
   const online = useOnline();
   const actions = useTemplateActions();
   const [name, setName] = useState('');
+  const nameRef = useRef<HTMLInputElement>(null);
   const [body, setBody] = useState('');
   const [toDelete, setToDelete] = useState<PromptTemplate | null>(null);
   const items = query.data ?? [];
@@ -56,6 +57,7 @@ export function TemplatesSection() {
         <TextField
           label={t.nameLabel}
           hint={t.nameHint}
+          ref={nameRef}
           value={name}
           maxLength={40}
           placeholder={t.namePlaceholder}
@@ -87,6 +89,11 @@ export function TemplatesSection() {
         state={view}
         loadingLabel={t.loading}
         emptyMessage={t.empty}
+        emptyAction={
+          <Button variant="secondary" onClick={() => nameRef.current?.focus()}>
+            {t.createAction}
+          </Button>
+        }
         errorMessage={query.isError ? apiErrorMessage(query.error, online) : ''}
         offlineMessage={copy.states.offline}
         retryLabel={copy.states.retry}

@@ -1,5 +1,5 @@
 import type { Message } from '@aios/contracts';
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { copy } from '../copy';
@@ -81,5 +81,16 @@ describe('activitySteps', () => {
     expect(activitySteps(live, [toolMessage()]).map((s) => s.id)).toEqual(['x']);
     expect(activitySteps(newLiveRun('r1'), [toolMessage()]).map((s) => s.id)).toEqual(['t1']);
     expect(activitySteps(undefined, [])).toEqual([]);
+  });
+});
+
+describe('ActivityPanel: aksi keadaan kosong', () => {
+  it('tombol Mulai percakapan meminta chat baru dan membuka layar chat', async () => {
+    const user = userEvent.setup();
+    const before = useUiStore.getState().newChatSignal;
+    const { router } = await renderScreen(<ActivityPanel />, '/status');
+    await user.click(screen.getByRole('button', { name: copy.activity.start }));
+    expect(useUiStore.getState().newChatSignal).toBe(before + 1);
+    await waitFor(() => expect(router.state.location.pathname).toBe('/'));
   });
 });

@@ -47,6 +47,14 @@ describe('TemplatesSection', () => {
     expect(screen.getByLabelText(copy.templates.nameLabel)).toHaveValue('');
   });
 
+  it('kosong: tombol aksi memindahkan fokus ke kolom nama templat', async () => {
+    const user = userEvent.setup();
+    await renderScreen(<TemplatesSection />);
+    await user.click(await screen.findByRole('button', { name: copy.templates.createAction }));
+
+    expect(screen.getByLabelText(copy.templates.nameLabel)).toHaveFocus();
+  });
+
   it('nama kembar: toast galat, isian tetap ada', async () => {
     api.createPromptTemplate.mockRejectedValue(
       new ApiProblem(409, 'template_name_taken', 'Sudah ada templat bernama /ringkas.'),

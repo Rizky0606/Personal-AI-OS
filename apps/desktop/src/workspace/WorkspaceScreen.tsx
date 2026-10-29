@@ -113,6 +113,17 @@ export function WorkspaceScreen() {
         state={view}
         loadingLabel={copy.workspace.loading}
         emptyMessage={all.length === 0 ? copy.workspace.empty : copy.workspace.emptyFilter}
+        emptyAction={
+          all.length === 0 ? (
+            <Button variant="secondary" onClick={() => void navigate({ to: '/kanban' })}>
+              {copy.workspace.openKanban}
+            </Button>
+          ) : (
+            <Button variant="secondary" onClick={() => setFilter('all')}>
+              {copy.workspace.showAll}
+            </Button>
+          )
+        }
         errorMessage={query.isError ? apiErrorMessage(query.error, online) : ''}
         offlineMessage={copy.states.offline}
         retryLabel={copy.states.retry}
