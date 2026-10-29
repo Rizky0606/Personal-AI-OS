@@ -131,4 +131,70 @@ describe('LoginScreen', () => {
     expect(fields().password).toHaveAttribute('type', 'text');
     expect(screen.getByRole('button', { name: 'Sembunyikan password' })).toBeInTheDocument();
   });
+
+  it('tombol tampilkan/sembunyikan ada di dalam ruas input (satu pembungkus), bukan di samping', () => {
+    render(<LoginScreen />);
+
+    const { password } = fields();
+    const toggle = screen.getByRole('button', { name: 'Tampilkan password' });
+
+    expect(password.parentElement).toContainElement(toggle);
+    // Tidak ada margin penyeimbang label/catatan seperti sebelumnya (mb-5).
+    expect(toggle.className).not.toMatch(/\bmb-/);
+    // Input memberi ruang di kanan agar teks tidak tertutup tombol.
+    expect(password.className).toMatch(/\bpr-10\b/);
+    // Pembungkus ruas tidak berada dalam baris flex yang membuatnya menyusut menjadi setengah lebar.
+    expect(password.closest('form')?.querySelector('.items-end')).toBeNull();
+  });
+
+  it('keyboard: Tab dari password ke tombol tampilkan lalu ke kode TOTP; Spasi dan Enter menukar tampilan', async () => {
+    const user = userEvent.setup();
+    render(<LoginScreen />);
+
+    await user.click(fields().password);
+    await user.tab();
+    const toggle = screen.getByRole('button', { name: 'Tampilkan password' });
+    expect(toggle).toHaveFocus();
+
+    await user.keyboard(' ');
+    expect(fields().password).toHaveAttribute('type', 'text');
+    await user.keyboard('{Enter}');
+    expect(fields().password).toHaveAttribute('type', 'password');
+    expect(screen.getByRole('button', { name: 'Tampilkan password' })).toHaveFocus();
+
+    await user.tab();
+    expect(fields().totp).toHaveFocus();
+  });
+
+  it('state error: pesan password tampil, input ditandai tidak valid, tombol tampilkan tetap di dalam ruas', async () => {
+    const user = userEvent.setup();
+    render(<LoginScreen />);
+
+    await user.type(fields().totp, '123456');
+    await user.click(fields().submit);
+
+    const { password } = fields();
+    expect(password).toHaveAttribute('aria-invalid', 'true');
+    expect(password).toHaveAccessibleDescription(copy.login.errors.passwordEmpty);
+    expect(password.parentElement).toContainElement(
+      screen.getByRole('button', { name: 'Tampilkan password' }),
+    );
+  });
+
+  it('saat memeriksa, input password dinonaktifkan dan tombol tampilkan tetap ada', async () => {
+    const user = userEvent.setup();
+    let finish: () => void = () => undefined;
+    impl.run = () => new Promise<void>((resolve) => (finish = resolve));
+    render(<LoginScreen />);
+
+    await user.type(fields().password, 'rahasia');
+    await user.type(fields().totp, '123456');
+    await user.click(fields().submit);
+
+    const password = await screen.findByLabelText(copy.login.password);
+    await waitFor(() => expect(password).toBeDisabled());
+    expect(screen.getByRole('button', { name: 'Tampilkan password' })).toBeInTheDocument();
+    finish();
+    await waitFor(() => expect(password).not.toBeDisabled());
+  });
 });

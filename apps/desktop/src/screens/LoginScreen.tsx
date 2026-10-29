@@ -87,29 +87,27 @@ export function LoginScreen({
             spellCheck={false}
           />
         )}
-        <div className="flex items-end gap-2">
-          <TextField
-            label={copy.login.password}
-            type={showPassword ? 'text' : 'password'}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            error={fieldErrors.password}
-            disabled={submitting}
-            autoComplete="current-password"
-            className="w-full"
-          />
-          <IconButton
-            label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
-            onClick={() => setShowPassword((v) => !v)}
-            className="mb-5 shrink-0"
-          >
-            {showPassword ? (
-              <EyeOff size={16} strokeWidth={1.5} />
-            ) : (
-              <Eye size={16} strokeWidth={1.5} />
-            )}
-          </IconButton>
-        </div>
+        <TextField
+          label={copy.login.password}
+          type={showPassword ? 'text' : 'password'}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          error={fieldErrors.password}
+          disabled={submitting}
+          autoComplete="current-password"
+          trailing={
+            <IconButton
+              label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
+              onClick={() => setShowPassword((v) => !v)}
+            >
+              {showPassword ? (
+                <EyeOff size={16} strokeWidth={1.5} />
+              ) : (
+                <Eye size={16} strokeWidth={1.5} />
+              )}
+            </IconButton>
+          }
+        />
         <TextField
           label={copy.login.totp}
           hint={copy.login.totpHint}
