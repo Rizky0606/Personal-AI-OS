@@ -4,17 +4,17 @@ Satu bahasa utama (TypeScript strict) untuk gateway, desktop, worker, dan paket 
 
 ## Tooling
 
-| Hal | Pilihan |
-| --- | --- |
-| Package manager | pnpm workspace + Turborepo |
-| Bahasa | TypeScript 5.x `strict`, `noUncheckedIndexedAccess`, ES modules |
-| Lint dan format | ESLint flat config + Prettier (atau Biome, pilih satu di Fase 1) |
-| Validasi | Zod di setiap batas: request, response, event, env, output model |
-| Tes | Vitest (unit dan integrasi), Playwright (E2E desktop), JUnit + Compose UI test (Android) |
-| DB | Drizzle ORM + drizzle-kit migration, satu folder migrasi |
-| Log | pino, format JSON, dengan `runId` dan `requestId` |
-| Kotlin | ktlint, detekt |
-| Rust | rustfmt, clippy `-D warnings` |
+| Hal             | Pilihan                                                                                  |
+| --------------- | ---------------------------------------------------------------------------------------- |
+| Package manager | pnpm workspace + Turborepo                                                               |
+| Bahasa          | TypeScript 5.x `strict`, `noUncheckedIndexedAccess`, ES modules                          |
+| Lint dan format | ESLint flat config + Prettier (atau Biome, pilih satu di Fase 1)                         |
+| Validasi        | Zod di setiap batas: request, response, event, env, output model                         |
+| Tes             | Vitest (unit dan integrasi), Playwright (E2E desktop), JUnit + Compose UI test (Android) |
+| DB              | Drizzle ORM + drizzle-kit migration, satu folder migrasi                                 |
+| Log             | pino, format JSON, dengan `runId` dan `requestId`                                        |
+| Kotlin          | ktlint, detekt                                                                           |
+| Rust            | rustfmt, clippy `-D warnings`                                                            |
 
 ## TypeScript
 
@@ -37,7 +37,7 @@ Satu bahasa utama (TypeScript strict) untuk gateway, desktop, worker, dan paket 
 - React 19 + Vite + TanStack Router + TanStack Query. State UI lokal memakai Zustand bila perlu.
 - Komponen primitif dari Radix (atau Base UI), gaya dari token Tailwind v4. Tanpa library komponen bergaya bawaan.
 - Satu komponen per file, props bertipe, tanpa logika data di komponen presentasi.
-- Ikon Lucide. Font IBM Plex dibundel lokal, tanpa CDN.
+- Ikon Lucide. Font Geist (cadangan IBM Plex) dibundel lokal sebagai woff2, tanpa CDN dan tanpa paket npm.
 
 ## Worker
 

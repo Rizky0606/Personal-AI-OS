@@ -33,29 +33,26 @@
   src: url('./fonts/IBMPlexMono-Medium.ttf') format('truetype');
 }
 
+/* Geist (teks) dan Geist Mono (kode, angka) di-self-host sebagai woff2 variabel (lisensi OFL di src/fonts);
+   IBM Plex tetap sebagai cadangan lewat tumpukan font di tokens.css. Tanpa CDN dan tanpa paket npm. */
+@font-face {
+  font-family: 'Geist';
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./fonts/Geist-Variable.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Geist Mono';
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./fonts/GeistMono-Variable.woff2') format('woff2');
+}
+
 /* Token desain (tokens.css) dipetakan ke utilitas Tailwind: bg-bg, text-text-2, border-border, ... */
 @theme inline {
-  --color-*: initial;
-  --color-bg: var(--aios-bg);
-  --color-surface: var(--aios-surface);
-  --color-surface-2: var(--aios-surface-2);
-  --color-border: var(--aios-border);
-  --color-border-strong: var(--aios-border-strong);
-  --color-text: var(--aios-text);
-  --color-text-2: var(--aios-text-2);
-  --color-text-3: var(--aios-text-3);
-  --color-accent: var(--aios-accent);
-  --color-accent-soft: var(--aios-accent-soft);
-  --color-success: var(--aios-success);
-  --color-warning: var(--aios-warning);
-  --color-danger: var(--aios-danger);
-  --color-info: var(--aios-info);
   --color-on-accent: var(--aios-on-accent);
   --color-transparent: transparent;
   --color-current: currentColor;
-
-  --font-sans: 'IBM Plex Sans', sans-serif;
-  --font-mono: 'IBM Plex Mono', monospace;
 
   /* Skala tipografi desktop (DESIGN_SYSTEM.md): caption 11, meta 12, UI 13, isi chat 14, bagian 16, halaman 20. */
   --text-caption: 11px;
@@ -71,11 +68,6 @@
   --text-page: 20px;
   --text-page--line-height: 1.25;
 
-  /* Radius desktop: 4 (badge, chip), 6 (tombol, input), 10 (panel, dialog). */
-  --radius-badge: 4px;
-  --radius-control: 6px;
-  --radius-panel: 10px;
-
   --shadow-float: var(--aios-shadow-float);
   --ease-aios: var(--aios-easing);
 
@@ -85,7 +77,7 @@
   --animate-aios-pop: aios-pop var(--aios-duration-base) var(--aios-easing) both;
   --animate-aios-dialog: aios-dialog var(--aios-duration-slow) var(--aios-easing) both;
   --animate-aios-toast: aios-toast var(--aios-duration-slow) var(--aios-easing) both;
-  --animate-aios-caret: aios-caret 1s steps(1, end) infinite;
+  --animate-aios-caret: aios-caret 1.4s steps(1, end) infinite;
   --animate-aios-breathe: aios-pulse 1.6s var(--aios-easing) infinite;
 
   /* Efek (DESIGN_SYSTEM.md: Efek): pegas ringan, cahaya aksen, dan kartu terangkat. */
@@ -102,6 +94,9 @@
     0 0 0 1px color-mix(in oklch, var(--aios-accent) 30%, transparent),
     0 6px 20px -6px color-mix(in oklch, var(--aios-accent) 55%, transparent);
   --aios-lift: 0 8px 24px -12px oklch(0 0 0 / 0.28);
+  /* Blur hanya untuk lapisan melayang (palet perintah, toast, header lengket, panel samping yang menimpa),
+     maks 16px, tidak pernah di belakang teks isi jawaban. Dipakai lewat kelas .aios-blur. */
+  --aios-blur: 12px;
   /* Ujung gradien tombol primer: lebih gelap di tema terang (teks putih), lebih terang di tema gelap
      (teks gelap), supaya kontras teks tidak turun di bawah AA. */
   --aios-accent-2: color-mix(in oklch, var(--aios-accent), black 14%);
@@ -238,7 +233,7 @@
   }
 }
 .aios-dots > span {
-  animation: aios-dot 1.2s var(--aios-easing) infinite;
+  animation: aios-dot 1.4s var(--aios-easing) infinite;
 }
 .aios-dots > span:nth-child(2) {
   animation-delay: 0.15s;
@@ -257,7 +252,7 @@ body {
   margin: 0;
   background: var(--aios-bg);
   color: var(--aios-text);
-  font-family: 'IBM Plex Sans', sans-serif;
+  font-family: 'Geist', 'IBM Plex Sans', sans-serif;
   font-size: 13px;
   line-height: 1.45;
   font-variant-numeric: tabular-nums;
@@ -271,7 +266,7 @@ body {
   outline-offset: var(--aios-focus-offset);
 }
 
-/* Gerak hanya fade bila pengguna meminta mengurangi gerakan. */
+/* Gerak hanya fade bila pengguna meminta mengurangi gerakan; efek tambahan dimatikan sama sekali. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -280,6 +275,22 @@ body {
     /* Tanpa ini animasi tak berhingga berkedip tiap 1 ms alih-alih berhenti. */
     animation-iteration-count: 1 !important;
     transition-duration: 1ms !important;
+  }
+  .aios-shimmer,
+  .aios-pulse-ring::after,
+  .aios-draw-in {
+    animation: none !important;
+  }
+  /* Kilau teks tanpa animasi: kembali ke warna teks biasa, bukan teks transparan. */
+  .aios-shimmer {
+    background-image: none;
+    -webkit-text-fill-color: currentColor;
+  }
+  .aios-pulse-ring::after {
+    opacity: 0;
+  }
+  .aios-draw-in {
+    stroke-dashoffset: 0;
   }
 }
 
@@ -343,4 +354,75 @@ body {
    ada dua cincin bertumpuk. */
 [data-composer-field]:focus-visible {
   outline: none;
+}
+
+/* ---- Keyframe dasar (belum dipakai komponen) ---- */
+
+/* Lapisan melayang: satu-satunya tempat blur dipakai (maks 16px, lihat --aios-blur). */
+.aios-blur {
+  -webkit-backdrop-filter: blur(var(--aios-blur));
+  backdrop-filter: blur(var(--aios-blur));
+}
+
+/* Kilau teks status sementara ("Berpikir…"): sapuan satu warna aksen, siklus 1800 ms. */
+@keyframes aios-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+.aios-shimmer {
+  background-image: linear-gradient(
+    100deg,
+    var(--aios-accent) 0%,
+    color-mix(in oklch, var(--aios-accent) 35%, transparent) 50%,
+    var(--aios-accent) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: aios-shimmer 1800ms linear infinite;
+}
+
+/* Cincin denyut di sekeliling indikator aktif; warna lewat --aios-ring (default aksen). */
+@keyframes aios-pulse-ring {
+  from {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+}
+.aios-pulse-ring {
+  position: relative;
+}
+.aios-pulse-ring::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--aios-ring, var(--aios-accent));
+  border-radius: inherit;
+  opacity: 0;
+  pointer-events: none;
+  animation: aios-pulse-ring var(--aios-loop-min) var(--aios-easing) infinite;
+}
+
+/* Goresan SVG tergambar (centang selesai, garis diagram); elemen perlu pathLength="1". */
+@keyframes aios-draw-in {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.aios-draw-in {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: aios-draw-in var(--aios-duration-long) var(--aios-easing) forwards;
 }
