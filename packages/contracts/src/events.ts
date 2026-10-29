@@ -40,6 +40,17 @@ export const ReasoningDeltaEventSchema = z.object({
   text: z.string(),
 });
 
+/**
+ * Judul ringkas satu baris dari penalaran, bila mesin menyediakannya. Opsional: mesin yang tidak
+ * mengirimnya (omp dan Hermes saat ini) tidak mengisinya; klien menurunkan judul dari teks penalaran.
+ * Pembaruan menggantikan judul sebelumnya.
+ */
+export const ReasoningSummaryEventSchema = z.object({
+  type: z.literal('reasoning.summary'),
+  messageId: IdSchema,
+  text: z.string(),
+});
+
 export const ToolStartedEventSchema = z.object({
   type: z.literal('tool.started'),
   toolCallId: z.string().min(1),
@@ -134,6 +145,7 @@ export const AgentEventSchema = z
     MessageDeltaEventSchema,
     MessageCompletedEventSchema,
     ReasoningDeltaEventSchema,
+    ReasoningSummaryEventSchema,
     ToolStartedEventSchema,
     ToolOutputEventSchema,
     ToolFinishedEventSchema,

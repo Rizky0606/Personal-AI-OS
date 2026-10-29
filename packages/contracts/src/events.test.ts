@@ -49,6 +49,14 @@ const agentCases: Record<AgentEventType, Cases> = {
     valid: [{ type: 'reasoning.delta', messageId: ID_A, text: 'Memeriksa...' }],
     invalid: [{ type: 'reasoning.delta', text: 'tanpa messageId' }],
   },
+  'reasoning.summary': {
+    valid: [{ type: 'reasoning.summary', messageId: ID_A, text: 'Memeriksa konfigurasi build' }],
+    invalid: [
+      { type: 'reasoning.summary', text: 'tanpa messageId' },
+      { type: 'reasoning.summary', messageId: ID_A },
+      { type: 'reasoning.summary', messageId: ID_A, text: 42 },
+    ],
+  },
   'tool.started': {
     valid: [
       { type: 'tool.started', toolCallId: 'call_1', name: 'bash' },
@@ -230,6 +238,7 @@ describe('AgentEvent', () => {
         'message.delta',
         'message.completed',
         'reasoning.delta',
+        'reasoning.summary',
         'tool.started',
         'tool.output',
         'tool.finished',

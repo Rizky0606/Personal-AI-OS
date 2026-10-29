@@ -16,7 +16,7 @@ Sumber kebenaran pemetaan adapter (`packages/adapters`). Kontrak ada di `package
 
 ## Event kontrak yang dihasilkan adapter
 
-`AgentEvent` di kontrak: `run.status`, `route.decided`, `message.delta`, `message.completed`, `reasoning.delta`, `tool.started`, `tool.output`, `tool.finished`, `approval.requested`, `approval.resolved`, `diff.updated`, `checkpoint.created`, `preview.ready`, `research.progress`, `research.source`, `error`, `run.completed`.
+`AgentEvent` di kontrak: `run.status`, `route.decided`, `message.delta`, `message.completed`, `reasoning.delta`, `reasoning.summary`, `tool.started`, `tool.output`, `tool.finished`, `approval.requested`, `approval.resolved`, `diff.updated`, `checkpoint.created`, `preview.ready`, `research.progress`, `research.source`, `error`, `run.completed`.
 
 - **`todo.updated` dan `subagent.updated` TIDAK ADA di kontrak.** Pemetaannya belum bisa dibuat tanpa menambah jenis event baru, dan sesi ini hanya mengizinkan tambahan field opsional. Datanya terbukti ada di omp (lihat bawah). Butuh keputusan.
 - `run.status` tidak dihasilkan adapter. Gateway (`runs/runner.ts`) yang memegang status run dan menulis `run.status` terminal (`completed`, `needs_review`, `failed`, `cancelled`). Adapter hanya mengakhiri aliran: `run.completed` (sukses), `error` (gagal), atau tanpa event penutup bila dibatalkan lewat `cancel`.
@@ -62,6 +62,8 @@ Direkam dengan omp 18.13.2 (`todo.jsonl`, `task-subagent.jsonl`):
 ### Penalaran
 
 omp mengirim penalaran (`thinking_*`). Terverifikasi dengan rekaman nyata (`thinking.jsonl`) dan e2e: `reasoning.delta` muncul sebelum `message.delta`. Syarat: LLM mengirim `reasoning_content`; model tanpa penalaran tidak menghasilkan event itu.
+
+**`reasoning.summary` (kontrak, Sesi 3):** tidak ada mesin yang mengirimnya. Rekaman omp (`thinking.jsonl`: `thinking_start/delta/end`) tidak memuat ringkasan, dan dokumentasi Hermes hanya menyebut `reasoning_content` (Chat Completions) serta `reasoning_summary_text` (Responses API, tidak dipakai adapter). Adapter tidak mengarang judul; event ini tidak pernah dikirim sampai ada mesin yang menyediakannya. Klien menurunkan judul dari teks penalaran (`buildActivity`).
 
 ### Pembatalan
 

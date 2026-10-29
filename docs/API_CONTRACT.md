@@ -75,6 +75,7 @@ Setiap event dari server dibungkus envelope yang sama:
 | `route.decided`                                | `role, confidence, reason`                                   | Agent dan skill yang dimuat |
 | `message.delta`, `message.completed`           | Potongan teks; usage token                                   | Streaming jawaban           |
 | `reasoning.delta`                              | Potongan penalaran (opsional)                                | Blok terlipat               |
+| `reasoning.summary`                            | `messageId, text`: judul satu baris penalaran (opsional)     | Judul abu ringkas           |
 | `tool.started`, `tool.output`, `tool.finished` | Nama, target, potongan output, status, durasi                | Baris langkah tool          |
 | `approval.requested`, `approval.resolved`      | Jenis (command, file_write, network), detail, cwd; keputusan | Panel izin                  |
 | `diff.updated`                                 | Daftar file dengan tambah dan hapus                          | Panel diff, diff stat kartu |

@@ -92,6 +92,21 @@ describe('createWorkerRelayAdapter', () => {
     expect(t.stop).toHaveBeenCalled();
   });
 
+  it('penalaran dan ringkasannya memakai ID pesan asisten gateway, bukan ID dari worker', async () => {
+    const t = fakePort();
+    const handle = await createWorkerRelayAdapter({ relay: t.port }).startRun(input());
+
+    t.emit({ type: 'reasoning.delta', messageId: WORKER_MESSAGE, text: 'Periksa dulu.' });
+    t.emit({ type: 'reasoning.summary', messageId: WORKER_MESSAGE, text: 'Memeriksa berkas' });
+    t.emit({ type: 'run.completed', summary: 'selesai' });
+
+    expect(await drain(handle)).toEqual([
+      { type: 'reasoning.delta', messageId: MESSAGE, text: 'Periksa dulu.' },
+      { type: 'reasoning.summary', messageId: MESSAGE, text: 'Memeriksa berkas' },
+      { type: 'run.completed', summary: 'selesai' },
+    ]);
+  });
+
   it('event error dari worker menutup aliran setelah diteruskan', async () => {
     const t = fakePort();
     const handle = await createWorkerRelayAdapter({ relay: t.port }).startRun(input());

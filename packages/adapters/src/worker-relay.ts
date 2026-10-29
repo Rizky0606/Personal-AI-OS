@@ -97,6 +97,7 @@ export function createWorkerRelayAdapter(options: WorkerRelayOptions): AgentAdap
             return;
           case 'message.delta':
           case 'reasoning.delta':
+          case 'reasoning.summary':
           case 'message.completed':
             // ID pesan asisten dibuat gateway; worker tidak mengenalnya.
             push({ ...event, messageId: input.messageId });
