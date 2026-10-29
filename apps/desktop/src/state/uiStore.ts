@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { ActivityStep } from '../activity/activity';
+import type { SubagentView } from '../realtime/liveRun';
 import { persist } from 'zustand/middleware';
 import {
   ROOT_ID,
@@ -60,6 +61,9 @@ interface UiState {
   /** Langkah tool run terbaru di chat yang terbuka, untuk panel Aktivitas dan penanda di Berkas; tidak disimpan. */
   agentSteps: ActivityStep[];
   setAgentSteps: (steps: ActivityStep[]) => void;
+  /** Subagent run terbaru di chat yang terbuka, untuk panel Aktivitas; tidak disimpan. */
+  agentSubagents: SubagentView[];
+  setAgentSubagents: (subagents: SubagentView[]) => void;
   /** Permintaan membuka berkas di tab Berkas (dari Aktivitas); `nonce` membedakan permintaan yang sama; tidak disimpan. */
   fileRequest: { path: string; nonce: number } | null;
   requestFile: (path: string) => void;
@@ -122,6 +126,8 @@ export const useUiStore = create<UiState>()(
       setSkillPacks: (skillPacks) => set({ skillPacks }),
       agentSteps: [],
       setAgentSteps: (agentSteps) => set({ agentSteps }),
+      agentSubagents: [],
+      setAgentSubagents: (agentSubagents) => set({ agentSubagents }),
       fileRequest: null,
       requestFile: (path) =>
         set((s) => ({ fileRequest: { path, nonce: (s.fileRequest?.nonce ?? 0) + 1 } })),

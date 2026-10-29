@@ -28,6 +28,12 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
     setAgentSteps(steps);
     return () => setAgentSteps([]);
   }, [steps, setAgentSteps]);
+  const setAgentSubagents = useUiStore((s) => s.setAgentSubagents);
+  const subagents = chat.live?.subagents;
+  useEffect(() => {
+    setAgentSubagents(subagents ?? []);
+    return () => setAgentSubagents([]);
+  }, [subagents, setAgentSubagents]);
 
   const hasContent = chat.messages.length > 0 || chat.pending !== null || chat.live !== undefined;
   const view: ViewState =
@@ -104,6 +110,8 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
               approvals={chat.approvals}
               resolvingApprovals={chat.resolvingApprovals}
               onResolveApproval={chat.resolveApproval}
+              onAnswerQuestion={chat.answerQuestion}
+              onRemoveQueued={chat.removeQueued}
               hasMore={chat.hasMore}
               loadingOlder={chat.loadingOlder}
               onLoadOlder={chat.loadOlder}
@@ -120,6 +128,7 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
         onDraft={chat.setDraft}
         onSend={chat.send}
         onStop={chat.stop}
+        onSteer={chat.canSteer ? chat.steer : undefined}
         streaming={chat.streaming}
         sending={chat.sending}
         models={chat.models}

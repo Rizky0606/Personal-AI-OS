@@ -2,10 +2,13 @@ import { AdapterError } from '@aios/adapters';
 import {
   TERMINAL_RUN_STATUSES,
   type Approval,
+  type QuestionAnswer,
+  type QueueName,
   type ReviewComment,
   type ReviewRequestSchema,
   type ReviewResponseSchema,
   type Run,
+  type SteerMode,
   type WorkspaceRunListSchema,
 } from '@aios/contracts';
 import { and, desc, eq, inArray } from 'drizzle-orm';
@@ -43,7 +46,15 @@ export interface RunsService {
     input: { decision: 'allow' | 'deny'; remember: boolean },
   ): Promise<Approval>;
   /** Mengarahkan agent yang sedang berjalan dengan teks baru. */
-  steer(runId: string, text: string): Promise<void>;
+  steer(runId: string, text: string, mode?: SteerMode): Promise<void>;
+  /** Menarik arahan dari antrean agent yang sedang berjalan. */
+  removeQueued(runId: string, queue: QueueName, text: string): Promise<void>;
+  /** Jawaban pengguna atas pertanyaan agent; diteruskan ke mesin (worker) yang menunggunya. */
+  answerQuestion(
+    runId: string,
+    questionId: string,
+    result: { answers: QuestionAnswer[]; cancelled: boolean },
+  ): Promise<void>;
   /**
    * Keputusan atas hasil run coding (status `needs_review`): terima (commit, opsional merge), tolak (buang),
    * atau tolak dengan komentar (agent memperbaiki di worktree yang sama lewat run baru).
@@ -223,10 +234,38 @@ export function createRunsService(deps: {
       return toApprovalDto(updated ?? row);
     },
 
-    async steer(runId, text) {
+    async steer(runId, text, mode) {
       await load(runId);
       try {
-        if ((await runner.steer(runId, text)) === 'inactive') {
+        if ((await runner.steer(runId, text, mode)) === 'inactive') {
+          throw new AppError(409, 'run_not_active', 'Run ini tidak sedang berjalan di gateway.');
+        }
+      } catch (error) {
+        if (error instanceof AdapterError) {
+          throw new AppError(error.retryable ? 503 : 409, error.code, error.message);
+        }
+        throw error;
+      }
+    },
+
+    async answerQuestion(runId, questionId, result) {
+      await load(runId);
+      try {
+        if ((await runner.answerQuestion(runId, questionId, result)) === 'inactive') {
+          throw new AppError(409, 'run_not_active', 'Run ini tidak sedang berjalan di gateway.');
+        }
+      } catch (error) {
+        if (error instanceof AdapterError) {
+          throw new AppError(error.retryable ? 503 : 409, error.code, error.message);
+        }
+        throw error;
+      }
+    },
+
+    async removeQueued(runId, queue, text) {
+      await load(runId);
+      try {
+        if ((await runner.removeQueued(runId, queue, text)) === 'inactive') {
           throw new AppError(409, 'run_not_active', 'Run ini tidak sedang berjalan di gateway.');
         }
       } catch (error) {

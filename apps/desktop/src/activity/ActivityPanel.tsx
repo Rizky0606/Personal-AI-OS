@@ -5,6 +5,7 @@ import { cn } from '../lib/cn';
 import { useUiStore } from '../state/uiStore';
 import { EmptyState } from '../ui/EmptyState';
 import { currentStep, fileActivities, otherSteps } from './activity';
+import { SubagentTree } from './SubagentTree';
 
 /**
  * Tab Aktivitas: apa yang sedang dilakukan agent sekarang, berkas apa yang ia baca atau ubah (yang terakhir
@@ -14,6 +15,7 @@ export function ActivityPanel() {
   const steps = useUiStore((s) => s.agentSteps);
   const requestFile = useUiStore((s) => s.requestFile);
   const openPanel = useUiStore((s) => s.openPanel);
+  const subagents = useUiStore((s) => s.agentSubagents);
   const files = useMemo(() => fileActivities(steps), [steps]);
   const others = useMemo(() => otherSteps(steps), [steps]);
   const now = currentStep(steps);
@@ -114,6 +116,8 @@ export function ActivityPanel() {
           </ul>
         </section>
       ) : null}
+
+      {subagents.length > 0 ? <SubagentTree subagents={subagents} /> : null}
     </div>
   );
 }

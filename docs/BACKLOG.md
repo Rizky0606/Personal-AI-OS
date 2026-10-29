@@ -589,3 +589,34 @@ Disusun 2026-10-26 dari perbandingan dengan Orca, Pi, Cline, Amp, Goose, dan Vib
 - Konteks tautan dan pencarian web (Fase 45/51) dikerjakan runner setelah run berjalan (`LaunchInput.enrich`): pengiriman pesan tidak menunggu, dan langkahnya (`baca_tautan`, `cari_web`) tampil di chat dan tersimpan di pesan. Kueri pencarian yang dibuat model belum ditampilkan (langkah memuat cuplikan pesan pemilik).
 - Armada agent (Fase 47): belum ada pengelompokan armada (tiap tugas berdiri sendiri; tidak ada tabel `fleets` atau `runs.fleet_id`), tampilan kartu per agent dengan berkas yang sedang disentuh, dan pembanding hasil antar-agent. Batas 4 agent per project tetap (konstanta, belum bisa diatur). Peluncuran berurutan: tugas ke-4 mulai beberapa saat setelah tugas pertama, tetapi respons kembali setelah semuanya dimulai.
 - Hapus role dan router (Fase 48): pemilih skill di komposer sudah ada di desktop (menu Skill: tambah paket untuk satu pesan; belum ada UI untuk mencabut skill otomatis, `skillsOff`) tetapi belum di Android, skill spesialis belum bisa dilihat per pesan selain lewat alasan `route.decided`, jadwal target `role` dan pemecah tugas kanban masih memakai daftar agent, dan skill baru (mis. arsitektur, database, devops, tes) dapat ditambahkan sebagai paket di `SKILL_PACKS`. Kode Android diubah tanpa kompilasi lokal (tidak ada JDK); diverifikasi CI.
+
+## Analisis pemanfaatan omp, Pi, dan Orca (2026-10-28)
+
+Dibandingkan dengan omp 18.13.2 (`omp --help`, `omp://rpc.md`), pi.dev, dan onorca.dev.
+
+| Fitur sumber | Status di proyek | Catatan |
+| --- | --- | --- |
+| Orca: agent paralel di worktree terpisah, status live | Sudah (W24, W35/W41) | Ruang Kerja, armada maks. 4 per project |
+| Orca: terminal, diff, browser, berkas dalam satu jendela | Sudah (W7, W11, W25, W26) | Panel terbagi |
+| Orca: Git (stage, commit, push) | Sudah (W38, W40) | |
+| Orca: kuota akun 5 jam / mingguan | Sudah (W14) | via 9Router |
+| Orca: pengaturan worktree otomatis (`orca.yaml`: install dependensi, salin `.env`) | **Sudah (2026-10-28)** | Dialog Setup worktree per project: perintah (tanpa shell) dan tautan node_modules opsional; disimpan di worker. Belum: salin `.env` (sengaja, agent tidak boleh membaca `.env`), setup per cabang/stack, pratinjau keluaran setup di dialog |
+| Orca: tugas dari GitHub/Linear, buat PR dari run | **Belum** | Hanya merge lokal; PR perlu kredensial GitHub (keputusan pemilik, SECURITY_OPS.md) |
+| Orca: pendamping seluler | Sebagian | Android hanya chat/riset/jadwal (non-goal PRD); notifikasi sudah |
+| Pi/omp: steer dan follow-up saat agent bekerja | **Sudah (dikerjakan 2026-10-28)** | Endpoint `/runs/:id/steer` sudah ada tetapi UI desktop tidak memakainya; kini Enter = arahkan, Alt+Enter = antre. Android belum |
+| Pi/omp: antrean pesan terlihat dan bisa dibatalkan | **Sudah (2026-10-28)** | Terlihat lewat `queue_update` → event `queue.updated`; item bisa ditarik lewat `remove_queued_message` (diuji: item follow-up ditarik, sisanya tetap diproses). Belum: arahan yang sudah mulai diproses tidak bisa ditarik, tidak ada konfirmasi bila omp tidak menemukan teksnya |
+| omp: LSP (diagnostik setelah edit, rename, referensi) | **Sudah (2026-10-28)** | Bawaan nyala per project (sakelar di Setup worktree), `lsp.requestTimeout: 60`; hanya aktif bila server bahasa ada di worktree/PATH. Belum: server bahasa tidak dipasang otomatis; panel diagnostik di UI |
+| omp: todo/rencana langsung (`todoPhases` di `get_state`, `set_todos`) | **Sudah (2026-10-28)** | Dari `result.details.phases` tool `todo` (bukan `get_state`) menjadi event `todo.updated`, panel di jawaban langsung. Belum: tidak disimpan setelah run selesai (hanya langsung), tidak tampil di Android |
+| omp: subagent (`task`, `subagent_*`, `set_subagent_subscription`) | **Sudah (2026-10-28)** | Event `subagent.updated` dari frame lifecycle/progress, pohon di tab Aktivitas (langsung saja). Belum: menghentikan atau mengarahkan subagent (`cancel_subagent`, `steer_subagent`), subagent bersarang tampil datar (hanya satu tingkat di bawah agent induk), tidak disimpan setelah run selesai |
+| omp: `ask` (agent bertanya ke pengguna, `set_ask_dialog`) | **Sudah (2026-10-28)** | Butuh `--mode rpc-ui` (di `rpc` tool `ask` tidak ada). Event `question.asked`/`question.resolved`, `POST /runs/:id/questions/:questionId`, panel "Agent bertanya" (pilihan tunggal/ganda, teks bebas, "Pakai yang disarankan"). Belum: batas waktu pertanyaan (`timeout` omp diabaikan), tampil di Android, riwayat pertanyaan setelah run selesai |
+| omp: `--max-time` / `--max-cost` | Belum | Batas waktu run sudah di worker; biaya nol di `models.yml` sehingga `--max-cost` tak berguna sebelum harga model diisi |
+| omp: `--thinking`, `set_thinking_level` | Belum | `reasoning: false` dibakukan di `models.yml`; pemilih tingkat berpikir butuh data model dari 9Router |
+| omp: `--advisor` (peninjau pasif tiap giliran) | Belum | Bisa melengkapi Pendapat kedua (W28) |
+| omp: sesi pohon, `fork`, `export_html`, `handoff`, kompaksi | Diganti | `--no-session`; cabang percakapan dan ringkasan (W30/W31) dibuat di gateway. Wajar karena riwayat milik server |
+| Pi: AGENTS.md, skills sesuai permintaan, templat prompt | Sudah | AGENTS.md dibaca omp dari worktree; skill via paket (Fase 48); templat (W27) |
+| Pi: SDK/RPC/JSON | Sudah (RPC) | Adapter memakai `--mode rpc` |
+| Pi: paket dan ekstensi | Sengaja tidak | `--no-extensions`; keamanan SECURITY_OPS.md |
+
+Urutan yang disarankan berikutnya: (1) `--advisor` sebagai peninjau pasif, (2) tingkat berpikir (`--thinking`) bila data model tersedia, (3) hentikan/arahkan subagent.
+
+Catatan steer/follow-up: pesan yang diarahkan tidak disimpan sebagai pesan chat dan tidak tampil di daftar pesan; yang terlihat hanya daftar "Menunggu giliran" selama masih mengantre.

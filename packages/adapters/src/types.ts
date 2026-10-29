@@ -1,4 +1,4 @@
-import type { AgentEvent } from '@aios/contracts';
+import type { AgentEvent, QueueName, QuestionAnswer, SteerMode } from '@aios/contracts';
 
 /** Antarmuka adapter persis seperti ARCHITECTURE.md ("Agent Adapter"). UI tidak pernah tahu mesin mana yang berjalan. */
 
@@ -42,6 +42,8 @@ export interface StartRunInput {
   runDir?: string | undefined;
   /** Server MCP (HTTP) yang disediakan worker untuk run ini, mis. tool browser. Hanya omp. */
   mcpServers?: Record<string, { url: string; headers?: Record<string, string> }> | undefined;
+  /** Menyalakan LSP omp (diagnostik setelah edit, definisi, referensi). Hanya omp; bawaan mati. */
+  lsp?: boolean | undefined;
 }
 
 export interface RunHandle {
@@ -51,9 +53,17 @@ export interface RunHandle {
    * (sukses), setelah `error` (gagal), atau tanpa event penutup bila dibatalkan lewat `cancel`.
    */
   events: AsyncIterable<AgentEvent>;
-  steer(text: string): Promise<void>;
+  /** `followUp` mengantre teks sampai giliran agent selesai; bawaan `steer` menyisipkannya setelah tool berjalan. */
+  steer(text: string, mode?: SteerMode): Promise<void>;
+  /** Menarik arahan dari antrean agent sebelum diproses (`text` persis seperti di `queue.updated`). */
+  removeQueued(queue: QueueName, text: string): Promise<void>;
   cancel(): Promise<void>;
   resolveApproval(id: string, decision: 'allow' | 'deny', remember?: boolean): Promise<void>;
+  /** Menjawab pertanyaan agent (`question.asked`); `cancelled` membuat agent memakai pilihan yang direkomendasikan. */
+  answerQuestion(
+    questionId: string,
+    result: { answers: QuestionAnswer[]; cancelled: boolean },
+  ): Promise<void>;
 }
 
 export interface AgentAdapter {

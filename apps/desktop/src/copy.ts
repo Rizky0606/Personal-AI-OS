@@ -98,6 +98,16 @@ export const copy = {
     historyLabel: 'Commit terbaru',
   },
   activity: {
+    subagents: {
+      title: 'Subagent',
+      tools: (n: number) => `${n} tool`,
+      status: {
+        running: 'Berjalan',
+        completed: 'Selesai',
+        failed: 'Gagal',
+        aborted: 'Dihentikan',
+      },
+    },
     empty: 'Belum ada aktivitas agent. Kirim pesan di project agar langkah agent muncul di sini.',
     now: 'Sedang dikerjakan',
     idle: 'Agent tidak sedang bekerja.',
@@ -388,7 +398,14 @@ export const copy = {
     add: 'Tambah project',
     workerOff:
       'Worker belum tersambung. Project belum bisa ditambahkan, tetapi daftar tetap tampil.',
-    columns: { name: 'Nama', stack: 'Stack', branch: 'Branch', folder: 'Folder', rules: 'Aturan' },
+    columns: {
+      name: 'Nama',
+      stack: 'Stack',
+      branch: 'Branch',
+      folder: 'Folder',
+      setup: 'Setup worktree',
+      rules: 'Aturan',
+    },
     branch: {
       change: 'Ganti',
       title: (name: string) => `Branch kerja ${name}`,
@@ -418,6 +435,29 @@ export const copy = {
       body: (name: string) =>
         `"${name}" dan kartu kanbannya dihapus. Percakapannya tetap ada sebagai chat biasa, dan folder di PC tidak disentuh.`,
       done: 'Project dihapus.',
+    },
+    setup: {
+      edit: 'Atur setup',
+      title: (name: string) => `Setup worktree ${name}`,
+      intro:
+        'Dijalankan di worktree baru sebelum agent mulai, supaya agent bisa langsung menjalankan tes dan typecheck. Disimpan di PC ini saja, tidak di repo.',
+      commandsLabel: 'Perintah (satu per baris)',
+      commandsHint: (n: number, max: number) =>
+        `${n}/${max} perintah. Tanpa shell: tanda kutip, & | ; < > $ dan % tidak boleh. Hasilnya harus diabaikan git (mis. node_modules), kalau tidak run tanpa perubahan pun masuk antrean review.`,
+      commandsPlaceholder: 'pnpm install --frozen-lockfile --offline',
+      invalid: (line: number) =>
+        `Baris ${line} memuat karakter yang tidak diizinkan atau terlalu panjang.`,
+      tooMany: (max: number) => `Maksimal ${max} perintah.`,
+      link: 'Tautkan node_modules project',
+      linkHint:
+        'Hemat waktu instal, tetapi agent bisa mengubah node_modules asli lewat tautan itu. Mati secara bawaan.',
+      lsp: 'Nyalakan LSP agent',
+      lspHint:
+        'Agent mendapat diagnostik tipe setelah mengubah berkas, plus definisi dan referensi. Aktif hanya bila server bahasa (mis. typescript-language-server di node_modules/.bin) ditemukan di worktree; instal pertama bisa memakan belasan detik dan memori.',
+      save: 'Simpan setup',
+      saving: 'Menyimpan…',
+      saved: 'Setup worktree disimpan.',
+      loading: 'Membaca setup…',
     },
     rules: {
       edit: 'Ubah aturan',
@@ -498,6 +538,15 @@ export const copy = {
     server: 'Server mengalami masalah. Coba lagi; bila berulang, periksa log gateway.',
     shape: 'Respons server tidak dikenali. Perbarui aplikasi atau gateway.',
     unknown: 'Terjadi kesalahan yang tidak dikenali. Coba lagi.',
+  },
+  question: {
+    title: 'Agent bertanya',
+    multiHint: 'Boleh pilih lebih dari satu.',
+    recommended: 'Disarankan',
+    other: 'Jawaban lain (opsional)',
+    submit: 'Kirim jawaban',
+    useRecommended: 'Pakai yang disarankan',
+    failed: 'Jawaban belum terkirim. Coba lagi.',
   },
   approval: {
     title: {
@@ -711,6 +760,34 @@ export const copy = {
     placeholder: 'Tulis pesan. Enter mengirim, Shift+Enter baris baru.',
     send: 'Kirim',
     stop: 'Hentikan',
+    queue: {
+      title: 'Menunggu giliran',
+      steering: 'Arahan',
+      followUp: 'Antre',
+      remove: (text: string) => `Tarik dari antrean: ${text}`,
+      removeFailed: 'Belum bisa menarik pesan dari antrean.',
+    },
+    todo: {
+      title: 'Rencana agent',
+      progress: (done: number, total: number) => `${done}/${total}`,
+      status: {
+        pending: 'Menunggu',
+        in_progress: 'Dikerjakan',
+        completed: 'Selesai',
+        abandoned: 'Dibatalkan',
+        blocked: 'Terhambat',
+      },
+    },
+    steer: {
+      placeholder: 'Arahkan agent. Enter menyisipkan sekarang, Alt+Enter mengantre sampai selesai.',
+      now: 'Arahkan',
+      nowHint: 'Disisipkan setelah langkah yang sedang berjalan (Enter)',
+      queue: 'Antre',
+      queueHint: 'Dikirim setelah agent selesai (Alt+Enter)',
+      sent: 'Arahan terkirim ke agent.',
+      queued: 'Pesan diantre; dikirim setelah agent selesai.',
+      failed: 'Arahan belum terkirim. Teks dikembalikan ke kolom pesan.',
+    },
     editLast: 'Ubah pesan terakhir',
     edit: 'Ubah',
     resend: 'Kirim ulang',

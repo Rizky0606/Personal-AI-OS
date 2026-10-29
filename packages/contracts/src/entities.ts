@@ -125,6 +125,10 @@ export type ApprovalKind = z.infer<typeof ApprovalKindSchema>;
 export const ApprovalDecisionSchema = z.enum(['allow', 'deny']);
 export type ApprovalDecision = z.infer<typeof ApprovalDecisionSchema>;
 
+/** `steer`: disisipkan setelah tool berjalan saat ini; `followUp`: antre dan dikirim setelah agent selesai (Pi/omp). */
+export const SteerModeSchema = z.enum(['steer', 'followUp']);
+export type SteerMode = z.infer<typeof SteerModeSchema>;
+
 export const ApprovalStatusSchema = z.enum(['pending', 'allowed', 'denied', 'cancelled']);
 export type ApprovalStatus = z.infer<typeof ApprovalStatusSchema>;
 

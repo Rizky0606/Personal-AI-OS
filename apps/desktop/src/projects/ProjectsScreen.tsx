@@ -14,6 +14,7 @@ import { workerErrorMessage } from '../worker/errors';
 import type { Project } from '@aios/contracts';
 import { AddProjectDialog } from './AddProjectDialog';
 import { ProjectRulesDialog } from './ProjectRulesDialog';
+import { ProjectSetupDialog } from './ProjectSetupDialog';
 import { BranchDialog } from './BranchDialog';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { api } from '../app/services';
@@ -32,6 +33,7 @@ export function ProjectsScreen() {
   const push = useToastStore((s) => s.push);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [rulesOf, setRulesOf] = useState<Project | null>(null);
+  const [setupOf, setSetupOf] = useState<Project | null>(null);
   const [branchOf, setBranchOf] = useState<{ project: Project; path: string | null } | null>(null);
   const [unbindOf, setUnbindOf] = useState<{ projectId: string; path: string } | null>(null);
   const [removeOf, setRemoveOf] = useState<{ project: Project; bound: boolean } | null>(null);
@@ -123,7 +125,7 @@ export function ProjectsScreen() {
         <table aria-label={copy.projects.listLabel} className="w-full border-collapse">
           <thead>
             <tr>
-              {(['name', 'stack', 'branch', 'folder', 'rules'] as const).map((column) => (
+              {(['name', 'stack', 'branch', 'folder', 'setup', 'rules'] as const).map((column) => (
                 <th key={column} scope="col" className={headerClass}>
                   {copy.projects.columns[column]}
                 </th>
@@ -131,8 +133,12 @@ export function ProjectsScreen() {
             </tr>
           </thead>
           <tbody>
-            {rows.map(({ project, binding, mine }) => (
-              <tr key={project.id}>
+            {rows.map(({ project, binding, mine }, index) => (
+              <tr
+                key={project.id}
+                className="animate-aios-enter"
+                style={{ animationDelay: `${Math.min(index, 3) * 40}ms` }}
+              >
                 <td className={cellClass}>
                   <span className="flex flex-col items-start gap-1">
                     <span className="font-medium text-text">{project.name}</span>
@@ -204,6 +210,16 @@ export function ProjectsScreen() {
                   )}
                 </td>
                 <td className={cellClass}>
+                  <Button
+                    variant="ghost"
+                    disabled={!workerReady || !mine}
+                    aria-label={`${copy.projects.setup.edit}: ${project.name}`}
+                    onClick={() => setSetupOf(project)}
+                  >
+                    {copy.projects.setup.edit}
+                  </Button>
+                </td>
+                <td className={cellClass}>
                   <span className="flex flex-col items-start gap-1">
                     <span className="line-clamp-2 max-w-64 text-meta whitespace-pre-wrap text-text-2">
                       {project.instructions || copy.projects.rules.none}
@@ -224,6 +240,7 @@ export function ProjectsScreen() {
       </StateView>
       <AddProjectDialog open={dialogOpen} onOpenChange={setDialogOpen} />
       <ProjectRulesDialog project={rulesOf} onClose={() => setRulesOf(null)} />
+      <ProjectSetupDialog project={setupOf} onClose={() => setSetupOf(null)} />
       <BranchDialog
         project={branchOf?.project ?? null}
         path={branchOf?.path ?? null}

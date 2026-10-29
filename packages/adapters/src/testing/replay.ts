@@ -8,7 +8,12 @@ interface Entry {
 }
 
 /** Perintah yang adapter kirim di luar transkrip rekaman; dijawab otomatis tanpa menggeser transkrip. */
-const EXTRA_COMMANDS = new Set(['set_auto_retry', 'abort_retry']);
+const EXTRA_COMMANDS = new Set([
+  'set_auto_retry',
+  'abort_retry',
+  'set_ask_dialog',
+  'set_subagent_subscription',
+]);
 
 export interface ReplayTransport extends OmpTransport {
   /** Frame yang dikirim adapter, berurutan. */

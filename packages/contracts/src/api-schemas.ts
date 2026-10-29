@@ -3,6 +3,7 @@ import {
   DEFAULT_TIMEZONE,
   CronSchema,
   ApprovalDecisionSchema,
+  SteerModeSchema,
   DeviceSchema,
   MEMORY_TEXT_MAX,
   MemorySchema,
@@ -33,7 +34,7 @@ import {
   TimestampSchema,
   UsageSchema,
 } from './common.js';
-import { RunEventSchema } from './events.js';
+import { QueueNameSchema, QuestionAnswerSchema, RunEventSchema } from './events.js';
 import { MergeSkippedSchema, ReviewCommentSchema } from './worker.js';
 
 /*
@@ -296,7 +297,7 @@ export const RunEventsResponseSchema = z
   .meta({ id: 'RunEventsResponse' });
 
 export const SteerRequestSchema = z
-  .object({ text: z.string().min(1) })
+  .object({ text: z.string().min(1), mode: SteerModeSchema.optional() })
   .meta({ id: 'SteerRequest' });
 
 export const ApprovalParamsSchema = z.object({ id: IdSchema, approvalId: IdSchema });
@@ -307,6 +308,21 @@ export const ApprovalDecisionRequestSchema = z
     remember: z.boolean().default(false),
   })
   .meta({ id: 'ApprovalDecisionRequest' });
+
+export const QuestionParamsSchema = z.object({ id: IdSchema, questionId: IdSchema });
+
+/** Menarik satu arahan dari antrean agent sebelum diproses; `text` persis seperti di event `queue.updated`. */
+export const RemoveQueuedRequestSchema = z
+  .object({ queue: QueueNameSchema, text: z.string().min(1).max(500) })
+  .meta({ id: 'RemoveQueuedRequest' });
+
+/** Jawaban atas pertanyaan agent: `cancelled` true membatalkan (agent memakai pilihan yang direkomendasikan). */
+export const QuestionAnswerRequestSchema = z
+  .object({
+    answers: z.array(QuestionAnswerSchema).max(8).default([]),
+    cancelled: z.boolean().default(false),
+  })
+  .meta({ id: 'QuestionAnswerRequest' });
 
 /**
  * Tinjauan hasil run coding. `accept`: perubahan di-commit pada branch kerja agent; `merge` juga menggabungkannya

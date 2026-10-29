@@ -12,7 +12,10 @@ import {
   type AgentEvent,
   type MessagePart,
   type RunError,
+  type QuestionAnswer,
+  type QueueName,
   type RunStatus,
+  type SteerMode,
   type Usage,
 } from '@aios/contracts';
 import { and, count, eq, inArray, notInArray } from 'drizzle-orm';
@@ -83,7 +86,15 @@ export interface Runner {
     remember: boolean,
   ): Promise<'ok' | 'inactive'>;
   /** Mengarahkan agent yang sedang berjalan. Melempar AdapterError bila mesin tidak mendukung. */
-  steer(runId: string, text: string): Promise<'ok' | 'inactive'>;
+  steer(runId: string, text: string, mode?: SteerMode): Promise<'ok' | 'inactive'>;
+  /** Menarik arahan dari antrean agent. 'inactive': run tidak berjalan di gateway ini. */
+  removeQueued(runId: string, queue: QueueName, text: string): Promise<'ok' | 'inactive'>;
+  /** Meneruskan jawaban atas pertanyaan agent. 'inactive': run tidak berjalan di gateway ini. */
+  answerQuestion(
+    runId: string,
+    questionId: string,
+    result: { answers: QuestionAnswer[]; cancelled: boolean },
+  ): Promise<'ok' | 'inactive'>;
   isActive(runId: string): boolean;
   /** Run chat yang tertinggal setelah gateway mati ditandai gagal. Mengembalikan jumlahnya. */
   recoverOrphans(): Promise<number>;
@@ -598,10 +609,24 @@ export function createRunner(deps: RunnerDeps): Runner {
       return 'ok';
     },
 
-    async steer(runId, text) {
+    async steer(runId, text, mode) {
       const handle = active.get(runId)?.handle;
       if (!handle) return 'inactive';
-      await handle.steer(text);
+      await handle.steer(text, mode);
+      return 'ok';
+    },
+
+    async answerQuestion(runId, questionId, result) {
+      const handle = active.get(runId)?.handle;
+      if (!handle) return 'inactive';
+      await handle.answerQuestion(questionId, result);
+      return 'ok';
+    },
+
+    async removeQueued(runId, queue, text) {
+      const handle = active.get(runId)?.handle;
+      if (!handle) return 'inactive';
+      await handle.removeQueued(queue, text);
       return 'ok';
     },
 

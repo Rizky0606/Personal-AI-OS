@@ -1,4 +1,10 @@
-import type { ModelInfoSchema, RoleInfoSchema } from '@aios/contracts';
+import type {
+  ModelInfoSchema,
+  QuestionAnswer,
+  QueueName,
+  RoleInfoSchema,
+  SteerMode,
+} from '@aios/contracts';
 import {
   ApprovalSchema,
   ConversationSchema,
@@ -282,6 +288,22 @@ export function createGatewayApi(call: Call) {
         })
       ).items,
     cancelRun: (id: string) => get(`/runs/${id}/cancel`, RunSchema, { method: 'POST' }),
+    /** Mengarahkan run coding yang berjalan: `steer` disisipkan sekarang, `followUp` antre sampai selesai. */
+    steerRun: async (id: string, text: string, mode: SteerMode) => {
+      await call(`/runs/${id}/steer`, { method: 'POST', body: { text, mode } });
+    },
+    /** Menjawab pertanyaan agent; `cancelled` membuat agent memakai pilihan yang disarankan. */
+    answerQuestion: async (
+      runId: string,
+      questionId: string,
+      result: { answers: QuestionAnswer[]; cancelled: boolean },
+    ) => {
+      await call(`/runs/${runId}/questions/${questionId}`, { method: 'POST', body: result });
+    },
+    /** Menarik arahan dari antrean agent sebelum diproses. */
+    removeQueued: async (runId: string, queue: QueueName, text: string) => {
+      await call(`/runs/${runId}/queue/remove`, { method: 'POST', body: { queue, text } });
+    },
 
     search: async (q: string) =>
       (await get(`/search${query({ q, limit: 20 })}`, SearchResponseSchema)).items,

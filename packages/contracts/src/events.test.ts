@@ -120,6 +120,99 @@ const agentCases: Record<AgentEventType, Cases> = {
     valid: [{ type: 'checkpoint.created', checkpointId: 'cp_1', label: 'Sebelum refactor' }],
     invalid: [{ type: 'checkpoint.created', label: 'tanpa id' }],
   },
+  'todo.updated': {
+    valid: [
+      { type: 'todo.updated', phases: [] },
+      {
+        type: 'todo.updated',
+        phases: [
+          {
+            name: 'Tahap',
+            tasks: [
+              { content: 'Baca kode', status: 'completed' },
+              { content: 'Jalankan lint', status: 'blocked', blocker: 'menunggu izin' },
+            ],
+          },
+        ],
+      },
+    ],
+    invalid: [
+      { type: 'todo.updated' },
+      {
+        type: 'todo.updated',
+        phases: [{ name: 'T', tasks: [{ content: 'x', status: 'selesai' }] }],
+      },
+    ],
+  },
+  'question.asked': {
+    valid: [
+      {
+        type: 'question.asked',
+        questionId: ID_B,
+        questions: [
+          {
+            id: 'db',
+            question: 'Database mana?',
+            options: [{ label: 'Postgres', description: 'Server' }, { label: 'SQLite' }],
+            recommended: 0,
+          },
+          { id: 'fitur', question: 'Fitur apa?', options: [{ label: 'Auth' }], multi: true },
+        ],
+      },
+    ],
+    invalid: [
+      { type: 'question.asked', questionId: ID_B, questions: [] },
+      { type: 'question.asked', questions: [{ id: 'x', question: 'q', options: [] }] },
+      {
+        type: 'question.asked',
+        questionId: ID_B,
+        questions: [{ id: 'x', question: 'q', options: [], recommended: -1 }],
+      },
+    ],
+  },
+  'question.resolved': {
+    valid: [{ type: 'question.resolved', questionId: ID_B, cancelled: false }],
+    invalid: [{ type: 'question.resolved', questionId: ID_B }],
+  },
+  'subagent.updated': {
+    valid: [
+      {
+        type: 'subagent.updated',
+        subagentId: 'Pekerja',
+        agent: 'task',
+        assignment: 'Baca a.txt',
+        status: 'running',
+        toolCount: 2,
+        durationMs: 1200,
+        tokens: 40,
+        lastOutput: 'membaca',
+        parentToolCallId: 'call_1',
+      },
+    ],
+    invalid: [
+      { type: 'subagent.updated', subagentId: 'x' },
+      {
+        type: 'subagent.updated',
+        subagentId: 'x',
+        agent: 'task',
+        assignment: 'a',
+        status: 'pending',
+        toolCount: 0,
+        durationMs: 0,
+        tokens: 0,
+      },
+    ],
+  },
+  'queue.updated': {
+    valid: [
+      { type: 'queue.updated', steering: [], followUp: [] },
+      { type: 'queue.updated', steering: ['fokus ke tes'], followUp: ['lalu lint'] },
+    ],
+    invalid: [
+      { type: 'queue.updated', steering: ['x'] },
+      { type: 'queue.updated', steering: [1], followUp: [] },
+    ],
+  },
   'preview.ready': {
     valid: [{ type: 'preview.ready', url: 'http://127.0.0.1:5173/' }],
     invalid: [{ type: 'preview.ready', url: 'bukan url' }, { type: 'preview.ready' }],
@@ -237,6 +330,11 @@ describe('AgentEvent', () => {
         'approval.resolved',
         'diff.updated',
         'checkpoint.created',
+        'todo.updated',
+        'queue.updated',
+        'subagent.updated',
+        'question.asked',
+        'question.resolved',
         'preview.ready',
         'research.progress',
         'research.source',

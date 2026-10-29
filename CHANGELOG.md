@@ -2,6 +2,20 @@
 
 Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/); versi mengikuti [SemVer](https://semver.org/lang/id/).
 
+## [Unreleased]
+
+### Ditambah
+
+- Desktop: arahkan agent coding yang sedang berjalan dari composer. Enter menyisipkan arahan setelah langkah yang sedang berjalan, Alt+Enter mengantre pesan sampai agent selesai (`POST /runs/:id/steer` menerima `mode: steer | followUp`).
+- Desktop, layar Project: **Setup worktree** per project (disimpan di worker): perintah yang dijalankan sebelum agent mulai (mis. `pnpm install --offline`, tampil sebagai langkah `setup` di chat) dan opsi menautkan node_modules.
+- LSP omp untuk run coding: agent mendapat diagnostik tipe setelah mengubah berkas serta definisi dan referensi, bila server bahasa ditemukan di worktree atau PATH. Bisa dimatikan per project.
+- Rencana agent langsung: daftar tugas dari tool `todo` omp tampil di jawaban yang sedang berjalan, dengan bilah kemajuan dan status tiap tugas (event baru `todo.updated`).
+- Antrean arahan terlihat: arahan (Enter) dan pesan antre (Alt+Enter) yang belum diproses agent tampil sebagai daftar "Menunggu giliran" dan hilang saat diproses (event baru `queue.updated`).
+- Agent bisa bertanya langsung ke pengguna: tool `ask` omp tampil sebagai panel "Agent bertanya" (pilihan tunggal atau ganda, teks bebas, atau "Pakai yang disarankan"). Adapter omp kini berjalan di `--mode rpc-ui` karena di `--mode rpc` tool `ask` tidak tersedia; izin tool tetap lewat panel izin (diuji).
+- Arahan yang masih mengantre bisa ditarik: tombol X di daftar "Menunggu giliran" (`POST /runs/:id/queue/remove`, omp `remove_queued_message`; diuji dengan omp sungguhan).
+- Subagent omp (tool `task`) tampil sebagai pohon di tab Aktivitas: nama, jenis agent, status, tugas, jumlah tool, durasi, dan keluaran terakhir (event baru `subagent.updated`).
+- Skill `find-skills` (adaptasi vercel-labs/skills) untuk agent umum dan project: bila topik spesifik dan belum ditutup skill yang dimuat, agent mencari skill yang cocok di skills.sh dan merekomendasikannya (nama, pemasang, perintah pasang). Hanya mencari; pemasangan tetap oleh pemilik.
+
 ## [1.0.3] - 2026-10-25
 
 ### Diubah

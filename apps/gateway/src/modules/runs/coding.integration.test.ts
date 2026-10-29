@@ -552,6 +552,32 @@ describe('run coding lewat worker', () => {
     fake.close();
   });
 
+  it('steer dengan mode followUp diteruskan ke worker; mode tak dikenal ditolak 400', async () => {
+    const { fake, conversationId } = await setup('Worker FollowUp');
+    const run = await startRun(conversationId);
+    await until(() => fake.command('run.start') !== undefined, 'run.start');
+    await until(async () => (await statusOf(run.id)) === 'running', 'running');
+
+    const bad = await env.post(`/runs/${run.id}/steer`, { text: 'x', mode: 'nanti' }, desktop);
+    expect(bad.statusCode).toBe(400);
+
+    const res = await env.post(
+      `/runs/${run.id}/steer`,
+      { text: 'lalu jalankan lint', mode: 'followUp' },
+      desktop,
+    );
+
+    expect(res.statusCode, res.body).toBe(204);
+    await until(() => fake.command('run.steer') !== undefined, 'run.steer');
+    expect(fake.command('run.steer')).toEqual({
+      type: 'run.steer',
+      runId: run.id,
+      text: 'lalu jalankan lint',
+      mode: 'followUp',
+    });
+    fake.close();
+  });
+
   it('worker putus lebih lama dari masa tunggu: run gagal worker_disconnected', async () => {
     const { fake, conversationId } = await setup('Worker Putus');
     const run = await startRun(conversationId);
