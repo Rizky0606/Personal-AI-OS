@@ -52,7 +52,7 @@ describe('GET /roles', () => {
       fallbackModel: 'coding-cheap',
       approval: 'ask',
     });
-    expect(project.skills).toEqual([...CORE_SKILLS]);
+    expect(project.skills).toEqual([...CORE_SKILLS, 'find-skills']);
     // Isi prompt tidak ikut ke klien.
     expect(JSON.stringify(items)).not.toContain('Definition of done');
   });
@@ -86,7 +86,13 @@ describe('bundel sebagai pesan sistem Hermes', () => {
     expect(system!.content).toContain(SERVER_FILES_RULE);
     for (const rule of AGENT_BEHAVIOR_RULES) expect(system!.content).toContain(rule);
     expect(system!.content).toContain('# Peran: Umum');
-    for (const skill of ['scope-guard', 'verify-before-done', 'answer-first', 'clarify-once']) {
+    for (const skill of [
+      'scope-guard',
+      'verify-before-done',
+      'answer-first',
+      'clarify-once',
+      'find-skills',
+    ]) {
       expect(system!.content).toContain(`## ${skill}\n`);
     }
     expect(system!.content).not.toContain('## ui-baseline');
