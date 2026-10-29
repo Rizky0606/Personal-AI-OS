@@ -19,11 +19,11 @@ beforeEach(() => {
 });
 
 describe('StatusBar: role, model, dan kuota', () => {
-  it('bawaan: role dan model otomatis; kuota "-" bila belum ada angka, tautannya ke halaman Kuota', async () => {
+  it('bawaan: model otomatis dan tanpa teks role; kuota "-" bila belum ada angka, tautannya ke halaman Kuota', async () => {
     api.getQuota.mockRejectedValue(new Error('x'));
     await renderScreen(<StatusBar />);
 
-    expect(screen.getByText(copy.status.role)).toBeInTheDocument();
+    expect(screen.queryByText(/role otomatis/i)).not.toBeInTheDocument();
     expect(screen.getByText(copy.status.model)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: copy.status.quota })).toHaveTextContent(
       copy.status.quota,

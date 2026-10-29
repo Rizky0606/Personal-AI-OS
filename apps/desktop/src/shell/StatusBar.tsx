@@ -51,7 +51,7 @@ export function StatusBar() {
   const quota = useQuota().data;
   const roleLabel = activeRole
     ? (roles?.find((r) => r.id === activeRole)?.name ?? activeRole)
-    : copy.status.role;
+    : null;
   const modelLabel = modelId
     ? (models?.find((m) => m.id === modelId)?.label ?? modelId)
     : copy.status.model;
@@ -69,7 +69,7 @@ export function StatusBar() {
     <footer className="flex h-(--aios-statusbar-height) shrink-0 items-center justify-between border-t border-border bg-surface px-3 font-mono text-caption text-text-2">
       <div className="flex items-center gap-4">
         <span>{projectLabel}</span>
-        <span>{roleLabel}</span>
+        {roleLabel ? <span>{roleLabel}</span> : null}
         <span className="max-w-48 truncate">{modelLabel}</span>
       </div>
       <div className="flex items-center gap-4">

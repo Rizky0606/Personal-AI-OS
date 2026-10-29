@@ -146,7 +146,6 @@ export const copy = {
     idle: 'Tidak tersambung',
     offline: 'Offline',
     project: 'Chat umum',
-    role: 'Role otomatis',
     model: 'Model otomatis',
     quota: 'Kuota -',
     statusColumn: 'Status',
@@ -824,7 +823,6 @@ export const copy = {
       },
     },
     role: {
-      auto: 'Role otomatis',
       label: 'Role',
       pick: 'Pilih role',
     },
