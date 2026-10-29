@@ -277,6 +277,24 @@ describe('kirim pesan dan run', () => {
     expect(hermes.requests[2]!.headers['x-hermes-session-id']).toBe(`aios-${other.id}`);
   });
 
+  it('model pilihan klien dikirim ke Hermes (body.model) dan tersimpan di run; tanpa pilihan: bawaan adapter', async () => {
+    answer('oke');
+    const conv = await createConversation();
+    const chosen = await env.post(
+      `/conversations/${conv.id}/messages`,
+      { parts: [{ type: 'text', text: 'pakai model ini' }], model: 'combo/cepat' },
+      token,
+    );
+    expect(chosen.statusCode, chosen.body).toBe(201);
+    const run = SendMessageResponseSchema.parse(chosen.json()).run;
+    await finalRun(run.id);
+    expect(hermes.requests[0]!.body.model).toBe('combo/cepat');
+    expect((await getRun(run.id)).model).toBe('combo/cepat');
+
+    await finalRun((await send(conv.id, 'tanpa model')).run.id);
+    expect(hermes.requests[1]!.body.model).toBe('hermes-agent');
+  });
+
   it('menolak pesan kedua selagi run masih berjalan (409), dan menerimanya setelah selesai', async () => {
     let release!: () => void;
     const gate = new Promise<void>((r) => (release = r));

@@ -363,6 +363,22 @@ describe('run coding lewat worker', () => {
     fake.close();
   });
 
+  it('model pilihan klien dikirim apa adanya di run.start ke worker (menggantikan model bawaan role)', async () => {
+    const { fake, conversationId } = await setup('Worker Model');
+    const res = await env.post(
+      `/conversations/${conversationId}/messages`,
+      { parts: [{ type: 'text', text: 'tambahkan tes untuk fungsi add' }], model: 'combo/pilihan' },
+      desktop,
+    );
+    expect(res.statusCode, res.body).toBe(201);
+    const run = SendMessageResponseSchema.parse(res.json()).run;
+    await until(() => fake.command('run.start') !== undefined, 'run.start');
+
+    expect(fake.command('run.start')?.model).toBe('combo/pilihan');
+    expect((await getRun(run.id)).model).toBe('combo/pilihan');
+    fake.close();
+  });
+
   it('run coding tanpa perubahan berkas selesai completed, bukan needs_review', async () => {
     const { fake, conversationId } = await setup('Worker Tanya');
     const run = await startRun(conversationId);
