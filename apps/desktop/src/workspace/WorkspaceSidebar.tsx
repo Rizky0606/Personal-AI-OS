@@ -1,4 +1,4 @@
-import { Link, useNavigate, useParams } from '@tanstack/react-router';
+import { Link, useParams } from '@tanstack/react-router';
 import { ChevronRight, Plus, Settings2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { apiErrorMessage } from '../api/errors';
@@ -6,6 +6,7 @@ import { useConversations, useWorkspaceRuns } from '../api/queries';
 import { useOnline } from '../app/hooks';
 import { ConversationRow } from '../chat/ConversationRow';
 import { useConversationActions } from '../chat/useConversationActions';
+import { AddProjectDialog } from '../projects/AddProjectDialog';
 import { copy } from '../copy';
 import { cn } from '../lib/cn';
 import { Button } from '../ui/Button';
@@ -124,7 +125,7 @@ export function WorkspaceSidebar() {
   const runs = useWorkspaceRuns();
   const online = useOnline();
   const params = useParams({ strict: false });
-  const navigate = useNavigate();
+  const [dialogOpen, setDialogOpen] = useState(false);
   const list = projects.data ?? [];
   const view: ViewState = projects.isPending
     ? 'loading'
@@ -144,7 +145,7 @@ export function WorkspaceSidebar() {
           loadingLabel={copy.projects.loading}
           emptyMessage={copy.projects.empty}
           emptyAction={
-            <Button variant="secondary" onClick={() => void navigate({ to: '/projects' })}>
+            <Button variant="secondary" onClick={() => setDialogOpen(true)}>
               <Plus size={14} strokeWidth={1.5} aria-hidden="true" />
               {copy.projects.add}
             </Button>
@@ -176,6 +177,7 @@ export function WorkspaceSidebar() {
           {copy.workspace.manage}
         </Link>
       </div>
+      <AddProjectDialog open={dialogOpen} onOpenChange={setDialogOpen} />
     </div>
   );
 }

@@ -265,7 +265,7 @@ export const copy = {
     conversationsEmpty: 'Belum ada percakapan.',
     untitled: 'Percakapan tanpa judul',
     newChat: 'Chat baru di ruang ini',
-    createNew: 'Buat ruang baru',
+    createNew: 'Tambah ruang',
     pickDocument: 'Pilih dokumen',
     startChat: 'Mulai percakapan',
     viewAll: 'Lihat ruang',
