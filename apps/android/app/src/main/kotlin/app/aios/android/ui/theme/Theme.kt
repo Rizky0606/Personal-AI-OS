@@ -62,7 +62,7 @@ fun AiosTheme(darkTheme: Boolean, content: @Composable () -> Unit) {
                 small = RoundedCornerShape(Tokens.Radius.sm),
                 medium = RoundedCornerShape(Tokens.Radius.md),
                 large = RoundedCornerShape(Tokens.Radius.lg),
-                extraLarge = RoundedCornerShape(Tokens.Radius.lg)
+                extraLarge = RoundedCornerShape(Tokens.Radius.xl)
             ),
             content = content
         )

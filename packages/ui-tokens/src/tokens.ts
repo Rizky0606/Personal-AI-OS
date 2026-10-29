@@ -4,10 +4,16 @@ import { z } from 'zod';
 const OKLCH = /^oklch\(\s*(\d*\.?\d+)\s+(\d*\.?\d+)\s+(\d*\.?\d+)\s*\)$/;
 const OklchSchema = z.string().regex(OKLCH, 'harus oklch(L C H) tanpa alfa');
 
+/** Warna status do agent: berpikir (violet), tool (amber), menulis (cyan), selesai (emerald), galat (merah). */
+export const STATUS_NAMES = ['thinking', 'tool', 'writing', 'done', 'error'] as const;
+export type StatusName = (typeof STATUS_NAMES)[number];
+
 export const COLOR_NAMES = [
   'bg',
   'surface',
+  'surface-1',
   'surface-2',
+  'surface-3',
   'border',
   'border-strong',
   'text',
@@ -19,6 +25,8 @@ export const COLOR_NAMES = [
   'warning',
   'danger',
   'info',
+  // Tiap status: solid, soft (latar), on (teks di atas solid).
+  ...STATUS_NAMES.flatMap((s) => [s, `${s}-soft`, `${s}-on`] as const),
 ] as const;
 export type ColorName = (typeof COLOR_NAMES)[number];
 
@@ -43,12 +51,20 @@ const RadiusSchema = z.object({
   sm: z.number().positive(),
   md: z.number().positive(),
   lg: z.number().positive(),
+  xl: z.number().positive(),
 });
+
+const ThemedShadowSchema = z.object({ light: z.string().min(1), dark: z.string().min(1) });
 
 export const TokensSchema = z.object({
   color: z.object({ light: ColorSetSchema, dark: ColorSetSchema }),
   font: z.object({
-    family: z.object({ sans: z.string().min(1), mono: z.string().min(1) }),
+    family: z.object({
+      sans: z.string().min(1),
+      mono: z.string().min(1),
+      /** Dipakai bila font utama gagal dimuat. */
+      fallback: z.object({ sans: z.string().min(1), mono: z.string().min(1) }),
+    }),
     weights: z.array(z.number().int()),
   }),
   type: z.object(
@@ -62,20 +78,36 @@ export const TokensSchema = z.object({
   }),
   radius: z.object({ desktop: RadiusSchema, android: RadiusSchema }),
   shadow: z.object({
-    float: z.object({ light: z.string().min(1), dark: z.string().min(1) }),
+    float: ThemedShadowSchema,
+    /** Bayangan tipis untuk surface-1, surface-2, surface-3 (makin tinggi makin tegas). */
+    layers: z.tuple([ThemedShadowSchema, ThemedShadowSchema, ThemedShadowSchema]),
     androidElevation: z.number().positive(),
+    androidLayers: z.tuple([z.number().positive(), z.number().positive(), z.number().positive()]),
   }),
   motion: z.object({
     duration: z.object({
+      /** Tekan dan umpan balik sangat singkat. */
+      instant: z.number().int().positive(),
       fast: z.number().int().positive(),
       base: z.number().int().positive(),
       slow: z.number().int().positive(),
       /** Animasi masuk yang menonjol (layar sambutan, pesan baru). */
       emphasis: z.number().int().positive(),
+      /** Transisi layar dan perpindahan besar. */
+      long: z.number().int().positive(),
+      /** Urutan sinematik yang jarang (sambutan, selesai besar). */
+      extra: z.number().int().positive(),
     }),
     easing: z.tuple([z.number(), z.number(), z.number(), z.number()]),
     /** Pegas ringan: sedikit melewati target lalu kembali (bukan pantulan berulang). */
     spring: z.tuple([z.number(), z.number(), z.number(), z.number()]),
+    /** Pegas fisik untuk elemen yang berpindah posisi (daftar, kartu, panel). */
+    springMove: z.object({
+      dampingRatio: z.number().positive().lt(1),
+      stiffness: z.number().positive(),
+    }),
+    /** Siklus minimum animasi tak berhingga (kilau, denyut), dalam ms. */
+    loopMinMs: z.number().int().positive(),
   }),
   focus: z.object({ width: z.number().positive(), offset: z.number().nonnegative() }),
   layout: z.object({

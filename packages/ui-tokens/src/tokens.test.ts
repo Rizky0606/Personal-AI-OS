@@ -1,16 +1,21 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { contrastRatio, inSrgbGamut, oklchToSrgb8, toHex } from './color.js';
-import { generateCss } from './css.js';
+import { generateCss, springLinear } from './css.js';
 import { generateKotlin } from './kotlin.js';
-import { COLOR_NAMES, TokensSchema, loadTokens, type ColorName } from './tokens.js';
+import { COLOR_NAMES, STATUS_NAMES, TokensSchema, loadTokens, type ColorName } from './tokens.js';
 
 const tokens = loadTokens();
 const read = (name: string) => readFileSync(new URL(`../${name}`, import.meta.url), 'utf8');
 
 describe('tokens.json', () => {
-  it('memuat 14 warna di tema terang dan gelap', () => {
-    expect(COLOR_NAMES).toHaveLength(14);
+  it('memuat 31 warna di tema terang dan gelap: 14 inti, 2 lapisan permukaan, 5 status x 3 varian', () => {
+    expect(COLOR_NAMES).toHaveLength(31);
+    expect(STATUS_NAMES).toEqual(['thinking', 'tool', 'writing', 'done', 'error']);
+    for (const s of STATUS_NAMES) {
+      for (const v of [s, `${s}-soft`, `${s}-on`]) expect(COLOR_NAMES).toContain(v);
+    }
+    for (const n of ['surface-1', 'surface-3']) expect(COLOR_NAMES).toContain(n);
     expect(Object.keys(tokens.color.light).sort()).toEqual([...COLOR_NAMES].sort());
     expect(Object.keys(tokens.color.dark).sort()).toEqual([...COLOR_NAMES].sort());
   });
@@ -19,14 +24,38 @@ describe('tokens.json', () => {
     expect(tokens.space).toEqual([4, 8, 12, 16, 20, 24, 32, 40, 48]);
   });
 
-  it('radius desktop 6/8/16 dan Android 8/12/16; gerak 120/180/240 ms', () => {
-    expect(tokens.radius.desktop).toEqual({ sm: 6, md: 8, lg: 16 });
-    expect(tokens.radius.android).toEqual({ sm: 8, md: 12, lg: 16 });
-    expect(tokens.motion.duration).toEqual({ fast: 120, base: 180, slow: 240, emphasis: 320 });
+  it('radius 8/12/16/24 di desktop dan Android; gerak 80/120/180/240/320/420/640 ms', () => {
+    expect(tokens.radius.desktop).toEqual({ sm: 8, md: 12, lg: 16, xl: 24 });
+    expect(tokens.radius.android).toEqual({ sm: 8, md: 12, lg: 16, xl: 24 });
+    expect(tokens.motion.duration).toEqual({
+      instant: 80,
+      fast: 120,
+      base: 180,
+      slow: 240,
+      emphasis: 320,
+      long: 420,
+      extra: 640,
+    });
     // Pegas ringan: overshoot kecil (y1 sedikit di atas 1), bukan pantulan.
     expect(tokens.motion.spring[1]).toBeGreaterThan(1);
     expect(tokens.motion.spring[1]).toBeLessThan(1.5);
     expect(tokens.motion.easing).toEqual([0.2, 0, 0, 1]);
+    // Pegas fisik untuk elemen yang berpindah posisi, dan siklus minimum animasi tak berhingga.
+    expect(tokens.motion.springMove).toEqual({ dampingRatio: 0.7, stiffness: 300 });
+    expect(tokens.motion.loopMinMs).toBe(1400);
+  });
+
+  it('font: Geist dan Geist Mono, IBM Plex sebagai cadangan', () => {
+    expect(tokens.font.family).toEqual({
+      sans: 'Geist',
+      mono: 'Geist Mono',
+      fallback: { sans: 'IBM Plex Sans', mono: 'IBM Plex Mono' },
+    });
+  });
+
+  it('lapisan permukaan: tiga bayangan tipis per tema dan tiga elevasi Android yang naik', () => {
+    expect(tokens.shadow.layers).toHaveLength(3);
+    expect(tokens.shadow.androidLayers).toEqual([1, 2, 4]);
   });
 
   it('skala tipografi sesuai tabel (desktop px, Android sp)', () => {
@@ -86,6 +115,17 @@ describe('kontras WCAG AA', () => {
 
   /** Teks harus >= 4.5; elemen UI non-teks (ikon, cincin fokus) >= 3. */
   const textPairs: Pair[] = [
+    ['text', 'surface-1'],
+    ['text', 'surface-3'],
+    ['text-2', 'surface-1'],
+    ['text-2', 'surface-3'],
+    ['text-3', 'surface-1'],
+    ['text-3', 'surface-3'],
+    ...STATUS_NAMES.flatMap((s): Pair[] => [
+      [`${s}-on` as ColorName, s as ColorName],
+      ['text', `${s}-soft` as ColorName],
+      ['text-2', `${s}-soft` as ColorName],
+    ]),
     ['text', 'bg'],
     ['text', 'surface'],
     ['text', 'surface-2'],
@@ -99,6 +139,12 @@ describe('kontras WCAG AA', () => {
     ['danger', 'surface'],
   ];
   const uiPairs: Pair[] = [
+    ...STATUS_NAMES.flatMap((s): Pair[] => [
+      [s as ColorName, 'bg'],
+      [s as ColorName, 'surface-1'],
+      [s as ColorName, 'surface-3'],
+      [s as ColorName, `${s}-soft` as ColorName],
+    ]),
     ['accent', 'bg'],
     ['accent', 'surface'],
     ['info', 'surface'],
@@ -165,7 +211,8 @@ describe('file hasil generate', () => {
     expect(css).toContain(":root[data-theme='dark']");
     expect(css).toContain('@theme inline {');
     expect(css).toContain('--color-accent: var(--aios-accent);');
-    expect(css).toContain("--font-sans: 'IBM Plex Sans', sans-serif;");
+    expect(css).toContain("--font-sans: 'Geist', 'IBM Plex Sans', sans-serif;");
+    expect(css).toContain("--font-mono: 'Geist Mono', 'IBM Plex Mono', monospace;");
     expect(css).toContain('--ease-standard: cubic-bezier(0.2, 0, 0, 1);');
     expect(css).toContain('--aios-accent: oklch(0.817 0.124 215.7);');
   });
@@ -182,5 +229,73 @@ describe('file hasil generate', () => {
 
   it('CSS tidak memuat hex acak (hanya OKLCH)', () => {
     expect(generateCss(tokens)).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
+  });
+
+  it('satu sumber: setiap warna token ada di CSS (OKLCH) dan di Kotlin (hex) untuk kedua tema', () => {
+    const css = generateCss(tokens);
+    const kt = generateKotlin(tokens);
+    const camel = (s: string) => s.replace(/-(\w)/g, (_, c: string) => c.toUpperCase());
+    for (const theme of ['light', 'dark'] as const) {
+      for (const n of COLOR_NAMES) {
+        const value = tokens.color[theme][n];
+        expect(css, `${theme} ${n}`).toContain(`--aios-${n}: ${value};`);
+        const block = kt.slice(kt.indexOf(`val ${theme}Colors`), kt.indexOf('FontFamilyName'));
+        expect(block, `${theme} ${n}`).toContain(`${camel(n)} = Color(0xFF${toHex(value)})`);
+      }
+    }
+  });
+
+  it('CSS dan Kotlin memuat radius, durasi, elevasi lapisan, dan pegas dari token yang sama', () => {
+    const css = generateCss(tokens);
+    const kt = generateKotlin(tokens);
+    expect(css).toContain('--radius-*: initial;');
+    for (const [name, px] of [
+      ['sm', 8],
+      ['md', 12],
+      ['lg', 16],
+      ['xl', 24],
+    ] as const) {
+      expect(css).toContain(`--radius-${name}: ${px}px;`);
+      expect(kt).toContain(`val ${name} = ${px}.dp`);
+    }
+    for (const [name, ms] of [
+      ['instant', 80],
+      ['long', 420],
+      ['extra', 640],
+    ] as const) {
+      expect(css).toContain(`--aios-duration-${name}: ${ms}ms;`);
+      expect(kt).toContain(`const val ${name[0]!.toUpperCase()}${name.slice(1)}Ms = ${ms}`);
+    }
+    expect(css).toContain('--aios-loop-min: 1400ms;');
+    for (const i of [1, 2, 3]) expect(css).toContain(`--aios-shadow-${i}:`);
+    expect(css).toMatch(/--aios-easing-spring-move: linear\(0, /);
+    expect(kt).toContain('const val SpringDampingRatio = 0.7f');
+    expect(kt).toContain('const val SpringStiffness = 300f');
+    expect(kt).toContain('val layer3 = 4.dp');
+  });
+
+  it('CSS meniadakan palet dan radius bawaan Tailwind supaya hanya token yang bisa dipakai', () => {
+    const css = generateCss(tokens);
+    expect(css).toContain('--color-*: initial;');
+    expect(css).toContain('--radius-*: initial;');
+  });
+});
+
+describe('pegas fisik', () => {
+  const { dampingRatio, stiffness } = tokens.motion.springMove;
+  const spring = springLinear(dampingRatio, stiffness);
+
+  it('mulai di 0, berakhir tepat di 1, dan melewati 1 sekali dengan overshoot kecil', () => {
+    expect(spring.points[0]).toBe(0);
+    expect(spring.points.at(-1)).toBe(1);
+    const peak = Math.max(...spring.points);
+    expect(peak).toBeGreaterThan(1);
+    expect(peak).toBeLessThan(1.1);
+  });
+
+  it('durasi wajar (200 sampai 600 ms) dan deterministik', () => {
+    expect(spring.durationMs).toBeGreaterThanOrEqual(200);
+    expect(spring.durationMs).toBeLessThanOrEqual(600);
+    expect(springLinear(dampingRatio, stiffness)).toEqual(spring);
   });
 });
