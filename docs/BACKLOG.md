@@ -618,3 +618,13 @@ Disusun 2026-10-26 dari perbandingan dengan Orca, Pi, Cline, Amp, Goose, dan Vib
 - [ ] **Waktu mulai dari envelope/`Run.createdAt`,** bukan dari `startedAt` di `run.status` (tidak ditambahkan karena `Run.createdAt` sudah ada). Polling mengisi `endedAt` dari `Run.updatedAt`, yang bisa lebih lambat dari waktu selesai sebenarnya.
 - [ ] **Android:** fixture `packages/contracts/fixtures/activity` belum dibaca Kotlin (sesi 8); `Frames.kt` belum mengenal `reasoning.summary`.
 - [ ] `AssistantMessage`, `ToolStepRow`, `ReasoningBlock`, `AgentHud` masih memakai data lama dan belum membaca `buildActivity` (sesi UI berikutnya).
+
+## Temuan Sesi 4 (shell desktop)
+
+- [ ] **`docs/screenshots/ref/` tidak ada** dan `docs/screenshots/00-baseline/` hanya ada di cabang `chore/sesi-0-baseline`; arah desain diambil dari prompt sesi dan spesifikasi. Screenshot "sebelum" sesi ini diambil dari commit akhir Sesi 3.
+- [ ] **Penanda "sedang berjalan" di daftar percakapan** bergantung pada `RunTracker.track(runId, conversationId)`; tiga pemanggil di `chat/useChatController.ts` kini meneruskan `conversationId`. Run yang dilacak tanpa `conversationId` (mis. tanya cepat, riset) tidak menandai baris mana pun.
+- [ ] **`ConversationRow`, kartu chat, dan composer belum bergaya pulau** (garis bawah per baris, wash aktif lama); itu cakupan sesi 5 dan 6.
+- [ ] **Kaki status masih memuat project/model** yang kini juga ada di topbar layar chat; pertimbangkan membuang duplikasinya saat layar chat didesain ulang.
+- [ ] **Banner galat gateway hanya muncul untuk `reconnecting`** (bukan `connecting` pertama atau `idle`); tidak ada batas "n kali gagal" sebelum banner.
+- [ ] **View Transitions** memotret pembungkus isi saja; panel kanan dan sidebar tidak ikut bertransisi saat berpindah layar. Tidak diuji di WebView Tauri nyata (hanya Chromium e2e).
+- [ ] Tooltip sidebar ringkas dan tab panel memakai `Tooltip` bawaan (tunda 400 ms di `TooltipProvider`).

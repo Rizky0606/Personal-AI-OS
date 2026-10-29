@@ -86,13 +86,16 @@ Tema mengikuti sistem secara default, dengan pilihan manual terang atau gelap. A
 
 ## Layout Windows
 
-- **Rail kiri 56px:** ikon Chat, Project, Kanban, Jadwal, Riset, Pengaturan.
-- **Sidebar 260px** (bisa diciutkan): daftar percakapan atau project.
-- **Area utama:** chat atau kanban.
-- **Panel kanan** (bisa diubah lebarnya, tab): Preview, Diff, Terminal, Berkas.
-- **Status bar 24px:** project dan branch, role aktif, model, status worker, kuota.
-- **Command palette** Ctrl+K untuk semua aksi.
-- **Pintasan keyboard** (sumber kebenaran: kode; `apps/desktop/src/shell/navRoutes.ts` dan `useShortcuts.ts`): Ctrl+K palet perintah, Ctrl+N chat baru, Ctrl+B sidebar, Ctrl+J panel kanan, Ctrl+Shift+Spasi tanya cepat. Ctrl+1 Chat, Ctrl+2 Project, Ctrl+3 Kanban, Ctrl+4 Jadwal, Ctrl+5 Riset, Ctrl+6 Pengaturan (urutan rail). Petunjuk di palet diturunkan dari kode yang sama dan daftar di Pengaturan diuji terhadapnya; layar lain (Ruang, Kuota, Status, Pembanding) hanya lewat palet atau rail.
+Shell berupa **pulau** di atas kanvas gelap berlapis: kanvas `bg`, tiap pulau `surface-1` dengan radius 16 (`rounded-panel`), batas tipis, dan bayangan lapisan 1 (kelas `ISLAND` di `shell/island.ts`); jarak antar pulau dan ke tepi jendela 8 px (`--aios-island-gap`). Elemen terangkat di dalam pulau memakai `surface-2`.
+
+- **Sidebar (pulau 232 px, ringkas 64 px):** merek, navigasi utama (ikon + label: Chat, Project, Kanban, Jadwal, Riset, Ruang, Pengaturan), lalu daftar konteks bagian aktif (percakapan, riset, jadwal). Ringkas (Ctrl+B) hanya ikon dengan tooltip; lebar bertransisi 240 ms. Penanda item aktif adalah **pelat yang meluncur** antar item (`PlateGroup`: posisi dihitung dari item aktif, transform 240 ms dengan kurva pegas token `--ease-spring-move`); pelat hover menyusul kursor (120 ms). Percakapan yang sedang berjalan diberi titik berpendar `writing` (`useLiveConversationIds`).
+- **Area utama (pulau terbesar):** topbar 48 px (`--aios-topbar-height`) berisi judul layar (h1), di layar chat project aktif dan model, di kanan indikator koneksi (titik status + teks: tersambung, menyambung ulang, terputus/luring), aksi konteks bagian (Chat baru, Riset baru), dan tombol panel kanan. Di bawahnya banner koneksi (galat gateway dengan Coba lagi, atau luring) dan isi layar. Lebar isi layar non-chat satu token `--aios-page-measure` (720 px) lewat `PageContainer`.
+- **Panel kanan (pulau, lebar bisa diubah, tab dengan ikon):** Preview, Diff, Terminal, Berkas, Git, Aktivitas. Tab aktif berlabel, lainnya ikon dengan tooltip dan nama aksesibel; penanda aktif meluncur seperti sidebar. Membuka melebar dari 0 ke lebar tersimpan dan menutup menyempit lagi (240 ms, CSS); panel baru dilepas setelah animasi tutup selesai. Pegangan ubah-lebar berada di celah antar pulau.
+- **Kaki status 24 px** di kanvas: project dan branch, role aktif, model, status worker, kuota.
+- **Perpindahan layar** memakai View Transitions API pada pembungkus isi (`.aios-page-transition`): cross-fade + geser 8 px, 180 ms; tanpa dukungan peramban atau saat `prefers-reduced-motion` tanpa animasi.
+- **Keadaan shell:** memuat awal (`ShellSkeleton`: kerangka pulau dengan shimmer aksen, bukan layar kosong), galat koneksi gateway (banner dengan Coba lagi), luring (banner informasi), dan sukses.
+- **Command palette** Ctrl+K untuk semua aksi: lapisan melayang (`surface-2`, radius 24, overlay dengan blur `.aios-blur`), masuk 180 ms naik 8 px + fade, hasil per grup dengan pintasan di tiap baris, fokus terkunci di dalam dan kembali ke pembuka saat ditutup.
+- **Pintasan keyboard** (sumber kebenaran: kode; `apps/desktop/src/shell/navRoutes.ts` dan `useShortcuts.ts`): Ctrl+K palet perintah, Ctrl+N chat baru, Ctrl+B sidebar, Ctrl+J panel kanan, Ctrl+Shift+Spasi tanya cepat. Ctrl+1 Chat, Ctrl+2 Project, Ctrl+3 Kanban, Ctrl+4 Jadwal, Ctrl+5 Riset, Ctrl+6 Pengaturan (urutan sidebar). Petunjuk di palet diturunkan dari kode yang sama dan daftar di Pengaturan diuji terhadapnya; layar lain (Ruang, Kuota, Status, Pembanding) hanya lewat palet atau rail.
 
 ## Layout Android
 
