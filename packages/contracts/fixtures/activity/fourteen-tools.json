@@ -1,0 +1,664 @@
+{
+  "name": "fourteen-tools",
+  "description": "14 tool berurutan; selesai di 6 mnt 24 dtk dengan 14 langkah.",
+  "runId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e01",
+  "visibleSteps": 3,
+  "events": [
+    {
+      "seq": 1,
+      "ts": "2026-10-29T10:00:00.000Z",
+      "event": {
+        "type": "run.status",
+        "status": "running"
+      }
+    },
+    {
+      "seq": 2,
+      "ts": "2026-10-29T10:00:02.000Z",
+      "event": {
+        "type": "reasoning.delta",
+        "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+        "text": "**Membaca struktur project**\n\nSaya perlu memahami komponen dulu."
+      }
+    },
+    {
+      "seq": 3,
+      "ts": "2026-10-29T10:00:10.000Z",
+      "event": {
+        "type": "tool.started",
+        "toolCallId": "c1",
+        "name": "read",
+        "target": "src/app.ts"
+      }
+    },
+    {
+      "seq": 4,
+      "ts": "2026-10-29T10:00:18.000Z",
+      "event": {
+        "type": "tool.finished",
+        "toolCallId": "c1",
+        "status": "ok",
+        "durationMs": 8000
+      }
+    },
+    {
+      "seq": 5,
+      "ts": "2026-10-29T10:00:36.000Z",
+      "event": {
+        "type": "tool.started",
+        "toolCallId": "c2",
+        "name": "grep",
+        "target": "useState"
+      }
+    },
+    {
+      "seq": 6,
+      "ts": "2026-10-29T10:00:48.000Z",
+      "event": {
+        "type": "tool.finished",
+        "toolCallId": "c2",
+        "status": "ok",
+        "durationMs": 12000
+      }
+    },
+    {
+      "seq": 7,
+      "ts": "2026-10-29T10:01:02.000Z",
+      "event": {
+        "type": "tool.started",
+        "toolCallId": "c3",
+        "name": "read",
+        "target": "src/ui/Button.tsx"
+      }
+    },
+    {
+      "seq": 8,
+      "ts": "2026-10-29T10:01:18.000Z",
+      "event": {
+        "type": "tool.finished",
+        "toolCallId": "c3",
+        "status": "ok",
+        "durationMs": 16000
+      }
+    },
+    {
+      "seq": 9,
+      "ts": "2026-10-29T10:01:28.000Z",
+      "event": {
+        "type": "tool.started",
+        "toolCallId": "c4",
+        "name": "edit",
+        "target": "src/ui/Button.tsx"
+      }
+    },
+    {
+      "seq": 10,
+      "ts": "2026-10-29T10:01:48.000Z",
+      "event": {
+        "type": "tool.finished",
+        "toolCallId": "c4",
+        "status": "ok",
+        "durationMs": 20000
+      }
+    },
+    {
+      "seq": 11,
+      "ts": "2026-10-29T10:01:54.000Z",
+      "event": {
+        "type": "tool.started",
+        "toolCallId": "c5",
+        "name": "bash",
+        "target": "npm test"
+      }
+    },
+    {
+      "seq": 12,
+      "ts": "2026-10-29T10:02:18.000Z",
+      "event": {
+        "type": "tool.finished",
+        "toolCallId": "c5",
+        "status": "ok",
+        "durationMs": 24000
+      }
+    },
+    {
+      "seq": 13,
+      "ts": "2026-10-29T10:02:20.000Z",
+      "event": {
+        "type": "tool.started",
+        "toolCallId": "c6",
+        "name": "read",
+        "target": "package.json"
+      }
+    },
+    {
+      "seq": 14,
+      "ts": "2026-10-29T10:02:28.000Z",
+      "event": {
+        "type": "tool.finished",
+        "toolCallId": "c6",
+        "status": "ok",
+        "durationMs": 8000
+      }
+    },
+    {
+      "seq": 15,
+      "ts": "2026-10-29T10:02:46.000Z",
+      "event": {
+        "type": "tool.started",
+        "toolCallId": "c7",
+        "name": "web_search",
+        "target": "react 19 ref prop"
+      }
+    },
+    {
+      "seq": 16,
+      "ts": "2026-10-29T10:02:58.000Z",
+      "event": {
+        "type": "tool.finished",
+        "toolCallId": "c7",
+        "status": "ok",
+        "durationMs": 12000
+      }
+    },
+    {
+      "seq": 17,
+      "ts": "2026-10-29T10:03:12.000Z",
+      "event": {
+        "type": "tool.started",
+        "toolCallId": "c8",
+        "name": "edit",
+        "target": "src/app.ts"
+      }
+    },
+    {
+      "seq": 18,
+      "ts": "2026-10-29T10:03:28.000Z",
+      "event": {
+        "type": "tool.finished",
+        "toolCallId": "c8",
+        "status": "ok",
+        "durationMs": 16000
+      }
+    },
+    {
+      "seq": 19,
+      "ts": "2026-10-29T10:03:38.000Z",
+      "event": {
+        "type": "tool.started",
+        "toolCallId": "c9",
+        "name": "write",
+        "target": "src/app.test.ts"
+      }
+    },
+    {
+      "seq": 20,
+      "ts": "2026-10-29T10:03:58.000Z",
+      "event": {
+        "type": "tool.finished",
+        "toolCallId": "c9",
+        "status": "ok",
+        "durationMs": 20000
+      }
+    },
+    {
+      "seq": 21,
+      "ts": "2026-10-29T10:04:04.000Z",
+      "event": {
+        "type": "tool.started",
+        "toolCallId": "c10",
+        "name": "bash",
+        "target": "npm run typecheck"
+      }
+    },
+    {
+      "seq": 22,
+      "ts": "2026-10-29T10:04:28.000Z",
+      "event": {
+        "type": "tool.finished",
+        "toolCallId": "c10",
+        "status": "ok",
+        "durationMs": 24000
+      }
+    },
+    {
+      "seq": 23,
+      "ts": "2026-10-29T10:04:30.000Z",
+      "event": {
+        "type": "tool.started",
+        "toolCallId": "c11",
+        "name": "grep",
+        "target": "TODO"
+      }
+    },
+    {
+      "seq": 24,
+      "ts": "2026-10-29T10:04:38.000Z",
+      "event": {
+        "type": "tool.finished",
+        "toolCallId": "c11",
+        "status": "ok",
+        "durationMs": 8000
+      }
+    },
+    {
+      "seq": 25,
+      "ts": "2026-10-29T10:04:56.000Z",
+      "event": {
+        "type": "tool.started",
+        "toolCallId": "c12",
+        "name": "todo"
+      }
+    },
+    {
+      "seq": 26,
+      "ts": "2026-10-29T10:05:08.000Z",
+      "event": {
+        "type": "tool.finished",
+        "toolCallId": "c12",
+        "status": "ok",
+        "durationMs": 12000
+      }
+    },
+    {
+      "seq": 27,
+      "ts": "2026-10-29T10:05:22.000Z",
+      "event": {
+        "type": "tool.started",
+        "toolCallId": "c13",
+        "name": "bash",
+        "target": "git status"
+      }
+    },
+    {
+      "seq": 28,
+      "ts": "2026-10-29T10:05:38.000Z",
+      "event": {
+        "type": "tool.finished",
+        "toolCallId": "c13",
+        "status": "ok",
+        "durationMs": 16000
+      }
+    },
+    {
+      "seq": 29,
+      "ts": "2026-10-29T10:05:48.000Z",
+      "event": {
+        "type": "tool.started",
+        "toolCallId": "c14",
+        "name": "bash",
+        "target": "npm run lint"
+      }
+    },
+    {
+      "seq": 30,
+      "ts": "2026-10-29T10:06:08.000Z",
+      "event": {
+        "type": "tool.finished",
+        "toolCallId": "c14",
+        "status": "ok",
+        "durationMs": 20000
+      }
+    },
+    {
+      "seq": 31,
+      "ts": "2026-10-29T10:06:14.000Z",
+      "event": {
+        "type": "message.delta",
+        "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+        "text": "Semua perubahan sudah diterapkan dan tes lulus."
+      }
+    },
+    {
+      "seq": 32,
+      "ts": "2026-10-29T10:06:24.000Z",
+      "event": {
+        "type": "message.completed",
+        "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f"
+      }
+    },
+    {
+      "seq": 33,
+      "ts": "2026-10-29T10:06:24.000Z",
+      "event": {
+        "type": "run.completed",
+        "summary": "Selesai."
+      }
+    },
+    {
+      "seq": 34,
+      "ts": "2026-10-29T10:06:24.100Z",
+      "event": {
+        "type": "run.status",
+        "status": "completed"
+      }
+    }
+  ],
+  "checkpoints": [
+    {
+      "note": "baru menalar",
+      "applied": 2,
+      "now": "2026-10-29T10:00:03.000Z",
+      "activity": {
+        "headline": "Membaca struktur project",
+        "phase": "thinking",
+        "current": null,
+        "stepCount": 0,
+        "hiddenCount": 0,
+        "elapsedMs": 3000,
+        "steps": [],
+        "summary": null,
+        "needsAttention": false
+      }
+    },
+    {
+      "note": "tool ke-4 berjalan",
+      "applied": 9,
+      "now": "2026-10-29T10:01:30.000Z",
+      "activity": {
+        "headline": "Membaca struktur project",
+        "phase": "tool",
+        "current": {
+          "label": "Mengubah berkas",
+          "target": "src/ui/Button.tsx",
+          "parallel": 1
+        },
+        "stepCount": 4,
+        "hiddenCount": 1,
+        "elapsedMs": 90000,
+        "steps": [
+          {
+            "id": "c1",
+            "label": "Berkas dibaca",
+            "target": "src/app.ts",
+            "status": "ok",
+            "durationMs": 8000,
+            "startedAt": 1793268010000
+          },
+          {
+            "id": "c2",
+            "label": "Pencarian kode selesai",
+            "target": "useState",
+            "status": "ok",
+            "durationMs": 12000,
+            "startedAt": 1793268036000
+          },
+          {
+            "id": "c3",
+            "label": "Berkas dibaca",
+            "target": "src/ui/Button.tsx",
+            "status": "ok",
+            "durationMs": 16000,
+            "startedAt": 1793268062000
+          },
+          {
+            "id": "c4",
+            "label": "Mengubah berkas",
+            "target": "src/ui/Button.tsx",
+            "status": "running",
+            "durationMs": 2000,
+            "startedAt": 1793268088000
+          }
+        ],
+        "summary": null,
+        "needsAttention": false
+      }
+    },
+    {
+      "note": "menulis jawaban",
+      "applied": 31,
+      "now": "2026-10-29T10:06:20.000Z",
+      "activity": {
+        "headline": "Membaca struktur project",
+        "phase": "writing",
+        "current": null,
+        "stepCount": 14,
+        "hiddenCount": 11,
+        "elapsedMs": 380000,
+        "steps": [
+          {
+            "id": "c1",
+            "label": "Berkas dibaca",
+            "target": "src/app.ts",
+            "status": "ok",
+            "durationMs": 8000,
+            "startedAt": 1793268010000
+          },
+          {
+            "id": "c2",
+            "label": "Pencarian kode selesai",
+            "target": "useState",
+            "status": "ok",
+            "durationMs": 12000,
+            "startedAt": 1793268036000
+          },
+          {
+            "id": "c3",
+            "label": "Berkas dibaca",
+            "target": "src/ui/Button.tsx",
+            "status": "ok",
+            "durationMs": 16000,
+            "startedAt": 1793268062000
+          },
+          {
+            "id": "c4",
+            "label": "Berkas diubah",
+            "target": "src/ui/Button.tsx",
+            "status": "ok",
+            "durationMs": 20000,
+            "startedAt": 1793268088000
+          },
+          {
+            "id": "c5",
+            "label": "Perintah selesai",
+            "target": "npm test",
+            "status": "ok",
+            "durationMs": 24000,
+            "startedAt": 1793268114000
+          },
+          {
+            "id": "c6",
+            "label": "Berkas dibaca",
+            "target": "package.json",
+            "status": "ok",
+            "durationMs": 8000,
+            "startedAt": 1793268140000
+          },
+          {
+            "id": "c7",
+            "label": "Pencarian web selesai",
+            "target": "react 19 ref prop",
+            "status": "ok",
+            "durationMs": 12000,
+            "startedAt": 1793268166000
+          },
+          {
+            "id": "c8",
+            "label": "Berkas diubah",
+            "target": "src/app.ts",
+            "status": "ok",
+            "durationMs": 16000,
+            "startedAt": 1793268192000
+          },
+          {
+            "id": "c9",
+            "label": "Berkas diubah",
+            "target": "src/app.test.ts",
+            "status": "ok",
+            "durationMs": 20000,
+            "startedAt": 1793268218000
+          },
+          {
+            "id": "c10",
+            "label": "Perintah selesai",
+            "target": "npm run typecheck",
+            "status": "ok",
+            "durationMs": 24000,
+            "startedAt": 1793268244000
+          },
+          {
+            "id": "c11",
+            "label": "Pencarian kode selesai",
+            "target": "TODO",
+            "status": "ok",
+            "durationMs": 8000,
+            "startedAt": 1793268270000
+          },
+          {
+            "id": "c12",
+            "label": "Rencana diperbarui",
+            "status": "ok",
+            "durationMs": 12000,
+            "startedAt": 1793268296000
+          },
+          {
+            "id": "c13",
+            "label": "Perintah selesai",
+            "target": "git status",
+            "status": "ok",
+            "durationMs": 16000,
+            "startedAt": 1793268322000
+          },
+          {
+            "id": "c14",
+            "label": "Perintah selesai",
+            "target": "npm run lint",
+            "status": "ok",
+            "durationMs": 20000,
+            "startedAt": 1793268348000
+          }
+        ],
+        "summary": null,
+        "needsAttention": false
+      }
+    },
+    {
+      "note": "selesai",
+      "applied": 34,
+      "now": "2026-10-29T10:15:00.000Z",
+      "activity": {
+        "headline": "Membaca struktur project",
+        "phase": "done",
+        "current": null,
+        "stepCount": 14,
+        "hiddenCount": 11,
+        "elapsedMs": 384000,
+        "steps": [
+          {
+            "id": "c1",
+            "label": "Berkas dibaca",
+            "target": "src/app.ts",
+            "status": "ok",
+            "durationMs": 8000,
+            "startedAt": 1793268010000
+          },
+          {
+            "id": "c2",
+            "label": "Pencarian kode selesai",
+            "target": "useState",
+            "status": "ok",
+            "durationMs": 12000,
+            "startedAt": 1793268036000
+          },
+          {
+            "id": "c3",
+            "label": "Berkas dibaca",
+            "target": "src/ui/Button.tsx",
+            "status": "ok",
+            "durationMs": 16000,
+            "startedAt": 1793268062000
+          },
+          {
+            "id": "c4",
+            "label": "Berkas diubah",
+            "target": "src/ui/Button.tsx",
+            "status": "ok",
+            "durationMs": 20000,
+            "startedAt": 1793268088000
+          },
+          {
+            "id": "c5",
+            "label": "Perintah selesai",
+            "target": "npm test",
+            "status": "ok",
+            "durationMs": 24000,
+            "startedAt": 1793268114000
+          },
+          {
+            "id": "c6",
+            "label": "Berkas dibaca",
+            "target": "package.json",
+            "status": "ok",
+            "durationMs": 8000,
+            "startedAt": 1793268140000
+          },
+          {
+            "id": "c7",
+            "label": "Pencarian web selesai",
+            "target": "react 19 ref prop",
+            "status": "ok",
+            "durationMs": 12000,
+            "startedAt": 1793268166000
+          },
+          {
+            "id": "c8",
+            "label": "Berkas diubah",
+            "target": "src/app.ts",
+            "status": "ok",
+            "durationMs": 16000,
+            "startedAt": 1793268192000
+          },
+          {
+            "id": "c9",
+            "label": "Berkas diubah",
+            "target": "src/app.test.ts",
+            "status": "ok",
+            "durationMs": 20000,
+            "startedAt": 1793268218000
+          },
+          {
+            "id": "c10",
+            "label": "Perintah selesai",
+            "target": "npm run typecheck",
+            "status": "ok",
+            "durationMs": 24000,
+            "startedAt": 1793268244000
+          },
+          {
+            "id": "c11",
+            "label": "Pencarian kode selesai",
+            "target": "TODO",
+            "status": "ok",
+            "durationMs": 8000,
+            "startedAt": 1793268270000
+          },
+          {
+            "id": "c12",
+            "label": "Rencana diperbarui",
+            "status": "ok",
+            "durationMs": 12000,
+            "startedAt": 1793268296000
+          },
+          {
+            "id": "c13",
+            "label": "Perintah selesai",
+            "target": "git status",
+            "status": "ok",
+            "durationMs": 16000,
+            "startedAt": 1793268322000
+          },
+          {
+            "id": "c14",
+            "label": "Perintah selesai",
+            "target": "npm run lint",
+            "status": "ok",
+            "durationMs": 20000,
+            "startedAt": 1793268348000
+          }
+        ],
+        "summary": "Selesai · 6 mnt 24 dtk · 14 langkah",
+        "needsAttention": false
+      }
+    }
+  ]
+}

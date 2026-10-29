@@ -1,0 +1,190 @@
+{
+  "name": "parallel-tools",
+  "description": "Dua tool berjalan bersamaan; yang terbaru ditampilkan dengan jumlah paralel 2.",
+  "runId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e01",
+  "visibleSteps": 3,
+  "events": [
+    {
+      "seq": 1,
+      "ts": "2026-10-29T10:00:00.000Z",
+      "event": {
+        "type": "run.status",
+        "status": "running"
+      }
+    },
+    {
+      "seq": 2,
+      "ts": "2026-10-29T10:00:01.000Z",
+      "event": {
+        "type": "tool.started",
+        "toolCallId": "p1",
+        "name": "read",
+        "target": "src/a.ts"
+      }
+    },
+    {
+      "seq": 3,
+      "ts": "2026-10-29T10:00:02.000Z",
+      "event": {
+        "type": "tool.started",
+        "toolCallId": "p2",
+        "name": "grep",
+        "target": "foo"
+      }
+    },
+    {
+      "seq": 4,
+      "ts": "2026-10-29T10:00:06.000Z",
+      "event": {
+        "type": "tool.finished",
+        "toolCallId": "p2",
+        "status": "ok",
+        "durationMs": 4000
+      }
+    },
+    {
+      "seq": 5,
+      "ts": "2026-10-29T10:00:09.000Z",
+      "event": {
+        "type": "tool.finished",
+        "toolCallId": "p1",
+        "status": "ok",
+        "durationMs": 8000
+      }
+    },
+    {
+      "seq": 6,
+      "ts": "2026-10-29T10:00:10.000Z",
+      "event": {
+        "type": "message.delta",
+        "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+        "text": "Ditemukan."
+      }
+    },
+    {
+      "seq": 7,
+      "ts": "2026-10-29T10:00:11.000Z",
+      "event": {
+        "type": "run.completed",
+        "summary": "Ditemukan."
+      }
+    },
+    {
+      "seq": 8,
+      "ts": "2026-10-29T10:00:11.100Z",
+      "event": {
+        "type": "run.status",
+        "status": "completed"
+      }
+    }
+  ],
+  "checkpoints": [
+    {
+      "note": "dua tool paralel",
+      "applied": 3,
+      "now": "2026-10-29T10:00:03.000Z",
+      "activity": {
+        "headline": null,
+        "phase": "tool",
+        "current": {
+          "label": "Mencari di kode",
+          "target": "foo",
+          "parallel": 2
+        },
+        "stepCount": 2,
+        "hiddenCount": 0,
+        "elapsedMs": 3000,
+        "steps": [
+          {
+            "id": "p1",
+            "label": "Membaca berkas",
+            "target": "src/a.ts",
+            "status": "running",
+            "durationMs": 2000,
+            "startedAt": 1793268001000
+          },
+          {
+            "id": "p2",
+            "label": "Mencari di kode",
+            "target": "foo",
+            "status": "running",
+            "durationMs": 1000,
+            "startedAt": 1793268002000
+          }
+        ],
+        "summary": null,
+        "needsAttention": false
+      }
+    },
+    {
+      "note": "satu tool tersisa",
+      "applied": 4,
+      "now": "2026-10-29T10:00:07.000Z",
+      "activity": {
+        "headline": null,
+        "phase": "tool",
+        "current": {
+          "label": "Membaca berkas",
+          "target": "src/a.ts",
+          "parallel": 1
+        },
+        "stepCount": 2,
+        "hiddenCount": 0,
+        "elapsedMs": 7000,
+        "steps": [
+          {
+            "id": "p1",
+            "label": "Membaca berkas",
+            "target": "src/a.ts",
+            "status": "running",
+            "durationMs": 6000,
+            "startedAt": 1793268001000
+          },
+          {
+            "id": "p2",
+            "label": "Pencarian kode selesai",
+            "target": "foo",
+            "status": "ok",
+            "durationMs": 4000,
+            "startedAt": 1793268002000
+          }
+        ],
+        "summary": null,
+        "needsAttention": false
+      }
+    },
+    {
+      "note": "selesai",
+      "applied": 8,
+      "now": "2026-10-29T10:00:20.000Z",
+      "activity": {
+        "headline": null,
+        "phase": "done",
+        "current": null,
+        "stepCount": 2,
+        "hiddenCount": 0,
+        "elapsedMs": 11000,
+        "steps": [
+          {
+            "id": "p1",
+            "label": "Berkas dibaca",
+            "target": "src/a.ts",
+            "status": "ok",
+            "durationMs": 8000,
+            "startedAt": 1793268001000
+          },
+          {
+            "id": "p2",
+            "label": "Pencarian kode selesai",
+            "target": "foo",
+            "status": "ok",
+            "durationMs": 4000,
+            "startedAt": 1793268002000
+          }
+        ],
+        "summary": "Selesai · 11 dtk · 2 langkah",
+        "needsAttention": false
+      }
+    }
+  ]
+}

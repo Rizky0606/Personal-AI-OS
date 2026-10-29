@@ -1,0 +1,62 @@
+{
+  "name": "format-elapsed",
+  "description": "formatElapsed(ms): detik dipotong ke bawah; <60 dtk: N dtk; <1 j: M mnt SS dtk; >=1 j: J j MM mnt. Negatif dianggap 0.",
+  "cases": [
+    {
+      "ms": 0,
+      "text": "0 dtk"
+    },
+    {
+      "ms": 999,
+      "text": "0 dtk"
+    },
+    {
+      "ms": 1000,
+      "text": "1 dtk"
+    },
+    {
+      "ms": 8000,
+      "text": "8 dtk"
+    },
+    {
+      "ms": 59999,
+      "text": "59 dtk"
+    },
+    {
+      "ms": 60000,
+      "text": "1 mnt 00 dtk"
+    },
+    {
+      "ms": 65000,
+      "text": "1 mnt 05 dtk"
+    },
+    {
+      "ms": 384000,
+      "text": "6 mnt 24 dtk"
+    },
+    {
+      "ms": 3599999,
+      "text": "59 mnt 59 dtk"
+    },
+    {
+      "ms": 3600000,
+      "text": "1 j 00 mnt"
+    },
+    {
+      "ms": 3720000,
+      "text": "1 j 02 mnt"
+    },
+    {
+      "ms": 3779999,
+      "text": "1 j 02 mnt"
+    },
+    {
+      "ms": 90000000,
+      "text": "25 j 00 mnt"
+    },
+    {
+      "ms": -5000,
+      "text": "0 dtk"
+    }
+  ]
+}

@@ -1,0 +1,100 @@
+{
+  "name": "reload-mid-run",
+  "description": "Reload di tengah run: event awal tidak ada. Waktu mulai dari waktu run dibuat di server (runCreatedAt); tool yang selesai tanpa event mulai tetap tampil.",
+  "runId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e01",
+  "runCreatedAt": "2026-10-29T09:59:00.000Z",
+  "visibleSteps": 3,
+  "events": [
+    {
+      "seq": 1,
+      "ts": "2026-10-29T10:01:40.000Z",
+      "event": {
+        "type": "tool.finished",
+        "toolCallId": "m1",
+        "status": "ok",
+        "durationMs": 4000
+      }
+    },
+    {
+      "seq": 2,
+      "ts": "2026-10-29T10:01:41.000Z",
+      "event": {
+        "type": "tool.started",
+        "toolCallId": "m2",
+        "name": "edit",
+        "target": "src/main.ts"
+      }
+    },
+    {
+      "seq": 3,
+      "ts": "2026-10-29T10:01:43.000Z",
+      "event": {
+        "type": "reasoning.delta",
+        "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+        "text": "Menyesuaikan impor setelah perubahan."
+      }
+    }
+  ],
+  "checkpoints": [
+    {
+      "note": "hanya tool selesai tanpa nama",
+      "applied": 1,
+      "now": "2026-10-29T10:01:40.500Z",
+      "activity": {
+        "headline": null,
+        "phase": "thinking",
+        "current": null,
+        "stepCount": 1,
+        "hiddenCount": 0,
+        "elapsedMs": 160500,
+        "steps": [
+          {
+            "id": "m1",
+            "label": "Alat selesai",
+            "status": "ok",
+            "durationMs": 4000,
+            "startedAt": null
+          }
+        ],
+        "summary": null,
+        "needsAttention": false
+      }
+    },
+    {
+      "note": "tool berjalan dan penalaran",
+      "applied": 3,
+      "now": "2026-10-29T10:01:45.000Z",
+      "activity": {
+        "headline": "Menyesuaikan impor setelah perubahan",
+        "phase": "tool",
+        "current": {
+          "label": "Mengubah berkas",
+          "target": "src/main.ts",
+          "parallel": 1
+        },
+        "stepCount": 2,
+        "hiddenCount": 0,
+        "elapsedMs": 165000,
+        "steps": [
+          {
+            "id": "m1",
+            "label": "Alat selesai",
+            "status": "ok",
+            "durationMs": 4000,
+            "startedAt": null
+          },
+          {
+            "id": "m2",
+            "label": "Mengubah berkas",
+            "target": "src/main.ts",
+            "status": "running",
+            "durationMs": 4000,
+            "startedAt": 1793268101000
+          }
+        ],
+        "summary": null,
+        "needsAttention": false
+      }
+    }
+  ]
+}

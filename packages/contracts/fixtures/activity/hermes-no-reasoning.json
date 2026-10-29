@@ -1,0 +1,141 @@
+{
+  "name": "hermes-no-reasoning",
+  "description": "Hermes tanpa penalaran: headline selalu null; tool dengan ID buatan adapter.",
+  "runId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e01",
+  "visibleSteps": 3,
+  "events": [
+    {
+      "seq": 1,
+      "ts": "2026-10-29T10:00:00.000Z",
+      "event": {
+        "type": "run.status",
+        "status": "running"
+      }
+    },
+    {
+      "seq": 2,
+      "ts": "2026-10-29T10:00:02.000Z",
+      "event": {
+        "type": "tool.started",
+        "toolCallId": "hermes-tool-1",
+        "name": "web_search",
+        "target": "berita AI minggu ini"
+      }
+    },
+    {
+      "seq": 3,
+      "ts": "2026-10-29T10:00:07.000Z",
+      "event": {
+        "type": "tool.finished",
+        "toolCallId": "hermes-tool-1",
+        "status": "ok",
+        "durationMs": 5000
+      }
+    },
+    {
+      "seq": 4,
+      "ts": "2026-10-29T10:00:08.000Z",
+      "event": {
+        "type": "message.delta",
+        "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+        "text": "Berikut ringkasannya."
+      }
+    },
+    {
+      "seq": 5,
+      "ts": "2026-10-29T10:00:09.000Z",
+      "event": {
+        "type": "message.completed",
+        "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f"
+      }
+    },
+    {
+      "seq": 6,
+      "ts": "2026-10-29T10:00:09.000Z",
+      "event": {
+        "type": "run.completed",
+        "summary": "Berikut ringkasannya."
+      }
+    },
+    {
+      "seq": 7,
+      "ts": "2026-10-29T10:00:09.100Z",
+      "event": {
+        "type": "run.status",
+        "status": "completed"
+      }
+    }
+  ],
+  "checkpoints": [
+    {
+      "note": "menunggu model, tanpa penalaran",
+      "applied": 1,
+      "now": "2026-10-29T10:00:01.000Z",
+      "activity": {
+        "headline": null,
+        "phase": "thinking",
+        "current": null,
+        "stepCount": 0,
+        "hiddenCount": 0,
+        "elapsedMs": 1000,
+        "steps": [],
+        "summary": null,
+        "needsAttention": false
+      }
+    },
+    {
+      "note": "tool web",
+      "applied": 2,
+      "now": "2026-10-29T10:00:04.000Z",
+      "activity": {
+        "headline": null,
+        "phase": "tool",
+        "current": {
+          "label": "Mencari di web",
+          "target": "berita AI minggu ini",
+          "parallel": 1
+        },
+        "stepCount": 1,
+        "hiddenCount": 0,
+        "elapsedMs": 4000,
+        "steps": [
+          {
+            "id": "hermes-tool-1",
+            "label": "Mencari di web",
+            "target": "berita AI minggu ini",
+            "status": "running",
+            "durationMs": 2000,
+            "startedAt": 1793268002000
+          }
+        ],
+        "summary": null,
+        "needsAttention": false
+      }
+    },
+    {
+      "note": "selesai",
+      "applied": 7,
+      "now": "2026-10-29T10:00:30.000Z",
+      "activity": {
+        "headline": null,
+        "phase": "done",
+        "current": null,
+        "stepCount": 1,
+        "hiddenCount": 0,
+        "elapsedMs": 9000,
+        "steps": [
+          {
+            "id": "hermes-tool-1",
+            "label": "Pencarian web selesai",
+            "target": "berita AI minggu ini",
+            "status": "ok",
+            "durationMs": 5000,
+            "startedAt": 1793268002000
+          }
+        ],
+        "summary": "Selesai · 9 dtk · 1 langkah",
+        "needsAttention": false
+      }
+    }
+  ]
+}

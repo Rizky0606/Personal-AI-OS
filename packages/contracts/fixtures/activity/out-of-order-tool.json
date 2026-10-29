@@ -1,0 +1,128 @@
+{
+  "name": "out-of-order-tool",
+  "description": "tool.finished tiba sebelum tool.started (event tidak berurutan): langkah tidak hilang dan nama dilengkapi.",
+  "runId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e01",
+  "visibleSteps": 3,
+  "events": [
+    {
+      "seq": 1,
+      "ts": "2026-10-29T10:00:00.000Z",
+      "event": {
+        "type": "run.status",
+        "status": "running"
+      }
+    },
+    {
+      "seq": 2,
+      "ts": "2026-10-29T10:00:05.000Z",
+      "event": {
+        "type": "tool.finished",
+        "toolCallId": "o1",
+        "status": "ok",
+        "durationMs": 3000
+      }
+    },
+    {
+      "seq": 3,
+      "ts": "2026-10-29T10:00:05.100Z",
+      "event": {
+        "type": "tool.started",
+        "toolCallId": "o1",
+        "name": "read",
+        "target": "src/lib.ts"
+      }
+    },
+    {
+      "seq": 4,
+      "ts": "2026-10-29T10:00:06.000Z",
+      "event": {
+        "type": "run.completed",
+        "summary": "ok"
+      }
+    },
+    {
+      "seq": 5,
+      "ts": "2026-10-29T10:00:06.100Z",
+      "event": {
+        "type": "run.status",
+        "status": "completed"
+      }
+    }
+  ],
+  "checkpoints": [
+    {
+      "note": "hanya finished",
+      "applied": 2,
+      "now": "2026-10-29T10:00:05.500Z",
+      "activity": {
+        "headline": null,
+        "phase": "thinking",
+        "current": null,
+        "stepCount": 1,
+        "hiddenCount": 0,
+        "elapsedMs": 5500,
+        "steps": [
+          {
+            "id": "o1",
+            "label": "Alat selesai",
+            "status": "ok",
+            "durationMs": 3000,
+            "startedAt": null
+          }
+        ],
+        "summary": null,
+        "needsAttention": false
+      }
+    },
+    {
+      "note": "started menyusul",
+      "applied": 3,
+      "now": "2026-10-29T10:00:05.500Z",
+      "activity": {
+        "headline": null,
+        "phase": "thinking",
+        "current": null,
+        "stepCount": 1,
+        "hiddenCount": 0,
+        "elapsedMs": 5500,
+        "steps": [
+          {
+            "id": "o1",
+            "label": "Berkas dibaca",
+            "target": "src/lib.ts",
+            "status": "ok",
+            "durationMs": 3000,
+            "startedAt": 1793268005100
+          }
+        ],
+        "summary": null,
+        "needsAttention": false
+      }
+    },
+    {
+      "note": "selesai",
+      "applied": 5,
+      "now": "2026-10-29T10:00:20.000Z",
+      "activity": {
+        "headline": null,
+        "phase": "done",
+        "current": null,
+        "stepCount": 1,
+        "hiddenCount": 0,
+        "elapsedMs": 6000,
+        "steps": [
+          {
+            "id": "o1",
+            "label": "Berkas dibaca",
+            "target": "src/lib.ts",
+            "status": "ok",
+            "durationMs": 3000,
+            "startedAt": 1793268005100
+          }
+        ],
+        "summary": "Selesai · 6 dtk · 1 langkah",
+        "needsAttention": false
+      }
+    }
+  ]
+}

@@ -610,3 +610,11 @@ Disusun 2026-10-26 dari perbandingan dengan Orca, Pi, Cline, Amp, Goose, dan Vib
 - [ ] **omp `todo_reminder`** memicu giliran model tambahan (sampai 3x) selama todo terbuka; jawaban bisa terduplikasi di rekaman `todo`. Periksa apakah perlu dihaluskan di UI atau dimatikan lewat konfigurasi omp.
 - [ ] **Hermes: penghentian run di sisi server** setelah koneksi diputus belum terbukti (opsi: `POST /v1/runs/{id}/stop`). Apakah Hermes mengirim `reasoning_content` di VPS juga belum terbukti.
 - [ ] **Pilihan model tidak mengganti model Hermes** (diabaikan tanpa `direct_model_requests`); UI sebaiknya menonaktifkan pemilih model untuk mesin ini atau menyatakannya.
+
+## Temuan Sesi 3 (lapisan data aktivitas, lihat `docs/RUN_ACTIVITY.md`)
+
+- [ ] **Gateway belum mengirim `reasoning.summary`** dan tidak ada mesin yang menyediakannya; judul selalu turunan klien dari teks penalaran. Bila omp/Hermes kelak menyediakan ringkasan, petakan di adapter.
+- [ ] **Nama tool Hermes untuk kalimat berjalan belum terverifikasi rekaman** (`TOOL_KINDS` di `activity.ts`). Perbarui setelah rekaman Hermes ada (lihat Sesi 2).
+- [ ] **Waktu mulai dari envelope/`Run.createdAt`,** bukan dari `startedAt` di `run.status` (tidak ditambahkan karena `Run.createdAt` sudah ada). Polling mengisi `endedAt` dari `Run.updatedAt`, yang bisa lebih lambat dari waktu selesai sebenarnya.
+- [ ] **Android:** fixture `packages/contracts/fixtures/activity` belum dibaca Kotlin (sesi 8); `Frames.kt` belum mengenal `reasoning.summary`.
+- [ ] `AssistantMessage`, `ToolStepRow`, `ReasoningBlock`, `AgentHud` masih memakai data lama dan belum membaca `buildActivity` (sesi UI berikutnya).

@@ -1,0 +1,174 @@
+{
+  "name": "waiting-approval",
+  "description": "Tool bash menunggu persetujuan lalu diizinkan.",
+  "runId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e01",
+  "visibleSteps": 3,
+  "events": [
+    {
+      "seq": 1,
+      "ts": "2026-10-29T10:00:00.000Z",
+      "event": {
+        "type": "run.status",
+        "status": "running"
+      }
+    },
+    {
+      "seq": 2,
+      "ts": "2026-10-29T10:00:01.000Z",
+      "event": {
+        "type": "tool.started",
+        "toolCallId": "w1",
+        "name": "bash",
+        "target": "rm -rf build"
+      }
+    },
+    {
+      "seq": 3,
+      "ts": "2026-10-29T10:00:01.200Z",
+      "event": {
+        "type": "approval.requested",
+        "approvalId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e0a",
+        "kind": "command",
+        "detail": "rm -rf build",
+        "toolCallId": "w1"
+      }
+    },
+    {
+      "seq": 4,
+      "ts": "2026-10-29T10:00:01.300Z",
+      "event": {
+        "type": "run.status",
+        "status": "waiting_approval"
+      }
+    },
+    {
+      "seq": 5,
+      "ts": "2026-10-29T10:00:20.000Z",
+      "event": {
+        "type": "approval.resolved",
+        "approvalId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e0a",
+        "decision": "allow",
+        "remember": false
+      }
+    },
+    {
+      "seq": 6,
+      "ts": "2026-10-29T10:00:20.100Z",
+      "event": {
+        "type": "run.status",
+        "status": "running"
+      }
+    },
+    {
+      "seq": 7,
+      "ts": "2026-10-29T10:00:22.000Z",
+      "event": {
+        "type": "tool.finished",
+        "toolCallId": "w1",
+        "status": "ok",
+        "durationMs": 2000
+      }
+    },
+    {
+      "seq": 8,
+      "ts": "2026-10-29T10:00:23.000Z",
+      "event": {
+        "type": "run.completed",
+        "summary": "Selesai."
+      }
+    },
+    {
+      "seq": 9,
+      "ts": "2026-10-29T10:00:23.100Z",
+      "event": {
+        "type": "run.status",
+        "status": "completed"
+      }
+    }
+  ],
+  "checkpoints": [
+    {
+      "note": "menunggu persetujuan",
+      "applied": 4,
+      "now": "2026-10-29T10:00:10.000Z",
+      "activity": {
+        "headline": null,
+        "phase": "waiting_approval",
+        "current": {
+          "label": "Menjalankan perintah",
+          "target": "rm -rf build",
+          "parallel": 1
+        },
+        "stepCount": 1,
+        "hiddenCount": 0,
+        "elapsedMs": 10000,
+        "steps": [
+          {
+            "id": "w1",
+            "label": "Menjalankan perintah",
+            "target": "rm -rf build",
+            "status": "running",
+            "durationMs": 9000,
+            "startedAt": 1793268001000
+          }
+        ],
+        "summary": null,
+        "needsAttention": true
+      }
+    },
+    {
+      "note": "diizinkan, tool berjalan",
+      "applied": 6,
+      "now": "2026-10-29T10:00:21.000Z",
+      "activity": {
+        "headline": null,
+        "phase": "tool",
+        "current": {
+          "label": "Menjalankan perintah",
+          "target": "rm -rf build",
+          "parallel": 1
+        },
+        "stepCount": 1,
+        "hiddenCount": 0,
+        "elapsedMs": 21000,
+        "steps": [
+          {
+            "id": "w1",
+            "label": "Menjalankan perintah",
+            "target": "rm -rf build",
+            "status": "running",
+            "durationMs": 20000,
+            "startedAt": 1793268001000
+          }
+        ],
+        "summary": null,
+        "needsAttention": false
+      }
+    },
+    {
+      "note": "selesai",
+      "applied": 9,
+      "now": "2026-10-29T10:00:40.000Z",
+      "activity": {
+        "headline": null,
+        "phase": "done",
+        "current": null,
+        "stepCount": 1,
+        "hiddenCount": 0,
+        "elapsedMs": 23000,
+        "steps": [
+          {
+            "id": "w1",
+            "label": "Perintah selesai",
+            "target": "rm -rf build",
+            "status": "ok",
+            "durationMs": 2000,
+            "startedAt": 1793268001000
+          }
+        ],
+        "summary": "Selesai · 23 dtk · 1 langkah",
+        "needsAttention": false
+      }
+    }
+  ]
+}

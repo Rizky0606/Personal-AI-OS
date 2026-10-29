@@ -1,0 +1,214 @@
+{
+  "name": "tool-error-mid",
+  "description": "Tool kedua gagal di tengah; run tetap lanjut dan selesai. needsAttention aktif sejak error.",
+  "runId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e01",
+  "visibleSteps": 3,
+  "events": [
+    {
+      "seq": 1,
+      "ts": "2026-10-29T10:00:00.000Z",
+      "event": {
+        "type": "run.status",
+        "status": "running"
+      }
+    },
+    {
+      "seq": 2,
+      "ts": "2026-10-29T10:00:01.000Z",
+      "event": {
+        "type": "tool.started",
+        "toolCallId": "e1",
+        "name": "read",
+        "target": "config.json"
+      }
+    },
+    {
+      "seq": 3,
+      "ts": "2026-10-29T10:00:02.000Z",
+      "event": {
+        "type": "tool.finished",
+        "toolCallId": "e1",
+        "status": "ok",
+        "durationMs": 1000
+      }
+    },
+    {
+      "seq": 4,
+      "ts": "2026-10-29T10:00:03.000Z",
+      "event": {
+        "type": "tool.started",
+        "toolCallId": "e2",
+        "name": "bash",
+        "target": "npm test"
+      }
+    },
+    {
+      "seq": 5,
+      "ts": "2026-10-29T10:00:09.000Z",
+      "event": {
+        "type": "tool.finished",
+        "toolCallId": "e2",
+        "status": "error",
+        "durationMs": 6000
+      }
+    },
+    {
+      "seq": 6,
+      "ts": "2026-10-29T10:00:10.000Z",
+      "event": {
+        "type": "tool.started",
+        "toolCallId": "e3",
+        "name": "bash",
+        "target": "npm test -- --fix"
+      }
+    },
+    {
+      "seq": 7,
+      "ts": "2026-10-29T10:00:15.000Z",
+      "event": {
+        "type": "tool.finished",
+        "toolCallId": "e3",
+        "status": "ok",
+        "durationMs": 5000
+      }
+    },
+    {
+      "seq": 8,
+      "ts": "2026-10-29T10:00:16.000Z",
+      "event": {
+        "type": "message.delta",
+        "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+        "text": "Sudah diperbaiki."
+      }
+    },
+    {
+      "seq": 9,
+      "ts": "2026-10-29T10:00:17.000Z",
+      "event": {
+        "type": "run.completed",
+        "summary": "Sudah diperbaiki."
+      }
+    },
+    {
+      "seq": 10,
+      "ts": "2026-10-29T10:00:17.100Z",
+      "event": {
+        "type": "run.status",
+        "status": "completed"
+      }
+    }
+  ],
+  "checkpoints": [
+    {
+      "note": "tool berjalan",
+      "applied": 4,
+      "now": "2026-10-29T10:00:05.000Z",
+      "activity": {
+        "headline": null,
+        "phase": "tool",
+        "current": {
+          "label": "Menjalankan perintah",
+          "target": "npm test",
+          "parallel": 1
+        },
+        "stepCount": 2,
+        "hiddenCount": 0,
+        "elapsedMs": 5000,
+        "steps": [
+          {
+            "id": "e1",
+            "label": "Berkas dibaca",
+            "target": "config.json",
+            "status": "ok",
+            "durationMs": 1000,
+            "startedAt": 1793268001000
+          },
+          {
+            "id": "e2",
+            "label": "Menjalankan perintah",
+            "target": "npm test",
+            "status": "running",
+            "durationMs": 2000,
+            "startedAt": 1793268003000
+          }
+        ],
+        "summary": null,
+        "needsAttention": false
+      }
+    },
+    {
+      "note": "tool error, perlu perhatian",
+      "applied": 5,
+      "now": "2026-10-29T10:00:09.500Z",
+      "activity": {
+        "headline": null,
+        "phase": "thinking",
+        "current": null,
+        "stepCount": 2,
+        "hiddenCount": 0,
+        "elapsedMs": 9500,
+        "steps": [
+          {
+            "id": "e1",
+            "label": "Berkas dibaca",
+            "target": "config.json",
+            "status": "ok",
+            "durationMs": 1000,
+            "startedAt": 1793268001000
+          },
+          {
+            "id": "e2",
+            "label": "Perintah gagal",
+            "target": "npm test",
+            "status": "error",
+            "durationMs": 6000,
+            "startedAt": 1793268003000
+          }
+        ],
+        "summary": null,
+        "needsAttention": true
+      }
+    },
+    {
+      "note": "selesai; error tetap tercatat",
+      "applied": 10,
+      "now": "2026-10-29T10:00:30.000Z",
+      "activity": {
+        "headline": null,
+        "phase": "done",
+        "current": null,
+        "stepCount": 3,
+        "hiddenCount": 0,
+        "elapsedMs": 17000,
+        "steps": [
+          {
+            "id": "e1",
+            "label": "Berkas dibaca",
+            "target": "config.json",
+            "status": "ok",
+            "durationMs": 1000,
+            "startedAt": 1793268001000
+          },
+          {
+            "id": "e2",
+            "label": "Perintah gagal",
+            "target": "npm test",
+            "status": "error",
+            "durationMs": 6000,
+            "startedAt": 1793268003000
+          },
+          {
+            "id": "e3",
+            "label": "Perintah selesai",
+            "target": "npm test -- --fix",
+            "status": "ok",
+            "durationMs": 5000,
+            "startedAt": 1793268010000
+          }
+        ],
+        "summary": "Selesai · 17 dtk · 3 langkah",
+        "needsAttention": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,133 @@
+{
+  "name": "short-no-tools",
+  "description": "Run singkat tanpa tool: penalaran satu kalimat, jawaban, selesai dalam 5 detik.",
+  "runId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e01",
+  "visibleSteps": 3,
+  "events": [
+    {
+      "seq": 1,
+      "ts": "2026-10-29T10:00:00.000Z",
+      "event": {
+        "type": "run.status",
+        "status": "running"
+      }
+    },
+    {
+      "seq": 2,
+      "ts": "2026-10-29T10:00:01.000Z",
+      "event": {
+        "type": "reasoning.delta",
+        "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+        "text": "Pertanyaan sederhana. Cukup jawab langsung."
+      }
+    },
+    {
+      "seq": 3,
+      "ts": "2026-10-29T10:00:03.000Z",
+      "event": {
+        "type": "message.delta",
+        "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+        "text": "Halo"
+      }
+    },
+    {
+      "seq": 4,
+      "ts": "2026-10-29T10:00:04.000Z",
+      "event": {
+        "type": "message.delta",
+        "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+        "text": " dunia."
+      }
+    },
+    {
+      "seq": 5,
+      "ts": "2026-10-29T10:00:05.000Z",
+      "event": {
+        "type": "message.completed",
+        "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f"
+      }
+    },
+    {
+      "seq": 6,
+      "ts": "2026-10-29T10:00:05.000Z",
+      "event": {
+        "type": "run.completed",
+        "summary": "Halo dunia."
+      }
+    },
+    {
+      "seq": 7,
+      "ts": "2026-10-29T10:00:05.100Z",
+      "event": {
+        "type": "run.status",
+        "status": "completed"
+      }
+    }
+  ],
+  "checkpoints": [
+    {
+      "note": "berjalan, belum ada aktivitas",
+      "applied": 1,
+      "now": "2026-10-29T10:00:00.500Z",
+      "activity": {
+        "headline": null,
+        "phase": "thinking",
+        "current": null,
+        "stepCount": 0,
+        "hiddenCount": 0,
+        "elapsedMs": 500,
+        "steps": [],
+        "summary": null,
+        "needsAttention": false
+      }
+    },
+    {
+      "note": "menalar",
+      "applied": 2,
+      "now": "2026-10-29T10:00:01.500Z",
+      "activity": {
+        "headline": "Pertanyaan sederhana",
+        "phase": "thinking",
+        "current": null,
+        "stepCount": 0,
+        "hiddenCount": 0,
+        "elapsedMs": 1500,
+        "steps": [],
+        "summary": null,
+        "needsAttention": false
+      }
+    },
+    {
+      "note": "menulis",
+      "applied": 3,
+      "now": "2026-10-29T10:00:03.500Z",
+      "activity": {
+        "headline": "Pertanyaan sederhana",
+        "phase": "writing",
+        "current": null,
+        "stepCount": 0,
+        "hiddenCount": 0,
+        "elapsedMs": 3500,
+        "steps": [],
+        "summary": null,
+        "needsAttention": false
+      }
+    },
+    {
+      "note": "selesai; elapsed berhenti di 5 dtk",
+      "applied": 7,
+      "now": "2026-10-29T10:01:00.000Z",
+      "activity": {
+        "headline": "Pertanyaan sederhana",
+        "phase": "done",
+        "current": null,
+        "stepCount": 0,
+        "hiddenCount": 0,
+        "elapsedMs": 5000,
+        "steps": [],
+        "summary": "Selesai · 5 dtk",
+        "needsAttention": false
+      }
+    }
+  ]
+}
