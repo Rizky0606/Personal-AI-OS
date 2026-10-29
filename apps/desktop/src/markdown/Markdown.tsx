@@ -218,11 +218,16 @@ function BlockView({
   }
 }
 
-/** Menampilkan Markdown sebagai elemen React (tanpa HTML mentah). Lebar baca maksimal 72 karakter. */
+/** Menampilkan Markdown sebagai elemen React (tanpa HTML mentah). Lebar baca mengikuti `--aios-chat-measure`. */
 export function Markdown({ source, citations, className }: MarkdownProps) {
   const blocks = parseMarkdown(source);
   return (
-    <div className={cn('flex max-w-[72ch] flex-col gap-3 text-chat text-text', className)}>
+    <div
+      className={cn(
+        'flex max-w-(--aios-chat-measure) flex-col gap-3 text-chat text-text',
+        className,
+      )}
+    >
       {blocks.map((block, i) => (
         <BlockView key={i} block={block} citations={citations} />
       ))}

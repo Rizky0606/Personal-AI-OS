@@ -8,6 +8,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -68,8 +69,8 @@ import kotlinx.coroutines.withContext
 import java.util.Locale
 
 /**
- * Pesan pengguna: blok `surface-2` rata kanan, radius 12 (token md Android). Tekan lama membuka menu Ubah dan
- * Hapus saat tidak ada jawaban yang berjalan.
+ * Pesan pengguna: gelembung `accent-soft` rata kanan tanpa garis. Tekan lama membuka menu Ubah dan Hapus
+ * saat tidak ada jawaban yang berjalan.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -255,8 +256,7 @@ private fun UserBubble(text: String, dimmed: Boolean = false, sentAt: String? = 
     Column(
         modifier = modifier
             .widthIn(max = Tokens.Space.s48 * 7)
-            .background(colors.surface2, shape)
-            .border(Hairline, colors.border, shape)
+            .background(colors.accentSoft, shape)
             .padding(horizontal = Tokens.Space.s16, vertical = Tokens.Space.s12),
         horizontalAlignment = Alignment.End
     ) {
@@ -269,7 +269,7 @@ private fun UserBubble(text: String, dimmed: Boolean = false, sentAt: String? = 
                 horizontalArrangement = Arrangement.spacedBy(Tokens.Space.s4),
                 modifier = Modifier.padding(top = Tokens.Space.s4)
             ) {
-                Text(time, style = AiosTheme.type.caption.copy(fontFamily = PlexMono), color = colors.text3)
+                Text(time, style = AiosTheme.type.caption.copy(fontFamily = PlexMono), color = colors.text2)
                 AiosIcon(
                     R.drawable.ic_check,
                     contentDescription = sent,
@@ -290,27 +290,27 @@ private fun clockOf(iso: String): String? = runCatching {
 @Composable
 private fun BotAvatar(streaming: Boolean) {
     val colors = AiosTheme.colors
-    val shape = RoundedCornerShape(Tokens.Radius.sm)
+    val shape = CircleShape
     Box(modifier = Modifier.size(Tokens.Space.s32)) {
         Box(
             modifier = Modifier
                 .size(Tokens.Space.s32)
-                .accentGlow(shape)
-                .background(colors.bg, shape),
+                .accentGlow(shape, enabled = streaming)
+                .background(colors.accentSoft, shape),
             contentAlignment = Alignment.Center
         ) { AiosIcon(R.drawable.ic_bot, contentDescription = null, tint = colors.accent) }
         Box(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .size(Tokens.Space.s12)
-                .background(colors.surface, CircleShape)
+                .background(colors.bg, CircleShape)
                 .padding(Tokens.Space.s4 / 2)
                 .background(if (streaming) colors.accent else colors.success, CircleShape)
         )
     }
 }
 
-/** Jawaban asisten: kartu berbingkai; avatar, nama, chip role, dan model di atas, lalu langkah tool dan teks. */
+/** Jawaban asisten tanpa kartu: avatar kecil, nama, chip role, dan model di atas, lalu langkah tool dan teks. */
 @Composable
 fun AssistantMessageRow(
     item: ChatItem.Assistant,
@@ -321,13 +321,10 @@ fun AssistantMessageRow(
 ) {
     val colors = AiosTheme.colors
     var menuOpen by remember { mutableStateOf(false) }
-    val cardShape = RoundedCornerShape(Tokens.Radius.lg)
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(colors.surface, cardShape)
-            .border(Hairline, colors.border, cardShape)
-            .padding(Tokens.Space.s12),
+            .padding(vertical = Tokens.Space.s4),
         verticalArrangement = Arrangement.spacedBy(Tokens.Space.s8)
     ) {
         run {
@@ -499,8 +496,10 @@ fun ToolStepRow(step: ToolStep) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(Tokens.Radius.sm))
+            .background(colors.surface2)
             .clickable(role = Role.Button) { open = !open }
-            .padding(vertical = Tokens.Space.s4)
+            .padding(horizontal = Tokens.Space.s8, vertical = Tokens.Space.s4)
     ) {
         Row(
             horizontalArrangement = Arrangement.spacedBy(Tokens.Space.s8),

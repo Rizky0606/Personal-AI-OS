@@ -25,8 +25,8 @@ export function IconButton({
       aria-label={label}
       aria-pressed={props['aria-pressed']}
       className={cn(
-        'inline-flex size-8 items-center justify-center rounded-control text-text-2',
-        'transition-colors duration-[120ms] ease-aios hover:bg-surface-2 hover:text-text',
+        'inline-flex size-8 shrink-0 items-center justify-center rounded-control text-text-2',
+        'transition duration-[120ms] ease-aios hover:bg-surface-2 hover:text-text active:scale-95 disabled:active:scale-100',
         active && 'bg-accent-soft text-text',
         'disabled:cursor-not-allowed disabled:opacity-50',
         className,

@@ -133,3 +133,40 @@ describe('saran lanjutan', () => {
     expect(screen.queryByRole('group', { name: copy.chat.followUps })).not.toBeInTheDocument();
   });
 });
+
+describe('langkah tool sebagai chip', () => {
+  it('chip menampilkan nama, status, dan durasi; target panjang bisa dibuka penuh', async () => {
+    const user = userEvent.setup();
+    render(
+      <TooltipProvider>
+        <AssistantMessage
+          parts={[
+            {
+              type: 'tool',
+              id: 't1',
+              name: 'read',
+              target: 'src/app/main.ts',
+              status: 'ok',
+              durationMs: 340,
+            },
+            { type: 'tool', id: 't2', name: 'bash', status: 'running' },
+            { type: 'text', text: 'Selesai.' },
+          ]}
+          role="general"
+          model={null}
+          roles={[]}
+        />
+      </TooltipProvider>,
+    );
+
+    const chip = screen.getByRole('button', { name: /read/ });
+    expect(chip).toHaveAttribute('aria-expanded', 'false');
+    expect(chip).toHaveTextContent(copy.chat.tool.ok);
+    expect(chip).toHaveTextContent('340 ms');
+    expect(screen.getByText('bash').parentElement).toHaveTextContent(copy.chat.tool.running);
+
+    await user.click(chip);
+    expect(chip).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('src/app/main.ts')).toBeInTheDocument();
+  });
+});

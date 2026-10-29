@@ -8,6 +8,8 @@ export interface ResizeHandleProps {
 }
 
 const KEY_STEP = 16;
+/** Jarak panel kanan dari tepi jendela (mr-2), agar lebar mengikuti pointer. */
+const EDGE_GAP = 8;
 
 /**
  * Pegangan di tepi kiri panel kanan. Bisa diseret dengan pointer dan diubah dengan panah kiri/kanan,
@@ -21,7 +23,7 @@ export function ResizeHandle({ label, width, onResize }: ResizeHandleProps) {
     event.currentTarget.setPointerCapture(event.pointerId);
   };
   const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
-    if (dragging.current) onResize(window.innerWidth - event.clientX);
+    if (dragging.current) onResize(window.innerWidth - event.clientX - EDGE_GAP);
   };
   const onPointerUp = (event: PointerEvent<HTMLDivElement>) => {
     dragging.current = false;
@@ -47,7 +49,7 @@ export function ResizeHandle({ label, width, onResize }: ResizeHandleProps) {
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onKeyDown={onKeyDown}
-      className="w-1 shrink-0 cursor-col-resize bg-border transition-colors duration-[120ms] ease-aios hover:bg-border-strong"
+      className="my-2 w-1 shrink-0 cursor-col-resize rounded-full bg-transparent transition-colors duration-[120ms] ease-aios hover:bg-border-strong"
     />
   );
 }

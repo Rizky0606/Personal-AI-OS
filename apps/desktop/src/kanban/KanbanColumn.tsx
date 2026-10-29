@@ -2,6 +2,7 @@ import type { TaskStatus } from '@aios/contracts';
 import { useId, type DragEvent, type ReactNode } from 'react';
 import { copy } from '../copy';
 import { cn } from '../lib/cn';
+import { enterDelay } from '../screens/PageLayout';
 
 export interface KanbanColumnProps {
   status: TaskStatus;
@@ -11,6 +12,8 @@ export interface KanbanColumnProps {
   /** Ada kartu yang sedang diseret (kolom yang menerima ditandai). */
   dragActive: boolean;
   onDrop: (status: TaskStatus, overId?: string) => void;
+  /** Urutan kolom, untuk masuk bertahap. */
+  index?: number;
   /** Kartu di kolom ini (`ReactNode` per kartu, sudah berupa `li`). */
   children: ReactNode;
 }
@@ -22,6 +25,7 @@ export function KanbanColumn({
   accepting,
   dragActive,
   onDrop,
+  index = 0,
   children,
 }: KanbanColumnProps) {
   const headingId = useId();
@@ -42,18 +46,22 @@ export function KanbanColumn({
         event.preventDefault();
         onDrop(status);
       }}
+      style={enterDelay(index)}
       className={cn(
-        'flex min-h-0 min-w-56 flex-1 flex-col rounded-panel border bg-surface-2 transition-colors duration-[120ms] ease-aios',
+        'flex min-h-0 min-w-56 flex-1 animate-aios-enter flex-col rounded-panel border bg-surface-2 transition-colors duration-[120ms] ease-aios',
         dragActive && accepting ? 'border-accent' : 'border-border',
       )}
     >
       <h3
         id={headingId}
         aria-label={copy.kanban.columnCount(name, count)}
-        className="flex items-center justify-between px-3 py-2 text-ui font-medium text-text"
+        className="flex items-center justify-between px-3 py-3 text-ui font-medium text-text"
       >
         <span aria-hidden="true">{name}</span>
-        <span aria-hidden="true" className="font-mono text-meta tabular-nums text-text-2">
+        <span
+          aria-hidden="true"
+          className="rounded-full bg-surface px-2 font-mono text-meta tabular-nums text-text-2"
+        >
           {count}
         </span>
       </h3>

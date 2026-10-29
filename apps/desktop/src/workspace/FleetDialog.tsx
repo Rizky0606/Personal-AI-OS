@@ -1,4 +1,3 @@
-import * as Dialog from '@radix-ui/react-dialog';
 import { useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, Plus, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -8,6 +7,7 @@ import { useOnline } from '../app/hooks';
 import { api } from '../app/services';
 import { ApiProblem } from '../auth/authSession';
 import { copy } from '../copy';
+import { DialogFrame } from '../screens/DialogFrame';
 import { useUiStore } from '../state/uiStore';
 import { Button } from '../ui/Button';
 import { ErrorBanner } from '../ui/ErrorBanner';
@@ -83,110 +83,106 @@ export function FleetDialog({ open, onOpenChange }: FleetDialogProps) {
   }
 
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-40 animate-aios-fade bg-bg/60" />
-        <Dialog.Content className="fixed top-16 left-1/2 z-50 flex max-h-[calc(100vh-6rem)] animate-aios-dialog w-[min(560px,calc(100vw-2rem))] -translate-x-1/2 flex-col gap-3 overflow-y-auto rounded-panel border border-border bg-surface p-4 shadow-float">
-          <Dialog.Title className="text-section font-semibold text-text">
-            {copy.fleet.title}
-          </Dialog.Title>
-          <Dialog.Description className="text-ui text-text-2">
-            {copy.fleet.intro}
-          </Dialog.Description>
-          {error ? <ErrorBanner message={error} /> : null}
+    <DialogFrame
+      open={open}
+      onOpenChange={onOpenChange}
+      title={copy.fleet.title}
+      description={copy.fleet.intro}
+      size="md"
+      footer={
+        <>
+          <Button variant="ghost" disabled={working} onClick={() => onOpenChange(false)}>
+            {copy.fleet.cancel}
+          </Button>
+          <Button variant="primary" disabled={!canLaunch} onClick={() => void launch()}>
+            {working ? copy.fleet.launching : copy.fleet.launch(Math.max(filled.length, 1))}
+          </Button>
+        </>
+      }
+    >
+      {error ? <ErrorBanner message={error} /> : null}
 
-          {list.length === 0 ? (
-            <p className="text-ui text-text-3">{copy.fleet.noProject}</p>
-          ) : (
-            <div className="flex flex-col gap-1">
-              <span className="text-meta text-text-2">{copy.fleet.project}</span>
-              <RadioMenu
-                label={copy.fleet.projectPick}
-                value={chosen?.id ?? ''}
-                onValueChange={setProjectId}
-                options={list.map((p) => ({ value: p.id, label: p.name }))}
-                trigger={
-                  <button
-                    type="button"
-                    aria-label={`${copy.fleet.project}: ${chosen?.name ?? ''}`}
-                    className="flex h-9 w-full items-center justify-between gap-2 rounded-control border border-border bg-surface px-3 text-ui text-text transition-colors duration-[120ms] ease-aios hover:bg-surface-2"
-                  >
-                    <span className="truncate">{chosen?.name ?? copy.fleet.projectPick}</span>
-                    <ChevronDown
-                      size={14}
-                      strokeWidth={1.5}
-                      aria-hidden="true"
-                      className="shrink-0 text-text-2"
-                    />
-                  </button>
+      {list.length === 0 ? (
+        <p className="text-ui text-text-3">{copy.fleet.noProject}</p>
+      ) : (
+        <div className="flex flex-col gap-1">
+          <span className="text-meta text-text-2">{copy.fleet.project}</span>
+          <RadioMenu
+            label={copy.fleet.projectPick}
+            value={chosen?.id ?? ''}
+            onValueChange={setProjectId}
+            options={list.map((p) => ({ value: p.id, label: p.name }))}
+            trigger={
+              <button
+                type="button"
+                aria-label={`${copy.fleet.project}: ${chosen?.name ?? ''}`}
+                className="flex h-9 w-full items-center justify-between gap-2 rounded-control border border-border bg-surface px-3 text-ui text-text transition-colors duration-[120ms] ease-aios hover:bg-surface-2"
+              >
+                <span className="truncate">{chosen?.name ?? copy.fleet.projectPick}</span>
+                <ChevronDown
+                  size={14}
+                  strokeWidth={1.5}
+                  aria-hidden="true"
+                  className="shrink-0 text-text-2"
+                />
+              </button>
+            }
+          />
+        </div>
+      )}
+
+      <div className="flex flex-col gap-3">
+        {tasks.map((text, index) => (
+          <div key={index} className="flex items-start gap-2">
+            <div className="min-w-0 flex-1">
+              <TextArea
+                label={copy.fleet.task(index + 1)}
+                rows={2}
+                value={text}
+                disabled={working}
+                placeholder={copy.fleet.taskPlaceholder}
+                onChange={(event) =>
+                  setTasks((current) =>
+                    current.map((t, i) => (i === index ? event.target.value : t)),
+                  )
                 }
               />
             </div>
-          )}
-
-          <div className="flex flex-col gap-3">
-            {tasks.map((text, index) => (
-              <div key={index} className="flex items-start gap-2">
-                <div className="min-w-0 flex-1">
-                  <TextArea
-                    label={copy.fleet.task(index + 1)}
-                    rows={2}
-                    value={text}
-                    disabled={working}
-                    placeholder={copy.fleet.taskPlaceholder}
-                    onChange={(event) =>
-                      setTasks((current) =>
-                        current.map((t, i) => (i === index ? event.target.value : t)),
-                      )
-                    }
-                  />
-                </div>
-                {tasks.length > 1 ? (
-                  <span className="pt-6">
-                    <IconButton
-                      label={copy.fleet.removeTask(index + 1)}
-                      disabled={working}
-                      onClick={() => setTasks((current) => current.filter((_, i) => i !== index))}
-                    >
-                      <X size={14} strokeWidth={1.5} aria-hidden="true" />
-                    </IconButton>
-                  </span>
-                ) : null}
-              </div>
-            ))}
-            {tasks.length < MAX_FLEET_TASKS ? (
-              <Button
-                variant="ghost"
-                disabled={working}
-                onClick={() => setTasks((current) => [...current, ''])}
-                className="self-start"
-              >
-                <Plus size={14} strokeWidth={1.5} aria-hidden="true" />
-                {copy.fleet.addTask}
-              </Button>
+            {tasks.length > 1 ? (
+              <span className="pt-6">
+                <IconButton
+                  label={copy.fleet.removeTask(index + 1)}
+                  disabled={working}
+                  onClick={() => setTasks((current) => current.filter((_, i) => i !== index))}
+                >
+                  <X size={14} strokeWidth={1.5} aria-hidden="true" />
+                </IconButton>
+              </span>
             ) : null}
           </div>
+        ))}
+        {tasks.length < MAX_FLEET_TASKS ? (
+          <Button
+            variant="ghost"
+            disabled={working}
+            onClick={() => setTasks((current) => [...current, ''])}
+            className="self-start"
+          >
+            <Plus size={14} strokeWidth={1.5} aria-hidden="true" />
+            {copy.fleet.addTask}
+          </Button>
+        ) : null}
+      </div>
 
-          <div className="flex items-center gap-2">
-            <Switch
-              checked={planOnly}
-              onChange={setPlanOnly}
-              label={copy.fleet.planOnly}
-              disabled={working}
-            />
-            <span className="text-ui text-text-2">{copy.fleet.planOnly}</span>
-          </div>
-
-          <div className="flex justify-end gap-2">
-            <Button variant="ghost" disabled={working} onClick={() => onOpenChange(false)}>
-              {copy.fleet.cancel}
-            </Button>
-            <Button variant="primary" disabled={!canLaunch} onClick={() => void launch()}>
-              {working ? copy.fleet.launching : copy.fleet.launch(Math.max(filled.length, 1))}
-            </Button>
-          </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+      <div className="flex items-center gap-2">
+        <Switch
+          checked={planOnly}
+          onChange={setPlanOnly}
+          label={copy.fleet.planOnly}
+          disabled={working}
+        />
+        <span className="text-ui text-text-2">{copy.fleet.planOnly}</span>
+      </div>
+    </DialogFrame>
   );
 }

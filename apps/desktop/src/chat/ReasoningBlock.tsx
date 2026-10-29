@@ -14,7 +14,7 @@ export function ReasoningBlock({ text }: { text: string }) {
         />
         {copy.chat.reasoning}
       </summary>
-      <p className="mt-1 max-w-[72ch] border-l-2 border-border pl-3 font-mono text-meta whitespace-pre-wrap">
+      <p className="mt-1 max-w-(--aios-chat-measure) border-l-2 border-border pl-3 font-mono text-meta whitespace-pre-wrap">
         {text}
       </p>
     </details>

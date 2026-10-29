@@ -13,14 +13,17 @@ export const copy = {
     catalog: 'Katalog komponen',
   },
   shell: {
-    rail: 'Navigasi utama',
-    brand: 'Personal AI OS',
+    navigation: 'Navigasi utama',
     sidebar: 'Daftar',
     collapseSidebar: 'Ciutkan sidebar',
     expandSidebar: 'Buka sidebar',
     toggleRightPanel: 'Panel kanan',
     resizePanel: 'Ubah lebar panel kanan',
     mainArea: 'Area utama',
+    location: 'Lokasi saat ini',
+    search: 'Cari perintah',
+    searchHint: 'Ctrl K',
+    runActive: 'Berjalan',
     palette: 'Palet perintah',
     panels: {
       preview: 'Preview',
@@ -155,13 +158,13 @@ export const copy = {
     reconnecting: 'Menyambung ulang…',
     idle: 'Tidak tersambung',
     offline: 'Offline',
-    project: 'Chat umum',
     role: 'Role otomatis',
     model: 'Model otomatis',
     quota: 'Kuota -',
     statusColumn: 'Status',
     page: {
       title: 'Status sistem',
+      description: 'Periksa versi, dependensi, worker, dan antrean job.',
       sidebar: 'Versi, dependensi, worker, dan antrean job.',
       loading: 'Memuat status',
       refresh: 'Muat ulang',
@@ -244,6 +247,7 @@ export const copy = {
   screens: {},
   spaces: {
     title: 'Ruang pengetahuan',
+    summary: 'Kumpulkan dokumen, lalu tanya di chat ruang itu dengan sumber tercantum.',
     intro:
       'Kumpulkan dokumen (PDF, DOCX, teks) dalam satu ruang, lalu bertanya di chat ruang itu. Jawaban memakai isi dokumen dan menyebut sumbernya.',
     loading: 'Memuat ruang',
@@ -335,6 +339,12 @@ export const copy = {
   settings: {
     tools: 'Alat',
     title: 'Pengaturan',
+    description: 'Atur akun, tampilan, memori, templat, pembaruan, dan pintasan.',
+    accountHint: 'Server dan perangkat yang sedang dipakai.',
+    appearance: 'Tampilan',
+    appearanceHint: 'Pilih tema terang, gelap, atau ikuti sistem.',
+    toolsHint: 'Halaman pendukung untuk memantau dan membandingkan.',
+    shortcutsHint: 'Pintasan keyboard yang berlaku di seluruh aplikasi.',
     account: 'Akun dan perangkat',
     server: 'Server',
     device: 'Perangkat',
@@ -392,6 +402,9 @@ export const copy = {
   },
   projects: {
     title: 'Project',
+    description: 'Daftarkan folder kerja, atur branch, setup worktree, dan aturan untuk agent.',
+    rowMenu: (name: string) => `Aksi project: ${name}`,
+    menu: { branch: 'Ganti branch' },
     listLabel: 'Daftar project',
     loading: 'Memuat project',
     empty: 'Belum ada project. Pilih folder project untuk mendaftarkannya.',
@@ -399,15 +412,9 @@ export const copy = {
     workerOff:
       'Worker belum tersambung. Project belum bisa ditambahkan, tetapi daftar tetap tampil.',
     columns: {
-      name: 'Nama',
-      stack: 'Stack',
-      branch: 'Branch',
-      folder: 'Folder',
-      setup: 'Setup worktree',
       rules: 'Aturan',
     },
     branch: {
-      change: 'Ganti',
       title: (name: string) => `Branch kerja ${name}`,
       intro:
         'Branch dasar tiap tugas coding (worktree dibuat dari sini) dan tujuan merge saat hasil diterima.',
@@ -461,7 +468,6 @@ export const copy = {
     },
     rules: {
       edit: 'Ubah aturan',
-      none: 'Belum ada',
       title: (name: string) => `Aturan project ${name}`,
       intro:
         'Instruksi untuk AI di setiap tugas coding dan chat project ini: gaya kode, perintah tes, hal yang dilarang.',
@@ -481,6 +487,7 @@ export const copy = {
     noStack: 'Tidak terdeteksi',
     dialog: {
       title: 'Tambah project',
+      intro: 'Pilih folder project di PC ini. Stack dan branch dibaca otomatis.',
       pick: 'Pilih folder',
       pickTitle: 'Pilih folder project',
       change: 'Pilih folder lain',
@@ -683,6 +690,7 @@ export const copy = {
   },
   workspace: {
     title: 'Project',
+    description: 'Pantau semua run coding dan mulai tugas paralel.',
     manage: 'Kelola project',
     expand: 'Buka percakapan',
     collapse: 'Tutup percakapan',
@@ -777,6 +785,13 @@ export const copy = {
         abandoned: 'Dibatalkan',
         blocked: 'Terhambat',
       },
+    },
+    hud: {
+      title: 'Agent bekerja',
+      tasks: (done: number, total: number) => `${done}/${total} tugas`,
+      queued: (n: number) => `${n} antre`,
+      subagents: (n: number) => `${n} subagent`,
+      openActivity: (n: number) => `Buka Aktivitas: ${n} subagent`,
     },
     steer: {
       placeholder: 'Arahkan agent. Enter menyisipkan sekarang, Alt+Enter mengantre sampai selesai.',
@@ -942,6 +957,7 @@ export const copy = {
     newResearch: 'Riset baru',
     form: {
       title: 'Riset baru',
+      description: 'Tulis pertanyaan; AI mencari, membaca, dan menyusun laporan bersitasi.',
       question: 'Pertanyaan riset',
       questionHint: 'Contoh: bandingkan SQLite dan Postgres untuk aplikasi pribadi',
       depth: 'Kedalaman',
@@ -988,6 +1004,7 @@ export const copy = {
   },
   schedules: {
     title: 'Jadwal',
+    description: 'Atur tugas yang berjalan otomatis pada waktu tertentu.',
     newSchedule: 'Jadwal baru',
     empty:
       'Belum ada jadwal. Tulis kapan dan apa yang dikerjakan, misalnya "setiap Senin 07.00 ringkas berita AI".',
@@ -1097,6 +1114,7 @@ export const copy = {
   },
   quota: {
     title: 'Kuota',
+    description: 'Pantau pemakaian token dan biaya per model dan per hari.',
     loading: 'Memuat pemakaian',
     empty: 'Belum ada pemakaian yang tercatat.',
     source: {
@@ -1187,6 +1205,7 @@ export const copy = {
   },
   kanban: {
     title: 'Kanban',
+    description: 'Pantau tugas project aktif dari ide sampai selesai.',
     board: 'Papan kartu',
     sidebarHint: 'Pilih project untuk melihat papan kartunya.',
     noProject: 'Pilih project di sidebar untuk melihat papan kartunya.',

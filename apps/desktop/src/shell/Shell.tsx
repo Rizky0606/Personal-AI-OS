@@ -1,5 +1,5 @@
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
-import { PanelLeftOpen, PanelRight, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { ConversationList } from '../chat/ConversationList';
 import { ProjectSwitcher } from '../chat/ProjectSwitcher';
@@ -13,10 +13,9 @@ import { useUiStore } from '../state/uiStore';
 import { EmptyState } from '../ui/EmptyState';
 import { IconButton } from '../ui/IconButton';
 import { CommandPalette } from './CommandPalette';
-import { Rail } from './Rail';
+import { Header } from './Header';
 import { RightPanel } from './RightPanel';
 import { Sidebar } from './Sidebar';
-import { StatusBar } from './StatusBar';
 import { useShortcuts } from './useShortcuts';
 
 interface Section {
@@ -27,7 +26,7 @@ interface Section {
   action?: { label: string; to: '/' | '/research' };
 }
 
-/** Tujuan Ctrl+1..6, sama dengan urutan rail. */
+/** Tujuan Ctrl+1..6, sama dengan urutan sidebar (Pengaturan di kaki). */
 const NAV_ROUTES = ['/', '/workspace', '/kanban', '/schedules', '/research', '/settings'] as const;
 
 /** Judul bagian dan isi sidebar menurut rute aktif. */
@@ -76,12 +75,12 @@ function sectionFor(pathname: string): Section {
 }
 
 /**
- * Kerangka final: rail 56px, sidebar 260px (ciut), area utama, panel kanan bertab (lebar bisa diubah), status bar 24px.
+ * Kerangka: satu sidebar (232px, ciut 64px), area utama dengan header 48px, dan panel kanan bertab
+ * (lebar bisa diubah) yang mengambang sebagai kartu.
  */
 export function Shell() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
-  const sidebarOpen = useUiStore((s) => s.sidebarOpen);
   const rightPanelOpen = useUiStore((s) => s.rightPanelOpen);
   const toggleSidebar = useUiStore((s) => s.toggleSidebar);
   const toggleRightPanel = useUiStore((s) => s.toggleRightPanel);
@@ -118,55 +117,32 @@ export function Shell() {
   const sectionKey = pathname === '/' ? 'chat' : (pathname.split('/')[1] ?? '');
 
   return (
-    <div className="flex h-full flex-col bg-bg text-text">
-      <div className="flex min-h-0 flex-1">
-        <Rail />
-        {sidebarOpen ? (
-          <Sidebar
-            title={section.title}
-            action={
-              section.action ? (
-                <IconButton
-                  label={section.action.label}
-                  onClick={() => {
-                    if (section.action?.to === '/') requestNewChat();
-                    else void navigate({ to: '/research' });
-                  }}
-                >
-                  <Plus size={16} strokeWidth={1.5} aria-hidden="true" />
-                </IconButton>
-              ) : undefined
-            }
-          >
-            {section.list}
-          </Sidebar>
-        ) : null}
-        <main aria-label={copy.shell.mainArea} className="flex min-w-0 flex-1 flex-col">
-          <div className="flex h-10 shrink-0 items-center justify-between border-b border-border px-2">
-            <div className="flex items-center gap-2">
-              {sidebarOpen ? null : (
-                <IconButton label={copy.shell.expandSidebar} onClick={toggleSidebar}>
-                  <PanelLeftOpen size={16} strokeWidth={1.5} aria-hidden="true" />
-                </IconButton>
-              )}
-              <h1 className="text-ui font-semibold text-text">{section.title}</h1>
-            </div>
+    <div className="flex h-full bg-bg text-text">
+      <Sidebar
+        title={section.title}
+        action={
+          section.action ? (
             <IconButton
-              label={copy.shell.toggleRightPanel}
-              active={rightPanelOpen}
-              aria-pressed={rightPanelOpen}
-              onClick={toggleRightPanel}
+              label={section.action.label}
+              onClick={() => {
+                if (section.action?.to === '/') requestNewChat();
+                else void navigate({ to: '/research' });
+              }}
             >
-              <PanelRight size={16} strokeWidth={1.5} aria-hidden="true" />
+              <Plus size={16} strokeWidth={1.5} aria-hidden="true" />
             </IconButton>
-          </div>
-          <div key={sectionKey} className="min-h-0 flex-1 animate-aios-fade overflow-auto">
-            <Outlet />
-          </div>
-        </main>
-        {rightPanelOpen ? <RightPanel /> : null}
-      </div>
-      <StatusBar />
+          ) : undefined
+        }
+      >
+        {section.list}
+      </Sidebar>
+      <main aria-label={copy.shell.mainArea} className="flex min-w-0 flex-1 flex-col bg-bg">
+        <Header title={section.title} />
+        <div key={sectionKey} className="min-h-0 flex-1 animate-aios-fade overflow-auto">
+          <Outlet />
+        </div>
+      </main>
+      {rightPanelOpen ? <RightPanel /> : null}
       <CommandPalette />
     </div>
   );

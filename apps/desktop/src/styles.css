@@ -71,10 +71,10 @@
   --text-page: 20px;
   --text-page--line-height: 1.25;
 
-  /* Radius desktop: 4 (badge, chip), 6 (tombol, input), 10 (panel, dialog). */
-  --radius-badge: 4px;
-  --radius-control: 6px;
-  --radius-panel: 10px;
+  /* Radius desktop: 6 (badge, chip), 10 (tombol, input), 14 (panel, dialog). */
+  --radius-badge: 6px;
+  --radius-control: 10px;
+  --radius-panel: 14px;
 
   --shadow-float: var(--aios-shadow-float);
   --ease-aios: var(--aios-easing);

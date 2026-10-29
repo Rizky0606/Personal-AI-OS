@@ -67,7 +67,7 @@ Tema mengikuti sistem secara default, dengan pilihan manual terang atau gelap. A
 ## Spasi, radius, elevasi, gerak
 
 - **Spasi:** kelipatan 4: 4, 8, 12, 16, 20, 24, 32, 40, 48.
-- **Radius:** 6 (badge), 8 (tombol, input), 16 (panel, kartu, dialog). Bulat penuh untuk chip role, titik status, dan avatar. Android: 8, 12, 16 dp.
+- **Radius** (Command Center, 2026-10-29): desktop 6 (badge, chip), 10 (tombol, input), 14 (panel, kartu, dialog); Android 10, 14, 20 dp. Bulat penuh untuk pil, titik status, dan avatar.
 - **Elevasi:** satu token bayangan untuk menu, popover, dialog, toast. Panel tidak berbayang.
 - **Gerak:** 120 ms untuk hover dan tekan, 180 ms untuk panel, 240 ms untuk dialog dan sheet, 320 ms (`emphasis`) untuk animasi masuk yang menonjol. Kurva `cubic-bezier(0.2, 0, 0, 1)`; pegas ringan `cubic-bezier(0.34, 1.32, 0.64, 1)` untuk elemen yang muncul. Saat `prefers-reduced-motion`, hanya fade.
 - **Efek:** cahaya aksen (`glow`, bayangan berwarna aksen transparan) untuk tombol primer saat hover, item aktif, indikator sedang menulis, dan cahaya layar sambutan; gradien satu warna aksen; kartu interaktif terangkat dengan bayangan lembut saat hover. Tetap dilarang: blur kaca, gradien multiwarna, partikel, dan efek yang terus bergerak di area kerja selain indikator status.
@@ -77,16 +77,15 @@ Tema mengikuti sistem secara default, dengan pilihan manual terang atau gelap. A
 
 ## Layout Windows
 
-- **Rail kiri 56px:** ikon Chat, Project, Kanban, Jadwal, Riset, Pengaturan.
-- **Sidebar 260px** (bisa diciutkan): daftar percakapan atau project.
-- **Area utama:** chat atau kanban.
-- **Panel kanan** (bisa diubah lebarnya, tab): Preview, Diff, Terminal, Berkas.
-- **Status bar 24px:** project dan branch, role aktif, model, status worker, kuota.
+- **Sidebar tunggal 232px** (ciut ke 64px, hanya ikon; Ctrl+B): pil pencarian "Cari atau perintah" (Ctrl+K), enam bagian (Chat, Project, Kanban, Jadwal, Riset, Ruang; Ctrl+1..6) dengan penanda aktif latar `accent-soft` dan garis aksen 2px, daftar konteks bagian aktif, dan kaki berisi status worker, kuota, koneksi, serta Pengaturan. Rail 56px dan status bar 24px dihapus (perombakan Command Center, 2026-10-29).
+- **Header 48px** di area utama: breadcrumb (bagian, project, branch mono redup), pil status run (titik berdenyut saat run coding berjalan), role dan model, tombol panel kanan (Ctrl+J).
+- **Area utama:** chat, kanban, atau layar lain; halaman memakai kolom lega dengan header (judul 20px, deskripsi satu baris redup, aksi kanan).
+- **Panel kanan** (kartu `rounded-panel`, bisa diubah lebarnya): tab pil bersegmen dengan ikon (Preview, Diff, Terminal, Berkas, Git, Aktivitas), bisa dibagi.
 - **Command palette** Ctrl+K untuk semua aksi.
 
 ## Layout Android
 
-- Bottom navigation 3 tab: Chat, Riset, Jadwal. Pengaturan lewat ikon di top bar.
+- Bottom navigation 4 tab: Chat, Riset, Jadwal, Ruang. Pengaturan lewat ikon di top bar. Item terpilih bertanda pil `accent-soft` dan ikon beraksen.
 - Composer menempel di bawah, naik bersama keyboard. Tombol suara di kiri, kirim di kanan.
 - Daftar percakapan lewat drawer dari kiri.
 
@@ -94,9 +93,11 @@ Tema mengikuti sistem secara default, dengan pilihan manual terang atau gelap. A
 
 | Komponen | Aturan |
 | --- | --- |
-| Pesan asisten | Kartu `surface` berbingkai, radius 16. Header: avatar bot dengan titik status (emerald selesai, cyan berdenyut saat menulis), nama "Personal AI", chip role, model mono. Teks sampai 72 karakter |
-| Pesan pengguna | Gelembung `surface-2` rata kanan, radius 16 dengan sudut kanan atas kecil; jam kirim mono dan tanda terkirim di bawah teks |
-| Langkah tool | Satu baris mono yang bisa dibuka: ikon, nama tool, target, status, durasi |
+| Pesan asisten | Tanpa kartu: avatar bot kecil di kiri (titik status: emerald selesai, cyan berdenyut saat menulis), baris meta redup (nama "Personal AI", chip role, model mono), isi langsung selebar `--aios-chat-measure` (72 karakter). Blok kode tetap berkartu |
+| Pesan pengguna | Gelembung `accent-soft` rata kanan, radius panel dengan sudut kanan atas kecil; jam kirim kecil di dalam gelembung |
+| Langkah tool | Chip kecil berderet (`rounded-control`, bergaris): ikon status, nama mono, target terpotong, durasi; bisa dibuka untuk target penuh |
+| Agent HUD | Satu bilah lipat di atas composer: rencana agent (bilah kemajuan), antrean "Menunggu giliran" dengan tombol tarik, chip jumlah subagent (membuka tab Aktivitas). Hilang bila kosong. Pertanyaan dan izin agent tetap panel penuh inline |
+| Composer | Kartu mengambang (`rounded-panel`, bayangan lift); garis aksen dan glow saat fokus; pil mode/model/skill; Kirim berubah jadi grup Hentikan/Antre/Arahkan saat run coding |
 | Blok kode | Header berisi bahasa atau path file plus tombol salin; isi mono 12–13 px |
 | Permintaan izin | Panel inline berwarna `warning`, berisi perintah persis, tombol Izinkan sekali, Selalu untuk project ini, Tolak |
 | Chip role | Pil `accent-soft` dengan titik (cyan berdenyut saat menulis); klik pada jawaban terakhir membuka koreksi role |

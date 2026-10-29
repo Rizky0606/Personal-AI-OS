@@ -42,6 +42,8 @@ export function LoginScreen({
   }, [initialServer]);
 
   const expired = state.status === 'signedOut' && state.reason === 'expired';
+  /** Fokus awal: alamat server bila belum terisi dan tidak tertanam; selain itu password. */
+  const focusServer = !fixedServer && !initialServer;
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -68,11 +70,15 @@ export function LoginScreen({
   }
 
   return (
-    <div className="flex h-full items-center justify-center bg-bg p-6">
+    <div className="relative flex h-full items-center justify-center overflow-hidden bg-bg p-6">
+      <div
+        aria-hidden="true"
+        className="aios-orb pointer-events-none absolute top-1/2 left-1/2 size-64 -translate-x-1/2 -translate-y-1/2 animate-aios-orb"
+      />
       <form
         onSubmit={(e) => void submit(e)}
         noValidate
-        className="flex w-full max-w-sm flex-col gap-4 rounded-panel border border-border bg-surface p-6"
+        className="relative flex w-full max-w-sm animate-aios-rise flex-col gap-4 rounded-panel border border-border bg-surface p-6 shadow-float"
       >
         <h1 className="text-page font-semibold text-text">{copy.login.title}</h1>
         {formError || expired ? <ErrorBanner message={formError ?? copy.login.expired} /> : null}
@@ -83,6 +89,7 @@ export function LoginScreen({
             value={server}
             onChange={(e) => setServer(e.target.value)}
             disabled={submitting}
+            autoFocus={focusServer}
             autoComplete="url"
             spellCheck={false}
           />
@@ -95,6 +102,7 @@ export function LoginScreen({
             onChange={(e) => setPassword(e.target.value)}
             error={fieldErrors.password}
             disabled={submitting}
+            autoFocus={!focusServer}
             autoComplete="current-password"
             className="w-full"
           />

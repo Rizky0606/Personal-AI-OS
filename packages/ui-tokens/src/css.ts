@@ -52,7 +52,7 @@ function plainDeclarations(tokens: Tokens): string[] {
     `--aios-focus-offset: ${px(tokens.focus.offset)};`,
     `--aios-rail-width: ${px(l.rail)};`,
     `--aios-sidebar-width: ${px(l.sidebar)};`,
-    `--aios-statusbar-height: ${px(l.statusBar)};`,
+    `--aios-header-height: ${px(l.header)};`,
     `--aios-row-height: ${px(l.row)};`,
     `--aios-chat-measure: ${tokens.layout.chatMeasureCh}ch;`,
   ];

@@ -27,7 +27,7 @@ export function PreviewToolbar({
   onStop,
 }: PreviewToolbarProps) {
   return (
-    <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border px-2 py-1">
+    <div className="flex min-h-11 shrink-0 flex-wrap items-center gap-2 border-b border-border px-3 py-1.5">
       <div role="group" aria-label={copy.preview.sizes.label} className="flex items-center gap-1">
         {SIZES.map((id) => (
           <Chip key={id} selected={size === id} onClick={() => onSize(id)}>
@@ -35,7 +35,7 @@ export function PreviewToolbar({
           </Chip>
         ))}
       </div>
-      <span className="ml-auto flex items-center gap-1">
+      <span className="ml-auto flex items-center gap-0.5">
         <IconButton label={copy.preview.inspect} active={inspecting} onClick={onInspect}>
           <MousePointerClick size={16} strokeWidth={1.5} aria-hidden="true" />
         </IconButton>

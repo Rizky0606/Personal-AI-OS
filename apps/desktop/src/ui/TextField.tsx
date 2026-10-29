@@ -14,8 +14,8 @@ export function TextField({ label, hint, error, className, ref, ...props }: Text
   const noteId = `${id}-note`;
   const note = error ?? hint;
   return (
-    <div className="flex flex-col gap-1">
-      <label htmlFor={id} className="text-meta text-text-2">
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={id} className="text-meta font-medium text-text-2">
         {label}
       </label>
       <input
@@ -24,8 +24,8 @@ export function TextField({ label, hint, error, className, ref, ...props }: Text
         aria-invalid={error ? true : undefined}
         aria-describedby={note ? noteId : undefined}
         className={cn(
-          'h-8 rounded-control border bg-surface px-3 text-ui text-text placeholder:text-text-3',
-          error ? 'border-danger' : 'border-border focus:border-border-strong',
+          'h-9 rounded-control border bg-surface px-3 text-ui text-text transition-colors duration-[120ms] ease-aios placeholder:text-text-3',
+          error ? 'border-danger' : 'border-border hover:border-border-strong focus:border-accent',
           'disabled:cursor-not-allowed disabled:opacity-50',
           className,
         )}

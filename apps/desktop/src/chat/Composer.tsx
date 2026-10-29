@@ -7,7 +7,7 @@ import { cn } from '../lib/cn';
 import type { PendingFile } from './useFileAttachments';
 import type { ContextAttachment } from '../state/uiStore';
 import { Button } from '../ui/Button';
-import { Chip } from '../ui/Chip';
+import { Chip, type ChipProps } from '../ui/Chip';
 import { IconButton } from '../ui/IconButton';
 import { CheckboxMenu, type CheckboxOption } from '../ui/CheckboxMenu';
 import { RadioMenu } from '../ui/RadioMenu';
@@ -57,6 +57,26 @@ export interface ComposerProps {
 }
 
 const MAX_HEIGHT_PX = 192;
+
+/** Pil seragam untuk mode, model, dan skill: bulat penuh, garis aksen saat aktif. */
+function Pill({ selected = false, className, children, type = 'button', ...props }: ChipProps) {
+  return (
+    <button
+      type={type}
+      aria-pressed={props.role === 'radio' ? undefined : selected}
+      className={cn(
+        'inline-flex h-7 items-center gap-1.5 rounded-full border px-3 text-meta transition-colors duration-[120ms] ease-aios',
+        selected
+          ? 'border-accent bg-accent-soft text-text'
+          : 'border-border bg-surface-2 text-text-2 hover:border-border-strong hover:text-text',
+        className,
+      )}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+}
 
 /**
  * Composer langsung siap ketik. Satu tombol primer: Kirim, atau Hentikan saat menjawab. Role tidak dipilih
@@ -156,8 +176,8 @@ export function Composer({
   const canSend = (draft.trim().length > 0 || hasFiles) && !sending && !uploading;
 
   return (
-    <div className="shrink-0 border-t border-border bg-bg px-8 pt-3 pb-3">
-      <div className="mx-auto flex max-w-[calc(72ch+4rem)] flex-col gap-2">
+    <div className="shrink-0 bg-bg px-8 pt-3 pb-4">
+      <div className="mx-auto flex max-w-[calc(var(--aios-chat-measure)+2.5rem)] flex-col gap-2">
         {suggestions && suggestions.length > 0 && draft === '' ? (
           <div
             role="group"
@@ -171,7 +191,7 @@ export function Composer({
             ))}
           </div>
         ) : null}
-        <div className="relative flex flex-col gap-2 overflow-hidden rounded-panel border border-border bg-surface p-2 transition duration-[180ms] ease-aios focus-within:border-border-strong focus-within:shadow-glow has-[[data-composer-field]:focus-visible]:border-accent">
+        <div className="relative flex flex-col gap-2 overflow-hidden rounded-panel border border-border bg-surface p-3 shadow-lift transition duration-[180ms] ease-aios focus-within:border-accent focus-within:shadow-glow">
           {streaming ? (
             <span aria-hidden="true" className="aios-progress absolute inset-x-0 top-0 h-0.5" />
           ) : null}
@@ -273,7 +293,7 @@ export function Composer({
             }}
             className="max-h-48 w-full resize-none bg-transparent px-1 py-1 text-chat text-text outline-none placeholder:text-text-3"
           />
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <RadioMenu
               label={copy.chat.model.pick}
               value={model ?? AUTO}
@@ -283,32 +303,32 @@ export function Composer({
                 ...models.map((m) => ({ value: m.id, label: m.label, hint: m.kind })),
               ]}
               trigger={
-                <Chip
+                <Pill
                   aria-label={`${copy.chat.model.label}: ${modelName}`}
                   selected={model !== null}
                 >
                   <span className="max-w-40 truncate">{modelName}</span>
-                  <ChevronDown size={12} strokeWidth={1.5} aria-hidden="true" className="ml-1" />
-                </Chip>
+                  <ChevronDown size={12} strokeWidth={1.5} aria-hidden="true" />
+                </Pill>
               }
             />
             {onPlanMode ? (
-              <Chip
+              <Pill
                 selected={planMode}
                 title={copy.chat.plan.chipHint}
                 onClick={() => onPlanMode(!planMode)}
               >
                 {copy.chat.plan.chip}
-              </Chip>
+              </Pill>
             ) : null}
             {onWebSearch ? (
-              <Chip
+              <Pill
                 selected={webSearch}
                 title={copy.chat.web.chipHint}
                 onClick={() => onWebSearch(!webSearch)}
               >
                 {copy.chat.web.chip}
-              </Chip>
+              </Pill>
             ) : null}
             {onSkillPacks ? (
               <CheckboxMenu
@@ -317,12 +337,12 @@ export function Composer({
                 onValuesChange={onSkillPacks}
                 options={skillOptions}
                 trigger={
-                  <Chip selected={skillPacks.length > 0} title={copy.chat.skills.hint}>
+                  <Pill selected={skillPacks.length > 0} title={copy.chat.skills.hint}>
                     {skillPacks.length > 0
                       ? copy.chat.skills.chipActive(skillPacks.length)
                       : copy.chat.skills.chip}
-                    <ChevronDown size={12} strokeWidth={1.5} aria-hidden="true" className="ml-1" />
-                  </Chip>
+                    <ChevronDown size={12} strokeWidth={1.5} aria-hidden="true" />
+                  </Pill>
                 }
               />
             ) : null}
@@ -360,13 +380,18 @@ export function Composer({
                 </IconButton>
               ) : null}
               {streaming ? (
-                <>
+                <div
+                  className={cn(
+                    'flex animate-aios-pop items-center gap-1',
+                    onSteer && 'rounded-control bg-surface-2 p-0.5',
+                  )}
+                >
                   <Button variant="secondary" onClick={onStop}>
                     <Square size={14} strokeWidth={1.5} aria-hidden="true" />
                     {copy.chat.stop}
                   </Button>
                   {onSteer ? (
-                    <div className="flex animate-aios-pop items-center gap-2">
+                    <>
                       <Button
                         variant="secondary"
                         disabled={draft.trim().length === 0}
@@ -384,11 +409,16 @@ export function Composer({
                         <ArrowUp size={14} strokeWidth={1.5} aria-hidden="true" />
                         {copy.chat.steer.now}
                       </Button>
-                    </div>
+                    </>
                   ) : null}
-                </>
+                </div>
               ) : (
-                <Button variant="primary" disabled={!canSend} onClick={onSend}>
+                <Button
+                  variant="primary"
+                  disabled={!canSend}
+                  onClick={onSend}
+                  className="animate-aios-pop"
+                >
                   <ArrowUp size={14} strokeWidth={1.5} aria-hidden="true" />
                   {copy.chat.send}
                 </Button>

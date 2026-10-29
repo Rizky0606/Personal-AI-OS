@@ -48,7 +48,7 @@ import androidx.compose.ui.res.stringResource
 @Composable
 fun AiosChip(text: String, modifier: Modifier = Modifier, selected: Boolean = false, onClick: (() -> Unit)? = null) {
     val colors = AiosTheme.colors
-    val shape = RoundedCornerShape(Tokens.Radius.sm)
+    val shape = RoundedCornerShape(Tokens.Radius.full)
     val source = remember { MutableInteractionSource() }
     val focused by source.collectIsFocusedAsState()
     val base = modifier
@@ -66,11 +66,11 @@ fun AiosChip(text: String, modifier: Modifier = Modifier, selected: Boolean = fa
         text = text,
         style = AiosTheme.type.meta,
         color = if (selected) colors.text else colors.text2,
-        modifier = clickable.padding(horizontal = Tokens.Space.s8, vertical = Tokens.Space.s4)
+        modifier = clickable.padding(horizontal = Tokens.Space.s12, vertical = Tokens.Space.s4)
     )
 }
 
-/** Baris daftar dengan pemisah 1dp di bawah. Tinggi minimum 48dp untuk target sentuh. */
+/** Baris daftar lega dengan pemisah halus 1dp yang menjorok 16dp. Tinggi minimum 56dp (target sentuh 48dp). */
 @Composable
 fun AiosListItem(
     title: String,
@@ -79,6 +79,7 @@ fun AiosListItem(
     trailing: String? = null,
     @DrawableRes leadingIcon: Int? = null,
     selected: Boolean = false,
+    showDivider: Boolean = true,
     trailingContent: (@Composable () -> Unit)? = null,
     onClick: (() -> Unit)? = null
 ) {
@@ -97,11 +98,18 @@ fun AiosListItem(
                 it
             }
         }
-        .drawBehind {
-            val y = size.height - Hairline.toPx() / 2
-            drawLine(colors.border, Offset(0f, y), Offset(size.width, y), Hairline.toPx())
+        .let {
+            if (showDivider) {
+                it.drawBehind {
+                    val y = size.height - Hairline.toPx() / 2
+                    val inset = Tokens.Space.s16.toPx()
+                    drawLine(colors.border, Offset(inset, y), Offset(size.width - inset, y), Hairline.toPx())
+                }
+            } else {
+                it
+            }
         }
-        .defaultMinSize(minHeight = Tokens.touchTarget)
+        .defaultMinSize(minHeight = Tokens.touchTarget + Tokens.Space.s8)
         .padding(horizontal = Tokens.Space.s16, vertical = Tokens.Space.s12)
     Row(
         modifier = rowModifier,
@@ -193,13 +201,13 @@ fun ErrorBanner(
     onDismiss: (() -> Unit)? = null
 ) {
     val colors = AiosTheme.colors
-    val shape = RoundedCornerShape(Tokens.Radius.sm)
+    val shape = RoundedCornerShape(Tokens.Radius.md)
     Column(
         modifier = modifier
             .fillMaxWidth()
             .background(colors.surface, shape)
             .border(Hairline, colors.danger, shape)
-            .padding(Tokens.Space.s12)
+            .padding(Tokens.Space.s16)
             .semantics { liveRegion = LiveRegionMode.Polite },
         verticalArrangement = Arrangement.spacedBy(Tokens.Space.s8)
     ) {

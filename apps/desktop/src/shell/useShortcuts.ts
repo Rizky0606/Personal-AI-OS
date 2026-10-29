@@ -5,7 +5,7 @@ export interface ShortcutActions {
   newChat(): void;
   toggleSidebar(): void;
   toggleRightPanel(): void;
-  /** Ctrl+1..6: Chat, Project, Kanban, Jadwal, Riset, Pengaturan (urutan rail). */
+  /** Ctrl+1..6: Chat, Project, Kanban, Jadwal, Riset, Pengaturan (urutan sidebar). */
   navigate(slot: number): void;
 }
 

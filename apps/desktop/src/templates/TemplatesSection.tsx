@@ -9,6 +9,7 @@ import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { StateView, type ViewState } from '../ui/StateView';
 import { TextArea } from '../ui/TextArea';
 import { TextField } from '../ui/TextField';
+import { enterDelay } from '../screens/PageLayout';
 import { useTemplateActions } from './useTemplateActions';
 
 /**
@@ -44,15 +45,15 @@ export function TemplatesSection() {
   }
 
   return (
-    <section aria-labelledby="settings-templates" className="flex flex-col gap-3">
+    <section aria-labelledby="settings-templates" className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
-        <h2 id="settings-templates" className="text-section font-semibold text-text">
+        <h3 id="settings-templates" className="text-section font-semibold text-text">
           {t.title}
-        </h2>
-        <p className="text-meta text-text-2">{t.intro}</p>
+        </h3>
+        <p className="text-ui text-text-2">{t.intro}</p>
       </div>
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-3 rounded-panel border border-border bg-surface p-4">
         <TextField
           label={t.nameLabel}
           hint={t.nameHint}
@@ -72,7 +73,7 @@ export function TemplatesSection() {
           disabled={!online || actions.busy === 'create'}
           onChange={(event) => setBody(event.target.value)}
         />
-        <div>
+        <div className="flex justify-end">
           <Button
             variant="primary"
             disabled={!online || !name.trim() || !body.trim() || actions.busy === 'create'}
@@ -92,9 +93,13 @@ export function TemplatesSection() {
         retryLabel={copy.states.retry}
         onRetry={() => void query.refetch()}
       >
-        <ul aria-label={t.listLabel} className="flex flex-col rounded-control border border-border">
-          {items.map((item) => (
+        <ul
+          aria-label={t.listLabel}
+          className="flex flex-col divide-y divide-border overflow-hidden rounded-panel border border-border bg-surface"
+        >
+          {items.map((item, index) => (
             <TemplateRow
+              index={index}
               key={item.id}
               template={item}
               disabled={!online || actions.busy !== null}
@@ -124,12 +129,13 @@ export function TemplatesSection() {
 
 interface TemplateRowProps {
   template: PromptTemplate;
+  index: number;
   disabled: boolean;
   onSave: (patch: { name: string; body: string }) => Promise<boolean>;
   onDelete: () => void;
 }
 
-function TemplateRow({ template, disabled, onSave, onDelete }: TemplateRowProps) {
+function TemplateRow({ template, index, disabled, onSave, onDelete }: TemplateRowProps) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(template.name);
   const [body, setBody] = useState(template.body);
@@ -141,7 +147,10 @@ function TemplateRow({ template, disabled, onSave, onDelete }: TemplateRowProps)
   }
 
   return (
-    <li className="flex flex-col gap-2 border-b border-border px-3 py-2 last:border-b-0">
+    <li
+      style={enterDelay(index)}
+      className="flex animate-aios-enter flex-col gap-2 px-4 py-3 transition-colors duration-[120ms] ease-aios hover:bg-surface-2"
+    >
       {editing ? (
         <>
           <TextField

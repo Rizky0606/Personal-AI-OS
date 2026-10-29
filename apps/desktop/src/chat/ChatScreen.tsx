@@ -8,6 +8,7 @@ import { packOptions } from './skillPacks';
 import { useUiStore } from '../state/uiStore';
 import { ErrorBanner } from '../ui/ErrorBanner';
 import { StateView, type ViewState } from '../ui/StateView';
+import { AgentHud } from './AgentHud';
 import { ChatWelcome } from './ChatWelcome';
 import { Composer } from './Composer';
 import { MessageList } from './MessageList';
@@ -111,7 +112,6 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
               resolvingApprovals={chat.resolvingApprovals}
               onResolveApproval={chat.resolveApproval}
               onAnswerQuestion={chat.answerQuestion}
-              onRemoveQueued={chat.removeQueued}
               hasMore={chat.hasMore}
               loadingOlder={chat.loadingOlder}
               onLoadOlder={chat.loadOlder}
@@ -123,6 +123,7 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
       {chat.awaitingPlanApproval ? (
         <PlanBanner onApprove={chat.approvePlan} disabled={chat.sending || !chat.online} />
       ) : null}
+      <AgentHud live={chat.live} onRemoveQueued={chat.removeQueued} />
       <Composer
         draft={chat.draft}
         onDraft={chat.setDraft}

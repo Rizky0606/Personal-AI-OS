@@ -1,6 +1,7 @@
 import { Check } from 'lucide-react';
 import { copy } from '../copy';
 import { cn } from '../lib/cn';
+import { enterDelay } from '../screens/PageLayout';
 
 export const RESEARCH_STAGES = ['planning', 'searching', 'reading', 'writing'] as const;
 export type StageId = (typeof RESEARCH_STAGES)[number];
@@ -35,7 +36,7 @@ export function ResearchProgress({ stage, progress, message }: ResearchProgressP
           style={{ width: `${percent}%` }}
         />
       </div>
-      <ol className="flex flex-wrap gap-x-6 gap-y-1 text-ui">
+      <ol className="flex flex-col divide-y divide-border overflow-hidden rounded-panel border border-border bg-surface text-ui">
         {RESEARCH_STAGES.map((id, index) => {
           const done = current > index;
           const active = current === index;
@@ -43,8 +44,9 @@ export function ResearchProgress({ stage, progress, message }: ResearchProgressP
             <li
               key={id}
               aria-current={active ? 'step' : undefined}
+              style={enterDelay(index)}
               className={cn(
-                'flex items-center gap-1',
+                'flex min-h-9 animate-aios-enter items-center gap-2 px-4 py-2 transition-colors duration-[120ms] ease-aios hover:bg-surface-2',
                 active ? 'font-medium text-text' : done ? 'text-text-2' : 'text-text-3',
               )}
             >

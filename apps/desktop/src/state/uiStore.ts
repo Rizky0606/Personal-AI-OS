@@ -54,7 +54,7 @@ interface UiState {
   newChatSignal: number;
   /** Project yang sedang dikerjakan (chat per folder); null = chat umum. */
   activeProjectId: string | null;
-  /** Branch kerja agent dari run coding yang sedang berjalan, untuk status bar; tidak disimpan. */
+  /** Branch kerja agent dari run coding yang sedang berjalan, untuk header; tidak disimpan. */
   activeRunBranch: string | null;
   /** Run coding yang hasilnya sedang menunggu tinjauan (tab Diff); tidak disimpan. */
   reviewRunId: string | null;
@@ -76,7 +76,7 @@ interface UiState {
   /** Model pilihan untuk pesan berikutnya; null = otomatis (router/combo). Diingat antar sesi. */
   model: string | null;
   setModel: (model: string | null) => void;
-  /** Role yang sedang dipakai chat (pilihan manual atau keputusan router) untuk status bar; tidak disimpan. */
+  /** Role yang sedang dipakai chat (pilihan manual atau keputusan router) untuk header; tidak disimpan. */
   activeRole: string | null;
   setActiveRole: (role: string | null) => void;
   /** Lampiran konteks untuk pesan berikutnya; tidak disimpan. */

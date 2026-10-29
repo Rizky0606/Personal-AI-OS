@@ -23,35 +23,39 @@ export function ActivityPanel() {
   if (steps.length === 0) return <EmptyState message={copy.activity.empty} />;
 
   return (
-    <div className="flex flex-col gap-4 p-3">
-      <section aria-label={copy.activity.now} className="flex flex-col gap-1">
+    <div className="flex animate-aios-enter flex-col gap-5 p-4">
+      <section aria-label={copy.activity.now} className="flex flex-col gap-2">
         <h3 className="text-meta font-medium text-text-2">{copy.activity.now}</h3>
-        {now ? (
-          <p className="flex items-center gap-2 font-mono text-ui text-text">
-            <Loader
-              size={14}
-              strokeWidth={1.5}
-              aria-hidden="true"
-              className="shrink-0 animate-aios-breathe text-accent"
-            />
-            <span className="shrink-0">{now.name}</span>
-            {now.target ? <span className="min-w-0 truncate text-text-2">{now.target}</span> : null}
-          </p>
-        ) : (
-          <p className="text-ui text-text-3">{copy.activity.idle}</p>
-        )}
+        <div className="rounded-panel border border-border bg-surface-2 px-3 py-2.5">
+          {now ? (
+            <p className="flex items-center gap-2 font-mono text-ui text-text">
+              <Loader
+                size={14}
+                strokeWidth={1.5}
+                aria-hidden="true"
+                className="shrink-0 animate-aios-breathe text-accent"
+              />
+              <span className="shrink-0">{now.name}</span>
+              {now.target ? (
+                <span className="min-w-0 truncate text-text-2">{now.target}</span>
+              ) : null}
+            </p>
+          ) : (
+            <p className="text-ui text-text-3">{copy.activity.idle}</p>
+          )}
+        </div>
       </section>
 
-      <section aria-label={copy.activity.files} className="flex flex-col gap-1">
+      <section aria-label={copy.activity.files} className="flex flex-col gap-2">
         <h3 className="text-meta font-medium text-text-2">{copy.activity.files}</h3>
         {files.length === 0 ? (
           <p className="text-ui text-text-3">{copy.activity.noFiles}</p>
         ) : (
-          <ul className="flex flex-col">
+          <ul className="flex flex-col gap-0.5">
             {files.map((file) => (
               <li
                 key={file.path}
-                className="group flex min-h-8 items-center gap-2 border-b border-border"
+                className="group flex min-h-9 animate-aios-enter items-center gap-2 rounded-control px-2 transition-colors duration-[120ms] ease-aios hover:bg-surface-2"
               >
                 <button
                   type="button"
@@ -79,7 +83,7 @@ export function ActivityPanel() {
                 ) : null}
                 <span
                   className={cn(
-                    'shrink-0 rounded-badge px-1.5 text-caption',
+                    'shrink-0 rounded-full px-2 py-0.5 text-caption',
                     file.action === 'edit'
                       ? 'bg-accent-soft text-text'
                       : 'bg-surface-2 text-text-2',
@@ -92,7 +96,7 @@ export function ActivityPanel() {
                     type="button"
                     aria-label={`${copy.activity.diff}: ${file.path}`}
                     onClick={() => openPanel('diff')}
-                    className="inline-flex size-6 shrink-0 items-center justify-center rounded-control text-text-2 transition-colors duration-[120ms] ease-aios hover:bg-surface-2 hover:text-text"
+                    className="inline-flex size-7 shrink-0 items-center justify-center rounded-control text-text-2 transition-colors duration-[120ms] ease-aios hover:bg-surface hover:text-text"
                   >
                     <FileDiff size={14} strokeWidth={1.5} aria-hidden="true" />
                   </button>
@@ -104,12 +108,17 @@ export function ActivityPanel() {
       </section>
 
       {others.length > 0 ? (
-        <section aria-label={copy.activity.steps} className="flex flex-col gap-1">
+        <section aria-label={copy.activity.steps} className="flex flex-col gap-2">
           <h3 className="text-meta font-medium text-text-2">{copy.activity.steps}</h3>
-          <ul className="flex flex-col gap-1">
+          <ul className="flex flex-col gap-1.5">
             {others.map((step) => (
-              <li key={step.id} className="flex min-w-0 items-center gap-2 font-mono text-ui">
-                <span className="shrink-0 text-text">{step.name}</span>
+              <li
+                key={step.id}
+                className="flex min-w-0 animate-aios-enter items-center gap-2 font-mono text-ui"
+              >
+                <span className="shrink-0 rounded-badge bg-surface-2 px-1.5 py-0.5 text-text">
+                  {step.name}
+                </span>
                 <span className="min-w-0 truncate text-text-2">{step.target}</span>
               </li>
             ))}

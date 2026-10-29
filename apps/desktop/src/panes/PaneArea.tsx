@@ -1,5 +1,16 @@
 import * as Tabs from '@radix-ui/react-tabs';
-import { Columns2, Rows2, X } from 'lucide-react';
+import {
+  Activity,
+  Columns2,
+  Eye,
+  FileDiff,
+  FolderTree,
+  GitBranch,
+  Rows2,
+  SquareTerminal,
+  X,
+  type LucideIcon,
+} from 'lucide-react';
 import { useRef, type KeyboardEvent, type PointerEvent } from 'react';
 import { copy } from '../copy';
 import { cn } from '../lib/cn';
@@ -14,6 +25,16 @@ import { IconButton } from '../ui/IconButton';
 import { MAX_PANES, PANE_TABS, ROOT_ID, countPanes, type PaneNode, type PaneTab } from './tree';
 
 const KEY_STEP = 0.05;
+
+/** Ikon tiap tab; label tetap teks asli (hanya disembunyikan visual di pane sempit). */
+const TAB_ICONS: Record<PaneTab, LucideIcon> = {
+  preview: Eye,
+  diff: FileDiff,
+  terminal: SquareTerminal,
+  files: FolderTree,
+  git: GitBranch,
+  activity: Activity,
+};
 
 function PaneContent({ tab }: { tab: PaneTab }) {
   if (tab === 'diff') return <DiffPanel />;
@@ -42,19 +63,26 @@ function Leaf({ id, tab, canSplit, canClose }: LeafProps) {
       onValueChange={(v) => setPaneTab(id, v as PaneTab)}
       className="flex min-h-0 min-w-0 flex-1 flex-col"
     >
-      <div className="flex h-10 shrink-0 items-end justify-between border-b border-border px-2">
-        <Tabs.List className="flex items-end gap-1">
-          {PANE_TABS.map((t) => (
-            <Tabs.Trigger
-              key={t}
-              value={t}
-              className="h-8 rounded-t-control border-b-2 border-transparent px-3 text-ui text-text-2 transition-colors duration-[120ms] ease-aios hover:text-text data-[state=active]:border-accent data-[state=active]:text-text"
-            >
-              {copy.shell.panels[t]}
-            </Tabs.Trigger>
-          ))}
+      <div className="@container flex h-12 shrink-0 items-center justify-between gap-2 border-b border-border px-3">
+        <Tabs.List className="flex min-w-0 items-center gap-0.5 overflow-x-auto rounded-full bg-surface-2 p-1">
+          {PANE_TABS.map((t) => {
+            const Icon = TAB_ICONS[t];
+            return (
+              <Tabs.Trigger
+                key={t}
+                value={t}
+                title={copy.shell.panels[t]}
+                className="group inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-transparent px-2.5 text-ui text-text-2 transition duration-[180ms] ease-aios hover:text-text data-[state=active]:border-border data-[state=active]:bg-surface data-[state=active]:text-text data-[state=active]:shadow-lift"
+              >
+                <Icon size={14} strokeWidth={1.5} aria-hidden="true" />
+                <span className="sr-only group-data-[state=active]:not-sr-only @lg:not-sr-only">
+                  {copy.shell.panels[t]}
+                </span>
+              </Tabs.Trigger>
+            );
+          })}
         </Tabs.List>
-        <div className="flex items-center gap-1 pb-1">
+        <div className="flex shrink-0 items-center gap-0.5">
           {canSplit ? (
             <>
               <IconButton label={copy.panes.splitRow} onClick={() => splitPane(id, 'row')}>
@@ -72,7 +100,7 @@ function Leaf({ id, tab, canSplit, canClose }: LeafProps) {
           ) : null}
         </div>
       </div>
-      <Tabs.Content value={tab} className="min-h-0 flex-1 overflow-auto">
+      <Tabs.Content value={tab} className="min-h-0 flex-1 animate-aios-fade overflow-auto">
         <PaneContent tab={tab} />
       </Tabs.Content>
     </Tabs.Root>
@@ -131,8 +159,10 @@ function SplitHandle({ direction, ratio, onRatio, container }: SplitHandleProps)
       }}
       onKeyDown={onKeyDown}
       className={cn(
-        'shrink-0 bg-border transition-colors duration-[120ms] ease-aios hover:bg-border-strong',
-        horizontal ? 'w-1 cursor-col-resize' : 'h-1 cursor-row-resize',
+        'relative shrink-0 bg-border transition-colors duration-[120ms] ease-aios hover:bg-accent',
+        horizontal
+          ? 'w-px cursor-col-resize before:absolute before:inset-y-0 before:-inset-x-1'
+          : 'h-px cursor-row-resize before:absolute before:-inset-y-1 before:inset-x-0',
       )}
     />
   );

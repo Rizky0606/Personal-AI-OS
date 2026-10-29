@@ -4,6 +4,10 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/); ve
 
 ## [Unreleased]
 
+### Diubah
+
+- **Perombakan tampilan "Command Center"** (desktop dan Android): satu sidebar 232 px dengan pencarian Ctrl K, enam bagian, daftar konteks, serta kartu status worker/kuota (menggantikan rail dan status bar); header 48 px dengan breadcrumb project/branch dan pil status run; jawaban AI tanpa kartu, langkah tool sebagai chip, composer mengambang, dan **Agent HUD** satu bilah lipat untuk rencana, antrean, dan subagent; tab panel kanan berbentuk pil dengan ikon; layar Project, Pengaturan, Kanban, dan lainnya diselaraskan dengan header halaman dan dialog seragam; radius baru (desktop 6/10/14, Android 10/14/20). Android: kartu jawaban tanpa bingkai tebal, composer membulat, baris daftar lebih lega, pengaturan berkelompok. Fitur dan pintasan tidak berubah.
+
 ### Ditambah
 
 - Desktop: arahkan agent coding yang sedang berjalan dari composer. Enter menyisipkan arahan setelah langkah yang sedang berjalan, Alt+Enter mengantre pesan sampai agent selesai (`POST /runs/:id/steer` menerima `mode: steer | followUp`).

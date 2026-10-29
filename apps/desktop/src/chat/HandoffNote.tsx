@@ -9,7 +9,10 @@ export const isHandoffNote = (text: string) => text.startsWith(HANDOFF_PREFIX);
 export function HandoffNote({ text }: { text: string }) {
   const body = text.slice(text.indexOf('\n\n') + 2);
   return (
-    <details open className="rounded-control border border-border bg-surface px-3 py-2">
+    <details
+      open
+      className="animate-aios-enter rounded-panel border border-border bg-surface px-4 py-3"
+    >
       <summary className="cursor-pointer text-meta text-text-2">
         {copy.chat.handoff.noteTitle}
       </summary>

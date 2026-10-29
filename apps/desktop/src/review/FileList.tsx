@@ -14,7 +14,7 @@ export interface FileListProps {
 export function FileList({ files, commentCounts, selected, onSelect }: FileListProps) {
   return (
     <nav aria-label={copy.review.filesLabel}>
-      <ul className="flex flex-col">
+      <ul className="flex flex-col gap-0.5">
         {files.map((file) => {
           const comments = commentCounts.get(file.path) ?? 0;
           return (
@@ -24,13 +24,15 @@ export function FileList({ files, commentCounts, selected, onSelect }: FileListP
                 aria-current={selected === file.path ? 'true' : undefined}
                 onClick={() => onSelect(file.path)}
                 className={cn(
-                  'flex w-full items-center gap-2 rounded-control px-2 py-1 text-left text-ui hover:bg-surface-2',
-                  selected === file.path && 'bg-accent-soft',
+                  'relative flex min-h-9 w-full items-center gap-2 rounded-control px-3 py-1 text-left text-ui transition-colors duration-[120ms] ease-aios',
+                  selected === file.path
+                    ? 'bg-accent-soft before:absolute before:inset-y-1.5 before:left-0 before:w-0.5 before:rounded-full before:bg-accent'
+                    : 'hover:bg-surface-2',
                 )}
               >
                 <span className="min-w-0 flex-1 truncate font-mono text-text">{file.path}</span>
                 {comments > 0 ? (
-                  <span className="rounded-badge bg-accent-soft px-1.5 text-caption text-text">
+                  <span className="rounded-full bg-accent-soft px-2 py-0.5 text-caption text-text">
                     {comments}
                   </span>
                 ) : null}

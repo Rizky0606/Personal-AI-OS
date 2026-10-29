@@ -4,10 +4,10 @@ import {
   SetupCommandSchema,
   type Project,
 } from '@aios/contracts';
-import * as Dialog from '@radix-ui/react-dialog';
 import { useEffect, useState } from 'react';
 import { workerApi } from '../app/services';
 import { copy } from '../copy';
+import { DialogFrame } from '../screens/DialogFrame';
 import { Button } from '../ui/Button';
 import { ErrorBanner } from '../ui/ErrorBanner';
 import { Switch } from '../ui/Switch';
@@ -87,55 +87,56 @@ export function ProjectSetupDialog({ project, onClose }: ProjectSetupDialogProps
   }
 
   return (
-    <Dialog.Root open={project !== null} onOpenChange={(open) => !open && onClose()}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-40 animate-aios-fade bg-bg/60" />
-        <Dialog.Content className="fixed top-20 left-1/2 z-50 flex animate-aios-dialog w-[min(640px,calc(100vw-2rem))] -translate-x-1/2 flex-col gap-3 rounded-panel border border-border bg-surface p-4 shadow-float">
-          <Dialog.Title className="text-section font-semibold text-text">
-            {project ? s.title(project.name) : ''}
-          </Dialog.Title>
-          <Dialog.Description className="text-ui text-text-2">{s.intro}</Dialog.Description>
-          {error ? <ErrorBanner message={error} /> : null}
-          <TextArea
-            label={s.commandsLabel}
-            hint={s.commandsHint(lines.length, SETUP_MAX_COMMANDS)}
-            error={problem}
-            placeholder={s.commandsPlaceholder}
-            value={loading ? s.loading : text}
-            rows={6}
-            maxLength={SETUP_MAX_COMMANDS * (SETUP_COMMAND_MAX + 1)}
-            disabled={loading || saving}
-            onChange={(event) => setText(event.target.value)}
-            className="font-mono"
-          />
-          <div className="flex items-start gap-3">
-            <Switch checked={link} onChange={setLink} label={s.link} disabled={loading || saving} />
-            <div className="flex flex-col">
-              <span className="text-ui text-text">{s.link}</span>
-              <span className="text-caption text-text-3">{s.linkHint}</span>
-            </div>
+    <DialogFrame
+      open={project !== null}
+      onOpenChange={(open) => !open && onClose()}
+      title={project ? s.title(project.name) : ''}
+      description={s.intro}
+      size="lg"
+      footer={
+        <>
+          <Button variant="ghost" disabled={saving} onClick={onClose}>
+            {copy.chat.cancel}
+          </Button>
+          <Button
+            variant="primary"
+            disabled={loading || saving || problem !== undefined}
+            onClick={() => void save()}
+          >
+            {saving ? s.saving : s.save}
+          </Button>
+        </>
+      }
+    >
+      {error ? <ErrorBanner message={error} /> : null}
+      <TextArea
+        label={s.commandsLabel}
+        hint={s.commandsHint(lines.length, SETUP_MAX_COMMANDS)}
+        error={problem}
+        placeholder={s.commandsPlaceholder}
+        value={loading ? s.loading : text}
+        rows={6}
+        maxLength={SETUP_MAX_COMMANDS * (SETUP_COMMAND_MAX + 1)}
+        disabled={loading || saving}
+        onChange={(event) => setText(event.target.value)}
+        className="font-mono"
+      />
+      <div className="flex flex-col divide-y divide-border rounded-control border border-border">
+        <div className="flex items-start gap-3 px-3 py-3">
+          <Switch checked={link} onChange={setLink} label={s.link} disabled={loading || saving} />
+          <div className="flex flex-col">
+            <span className="text-ui text-text">{s.link}</span>
+            <span className="text-caption text-text-3">{s.linkHint}</span>
           </div>
-          <div className="flex items-start gap-3">
-            <Switch checked={lsp} onChange={setLsp} label={s.lsp} disabled={loading || saving} />
-            <div className="flex flex-col">
-              <span className="text-ui text-text">{s.lsp}</span>
-              <span className="text-caption text-text-3">{s.lspHint}</span>
-            </div>
+        </div>
+        <div className="flex items-start gap-3 px-3 py-3">
+          <Switch checked={lsp} onChange={setLsp} label={s.lsp} disabled={loading || saving} />
+          <div className="flex flex-col">
+            <span className="text-ui text-text">{s.lsp}</span>
+            <span className="text-caption text-text-3">{s.lspHint}</span>
           </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="ghost" disabled={saving} onClick={onClose}>
-              {copy.chat.cancel}
-            </Button>
-            <Button
-              variant="primary"
-              disabled={loading || saving || problem !== undefined}
-              onClick={() => void save()}
-            >
-              {saving ? s.saving : s.save}
-            </Button>
-          </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+        </div>
+      </div>
+    </DialogFrame>
   );
 }

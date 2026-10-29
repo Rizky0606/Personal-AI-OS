@@ -1,6 +1,6 @@
 import type { Project, ProjectInspection } from '@aios/contracts';
 import { act, screen, waitFor, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiProblem } from '../auth/authSession';
 import { copy } from '../copy';
@@ -59,6 +59,12 @@ beforeEach(() => {
   Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
 });
 
+/** Buka menu aksi baris project lalu pilih satu item (aksi sekunder tidak lagi tampil sebagai tombol di baris). */
+async function chooseAction(user: UserEvent, list: HTMLElement, projectName: string, item: string) {
+  await user.click(within(list).getByRole('button', { name: copy.projects.rowMenu(projectName) }));
+  await user.click(await screen.findByRole('menuitem', { name: item }));
+}
+
 describe('ProjectsScreen: daftar', () => {
   it('menggabungkan project server dengan folder lokal; project tanpa ikatan ditandai', async () => {
     connected();
@@ -71,11 +77,11 @@ describe('ProjectsScreen: daftar', () => {
     ]);
     await renderScreen(<ProjectsScreen />, '/projects');
 
-    const table = await screen.findByRole('table', { name: copy.projects.listLabel });
-    const mine = within(table).getByText('Aplikasi saya').closest('tr') as HTMLElement;
+    const list = await screen.findByRole('list', { name: copy.projects.listLabel });
+    const mine = within(list).getByText('Aplikasi saya').closest('li') as HTMLElement;
     expect(await within(mine).findByText('C:\\Kerja\\aplikasi')).toBeInTheDocument();
     expect(within(mine).getByText('react')).toBeInTheDocument();
-    const other = within(table).getByText('Proyek PC lain').closest('tr') as HTMLElement;
+    const other = within(list).getByText('Proyek PC lain').closest('li') as HTMLElement;
     expect(within(other).getByText(copy.projects.folderMissing)).toBeInTheDocument();
   });
 
@@ -87,11 +93,9 @@ describe('ProjectsScreen: daftar', () => {
     api.updateProject.mockResolvedValue(project({ instructions: 'Pakai pnpm.\nJalankan tes.' }));
     await renderScreen(<ProjectsScreen />, '/projects');
 
-    const table = await screen.findByRole('table', { name: copy.projects.listLabel });
-    expect(within(table).getByText('Pakai pnpm.')).toBeInTheDocument();
-    await user.click(
-      within(table).getByRole('button', { name: `${copy.projects.rules.edit}: Aplikasi saya` }),
-    );
+    const list = await screen.findByRole('list', { name: copy.projects.listLabel });
+    expect(within(list).getByText('Pakai pnpm.')).toBeInTheDocument();
+    await chooseAction(user, list, 'Aplikasi saya', copy.projects.rules.edit);
     const dialog = await screen.findByRole('dialog', {
       name: copy.projects.rules.title('Aplikasi saya'),
     });
@@ -120,10 +124,8 @@ describe('ProjectsScreen: daftar', () => {
     workerApi.setupSet.mockImplementation((_id, setup) => Promise.resolve(setup));
     await renderScreen(<ProjectsScreen />, '/projects');
 
-    const table = await screen.findByRole('table', { name: copy.projects.listLabel });
-    await user.click(
-      within(table).getByRole('button', { name: `${copy.projects.setup.edit}: Aplikasi saya` }),
-    );
+    const list = await screen.findByRole('list', { name: copy.projects.listLabel });
+    await chooseAction(user, list, 'Aplikasi saya', copy.projects.setup.edit);
     const dialog = await screen.findByRole('dialog', {
       name: copy.projects.setup.title('Aplikasi saya'),
     });
@@ -168,11 +170,9 @@ describe('ProjectsScreen: daftar', () => {
     api.updateProject.mockResolvedValue(project({ defaultBranch: 'main' }));
     await renderScreen(<ProjectsScreen />, '/projects');
 
-    const table = await screen.findByRole('table', { name: copy.projects.listLabel });
-    await within(table).findByText('C:\\Kerja\\aplikasi');
-    await user.click(
-      within(table).getByRole('button', { name: `${copy.projects.branch.change}: Aplikasi saya` }),
-    );
+    const list = await screen.findByRole('list', { name: copy.projects.listLabel });
+    await within(list).findByText('C:\\Kerja\\aplikasi');
+    await chooseAction(user, list, 'Aplikasi saya', copy.projects.menu.branch);
     const dialog = await screen.findByRole('dialog', {
       name: copy.projects.branch.title('Aplikasi saya'),
     });
@@ -196,12 +196,9 @@ describe('ProjectsScreen: daftar', () => {
     workerApi.unbind.mockResolvedValue([]);
     await renderScreen(<ProjectsScreen />, '/projects');
 
-    const table = await screen.findByRole('table', { name: copy.projects.listLabel });
-    await user.click(
-      await within(table).findByRole('button', {
-        name: `${copy.projects.unbind.action}: Aplikasi saya`,
-      }),
-    );
+    const list = await screen.findByRole('list', { name: copy.projects.listLabel });
+    await within(list).findByText('C:\\Kerja\\aplikasi');
+    await chooseAction(user, list, 'Aplikasi saya', copy.projects.unbind.action);
     const dialog = await screen.findByRole('dialog', { name: copy.projects.unbind.title });
     await user.click(within(dialog).getByRole('button', { name: copy.projects.unbind.action }));
     await waitFor(() => expect(workerApi.unbind).toHaveBeenCalledWith(P1));
@@ -219,11 +216,9 @@ describe('ProjectsScreen: daftar', () => {
     workerApi.unbind.mockResolvedValue([]);
     await renderScreen(<ProjectsScreen />, '/projects');
 
-    const table = await screen.findByRole('table', { name: copy.projects.listLabel });
-    await within(table).findByText('C:\\Kerja\\aplikasi');
-    await user.click(
-      within(table).getByRole('button', { name: `${copy.projects.remove.action}: Aplikasi saya` }),
-    );
+    const list = await screen.findByRole('list', { name: copy.projects.listLabel });
+    await within(list).findByText('C:\\Kerja\\aplikasi');
+    await chooseAction(user, list, 'Aplikasi saya', copy.projects.remove.action);
     const dialog = await screen.findByRole('dialog', { name: copy.projects.remove.title });
     await user.click(within(dialog).getByRole('button', { name: copy.projects.remove.action }));
     await waitFor(() => expect(api.deleteProject).toHaveBeenCalledWith(P1));
