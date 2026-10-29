@@ -97,7 +97,7 @@ private val tabs = listOf(
     Tab(Routes.SPACES, R.string.nav_spaces, R.drawable.ic_library)
 )
 
-/** Kerangka setelah login: top bar dengan ikon Pengaturan, konten, dan bottom nav 3 tab. */
+/** Kerangka setelah login: top bar dengan ikon Pengaturan, konten, dan bottom nav 4 tab dengan indikator pil. */
 /**
  * [sessionKey] (ID perangkat) membuat ViewModel chat baru untuk setiap sesi, sehingga percakapan
  * akun sebelumnya tidak terbawa setelah logout lalu login lagi.
@@ -396,8 +396,10 @@ private fun BottomBar(currentRoute: String, nav: NavHostController) {
         }
     ) {
         tabs.forEach { tab ->
+            val selected = currentRoute == tab.route
+            val iconTint = if (selected) colors.accent else colors.text2
             NavigationBarItem(
-                selected = currentRoute == tab.route,
+                selected = selected,
                 onClick = {
                     nav.navigate(tab.route) {
                         popUpTo(nav.graph.findStartDestination().id) { saveState = true }
@@ -405,7 +407,7 @@ private fun BottomBar(currentRoute: String, nav: NavHostController) {
                         restoreState = true
                     }
                 },
-                icon = { AiosIcon(tab.icon, contentDescription = null, tint = colors.text) },
+                icon = { AiosIcon(tab.icon, contentDescription = null, tint = iconTint) },
                 label = { Text(stringResource(tab.label), style = AiosTheme.type.caption) },
                 colors = NavigationBarItemDefaults.colors(
                     selectedTextColor = colors.text,

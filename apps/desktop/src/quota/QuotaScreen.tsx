@@ -4,13 +4,16 @@ import { useQuota } from '../api/queries';
 import { useOnline } from '../app/hooks';
 import { copy } from '../copy';
 import { formatCost, formatCount } from '../lib/format';
+import { Page, PageHeader } from '../screens/PageLayout';
 import { IconButton } from '../ui/IconButton';
 import { StateView, type ViewState } from '../ui/StateView';
 
 const headerClass =
-  'border-b border-border-strong px-3 py-2 text-left text-meta font-medium text-text-2';
-const cellClass = 'border-b border-border px-3 py-1 align-middle text-ui tabular-nums';
+  'border-b border-border px-4 py-2.5 text-left text-meta font-medium text-text-3';
+const cellClass = 'border-b border-border px-4 py-3 align-middle text-ui tabular-nums';
 const numberCell = `${cellClass} text-right`;
+const rowClass = 'transition-colors duration-[120ms] ease-aios hover:bg-surface-2';
+const panelClass = 'overflow-hidden rounded-panel border border-border bg-surface';
 
 /** Pemakaian dari /quota: total, per model, dan per hari. Angka dari 9Router bila ada, selain itu ringkasan run. */
 export function QuotaScreen() {
@@ -34,13 +37,16 @@ export function QuotaScreen() {
   const busiest = Math.max(1, ...days.map((d) => d.inputTokens + d.outputTokens));
 
   return (
-    <div className="flex flex-col">
-      <div className="flex h-12 items-center justify-between border-b border-border px-4">
-        <h2 className="text-section font-semibold text-text">{copy.quota.title}</h2>
-        <IconButton label={copy.quota.refresh} onClick={() => void query.refetch()}>
-          <RefreshCw size={16} strokeWidth={1.5} aria-hidden="true" />
-        </IconButton>
-      </div>
+    <Page>
+      <PageHeader
+        title={copy.quota.title}
+        description={copy.quota.description}
+        actions={
+          <IconButton label={copy.quota.refresh} onClick={() => void query.refetch()}>
+            <RefreshCw size={16} strokeWidth={1.5} aria-hidden="true" />
+          </IconButton>
+        }
+      />
       <StateView
         state={view}
         loadingLabel={copy.quota.loading}
@@ -51,122 +57,129 @@ export function QuotaScreen() {
         onRetry={() => void query.refetch()}
       >
         {quota ? (
-          <div className="flex flex-col gap-6 p-4">
+          <div className="flex animate-aios-enter flex-col gap-6">
             <p className="text-meta text-text-2">{copy.quota.source[quota.source]}</p>
 
-            <dl
-              aria-label={copy.quota.totals}
-              className="grid max-w-2xl grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4"
-            >
+            <dl aria-label={copy.quota.totals} className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {[
                 [c.requests, formatCount(quota.totals.requests)],
                 [c.input, formatCount(quota.totals.inputTokens)],
                 [c.output, formatCount(quota.totals.outputTokens)],
                 [c.cost, formatCost(quota.totals.costUsd)],
               ].map(([label, value]) => (
-                <div key={label} className="flex flex-col">
+                <div
+                  key={label}
+                  className="flex flex-col gap-1 rounded-panel border border-border bg-surface p-4"
+                >
                   <dt className="text-meta text-text-2">{label}</dt>
-                  <dd className="font-mono text-section text-text tabular-nums">{value}</dd>
+                  <dd className="font-mono text-page text-text tabular-nums">{value}</dd>
                 </div>
               ))}
             </dl>
 
-            <section aria-labelledby="quota-model" className="flex flex-col gap-2">
-              <h3 id="quota-model" className="text-ui font-semibold text-text">
+            <section aria-labelledby="quota-model" className="flex flex-col gap-3">
+              <h3 id="quota-model" className="text-section font-semibold text-text">
                 {copy.quota.byModel}
               </h3>
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr>
-                    <th scope="col" className={headerClass}>
-                      {c.model}
-                    </th>
-                    <th scope="col" className={`${headerClass} text-right`}>
-                      {c.requests}
-                    </th>
-                    <th scope="col" className={`${headerClass} text-right`}>
-                      {c.input}
-                    </th>
-                    <th scope="col" className={`${headerClass} text-right`}>
-                      {c.output}
-                    </th>
-                    <th scope="col" className={`${headerClass} text-right`}>
-                      {c.cost}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {quota.byModel.map((m) => (
-                    <tr key={m.model}>
-                      <th scope="row" className={`${cellClass} text-left font-mono font-normal`}>
-                        {m.model}
+              <div className={panelClass}>
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr>
+                      <th scope="col" className={headerClass}>
+                        {c.model}
                       </th>
-                      <td className={numberCell}>{formatCount(m.requests)}</td>
-                      <td className={numberCell}>{formatCount(m.inputTokens)}</td>
-                      <td className={numberCell}>{formatCount(m.outputTokens)}</td>
-                      <td className={numberCell}>{formatCost(m.costUsd)}</td>
+                      <th scope="col" className={`${headerClass} text-right`}>
+                        {c.requests}
+                      </th>
+                      <th scope="col" className={`${headerClass} text-right`}>
+                        {c.input}
+                      </th>
+                      <th scope="col" className={`${headerClass} text-right`}>
+                        {c.output}
+                      </th>
+                      <th scope="col" className={`${headerClass} text-right`}>
+                        {c.cost}
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {quota.byModel.map((m) => (
+                      <tr key={m.model} className={rowClass}>
+                        <th scope="row" className={`${cellClass} text-left font-mono font-normal`}>
+                          {m.model}
+                        </th>
+                        <td className={numberCell}>{formatCount(m.requests)}</td>
+                        <td className={numberCell}>{formatCount(m.inputTokens)}</td>
+                        <td className={numberCell}>{formatCount(m.outputTokens)}</td>
+                        <td className={numberCell}>{formatCost(m.costUsd)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </section>
 
-            <section aria-labelledby="quota-day" className="flex flex-col gap-2">
-              <h3 id="quota-day" className="text-ui font-semibold text-text">
+            <section aria-labelledby="quota-day" className="flex flex-col gap-3">
+              <h3 id="quota-day" className="text-section font-semibold text-text">
                 {copy.quota.byDay}
               </h3>
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr>
-                    <th scope="col" className={headerClass}>
-                      {c.date}
-                    </th>
-                    <th scope="col" className={`${headerClass} text-right`}>
-                      {c.requests}
-                    </th>
-                    <th scope="col" className={`${headerClass} text-right`}>
-                      {c.input}
-                    </th>
-                    <th scope="col" className={`${headerClass} text-right`}>
-                      {c.output}
-                    </th>
-                    <th scope="col" className={`${headerClass} text-right`}>
-                      {c.cost}
-                    </th>
-                    <th scope="col" className={headerClass}>
-                      <span className="sr-only">Porsi token</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {days.map((d) => {
-                    const total = d.inputTokens + d.outputTokens;
-                    return (
-                      <tr key={d.date}>
-                        <th scope="row" className={`${cellClass} text-left font-mono font-normal`}>
-                          {d.date}
-                        </th>
-                        <td className={numberCell}>{formatCount(d.requests)}</td>
-                        <td className={numberCell}>{formatCount(d.inputTokens)}</td>
-                        <td className={numberCell}>{formatCount(d.outputTokens)}</td>
-                        <td className={numberCell}>{formatCost(d.costUsd)}</td>
-                        <td className={`${cellClass} w-32`} aria-hidden="true">
-                          <div className="h-1 rounded-badge bg-surface-2">
-                            <div
-                              className="h-1 rounded-badge bg-accent"
-                              style={{ width: `${Math.round((total / busiest) * 100)}%` }}
-                            />
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+              <div className={panelClass}>
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr>
+                      <th scope="col" className={headerClass}>
+                        {c.date}
+                      </th>
+                      <th scope="col" className={`${headerClass} text-right`}>
+                        {c.requests}
+                      </th>
+                      <th scope="col" className={`${headerClass} text-right`}>
+                        {c.input}
+                      </th>
+                      <th scope="col" className={`${headerClass} text-right`}>
+                        {c.output}
+                      </th>
+                      <th scope="col" className={`${headerClass} text-right`}>
+                        {c.cost}
+                      </th>
+                      <th scope="col" className={headerClass}>
+                        <span className="sr-only">Porsi token</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {days.map((d) => {
+                      const total = d.inputTokens + d.outputTokens;
+                      return (
+                        <tr key={d.date} className={rowClass}>
+                          <th
+                            scope="row"
+                            className={`${cellClass} text-left font-mono font-normal`}
+                          >
+                            {d.date}
+                          </th>
+                          <td className={numberCell}>{formatCount(d.requests)}</td>
+                          <td className={numberCell}>{formatCount(d.inputTokens)}</td>
+                          <td className={numberCell}>{formatCount(d.outputTokens)}</td>
+                          <td className={numberCell}>{formatCost(d.costUsd)}</td>
+                          <td className={`${cellClass} w-32`} aria-hidden="true">
+                            <div className="h-1 rounded-badge bg-surface-2">
+                              <div
+                                className="h-1 rounded-badge bg-accent"
+                                style={{ width: `${Math.round((total / busiest) * 100)}%` }}
+                              />
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </section>
           </div>
         ) : null}
       </StateView>
-    </div>
+    </Page>
   );
 }

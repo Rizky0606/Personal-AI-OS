@@ -41,7 +41,7 @@ export function Toaster() {
             if (!open) dismiss(toast.id);
           }}
           className={cn(
-            'flex animate-aios-toast items-start gap-3 rounded-control border bg-surface-2 p-3 shadow-float',
+            'flex animate-aios-toast items-start gap-3 rounded-panel border bg-surface p-3.5 shadow-float',
             toast.tone === 'danger' ? 'border-danger' : 'border-border',
           )}
         >
@@ -50,13 +50,13 @@ export function Toaster() {
           </ToastPrimitive.Description>
           <ToastPrimitive.Close
             aria-label={copy.toast.close}
-            className="rounded-control p-1 text-text-2 hover:bg-surface hover:text-text"
+            className="rounded-badge p-1 text-text-2 transition-colors duration-[120ms] ease-aios hover:bg-surface-2 hover:text-text"
           >
             <X size={14} strokeWidth={1.5} aria-hidden="true" />
           </ToastPrimitive.Close>
         </ToastPrimitive.Root>
       ))}
-      <ToastPrimitive.Viewport className="fixed right-4 bottom-10 z-50 flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2 outline-none" />
+      <ToastPrimitive.Viewport className="fixed right-4 bottom-6 z-50 flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2 outline-none" />
     </ToastPrimitive.Provider>
   );
 }

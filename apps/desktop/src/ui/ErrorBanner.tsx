@@ -15,7 +15,7 @@ export function ErrorBanner({ message, action, className, tone = 'danger' }: Err
     <div
       role="alert"
       className={cn(
-        'flex items-start gap-3 rounded-control border bg-surface p-3',
+        'flex animate-aios-enter items-start gap-3 rounded-panel border bg-surface p-3.5',
         tone === 'danger' ? 'border-danger' : 'border-warning',
         className,
       )}

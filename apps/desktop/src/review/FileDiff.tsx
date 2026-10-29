@@ -18,15 +18,16 @@ export interface FileDiffProps {
   busy: boolean;
 }
 
-/** Satu file: judul (path, status, tambah/hapus), tombol batalkan, dan isi diff. */
+/** Satu file: judul lengket (path, status, tambah/hapus), tombol batalkan, dan isi diff. */
 export function FileDiff({ file, view, busy, onRevert, ...table }: FileDiffProps) {
   return (
     <article
       aria-label={file.path}
       id={`file-${file.path}`}
-      className="overflow-hidden rounded-control border border-border"
+      // overflow-clip (bukan hidden) supaya kepala berkas tetap lengket terhadap area gulir.
+      className="animate-aios-enter overflow-clip rounded-panel border border-border"
     >
-      <header className="flex items-center gap-2 border-b border-border bg-surface-2 px-2 py-1">
+      <header className="sticky top-0 z-10 flex items-center gap-2 border-b border-border bg-surface-2 px-3 py-2">
         <div className="min-w-0 flex-1">
           <p className="truncate font-mono text-ui text-text">{file.path}</p>
           {file.oldPath ? (
@@ -35,7 +36,7 @@ export function FileDiff({ file, view, busy, onRevert, ...table }: FileDiffProps
             </p>
           ) : null}
         </div>
-        <span className="rounded-badge bg-surface px-1.5 text-caption text-text-2">
+        <span className="rounded-full bg-surface px-2 py-0.5 text-caption text-text-2">
           {copy.review.status[file.status]}
         </span>
         <span className="font-mono text-meta tabular-nums text-success">+{file.additions}</span>
@@ -45,12 +46,12 @@ export function FileDiff({ file, view, busy, onRevert, ...table }: FileDiffProps
         </IconButton>
       </header>
       {file.binary ? (
-        <p className="p-3 text-meta text-text-2">{copy.review.binary}</p>
+        <p className="p-4 text-meta text-text-2">{copy.review.binary}</p>
       ) : (
         <>
           <DiffTable path={file.path} patch={file.patch} view={view} {...table} />
           {file.truncated ? (
-            <p className="border-t border-border p-3 text-meta text-text-2">
+            <p className="border-t border-border p-4 text-meta text-text-2">
               {copy.review.truncated}
             </p>
           ) : null}

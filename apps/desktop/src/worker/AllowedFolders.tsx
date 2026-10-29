@@ -63,11 +63,11 @@ export function AllowedFolders() {
   );
 
   return (
-    <section aria-labelledby="settings-folders" className="flex flex-col gap-2">
-      <h2 id="settings-folders" className="text-section font-semibold text-text">
+    <section aria-labelledby="settings-folders" className="flex flex-col gap-3">
+      <h3 id="settings-folders" className="text-section font-semibold text-text">
         {copy.settings.folders.title}
-      </h2>
-      <p className="max-w-[72ch] text-meta text-text-2">{copy.settings.folders.hint}</p>
+      </h3>
+      <p className="max-w-[72ch] text-ui text-text-2">{copy.settings.folders.hint}</p>
       <StateView
         state={view}
         loadingLabel={copy.settings.folders.loading}
@@ -78,11 +78,12 @@ export function AllowedFolders() {
         retryLabel={copy.states.retry}
         onRetry={() => void query.refetch()}
       >
-        <ul className="flex flex-col">
-          {folders.map((folder) => (
+        <ul className="flex flex-col divide-y divide-border overflow-hidden rounded-panel border border-border bg-surface">
+          {folders.map((folder, index) => (
             <li
               key={folder}
-              className="flex min-h-8 items-center justify-between gap-3 border-b border-border px-3 py-1"
+              style={{ animationDelay: `${Math.min(index, 3) * 40}ms` }}
+              className="flex min-h-10 animate-aios-enter items-center justify-between gap-3 px-4 py-2 transition-colors duration-[120ms] ease-aios hover:bg-surface-2"
             >
               <span className="min-w-0 truncate font-mono text-ui text-text" title={folder}>
                 {folder}

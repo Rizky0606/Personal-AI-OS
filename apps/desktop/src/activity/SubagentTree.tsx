@@ -8,7 +8,7 @@ import { formatDuration } from '../chat/ToolStepRow';
 const ICON = { size: 14, strokeWidth: 1.5, 'aria-hidden': true } as const;
 
 const statusIcon: Record<SubagentView['status'], ReactNode> = {
-  running: <Loader {...ICON} className="animate-spin text-accent" />,
+  running: <Loader {...ICON} className="animate-aios-breathe text-accent" />,
   completed: <Check {...ICON} className="text-success" />,
   failed: <TriangleAlert {...ICON} className="text-danger" />,
   aborted: <CircleSlash {...ICON} className="text-warning" />,
@@ -18,17 +18,20 @@ const statusIcon: Record<SubagentView['status'], ReactNode> = {
 export function SubagentTree({ subagents }: { subagents: readonly SubagentView[] }) {
   const t = copy.activity.subagents;
   return (
-    <section aria-label={t.title} className="flex flex-col gap-1">
+    <section aria-label={t.title} className="flex flex-col gap-2">
       <h3 className="text-meta font-medium text-text-2">{t.title}</h3>
-      <ul className="ml-1.5 flex flex-col gap-2 border-l border-border pl-3">
+      <ul className="ml-2 flex flex-col gap-3 border-l border-border-strong pl-4">
         {subagents.map((agent) => (
-          <li key={agent.subagentId} className="flex animate-aios-enter flex-col gap-0.5">
+          <li
+            key={agent.subagentId}
+            className="relative flex animate-aios-enter flex-col gap-1 before:absolute before:top-2 before:-left-4 before:h-px before:w-3 before:bg-border-strong"
+          >
             <span className="flex min-w-0 items-center gap-2 text-ui">
               {statusIcon[agent.status]}
               <span className="sr-only">{t.status[agent.status]}: </span>
               <span className="truncate font-medium text-text">{agent.subagentId}</span>
               {agent.agent ? (
-                <span className="rounded-badge bg-surface-2 px-1.5 py-0.5 font-mono text-caption text-text-2">
+                <span className="rounded-full bg-surface-2 px-2 py-0.5 font-mono text-caption text-text-2">
                   {agent.agent}
                 </span>
               ) : null}

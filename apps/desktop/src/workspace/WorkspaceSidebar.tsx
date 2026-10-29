@@ -40,11 +40,11 @@ function ProjectGroup({
   }, [query.data, project.id]);
 
   return (
-    <li className="border-b border-border">
+    <li>
       <div
         className={cn(
-          'group flex min-h-9 items-center gap-1 pr-1 pl-1',
-          selected && 'aios-active-wash',
+          'group flex min-h-9 items-center gap-1 rounded-control pr-1 pl-1 transition-colors duration-[120ms] ease-aios',
+          selected ? 'aios-active-wash' : 'hover:bg-surface-2',
         )}
       >
         <IconButton
@@ -146,7 +146,7 @@ export function WorkspaceSidebar() {
           retryLabel={copy.states.retry}
           onRetry={() => void projects.refetch()}
         >
-          <ul aria-label={copy.projects.listLabel}>
+          <ul aria-label={copy.projects.listLabel} className="flex flex-col gap-0.5 p-2">
             {list.map((project) => (
               <ProjectGroup
                 key={project.id}

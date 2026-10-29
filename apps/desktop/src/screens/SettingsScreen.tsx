@@ -8,9 +8,9 @@ import { Button } from '../ui/Button';
 import { Chip } from '../ui/Chip';
 import { MemorySection } from '../memory/MemorySection';
 import { TemplatesSection } from '../templates/TemplatesSection';
-import { ListItem } from '../ui/ListItem';
 import { UpdateSection } from '../updater/UpdateSection';
 import { AllowedFolders } from '../worker/AllowedFolders';
+import { Page, PageHeader, Section } from './PageLayout';
 
 const themes: { value: ThemeMode; label: string }[] = [
   { value: 'system', label: copy.settings.themeSystem },
@@ -18,7 +18,15 @@ const themes: { value: ThemeMode; label: string }[] = [
   { value: 'dark', label: copy.settings.themeDark },
 ];
 
-/** Info perangkat, tema, shortcut, dan keluar. */
+const shortcuts = [
+  copy.shortcuts.palette,
+  copy.shortcuts.newChat,
+  copy.shortcuts.sidebar,
+  copy.shortcuts.rightPanel,
+  copy.shortcuts.quickAsk,
+];
+
+/** Pengaturan dalam bagian bergaris: akun dan perangkat, alat, tampilan, memori, templat, folder, pembaruan, pintasan. */
 export function SettingsScreen() {
   const state = useAuthState();
   const theme = useUiStore((s) => s.theme);
@@ -36,71 +44,99 @@ export function SettingsScreen() {
   }
 
   return (
-    <div className="flex max-w-2xl flex-col gap-6 p-4">
-      <section aria-labelledby="settings-account" className="flex flex-col">
-        <h2 id="settings-account" className="mb-2 text-section font-semibold text-text">
-          {copy.settings.account}
-        </h2>
-        <ListItem title={copy.settings.server} trailing={session?.serverUrl ?? ''} />
-        <ListItem title={copy.settings.device} trailing={session?.deviceName ?? ''} />
-      </section>
+    <Page width="md" className="animate-aios-enter">
+      <PageHeader title={copy.settings.title} description={copy.settings.description} />
 
-      <MemorySection />
+      <Section
+        id="settings-account"
+        title={copy.settings.account}
+        description={copy.settings.accountHint}
+        actions={
+          <Button variant="danger" disabled={loggingOut} onClick={() => void logout()}>
+            {loggingOut ? copy.settings.loggingOut : copy.settings.logout}
+          </Button>
+        }
+      >
+        <dl className="divide-y divide-border rounded-panel border border-border bg-surface">
+          <div className="flex items-center justify-between gap-4 px-4 py-3 text-ui">
+            <dt className="text-text-2">{copy.settings.server}</dt>
+            <dd className="min-w-0 truncate font-mono text-meta text-text">
+              {session?.serverUrl ?? ''}
+            </dd>
+          </div>
+          <div className="flex items-center justify-between gap-4 px-4 py-3 text-ui">
+            <dt className="text-text-2">{copy.settings.device}</dt>
+            <dd className="min-w-0 truncate text-text">{session?.deviceName ?? ''}</dd>
+          </div>
+        </dl>
+      </Section>
 
-      <TemplatesSection />
-
-      <AllowedFolders />
-
-      <section aria-labelledby="settings-tools" className="flex flex-col gap-2">
-        <h2 id="settings-tools" className="text-section font-semibold text-text">
-          {copy.settings.tools}
-        </h2>
-        <div className="flex gap-2">
-          <Link to="/status" className="text-ui text-text underline underline-offset-2">
-            {copy.status.page.title}
-          </Link>
-          <Link to="/quota" className="text-ui text-text underline underline-offset-2">
-            {copy.quota.title}
-          </Link>
-          <Link to="/compare" className="text-ui text-text underline underline-offset-2">
-            {copy.compare.title}
-          </Link>
-        </div>
-      </section>
-
-      <section aria-labelledby="settings-theme" className="flex flex-col gap-2">
-        <h2 id="settings-theme" className="text-section font-semibold text-text">
-          {copy.settings.theme}
-        </h2>
-        <div className="flex gap-2">
+      <Section
+        id="settings-theme"
+        title={copy.settings.appearance}
+        description={copy.settings.appearanceHint}
+      >
+        <div role="group" aria-label={copy.settings.theme} className="flex flex-wrap gap-2">
           {themes.map((t) => (
             <Chip key={t.value} selected={theme === t.value} onClick={() => setTheme(t.value)}>
               {t.label}
             </Chip>
           ))}
         </div>
-      </section>
+      </Section>
 
-      <section aria-labelledby="settings-shortcuts" className="flex flex-col gap-2">
-        <h2 id="settings-shortcuts" className="text-section font-semibold text-text">
-          {copy.settings.shortcuts}
-        </h2>
-        <ul className="flex flex-col gap-1 font-mono text-meta text-text-2">
-          <li>{copy.shortcuts.palette}</li>
-          <li>{copy.shortcuts.newChat}</li>
-          <li>{copy.shortcuts.sidebar}</li>
-          <li>{copy.shortcuts.rightPanel}</li>
-          <li>{copy.shortcuts.quickAsk}</li>
-        </ul>
-      </section>
-
-      <UpdateSection />
-
-      <div>
-        <Button variant="danger" disabled={loggingOut} onClick={() => void logout()}>
-          {loggingOut ? copy.settings.loggingOut : copy.settings.logout}
-        </Button>
+      <div className="border-t border-border pt-6">
+        <MemorySection />
       </div>
-    </div>
+
+      <div className="border-t border-border pt-6">
+        <TemplatesSection />
+      </div>
+
+      <div className="border-t border-border pt-6">
+        <AllowedFolders />
+      </div>
+
+      <Section
+        id="settings-tools"
+        title={copy.settings.tools}
+        description={copy.settings.toolsHint}
+      >
+        <nav aria-label={copy.settings.tools} className="flex flex-wrap gap-2">
+          <ToolLink to="/status" label={copy.status.page.title} />
+          <ToolLink to="/quota" label={copy.quota.title} />
+          <ToolLink to="/compare" label={copy.compare.title} />
+        </nav>
+      </Section>
+
+      <div className="border-t border-border pt-6">
+        <UpdateSection />
+      </div>
+
+      <Section
+        id="settings-shortcuts"
+        title={copy.settings.shortcuts}
+        description={copy.settings.shortcutsHint}
+      >
+        <ul className="divide-y divide-border rounded-panel border border-border bg-surface font-mono text-meta text-text-2">
+          {shortcuts.map((line) => (
+            <li key={line} className="px-4 py-2 whitespace-pre">
+              {line}
+            </li>
+          ))}
+        </ul>
+      </Section>
+    </Page>
+  );
+}
+
+function ToolLink({ to, label }: { to: '/status' | '/quota' | '/compare'; label: string }) {
+  return (
+    <Link
+      to={to}
+      className="inline-flex h-8 items-center rounded-control border border-border-strong bg-surface px-3 text-ui font-medium text-text transition-colors duration-[120ms] ease-aios hover:bg-surface-2"
+    >
+      {label}
+    </Link>
   );
 }

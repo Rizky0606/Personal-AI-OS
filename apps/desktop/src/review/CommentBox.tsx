@@ -18,7 +18,7 @@ export function CommentEditor({ path, line, initial, onSave, onCancel }: Comment
     if (body.trim()) onSave(body.trim());
   };
   return (
-    <div className="flex flex-col gap-2 border-y border-border bg-surface p-2">
+    <div className="flex animate-aios-enter flex-col gap-2 border-y border-border bg-surface p-3">
       <TextArea
         label={copy.review.commentLabel(path, line)}
         value={body}
@@ -52,7 +52,7 @@ export interface CommentCardProps {
 /** Komentar yang belum dikirim; baru terkirim ke agent lewat "Kirim komentar". */
 export function CommentCard({ body, onEdit, onRemove }: CommentCardProps) {
   return (
-    <div className="flex items-start gap-2 border-y border-border bg-accent-soft p-2">
+    <div className="flex animate-aios-enter items-start gap-2 border-y border-border bg-accent-soft p-3">
       <p className="min-w-0 flex-1 text-ui break-words whitespace-pre-wrap text-text">{body}</p>
       <Button variant="ghost" className="h-6 px-2 text-meta" onClick={onEdit}>
         {copy.review.commentEdit}

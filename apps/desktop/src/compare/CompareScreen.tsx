@@ -24,7 +24,7 @@ function ResultColumn({ result, label }: { result: CompareResult; label: string 
   return (
     <section
       aria-label={label}
-      className="flex min-w-0 flex-1 flex-col gap-2 rounded-panel border border-border bg-surface p-3"
+      className="flex min-w-0 flex-1 animate-aios-enter flex-col gap-3 rounded-panel border border-border bg-surface p-4"
     >
       <header className="flex flex-col gap-1">
         <h3 className="truncate font-mono text-ui font-medium text-text">{label}</h3>
@@ -103,11 +103,9 @@ export function CompareScreen() {
   }
 
   return (
-    <div className="flex flex-col" onKeyDown={onKeyDown}>
-      <div className="flex h-12 items-center border-b border-border px-4">
-        <h2 className="text-section font-semibold text-text">{c.title}</h2>
-      </div>
-      <div className="flex flex-col gap-4 p-4">
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-8 py-8" onKeyDown={onKeyDown}>
+      <h2 className="text-page font-semibold text-text">{c.title}</h2>
+      <div className="flex flex-col gap-5">
         <p className="max-w-[72ch] text-ui text-text-2">{c.intro}</p>
         <TextArea
           label={c.prompt}
@@ -137,7 +135,7 @@ export function CompareScreen() {
                     <button
                       type="button"
                       aria-label={`${c.modelSlot(index + 1)}: ${id === NONE ? c.none : labelOf(id)}`}
-                      className="flex h-8 max-w-56 items-center gap-2 rounded-control border border-border bg-surface px-2 text-ui text-text transition-colors duration-[120ms] ease-aios hover:bg-surface-2"
+                      className="flex h-9 max-w-56 items-center gap-2 rounded-control border border-border bg-surface px-3 text-ui text-text transition-colors duration-[120ms] ease-aios hover:border-border-strong hover:bg-surface-2"
                     >
                       <span className="truncate">{id === NONE ? c.none : labelOf(id)}</span>
                       <ChevronDown
@@ -182,7 +180,7 @@ export function CompareScreen() {
             {chosen.map((id, i) => (
               <div
                 key={i}
-                className="flex flex-1 flex-col gap-2 rounded-panel border border-border p-3"
+                className="flex flex-1 flex-col gap-2 rounded-panel border border-border p-4"
               >
                 <span className="sr-only">{labelOf(id)}</span>
                 <Skeleton className="w-full" />

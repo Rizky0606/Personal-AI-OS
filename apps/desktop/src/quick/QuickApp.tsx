@@ -102,7 +102,7 @@ export function QuickApp({ channel }: { channel: QuickChannel }) {
   }
 
   return (
-    <div className="flex h-full flex-col overflow-hidden rounded-panel border border-border bg-surface">
+    <div className="flex h-full animate-aios-fade flex-col overflow-hidden rounded-panel border border-border bg-surface">
       <header
         data-tauri-drag-region
         className="flex h-10 shrink-0 items-center justify-between border-b border-border pr-1 pl-4"
@@ -115,37 +115,43 @@ export function QuickApp({ channel }: { channel: QuickChannel }) {
         </IconButton>
       </header>
 
-      <form onSubmit={submit} className="flex shrink-0 flex-col gap-2 p-3">
-        <TextArea
-          ref={field}
-          label={q.label}
-          hint={q.hint}
-          placeholder={q.placeholder}
-          rows={2}
-          autoFocus
-          value={text}
-          disabled={busy}
-          onChange={(event) => setText(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' && !event.shiftKey) {
-              event.preventDefault();
-              submit();
-            }
-          }}
+      <form onSubmit={submit} className="relative flex shrink-0 flex-col gap-2 p-4">
+        <div
+          aria-hidden="true"
+          className="aios-orb pointer-events-none absolute top-1/2 left-1/2 size-40 -translate-x-1/2 -translate-y-1/2 animate-aios-orb"
         />
-        {!online ? (
-          <p className="flex items-center gap-2 text-meta text-text-2">
-            <WifiOff size={14} strokeWidth={1.5} aria-hidden="true" />
-            {copy.states.offline}
-          </p>
-        ) : null}
+        <div className="relative flex flex-col gap-2">
+          <TextArea
+            ref={field}
+            label={q.label}
+            hint={q.hint}
+            placeholder={q.placeholder}
+            rows={2}
+            autoFocus
+            value={text}
+            disabled={busy}
+            onChange={(event) => setText(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                submit();
+              }
+            }}
+          />
+          {!online ? (
+            <p className="flex items-center gap-2 text-meta text-text-2">
+              <WifiOff size={14} strokeWidth={1.5} aria-hidden="true" />
+              {copy.states.offline}
+            </p>
+          ) : null}
+        </div>
       </form>
 
       <section
         aria-label={q.answer}
         aria-live="polite"
         aria-busy={busy}
-        className="min-h-0 flex-1 overflow-y-auto px-3 pb-3"
+        className="min-h-0 flex-1 overflow-y-auto px-4 pb-4"
       >
         {noMain ? (
           <ErrorBanner message={q.noMain} />

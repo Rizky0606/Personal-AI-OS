@@ -5,6 +5,7 @@ import { apiErrorMessage } from '../api/errors';
 import { useSpaceConversations, useSpaceDocuments, useSpaces } from '../api/queries';
 import { useOnline } from '../app/hooks';
 import { copy } from '../copy';
+import { Page, PageHeader, enterDelay } from '../screens/PageLayout';
 import { Button } from '../ui/Button';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { EmptyState } from '../ui/EmptyState';
@@ -41,16 +42,16 @@ export function SpaceDetailScreen({ spaceId }: { spaceId: string }) {
         : 'empty';
 
   return (
-    <div className="flex flex-col">
-      <div className="flex h-12 items-center border-b border-border px-4">
+    <Page>
+      {space ? null : (
         <Link
           to="/spaces"
-          className="flex items-center gap-1 rounded-control text-ui text-text-2 hover:text-text"
+          className="flex w-fit items-center gap-1 rounded-control text-ui text-text-2 transition-colors duration-[120ms] ease-aios hover:text-text"
         >
           <ArrowLeft size={14} strokeWidth={1.5} aria-hidden="true" />
           {s.back}
         </Link>
-      </div>
+      )}
       <StateView
         state={view}
         loadingLabel={s.loading}
@@ -61,28 +62,40 @@ export function SpaceDetailScreen({ spaceId }: { spaceId: string }) {
         onRetry={() => void spacesQuery.refetch()}
       >
         {space ? (
-          <div className="flex max-w-3xl flex-col gap-6 p-6">
-            <header className="flex flex-wrap items-start gap-3">
-              <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <h2 className="text-section font-semibold text-text">{space.name}</h2>
-                {space.description ? (
-                  <p className="max-w-[72ch] text-ui text-text-2">{space.description}</p>
-                ) : null}
-              </div>
-              <Button
-                variant="primary"
-                disabled={!online || actions.busy === 'chat'}
-                onClick={() => void actions.newChat(space.id)}
-              >
-                <MessageSquarePlus size={14} strokeWidth={1.5} aria-hidden="true" />
-                {s.newChat}
-              </Button>
-              <Button variant="danger" onClick={() => setConfirmDelete(true)}>
-                {s.delete}
-              </Button>
-            </header>
+          <div className="flex flex-col gap-6">
+            <PageHeader
+              back={
+                <Link
+                  to="/spaces"
+                  className="flex w-fit items-center gap-1 rounded-control text-ui text-text-2 transition-colors duration-[120ms] ease-aios hover:text-text"
+                >
+                  <ArrowLeft size={14} strokeWidth={1.5} aria-hidden="true" />
+                  {s.back}
+                </Link>
+              }
+              title={space.name}
+              {...(space.description ? { description: space.description } : {})}
+              actions={
+                <>
+                  <Button variant="danger" onClick={() => setConfirmDelete(true)}>
+                    {s.delete}
+                  </Button>
+                  <Button
+                    variant="primary"
+                    disabled={!online || actions.busy === 'chat'}
+                    onClick={() => void actions.newChat(space.id)}
+                  >
+                    <MessageSquarePlus size={14} strokeWidth={1.5} aria-hidden="true" />
+                    {s.newChat}
+                  </Button>
+                </>
+              }
+            />
 
-            <section aria-labelledby="space-docs" className="flex flex-col gap-2">
+            <section
+              aria-labelledby="space-docs"
+              className="flex flex-col gap-3 rounded-panel border border-border bg-surface p-5"
+            >
               <div className="flex items-center justify-between">
                 <h3 id="space-docs" className="text-chat font-semibold text-text">
                   {s.documents}
@@ -123,12 +136,13 @@ export function SpaceDetailScreen({ spaceId }: { spaceId: string }) {
               ) : (
                 <ul
                   aria-label={s.documents}
-                  className="flex flex-col rounded-control border border-border"
+                  className="flex flex-col divide-y divide-border overflow-hidden rounded-control border border-border"
                 >
-                  {docs.map((doc) => (
+                  {docs.map((doc, index) => (
                     <li
                       key={doc.id}
-                      className="flex items-center gap-3 border-b border-border px-3 py-2 last:border-b-0"
+                      className="flex animate-aios-enter items-center gap-3 px-3 py-2 transition-colors duration-[120ms] ease-aios hover:bg-surface-2"
+                      style={enterDelay(index)}
                     >
                       <FileText
                         size={16}
@@ -162,13 +176,13 @@ export function SpaceDetailScreen({ spaceId }: { spaceId: string }) {
               {chats.length === 0 ? (
                 <EmptyState message={s.conversationsEmpty} />
               ) : (
-                <ul className="flex flex-col">
-                  {chats.map((chat) => (
-                    <li key={chat.id}>
+                <ul className="flex flex-col divide-y divide-border overflow-hidden rounded-panel border border-border bg-surface">
+                  {chats.map((chat, index) => (
+                    <li key={chat.id} className="animate-aios-enter" style={enterDelay(index)}>
                       <Link
                         to="/chat/$conversationId"
                         params={{ conversationId: chat.id }}
-                        className="block border-b border-border px-1 py-2 text-ui text-info underline-offset-2 hover:underline"
+                        className="block px-4 py-2 text-ui text-info transition-colors duration-[120ms] ease-aios hover:bg-surface-2"
                       >
                         {chat.title || s.untitled}
                       </Link>
@@ -194,6 +208,6 @@ export function SpaceDetailScreen({ spaceId }: { spaceId: string }) {
           void actions.remove(spaceId);
         }}
       />
-    </div>
+    </Page>
   );
 }

@@ -1,6 +1,4 @@
 import type { Task } from '@aios/contracts';
-import * as Dialog from '@radix-ui/react-dialog';
-import { X } from 'lucide-react';
 import { useState } from 'react';
 import { useOnline } from '../app/hooks';
 import { copy } from '../copy';
@@ -8,7 +6,7 @@ import { taskErrorMessage } from './errors';
 import { Markdown } from '../markdown/Markdown';
 import { Button } from '../ui/Button';
 import { ErrorBanner } from '../ui/ErrorBanner';
-import { IconButton } from '../ui/IconButton';
+import { DialogFrame } from '../screens/DialogFrame';
 import { TextArea } from '../ui/TextArea';
 import { TextField } from '../ui/TextField';
 import { isEditable, isQueued } from './board';
@@ -60,72 +58,56 @@ export function TaskDialog({ open, onOpenChange, task, onSave }: TaskDialogProps
   }
 
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-40 bg-bg/60" />
-        <Dialog.Content
-          aria-describedby={undefined}
-          className="fixed top-20 left-1/2 z-50 flex max-h-[calc(100vh-10rem)] w-[min(560px,calc(100vw-2rem))] -translate-x-1/2 flex-col gap-4 overflow-y-auto rounded-panel border border-border bg-surface p-4 shadow-float"
-        >
-          <div className="flex items-center justify-between">
-            <Dialog.Title className="text-section font-semibold text-text">
-              {!task ? d.createTitle : readOnly ? d.viewTitle : d.editTitle}
-            </Dialog.Title>
-            <Dialog.Close asChild>
-              <IconButton label={d.close}>
-                <X size={16} strokeWidth={1.5} aria-hidden="true" />
-              </IconButton>
-            </Dialog.Close>
+    <DialogFrame
+      open={open}
+      onOpenChange={onOpenChange}
+      title={!task ? d.createTitle : readOnly ? d.viewTitle : d.editTitle}
+      size="md"
+      closeLabel={d.close}
+      footer={
+        readOnly ? undefined : (
+          <>
+            <Button variant="secondary" onClick={() => setPreview((p) => !p)}>
+              {preview ? d.write : d.preview}
+            </Button>
+            <Button variant="primary" disabled={saving} onClick={() => void save()}>
+              {saving ? d.saving : d.save}
+            </Button>
+          </>
+        )
+      }
+    >
+      {error ? <ErrorBanner message={error} /> : null}
+      {readOnly ? <p className="text-meta text-text-2">{d.lockedHint}</p> : null}
+
+      <TextField
+        label={d.name}
+        value={title}
+        error={titleError}
+        disabled={readOnly}
+        onChange={(e) => setTitle(e.target.value)}
+      />
+
+      {preview || readOnly ? (
+        <div className="flex flex-col gap-1">
+          <span className="text-meta text-text-2">{d.body}</span>
+          <div className="min-h-24 rounded-control border border-border bg-surface px-3 py-2">
+            {body.trim() ? (
+              <Markdown source={body} />
+            ) : (
+              <p className="text-ui text-text-3">{d.noBody}</p>
+            )}
           </div>
-
-          {error ? <ErrorBanner message={error} /> : null}
-          {readOnly ? <p className="text-meta text-text-2">{d.lockedHint}</p> : null}
-
-          <TextField
-            label={d.name}
-            value={title}
-            error={titleError}
-            disabled={readOnly}
-            onChange={(e) => setTitle(e.target.value)}
-          />
-
-          {preview || readOnly ? (
-            <div className="flex flex-col gap-1">
-              <span className="text-meta text-text-2">{d.body}</span>
-              <div className="min-h-24 rounded-control border border-border bg-surface px-3 py-2">
-                {body.trim() ? (
-                  <Markdown source={body} />
-                ) : (
-                  <p className="text-ui text-text-3">{d.noBody}</p>
-                )}
-              </div>
-            </div>
-          ) : (
-            <TextArea
-              label={d.body}
-              hint={d.bodyHint}
-              rows={6}
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-            />
-          )}
-
-          <div className="flex items-center justify-between gap-3">
-            <div className="ml-auto flex gap-2">
-              {readOnly ? null : (
-                <Button variant="secondary" onClick={() => setPreview((p) => !p)}>
-                  {preview ? d.write : d.preview}
-                </Button>
-              )}
-              {readOnly ? null : (
-                <Button variant="primary" disabled={saving} onClick={() => void save()}>
-                  {saving ? d.saving : d.save}
-                </Button>
-              )}
-            </div>
-          </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+        </div>
+      ) : (
+        <TextArea
+          label={d.body}
+          hint={d.bodyHint}
+          rows={6}
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+        />
+      )}
+    </DialogFrame>
   );
 }

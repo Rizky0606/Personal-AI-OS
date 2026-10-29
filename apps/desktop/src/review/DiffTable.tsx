@@ -32,9 +32,9 @@ interface ShownHunk {
 }
 
 const rowTone: Record<DiffLineData['kind'], string> = {
-  add: 'bg-success/10',
-  del: 'bg-danger/10',
-  ctx: '',
+  add: 'border-l-success bg-success/10',
+  del: 'border-l-danger bg-danger/10',
+  ctx: 'border-l-transparent',
 };
 const sign: Record<DiffLineData['kind'], string> = { add: '+', del: '−', ctx: ' ' };
 
@@ -104,7 +104,7 @@ function Unified({ hunk, props }: { hunk: ShownHunk; props: DiffTableProps }) {
         <div key={i}>
           <div
             className={cn(
-              'grid grid-cols-[3rem_3rem_1.25rem_1fr] gap-x-1 px-1',
+              'grid grid-cols-[3rem_3rem_1.25rem_1fr] gap-x-1 border-l-2 px-1',
               rowTone[line.kind],
             )}
           >
@@ -133,7 +133,12 @@ function Side({
 }) {
   if (!line) return <div className="bg-surface-2/40" />;
   return (
-    <div className={cn('grid grid-cols-[3rem_1.25rem_1fr] gap-x-1 px-1', rowTone[line.kind])}>
+    <div
+      className={cn(
+        'grid grid-cols-[3rem_1.25rem_1fr] gap-x-1 border-l-2 px-1',
+        rowTone[line.kind],
+      )}
+    >
       {right ? (
         <NewNo line={line} onStart={props.onStartComment} readOnly={props.readOnly === true} />
       ) : (
@@ -179,10 +184,12 @@ export function DiffTable(props: DiffTableProps) {
   }, [patch, path]);
 
   return (
-    <div className="font-mono text-ui leading-5 text-text">
+    <div className="font-mono text-ui leading-6 text-text">
       {hunks.map((hunk, i) => (
         <section key={i} aria-label={`${copy.review.hunkLabel} ${i + 1}`}>
-          <div className="truncate bg-surface-2 px-2 text-meta text-text-3">{hunk.header}</div>
+          <div className="truncate bg-surface-2 px-3 py-0.5 text-meta text-text-3">
+            {hunk.header}
+          </div>
           {view === 'split' ? (
             <Split hunk={hunk} props={props} />
           ) : (

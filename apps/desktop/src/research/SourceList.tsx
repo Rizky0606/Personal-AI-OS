@@ -1,6 +1,7 @@
 import { ExternalLink } from 'lucide-react';
 import { copy } from '../copy';
 import { openExternal } from '../lib/external';
+import { enterDelay } from '../screens/PageLayout';
 
 export interface SourceItem {
   key: string;
@@ -22,9 +23,9 @@ function hostOf(url: string): string {
 /** Daftar sumber; tiap baris dibuka di peramban sistem. */
 export function SourceList({ items }: { items: SourceItem[] }) {
   return (
-    <ul className="flex flex-col">
-      {items.map((item) => (
-        <li key={item.key} className="border-b border-border">
+    <ul className="flex flex-col divide-y divide-border overflow-hidden rounded-panel border border-border bg-surface">
+      {items.map((item, index) => (
+        <li key={item.key} className="animate-aios-enter" style={enterDelay(index)}>
           <a
             href={item.url}
             rel="noopener noreferrer"
@@ -33,7 +34,7 @@ export function SourceList({ items }: { items: SourceItem[] }) {
               event.preventDefault();
               void openExternal(item.url);
             }}
-            className="flex min-h-8 items-center gap-2 px-1 py-1 text-ui text-text hover:bg-surface-2"
+            className="flex min-h-9 items-center gap-3 px-4 py-2 text-ui text-text transition-colors duration-[120ms] ease-aios hover:bg-surface-2"
           >
             {item.n !== undefined ? (
               <span className="w-8 shrink-0 font-mono text-meta text-text-2">[{item.n}]</span>

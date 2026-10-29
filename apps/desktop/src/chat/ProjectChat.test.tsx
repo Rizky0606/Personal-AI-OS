@@ -12,7 +12,7 @@ import { renderScreen } from '../test/render';
 vi.mock('../app/services', async () => (await import('../test/fakeServices')).fakeServices);
 
 const { ChatScreen } = await import('./ChatScreen');
-const { StatusBar } = await import('../shell/StatusBar');
+const { Header } = await import('../shell/Header');
 
 const PROJECT = '0192f0c4-7a1b-7c2d-a001-4a5b6c7d8e91';
 const APPROVAL = '0192f0c4-7a1b-7c2d-a003-4a5b6c7d8e93';
@@ -409,7 +409,9 @@ describe('panel izin inline', () => {
   });
 });
 
-describe('status bar: project dan branch', () => {
+describe('header: project dan branch', () => {
+  const crumb = () => screen.getByRole('group', { name: copy.shell.location });
+
   it('menampilkan project dan branch bawaan; saat run coding berjalan, branch kerja agent', async () => {
     useUiStore.getState().setActiveProject(PROJECT);
     api.listMessages.mockResolvedValue(
@@ -419,10 +421,11 @@ describe('status bar: project dan branch', () => {
     await renderScreen(
       <>
         <ChatScreen conversationId={CONV} />
-        <StatusBar />
+        <Header title={copy.nav.chat} />
       </>,
     );
-    expect(await screen.findByText('Toko Online · main')).toBeInTheDocument();
+    expect(await within(crumb()).findByText('Toko Online')).toBeInTheDocument();
+    expect(within(crumb()).getByText('main')).toBeInTheDocument();
     await waitFor(() => expect(runs.get(RUN_X)).toBeDefined());
 
     act(() => {
@@ -434,13 +437,14 @@ describe('status bar: project dan branch', () => {
       });
       emit(`run:${RUN_X}`, { type: 'run.status', status: 'running' });
     });
-    expect(await screen.findByText(`Toko Online · ${workerBranchFor(RUN_X)}`)).toBeInTheDocument();
+    expect(await within(crumb()).findByText(workerBranchFor(RUN_X))).toBeInTheDocument();
+    expect(within(crumb()).getByText('Toko Online')).toBeInTheDocument();
 
     act(() => emit(`run:${RUN_X}`, { type: 'run.status', status: 'needs_review' }));
-    expect(await screen.findByText('Toko Online · main')).toBeInTheDocument();
+    expect(await within(crumb()).findByText('main')).toBeInTheDocument();
   });
 
-  it('role Umum di dalam project tidak mengubah branch di status bar', async () => {
+  it('role Umum di dalam project tidak mengubah branch di header', async () => {
     useUiStore.getState().setActiveProject(PROJECT);
     api.listMessages.mockResolvedValue(
       page(message({ author: 'user', text: 'tulis catatan', runId: RUN_X })),
@@ -449,7 +453,7 @@ describe('status bar: project dan branch', () => {
     await renderScreen(
       <>
         <ChatScreen conversationId={CONV} />
-        <StatusBar />
+        <Header title={copy.nav.chat} />
       </>,
     );
     await waitFor(() => expect(runs.get(RUN_X)).toBeDefined());
@@ -459,13 +463,17 @@ describe('status bar: project dan branch', () => {
       emit(`run:${RUN_X}`, { type: 'run.status', status: 'running' });
     });
 
-    expect(await screen.findByText('Toko Online · main')).toBeInTheDocument();
+    expect(await within(crumb()).findByText('main')).toBeInTheDocument();
+    expect(within(crumb()).queryByText(/^aios\//)).not.toBeInTheDocument();
   });
 
-  it('tanpa project aktif: Chat umum', async () => {
-    await renderScreen(<StatusBar />);
+  it('tanpa project aktif: breadcrumb hanya judul bagian', async () => {
+    await renderScreen(<Header title={copy.nav.chat} />);
 
-    expect(await screen.findByText(copy.status.project)).toBeInTheDocument();
+    expect(
+      within(crumb()).getByRole('heading', { level: 1, name: copy.nav.chat }),
+    ).toBeInTheDocument();
+    expect(within(crumb()).queryByText('Toko Online')).not.toBeInTheDocument();
   });
 });
 

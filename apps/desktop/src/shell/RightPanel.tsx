@@ -13,7 +13,7 @@ export function RightPanel() {
       <aside
         aria-label={copy.shell.toggleRightPanel}
         style={{ width }}
-        className="flex shrink-0 flex-col bg-surface"
+        className="my-2 mr-2 flex shrink-0 flex-col overflow-hidden rounded-panel border border-border bg-surface"
       >
         <PaneArea />
       </aside>

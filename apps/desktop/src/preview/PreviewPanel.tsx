@@ -72,7 +72,7 @@ export function PreviewPanel() {
 
   if (preview.starting || info?.status === 'starting') {
     return (
-      <div role="status" className="flex flex-col gap-2 p-6">
+      <div role="status" className="flex animate-aios-enter flex-col gap-2 px-6 py-8">
         <p className="text-ui text-text">{p.starting}</p>
         <p className="max-w-[56ch] text-meta text-text-2">{p.startingHint}</p>
       </div>
@@ -81,7 +81,7 @@ export function PreviewPanel() {
 
   if (info?.status === 'failed' || preview.error) {
     return (
-      <div className="flex flex-col gap-3 p-4">
+      <div className="flex flex-col gap-3 p-5">
         <ErrorBanner
           message={`${p.failed} ${preview.error ?? info?.error ?? ''}`.trim()}
           action={
@@ -93,7 +93,7 @@ export function PreviewPanel() {
         {info?.log ? (
           <details>
             <summary className="cursor-pointer text-meta text-text-2">{p.showLog}</summary>
-            <pre className="mt-2 max-h-64 overflow-auto rounded-control border border-border bg-surface-2 p-2 font-mono text-meta whitespace-pre-wrap text-text-2">
+            <pre className="mt-2 max-h-64 overflow-auto rounded-panel border border-border bg-surface-2 p-3 font-mono text-meta whitespace-pre-wrap text-text-2">
               {info.log}
             </pre>
           </details>
@@ -118,9 +118,9 @@ export function PreviewPanel() {
   const url = info.url;
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex h-8 shrink-0 items-center gap-2 px-2 text-caption text-text-3">
-        <span>{scope}</span>
-        {info.command ? <span className="font-mono">· {info.command}</span> : null}
+      <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border px-3 text-meta text-text-3">
+        <span className="rounded-full bg-surface-2 px-2.5 py-0.5 text-text-2">{scope}</span>
+        {info.command ? <span className="min-w-0 truncate font-mono">· {info.command}</span> : null}
       </div>
       <PreviewToolbar
         size={size}
@@ -132,7 +132,7 @@ export function PreviewPanel() {
         onStop={() => void preview.stop()}
       />
       {inspecting ? (
-        <p role="status" className="shrink-0 px-2 py-1 text-meta text-text-2">
+        <p role="status" className="shrink-0 px-3 py-1.5 text-meta text-text-2">
           {p.inspecting}
         </p>
       ) : null}

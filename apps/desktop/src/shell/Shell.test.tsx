@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import {
   RouterProvider,
   createMemoryHistory,
@@ -36,7 +36,7 @@ async function renderShell(path = '/') {
       </TooltipProvider>
     </QueryClientProvider>,
   );
-  await screen.findByRole('navigation', { name: copy.shell.rail });
+  await screen.findByRole('navigation', { name: copy.shell.navigation });
   return { router, ...view };
 }
 
@@ -48,11 +48,11 @@ beforeEach(() => {
 });
 
 describe('Shell', () => {
-  it('kerangka final: rail 7 tujuan, sidebar, area utama, dan status bar; panel kanan tertutup', async () => {
+  it('kerangka: satu sidebar dengan 6 bagian dan Pengaturan, header, dan area utama; tanpa status bar; panel kanan tertutup', async () => {
     await renderShell();
 
-    const rail = screen.getByRole('navigation', { name: copy.shell.rail });
-    const names = Array.from(rail.querySelectorAll('a')).map((a) => a.getAttribute('aria-label'));
+    const nav = screen.getByRole('navigation', { name: copy.shell.navigation });
+    const names = Array.from(nav.querySelectorAll('a')).map((a) => a.getAttribute('aria-label'));
     expect(names).toEqual([
       copy.nav.chat,
       copy.nav.workspace,
@@ -60,27 +60,41 @@ describe('Shell', () => {
       copy.nav.schedules,
       copy.nav.research,
       copy.nav.spaces,
-      copy.nav.settings,
     ]);
-    expect(screen.getByRole('complementary', { name: copy.shell.sidebar })).toBeInTheDocument();
+    const sidebar = screen.getByRole('complementary', { name: copy.shell.sidebar });
+    expect(within(sidebar).getByRole('link', { name: copy.nav.settings })).toBeInTheDocument();
+    expect(within(sidebar).getByRole('link', { name: copy.nav.chat })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
     expect(screen.getByRole('main', { name: copy.shell.mainArea })).toBeInTheDocument();
-    expect(screen.getByRole('contentinfo')).toHaveTextContent(copy.status.idle);
+    expect(screen.getByRole('heading', { level: 1, name: copy.nav.chat })).toBeInTheDocument();
+    expect(screen.queryByRole('contentinfo')).not.toBeInTheDocument();
+    // Status koneksi pindah ke kaki sidebar.
+    expect(within(sidebar).getByText(copy.status.idle)).toBeInTheDocument();
     expect(
       screen.queryByRole('complementary', { name: copy.shell.toggleRightPanel }),
     ).not.toBeInTheDocument();
   });
 
-  it('Ctrl+B menutup dan membuka sidebar; tombol di area utama membukanya lagi', async () => {
+  it('Ctrl+B menciutkan sidebar jadi ikon dan membukanya lagi; tombol di header membukanya', async () => {
     await renderShell();
+    const sidebar = screen.getByRole('complementary', { name: copy.shell.sidebar });
+    expect(screen.getByRole('button', { name: copy.shell.collapseSidebar })).toBeInTheDocument();
+    expect(within(sidebar).getByText(copy.shell.search)).toBeInTheDocument();
 
     ctrl('b');
-    expect(
-      screen.queryByRole('complementary', { name: copy.shell.sidebar }),
-    ).not.toBeInTheDocument();
     expect(useUiStore.getState().sidebarOpen).toBe(false);
+    // Ciut: tetap ada navigasi (ikon), tanpa teks pencarian dan daftar konteks.
+    expect(screen.getByRole('navigation', { name: copy.shell.navigation })).toBeInTheDocument();
+    expect(within(sidebar).queryByText(copy.shell.search)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: copy.shell.collapseSidebar }),
+    ).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: copy.shell.expandSidebar }));
-    expect(screen.getByRole('complementary', { name: copy.shell.sidebar })).toBeInTheDocument();
+    expect(useUiStore.getState().sidebarOpen).toBe(true);
+    expect(within(sidebar).getByText(copy.shell.search)).toBeInTheDocument();
   });
 
   it('Ctrl+J membuka panel kanan dengan 6 tab dan lebar yang diingat', async () => {
@@ -158,7 +172,7 @@ describe('Shell', () => {
     expect(useUiStore.getState().newChatSignal).toBe(before + 1);
   });
 
-  it('Ctrl+1..6 berpindah layar sesuai urutan rail, tanpa mouse', async () => {
+  it('Ctrl+1..6 berpindah layar sesuai urutan sidebar, tanpa mouse', async () => {
     const { router } = await renderShell();
 
     for (const [digit, path] of [

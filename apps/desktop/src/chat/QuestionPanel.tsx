@@ -71,7 +71,7 @@ export function QuestionPanel({ questions, busy, onSubmit }: QuestionPanelProps)
   return (
     <section
       aria-label={q.title}
-      className="flex animate-aios-rise flex-col gap-4 rounded-panel border border-accent bg-surface p-4 shadow-glow"
+      className="ml-10 flex max-w-(--aios-chat-measure) animate-aios-rise flex-col gap-4 rounded-panel border border-accent bg-surface p-4 shadow-glow"
     >
       <h3 className="text-ui font-semibold text-text">{q.title}</h3>
       {questions.map((question, i) => {

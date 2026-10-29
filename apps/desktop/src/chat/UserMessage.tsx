@@ -25,8 +25,8 @@ const clock = (iso: string) =>
   new Date(iso).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
 
 /**
- * Blok `surface-2` rata kanan, radius 10 (DESIGN_SYSTEM: Pesan pengguna). Aksi muncul saat kursor atau fokus
- * berada di pesan; Ubah mengganti blok dengan editor di tempat.
+ * Gelembung `accent-soft` rata kanan, radius panel dengan sudut kanan atas kecil, jam kirim kecil di dalamnya.
+ * Aksi muncul saat kursor atau fokus berada di pesan; Ubah mengganti gelembung dengan editor di tempat.
  */
 export function UserMessage({
   text,
@@ -52,7 +52,7 @@ export function UserMessage({
   if (editing) {
     return (
       <article aria-label={copy.chat.you} className="flex flex-col items-end gap-2">
-        <div className="w-full max-w-[72ch]">
+        <div className="w-full max-w-(--aios-chat-measure)">
           <TextArea
             label={copy.chat.editLabel}
             hint={copy.chat.editNote}
@@ -90,13 +90,13 @@ export function UserMessage({
   return (
     <article
       aria-label={copy.chat.you}
-      className="group flex animate-aios-rise flex-col items-end gap-1"
+      className="group flex animate-aios-enter flex-col items-end gap-1"
     >
       {text ? (
-        <div className="max-w-[72ch] rounded-panel rounded-tr-badge border border-border bg-surface-2 px-4 py-3">
+        <div className="max-w-(--aios-chat-measure) rounded-panel rounded-tr-badge bg-accent-soft px-4 py-2.5">
           <p className="text-chat whitespace-pre-wrap text-text">{text}</p>
           {sentAt ? (
-            <p className="mt-1 flex items-center justify-end gap-1 font-mono text-caption text-text-3">
+            <p className="mt-1 flex items-center justify-end gap-1 font-mono text-caption text-text-2">
               <time dateTime={sentAt}>{clock(sentAt)}</time>
               <CheckCheck
                 size={12}
@@ -111,7 +111,7 @@ export function UserMessage({
       {files.length > 0 ? (
         <ul
           aria-label={copy.chat.files.group}
-          className="flex max-w-[72ch] flex-wrap justify-end gap-2"
+          className="flex max-w-(--aios-chat-measure) flex-wrap justify-end gap-2"
         >
           {files.map((file) => (
             <li

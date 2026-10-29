@@ -5,6 +5,7 @@ import { useLiveRun, useOnline } from '../app/hooks';
 import { runs } from '../app/services';
 import { copy } from '../copy';
 import { Markdown } from '../markdown/Markdown';
+import { Page, PageHeader } from '../screens/PageLayout';
 import { Button } from '../ui/Button';
 import { ErrorBanner } from '../ui/ErrorBanner';
 import { StateView, type ViewState } from '../ui/StateView';
@@ -76,42 +77,42 @@ export function ResearchDetailScreen({ researchId }: { researchId: string }) {
       onRetry={() => void query.refetch()}
     >
       {job ? (
-        <div className="mx-auto flex max-w-[calc(72ch+4rem)] flex-col gap-6 px-8 py-6">
-          <header className="flex flex-col gap-2">
-            <h2 className="text-section font-semibold text-text">{job.question}</h2>
-            <p className="text-meta text-text-2">
-              {copy.research.status[job.status]} · {copy.research.form.depths[job.depth]}
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {running ? (
-                <Button
-                  variant="secondary"
-                  disabled={busy === 'cancel'}
-                  onClick={() => void cancel(job.id)}
-                >
-                  {busy === 'cancel' ? copy.research.cancelling : copy.research.cancel}
-                </Button>
-              ) : null}
-              {job.status === 'completed' ? (
-                <>
+        <Page width="md">
+          <PageHeader
+            title={job.question}
+            description={`${copy.research.status[job.status]} · ${copy.research.form.depths[job.depth]}`}
+            actions={
+              <>
+                {running ? (
                   <Button
                     variant="secondary"
-                    disabled={busy === 'md'}
-                    onClick={() => void exportReport(job.id, 'md')}
+                    disabled={busy === 'cancel'}
+                    onClick={() => void cancel(job.id)}
                   >
-                    {busy === 'md' ? copy.research.exporting : copy.research.exportMd}
+                    {busy === 'cancel' ? copy.research.cancelling : copy.research.cancel}
                   </Button>
-                  <Button
-                    variant="secondary"
-                    disabled={busy === 'pdf'}
-                    onClick={() => void exportReport(job.id, 'pdf')}
-                  >
-                    {busy === 'pdf' ? copy.research.exporting : copy.research.exportPdf}
-                  </Button>
-                </>
-              ) : null}
-            </div>
-          </header>
+                ) : null}
+                {job.status === 'completed' ? (
+                  <>
+                    <Button
+                      variant="secondary"
+                      disabled={busy === 'md'}
+                      onClick={() => void exportReport(job.id, 'md')}
+                    >
+                      {busy === 'md' ? copy.research.exporting : copy.research.exportMd}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      disabled={busy === 'pdf'}
+                      onClick={() => void exportReport(job.id, 'pdf')}
+                    >
+                      {busy === 'pdf' ? copy.research.exporting : copy.research.exportPdf}
+                    </Button>
+                  </>
+                ) : null}
+              </>
+            }
+          />
 
           {job.status === 'failed' || failureMessage ? (
             <ErrorBanner message={`${copy.research.failedTitle} ${failureMessage ?? ''}`.trim()} />
@@ -128,7 +129,7 @@ export function ResearchDetailScreen({ researchId }: { researchId: string }) {
           {subQuestions.length > 0 ? (
             <section className="flex flex-col gap-2">
               <h3 className="text-chat font-semibold text-text">{copy.research.plan}</h3>
-              <ol className="list-decimal pl-6 text-ui text-text-2">
+              <ol className="list-decimal rounded-panel border border-border bg-surface py-3 pr-4 pl-9 text-ui text-text-2">
                 {subQuestions.map((q) => (
                   <li key={q}>{q}</li>
                 ))}
@@ -137,7 +138,7 @@ export function ResearchDetailScreen({ researchId }: { researchId: string }) {
           ) : null}
 
           {report ? (
-            <section aria-label={copy.research.report}>
+            <section aria-label={copy.research.report} className="max-w-[72ch]">
               <Markdown source={report.bodyMd} citations={report.citations} />
             </section>
           ) : running || job.status === 'queued' ? null : (
@@ -152,7 +153,7 @@ export function ResearchDetailScreen({ researchId }: { researchId: string }) {
               <p className="text-ui text-text-2">{copy.research.sourcesEmpty}</p>
             )}
           </section>
-        </div>
+        </Page>
       ) : null}
     </StateView>
   );

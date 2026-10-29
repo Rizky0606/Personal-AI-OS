@@ -6,19 +6,22 @@ import { useOnline } from '../app/hooks';
 import { copy } from '../copy';
 import { cn } from '../lib/cn';
 import { formatDateTime } from '../lib/time';
+import { Page, PageHeader, enterDelay } from '../screens/PageLayout';
 import { IconButton } from '../ui/IconButton';
 import { StateView, type ViewState } from '../ui/StateView';
 import { useWorker } from '../worker/hooks';
 
 const p = copy.status.page;
 const headerClass =
-  'border-b border-border-strong px-3 py-2 text-left text-meta font-medium text-text-2';
-const cellClass = 'border-b border-border px-3 py-1 align-middle text-ui';
+  'border-b border-border px-4 py-2.5 text-left text-meta font-medium text-text-3';
+const cellClass = 'border-b border-border px-4 py-3 align-middle text-ui';
+const rowClass = 'transition-colors duration-[120ms] ease-aios hover:bg-surface-2';
+const panelClass = 'overflow-hidden rounded-panel border border-border bg-surface';
 
 function Section({ id, title, children }: { id: string; title: string; children: ReactNode }) {
   return (
-    <section aria-labelledby={id} className="flex flex-col gap-2">
-      <h3 id={id} className="text-ui font-semibold text-text">
+    <section aria-labelledby={id} className="flex flex-col gap-3">
+      <h3 id={id} className="text-section font-semibold text-text">
         {title}
       </h3>
       {children}
@@ -28,11 +31,11 @@ function Section({ id, title, children }: { id: string; title: string; children:
 
 function Rows({ rows }: { rows: [label: string, value: ReactNode][] }) {
   return (
-    <dl className="flex max-w-xl flex-col">
+    <dl className={cn(panelClass, 'flex flex-col divide-y divide-border')}>
       {rows.map(([label, value]) => (
         <div
           key={label}
-          className="grid grid-cols-[12rem_1fr] gap-3 border-b border-border py-1.5 text-ui"
+          className="grid grid-cols-[12rem_1fr] gap-3 px-4 py-3 text-ui transition-colors duration-[120ms] ease-aios hover:bg-surface-2"
         >
           <dt className="text-text-2">{label}</dt>
           <dd className="min-w-0 break-words font-mono text-text">{value}</dd>
@@ -80,13 +83,16 @@ export function StatusScreen() {
       : 'content';
 
   return (
-    <div className="flex flex-col">
-      <div className="flex h-12 items-center justify-between border-b border-border px-4">
-        <h2 className="text-section font-semibold text-text">{p.title}</h2>
-        <IconButton label={p.refresh} onClick={() => void query.refetch()}>
-          <RefreshCw size={16} strokeWidth={1.5} aria-hidden="true" />
-        </IconButton>
-      </div>
+    <Page>
+      <PageHeader
+        title={p.title}
+        description={p.description}
+        actions={
+          <IconButton label={p.refresh} onClick={() => void query.refetch()}>
+            <RefreshCw size={16} strokeWidth={1.5} aria-hidden="true" />
+          </IconButton>
+        }
+      />
       <StateView
         state={view}
         loadingLabel={p.loading}
@@ -97,7 +103,7 @@ export function StatusScreen() {
         onRetry={() => void query.refetch()}
       >
         {status ? (
-          <div className="flex flex-col gap-6 p-4">
+          <div className="flex animate-aios-enter flex-col gap-6">
             <p role="status" className="text-ui text-text-2">
               {p.overall[status.readiness.status]}
             </p>
@@ -115,44 +121,50 @@ export function StatusScreen() {
             </Section>
 
             <Section id="st-deps" title={p.dependencies}>
-              <table className="w-full max-w-xl border-collapse">
-                <thead>
-                  <tr>
-                    <th scope="col" className={headerClass}>
-                      {p.dependencies}
-                    </th>
-                    <th scope="col" className={headerClass}>
-                      {copy.status.statusColumn}
-                    </th>
-                    <th scope="col" className={`${headerClass} text-right`}>
-                      {p.latency}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(Object.keys(status.readiness.checks) as (keyof typeof p.deps)[]).map((name) => {
-                    const check = status.readiness.checks[name];
-                    return (
-                      <tr key={name}>
-                        <th scope="row" className={`${cellClass} text-left font-normal`}>
-                          {p.deps[name]}
-                        </th>
-                        <td className={cellClass}>
-                          <Dot
-                            ok={check.ok}
-                            label={
-                              check.ok ? p.ok : `${p.down}${check.error ? ` (${check.error})` : ''}`
-                            }
-                          />
-                        </td>
-                        <td className={`${cellClass} text-right font-mono tabular-nums`}>
-                          {check.latencyMs === undefined ? '-' : `${check.latencyMs} ms`}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+              <div className={panelClass}>
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr>
+                      <th scope="col" className={headerClass}>
+                        {p.dependencies}
+                      </th>
+                      <th scope="col" className={headerClass}>
+                        {copy.status.statusColumn}
+                      </th>
+                      <th scope="col" className={`${headerClass} text-right`}>
+                        {p.latency}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(Object.keys(status.readiness.checks) as (keyof typeof p.deps)[]).map(
+                      (name) => {
+                        const check = status.readiness.checks[name];
+                        return (
+                          <tr key={name} className={rowClass}>
+                            <th scope="row" className={`${cellClass} text-left font-normal`}>
+                              {p.deps[name]}
+                            </th>
+                            <td className={cellClass}>
+                              <Dot
+                                ok={check.ok}
+                                label={
+                                  check.ok
+                                    ? p.ok
+                                    : `${p.down}${check.error ? ` (${check.error})` : ''}`
+                                }
+                              />
+                            </td>
+                            <td className={`${cellClass} text-right font-mono tabular-nums`}>
+                              {check.latencyMs === undefined ? '-' : `${check.latencyMs} ms`}
+                            </td>
+                          </tr>
+                        );
+                      },
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </Section>
 
             <Section id="st-workers" title={p.workers}>
@@ -174,11 +186,12 @@ export function StatusScreen() {
               {status.workers.length === 0 ? (
                 <p className="text-ui text-text-2">{p.noWorkers}</p>
               ) : (
-                <ul className="flex max-w-xl flex-col">
-                  {status.workers.map((w) => (
+                <ul className={cn(panelClass, 'divide-y divide-border')}>
+                  {status.workers.map((w, index) => (
                     <li
                       key={w.deviceId}
-                      className="flex items-center justify-between gap-3 border-b border-border py-1.5 text-ui"
+                      style={enterDelay(index)}
+                      className="flex animate-aios-enter items-center justify-between gap-3 px-4 py-3 text-ui transition-colors duration-[120ms] ease-aios hover:bg-surface-2"
                     >
                       <span className="min-w-0 truncate text-text">{w.name}</span>
                       <span className="flex shrink-0 items-center gap-4 text-text-2">
@@ -197,49 +210,54 @@ export function StatusScreen() {
               {status.jobs.length === 0 ? (
                 <p className="text-ui text-text-2">{p.noJobs}</p>
               ) : (
-                <table className="w-full max-w-xl border-collapse">
-                  <thead>
-                    <tr>
-                      <th scope="col" className={headerClass}>
-                        {p.queue}
-                      </th>
-                      <th scope="col" className={`${headerClass} text-right`}>
-                        {p.queued}
-                      </th>
-                      <th scope="col" className={`${headerClass} text-right`}>
-                        {p.active}
-                      </th>
-                      <th scope="col" className={`${headerClass} text-right`}>
-                        {p.failed}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {status.jobs.map((q) => (
-                      <tr key={q.queue}>
-                        <th scope="row" className={`${cellClass} text-left font-mono font-normal`}>
-                          {q.queue}
+                <div className={panelClass}>
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr>
+                        <th scope="col" className={headerClass}>
+                          {p.queue}
                         </th>
-                        <td className={`${cellClass} text-right tabular-nums`}>{q.queued}</td>
-                        <td className={`${cellClass} text-right tabular-nums`}>{q.active}</td>
-                        <td
-                          className={cn(
-                            cellClass,
-                            'text-right tabular-nums',
-                            q.failed > 0 && 'text-danger',
-                          )}
-                        >
-                          {q.failed}
-                        </td>
+                        <th scope="col" className={`${headerClass} text-right`}>
+                          {p.queued}
+                        </th>
+                        <th scope="col" className={`${headerClass} text-right`}>
+                          {p.active}
+                        </th>
+                        <th scope="col" className={`${headerClass} text-right`}>
+                          {p.failed}
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {status.jobs.map((q) => (
+                        <tr key={q.queue} className={rowClass}>
+                          <th
+                            scope="row"
+                            className={`${cellClass} text-left font-mono font-normal`}
+                          >
+                            {q.queue}
+                          </th>
+                          <td className={`${cellClass} text-right tabular-nums`}>{q.queued}</td>
+                          <td className={`${cellClass} text-right tabular-nums`}>{q.active}</td>
+                          <td
+                            className={cn(
+                              cellClass,
+                              'text-right tabular-nums',
+                              q.failed > 0 && 'text-danger',
+                            )}
+                          >
+                            {q.failed}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </Section>
           </div>
         ) : null}
       </StateView>
-    </div>
+    </Page>
   );
 }

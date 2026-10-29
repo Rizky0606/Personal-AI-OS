@@ -1,4 +1,4 @@
-import { Check, ChevronRight, CircleSlash, Loader, TriangleAlert, Wrench } from 'lucide-react';
+import { Check, ChevronRight, CircleSlash, Loader, TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
 import { copy } from '../copy';
 import { cn } from '../lib/cn';
@@ -25,41 +25,61 @@ export function formatDuration(ms: number): string {
   return ms < 1_000 ? `${ms} ms` : `${(ms / 1_000).toFixed(1).replace('.', ',')} dtk`;
 }
 
-/** Satu baris mono: ikon, nama tool, target, status, durasi. Target panjang bisa dibuka penuh. */
+const chipClass =
+  'inline-flex h-7 max-w-full items-center gap-1.5 rounded-control border border-border bg-surface-2 px-2 font-mono text-meta text-text-2';
+
+/**
+ * Chip kecil: ikon status, nama tool, target (dipotong), dan durasi; berderet bersama chip lain. Target
+ * panjang bisa dibuka penuh di bawah chip.
+ */
 export function ToolStepRow({ name, target, status, durationMs }: ToolStepView) {
   const [open, setOpen] = useState(false);
   const label = copy.chat.tool[status];
+  const body = (
+    <>
+      {statusIcon[status]}
+      <span className="sr-only">{label}: </span>
+      <span className="shrink-0 text-text">{name}</span>
+      {target ? (
+        <>
+          <span className="min-w-0 max-w-48 truncate">{open ? '' : target}</span>
+          <ChevronRight
+            size={12}
+            strokeWidth={1.5}
+            aria-hidden="true"
+            className={cn(
+              'shrink-0 text-text-3 transition-transform duration-[120ms] ease-aios',
+              open && 'rotate-90',
+            )}
+          />
+        </>
+      ) : null}
+      {durationMs !== undefined ? (
+        <span className="shrink-0 text-text-3">{formatDuration(durationMs)}</span>
+      ) : null}
+    </>
+  );
   return (
-    <div className="font-mono text-ui text-text-2">
-      <div className="flex min-h-6 items-center gap-2">
-        <Wrench size={14} strokeWidth={1.5} aria-hidden="true" className="shrink-0 text-text-3" />
-        <span className="shrink-0 text-text">{name}</span>
-        {target ? (
-          <button
-            type="button"
-            aria-expanded={open}
-            onClick={() => setOpen((v) => !v)}
-            className="flex min-w-0 items-center gap-1 rounded-badge text-left hover:text-text"
-          >
-            <ChevronRight
-              size={12}
-              strokeWidth={1.5}
-              aria-hidden="true"
-              className={cn('shrink-0 transition-transform duration-[120ms]', open && 'rotate-90')}
-            />
-            <span className={cn('min-w-0', !open && 'truncate')}>{open ? '' : target}</span>
-          </button>
-        ) : null}
-        <span className="ml-auto flex shrink-0 items-center gap-1">
-          {statusIcon[status]}
-          <span>{label}</span>
-          {durationMs !== undefined ? (
-            <span className="text-text-3">{formatDuration(durationMs)}</span>
-          ) : null}
-        </span>
-      </div>
+    <div className="flex max-w-full min-w-0 flex-col items-start gap-1">
+      {target ? (
+        <button
+          type="button"
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
+          className={cn(
+            chipClass,
+            'text-left transition-colors duration-[120ms] ease-aios hover:border-border-strong hover:text-text',
+          )}
+        >
+          {body}
+        </button>
+      ) : (
+        <span className={chipClass}>{body}</span>
+      )}
       {open && target ? (
-        <p className="pb-1 pl-6 break-all whitespace-pre-wrap text-text">{target}</p>
+        <p className="animate-aios-enter max-w-full rounded-control bg-surface-2 px-3 py-2 font-mono text-meta break-all whitespace-pre-wrap text-text">
+          {target}
+        </p>
       ) : null}
     </div>
   );

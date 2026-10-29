@@ -212,7 +212,7 @@ private fun MessageList(
         reverseLayout = true,
         modifier = Modifier.fillMaxSize(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(Tokens.Space.s16),
-        verticalArrangement = Arrangement.spacedBy(Tokens.Space.s16)
+        verticalArrangement = Arrangement.spacedBy(Tokens.Space.s20)
     ) {
         items(items, key = { it.key }) { item ->
             // Pesan baru memudar masuk dan pesan lain bergeser halus (bukan melompat) saat daftar berubah.

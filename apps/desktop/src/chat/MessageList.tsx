@@ -1,9 +1,7 @@
-import type { Message, QueueName, QuestionAnswer } from '@aios/contracts';
+import type { Message, QuestionAnswer } from '@aios/contracts';
 import type { RoleInfo } from '../api/gateway';
 import { useLayoutEffect, useRef, useState } from 'react';
 import { copy } from '../copy';
-import { X } from 'lucide-react';
-import { IconButton } from '../ui/IconButton';
 import { isSettled, type LiveRun, type PendingApproval } from '../realtime/liveRun';
 import { Button } from '../ui/Button';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
@@ -44,8 +42,6 @@ export interface MessageListProps {
     questionId: string,
     result: { answers: QuestionAnswer[]; cancelled: boolean },
   ) => void;
-  /** Menarik arahan dari antrean agent; tanpa ini tombol tarik tidak tampil. */
-  onRemoveQueued?: (queue: QueueName, text: string) => void;
   hasMore: boolean;
   loadingOlder: boolean;
   onLoadOlder: () => void;
@@ -100,7 +96,6 @@ export function MessageList({
   resolvingApprovals,
   onResolveApproval,
   onAnswerQuestion,
-  onRemoveQueued,
   hasMore,
   loadingOlder,
   onLoadOlder,
@@ -141,7 +136,7 @@ export function MessageList({
       }}
       className="min-h-0 flex-1 overflow-y-auto"
     >
-      <div className="mx-auto flex max-w-[calc(72ch+4rem)] flex-col gap-6 px-8 py-6">
+      <div className="mx-auto flex max-w-[calc(var(--aios-chat-measure)+6.5rem)] flex-col gap-8 px-8 py-8">
         {hasMore ? (
           <Button
             variant="ghost"
@@ -189,55 +184,15 @@ export function MessageList({
             <AssistantMessage
               parts={liveParts(live)}
               reasoning={live.reasoning}
-              todos={live.todos}
               role={live.role}
               model={null}
               roles={roles}
               streaming={streaming}
             />
             {streaming && !live.text ? (
-              <p role="status" className="text-meta text-text-2">
+              <p role="status" className="pl-10 text-meta text-text-2">
                 {copy.runStatus[live.status]}…
               </p>
-            ) : null}
-            {live.queue.steering.length + live.queue.followUp.length > 0 ? (
-              <ul
-                aria-label={copy.chat.queue.title}
-                className="flex animate-aios-enter flex-col gap-1 text-meta text-text-2"
-              >
-                {live.queue.steering.map((text, i) => (
-                  <li key={`s${i}`} className="flex items-baseline gap-2">
-                    <span className="rounded-badge bg-accent-soft px-1.5 py-0.5 font-mono text-caption text-text">
-                      {copy.chat.queue.steering}
-                    </span>
-                    <span className="min-w-0 flex-1 truncate">{text}</span>
-                    {onRemoveQueued ? (
-                      <IconButton
-                        label={copy.chat.queue.remove(text)}
-                        onClick={() => onRemoveQueued('steering', text)}
-                      >
-                        <X size={14} strokeWidth={1.5} aria-hidden="true" />
-                      </IconButton>
-                    ) : null}
-                  </li>
-                ))}
-                {live.queue.followUp.map((text, i) => (
-                  <li key={`f${i}`} className="flex items-baseline gap-2">
-                    <span className="rounded-badge bg-surface-2 px-1.5 py-0.5 font-mono text-caption text-text">
-                      {copy.chat.queue.followUp}
-                    </span>
-                    <span className="min-w-0 flex-1 truncate">{text}</span>
-                    {onRemoveQueued ? (
-                      <IconButton
-                        label={copy.chat.queue.remove(text)}
-                        onClick={() => onRemoveQueued('followUp', text)}
-                      >
-                        <X size={14} strokeWidth={1.5} aria-hidden="true" />
-                      </IconButton>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
             ) : null}
           </div>
         ) : null}

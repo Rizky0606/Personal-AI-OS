@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { copy } from '../copy';
-import { connectionView } from './StatusBar';
+import { connectionView } from './connectionView';
 
 describe('connectionView', () => {
   it('menurut status koneksi gateway', () => {
