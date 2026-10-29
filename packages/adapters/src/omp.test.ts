@@ -484,3 +484,164 @@ describe('pickOption', () => {
     expect(pickOption([], 'allow', false)).toBeUndefined();
   });
 });
+
+/**
+ * Skenario di bawah memakai bentuk frame yang sama dengan rekaman nyata (tool_execution_start/end,
+ * prompt_result), tetapi urutannya disusun tangan: rekaman nyata belum memuat tool yang sedang berjalan
+ * saat dibatalkan, proses mati saat tool berjalan, atau penalaran (thinking). Lihat docs/ADAPTER_EVENTS.md.
+ */
+describe('urutan frame sintetis (bentuk frame dari rekaman)', () => {
+  const llm = { baseUrl: 'http://x', apiKey: 'k' };
+  const frame = (transport: ReturnType<typeof manualTransport>, f: Record<string, unknown>) =>
+    transport.queue.push(JSON.stringify(f));
+  const toolStart = {
+    type: 'tool_execution_start',
+    toolCallId: 'call_9',
+    toolName: 'bash',
+    args: { command: 'sleep 60' },
+  };
+
+  async function boot(clock: { t: number }) {
+    const transport = manualTransport();
+    const adapter = createOmpAdapter({
+      launch: () => transport,
+      llm,
+      now: () => clock.t,
+      abortGraceMs: 500,
+    });
+    const handle = await adapter.startRun(input());
+    frame(transport, { type: 'ready' });
+    frame(transport, {
+      id: 'cfg-retry',
+      type: 'response',
+      command: 'set_auto_retry',
+      success: true,
+    });
+    return { transport, handle };
+  }
+
+  it('cancel saat tool berjalan dan omp tidak mengirim tool_execution_end: tool.finished cancelled lebih dulu, lalu aliran tutup', async () => {
+    const clock = { t: 1000 };
+    const { transport, handle } = await boot(clock);
+    frame(transport, toolStart);
+
+    const events = await collect(handle, async (event) => {
+      if (event.type !== 'tool.started') return;
+      clock.t = 1750;
+      const cancelled = handle.cancel();
+      frame(transport, { id: 'p1', type: 'prompt_result', status: 'aborted' });
+      await cancelled;
+    });
+
+    expect(events).toEqual([
+      { type: 'tool.started', toolCallId: 'call_9', name: 'bash', target: 'sleep 60' },
+      { type: 'tool.finished', toolCallId: 'call_9', status: 'cancelled', durationMs: 750 },
+    ]);
+  });
+
+  it('cancel saat tool berjalan dan omp mengirim hasil galat karena dihentikan: tetap cancelled, bukan error', async () => {
+    const clock = { t: 1000 };
+    const { transport, handle } = await boot(clock);
+    frame(transport, toolStart);
+
+    const events = await collect(handle, async (event) => {
+      if (event.type !== 'tool.started') return;
+      clock.t = 1300;
+      const cancelled = handle.cancel();
+      frame(transport, {
+        type: 'tool_execution_end',
+        toolCallId: 'call_9',
+        toolName: 'bash',
+        result: { content: [{ type: 'text', text: 'Command aborted' }] },
+        isError: true,
+      });
+      frame(transport, { id: 'p1', type: 'prompt_result', status: 'aborted' });
+      await cancelled;
+    });
+
+    expect(events.map((e) => e.type)).toEqual(['tool.started', 'tool.finished']);
+    expect(events[1]).toMatchObject({ status: 'cancelled', durationMs: 300 });
+  });
+
+  it('cancel saat izin menggantung (rekaman tool-deny): tool selesai sebagai cancelled, bukan denied', async () => {
+    const { handle } = await launchReplay('tool-deny');
+
+    const events = await collect(handle, async (event) => {
+      if (event.type === 'approval.requested') await handle.cancel();
+    });
+
+    expect(events.find((e) => e.type === 'tool.finished')).toMatchObject({ status: 'cancelled' });
+  });
+
+  it('omp mati saat tool berjalan: tool.finished error mendahului event error', async () => {
+    const clock = { t: 5000 };
+    const { transport, handle } = await boot(clock);
+    frame(transport, toolStart);
+
+    const events = await collect(handle, (event) => {
+      if (event.type !== 'tool.started') return;
+      clock.t = 5400;
+      transport.exit(1);
+    });
+
+    expect(events.map((e) => e.type)).toEqual(['tool.started', 'tool.finished', 'error']);
+    expect(events[1]).toMatchObject({ status: 'error', durationMs: 400 });
+  });
+
+  it('penalaran: thinking_delta menjadi reasoning.delta dengan messageId pesan asisten', async () => {
+    const { transport, handle } = await boot({ t: 0 });
+    frame(transport, {
+      type: 'message_update',
+      assistantMessageEvent: { type: 'thinking_delta', delta: 'Pertama, baca berkasnya. ' },
+    });
+    frame(transport, {
+      type: 'message_update',
+      assistantMessageEvent: { type: 'text_delta', delta: 'Selesai.' },
+    });
+    frame(transport, { id: 'p1', type: 'prompt_result', status: 'completed' });
+
+    const events = await collect(handle);
+
+    expect(events.slice(0, 2)).toEqual([
+      { type: 'reasoning.delta', messageId: MESSAGE, text: 'Pertama, baca berkasnya. ' },
+      { type: 'message.delta', messageId: MESSAGE, text: 'Selesai.' },
+    ]);
+  });
+
+  it('frame dan subjenis yang tidak dikenal diabaikan: run tetap selesai dan tidak ada event error', async () => {
+    const { transport, handle } = await boot({ t: 0 });
+    frame(transport, { type: 'frame_masa_depan', payload: { a: 1 } });
+    frame(transport, {
+      type: 'message_update',
+      assistantMessageEvent: { type: 'jenis_baru', delta: 'x' },
+    });
+    frame(transport, { type: 'message_update', assistantMessageEvent: 'bukan objek' });
+    frame(transport, {
+      type: 'tool_execution_update',
+      toolCallId: 'tak-pernah-mulai',
+      partialResult: {},
+    });
+    frame(transport, { type: 'tool_execution_end', toolCallId: 'tak-pernah-mulai', result: {} });
+    frame(transport, { type: 'extension_ui_request', id: 'u1', method: 'metode_baru' });
+    frame(transport, {
+      type: 'extension_ui_request',
+      id: 'u2',
+      method: 'select',
+      title: 'Judul lain',
+      options: ['a'],
+    });
+    frame(transport, {
+      type: 'message_update',
+      assistantMessageEvent: { type: 'text_delta', delta: 'ok' },
+    });
+    frame(transport, { id: 'p1', type: 'prompt_result', status: 'completed' });
+
+    const events = await collect(handle);
+
+    expect(events.map((e) => e.type)).toEqual([
+      'message.delta',
+      'message.completed',
+      'run.completed',
+    ]);
+  });
+});

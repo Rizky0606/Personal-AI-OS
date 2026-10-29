@@ -1,0 +1,589 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`omp: rekaman nyata → event kontrak (snapshot) > abort 1`] = `
+[
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "bagian-0 ",
+    "type": "message.delta",
+  },
+]
+`;
+
+exports[`omp: rekaman nyata → event kontrak (snapshot) > abort-tool 1`] = `
+[
+  {
+    "name": "bash",
+    "target": "node -e "setTimeout(() => {}, 120000)"",
+    "toolCallId": "call_1",
+    "type": "tool.started",
+  },
+  {
+    "approvalId": "approval-1",
+    "cwd": "C:\\work\\repo",
+    "detail": "node -e "setTimeout(() => {}, 120000)"",
+    "kind": "command",
+    "toolCallId": "call_1",
+    "type": "approval.requested",
+  },
+  {
+    "approvalId": "approval-1",
+    "decision": "allow",
+    "remember": false,
+    "type": "approval.resolved",
+  },
+  {
+    "durationMs": 100,
+    "status": "cancelled",
+    "toolCallId": "call_1",
+    "type": "tool.finished",
+  },
+]
+`;
+
+exports[`omp: rekaman nyata → event kontrak (snapshot) > model-error 1`] = `
+[
+  {
+    "code": "model_http_500",
+    "message": "500 boom dari model",
+    "retryable": true,
+    "type": "error",
+  },
+]
+`;
+
+exports[`omp: rekaman nyata → event kontrak (snapshot) > steer 1`] = `
+[
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "a0 ",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "a1 ",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "a2 ",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "a3 ",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "a4 ",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "a5 ",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "a6 ",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "a7 ",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "a8 ",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "a9 ",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "a10 ",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "a11 ",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "a12 ",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "a13 ",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "a14 ",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "a15 ",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "a16 ",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "a17 ",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "a18 ",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "a19 ",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "Arah baru diterima.",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "type": "message.completed",
+    "usage": {
+      "inputTokens": 24,
+      "outputTokens": 10,
+    },
+  },
+  {
+    "summary": "Arah baru diterima.",
+    "type": "run.completed",
+    "usage": {
+      "inputTokens": 24,
+      "outputTokens": 10,
+    },
+  },
+]
+`;
+
+exports[`omp: rekaman nyata → event kontrak (snapshot) > task-subagent 1`] = `
+[
+  {
+    "name": "task",
+    "toolCallId": "call_1",
+    "type": "tool.started",
+  },
+  {
+    "approvalId": "approval-1",
+    "cwd": "C:\\work\\repo",
+    "detail": "Context:
+Konteks bersama
+Batch agents: task ×1
+Agent: task
+Task:
+Sebutkan satu berkas di repo.",
+    "kind": "command",
+    "toolCallId": "call_1",
+    "type": "approval.requested",
+  },
+  {
+    "approvalId": "approval-1",
+    "decision": "allow",
+    "remember": false,
+    "type": "approval.resolved",
+  },
+  {
+    "chunk": "Spawned agent \`PublicMongoose\`...",
+    "stream": "stdout",
+    "toolCallId": "call_1",
+    "type": "tool.output",
+  },
+  {
+    "chunk": "Running background task PublicMongoose...",
+    "stream": "stdout",
+    "toolCallId": "call_1",
+    "type": "tool.output",
+  },
+  {
+    "durationMs": 100,
+    "status": "ok",
+    "toolCallId": "call_1",
+    "type": "tool.finished",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "selesai",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "type": "message.completed",
+    "usage": {
+      "inputTokens": 24,
+      "outputTokens": 10,
+    },
+  },
+  {
+    "summary": "selesai",
+    "type": "run.completed",
+    "usage": {
+      "inputTokens": 24,
+      "outputTokens": 10,
+    },
+  },
+]
+`;
+
+exports[`omp: rekaman nyata → event kontrak (snapshot) > text-only 1`] = `
+[
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "Halo ",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "dari ",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "model.",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "type": "message.completed",
+    "usage": {
+      "inputTokens": 12,
+      "outputTokens": 5,
+    },
+  },
+  {
+    "summary": "Halo dari model.",
+    "type": "run.completed",
+    "usage": {
+      "inputTokens": 12,
+      "outputTokens": 5,
+    },
+  },
+]
+`;
+
+exports[`omp: rekaman nyata → event kontrak (snapshot) > thinking 1`] = `
+[
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "Pertama, ",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "periksa berkas.",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "Jawaban ",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "akhir.",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "type": "message.completed",
+    "usage": {
+      "inputTokens": 12,
+      "outputTokens": 5,
+    },
+  },
+  {
+    "summary": "Jawaban akhir.",
+    "type": "run.completed",
+    "usage": {
+      "inputTokens": 12,
+      "outputTokens": 5,
+    },
+  },
+]
+`;
+
+exports[`omp: rekaman nyata → event kontrak (snapshot) > todo 1`] = `
+[
+  {
+    "name": "todo",
+    "toolCallId": "call_1",
+    "type": "tool.started",
+  },
+  {
+    "durationMs": 100,
+    "status": "ok",
+    "toolCallId": "call_1",
+    "type": "tool.finished",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "selesai",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "selesai",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "type": "message.completed",
+    "usage": {
+      "inputTokens": 36,
+      "outputTokens": 15,
+    },
+  },
+  {
+    "summary": "selesai",
+    "type": "run.completed",
+    "usage": {
+      "inputTokens": 36,
+      "outputTokens": 15,
+    },
+  },
+]
+`;
+
+exports[`omp: rekaman nyata → event kontrak (snapshot) > tool-approve 1`] = `
+[
+  {
+    "name": "bash",
+    "target": "echo hi > probe.txt",
+    "toolCallId": "call_1",
+    "type": "tool.started",
+  },
+  {
+    "approvalId": "approval-1",
+    "cwd": "C:\\work\\repo",
+    "detail": "echo hi > probe.txt",
+    "kind": "command",
+    "toolCallId": "call_1",
+    "type": "approval.requested",
+  },
+  {
+    "approvalId": "approval-1",
+    "decision": "allow",
+    "remember": false,
+    "type": "approval.resolved",
+  },
+  {
+    "chunk": "(no output)",
+    "stream": "stdout",
+    "toolCallId": "call_1",
+    "type": "tool.output",
+  },
+  {
+    "durationMs": 100,
+    "status": "ok",
+    "toolCallId": "call_1",
+    "type": "tool.finished",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "Selesai, file dibuat.",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "type": "message.completed",
+    "usage": {
+      "inputTokens": 24,
+      "outputTokens": 10,
+    },
+  },
+  {
+    "summary": "Selesai, file dibuat.",
+    "type": "run.completed",
+    "usage": {
+      "inputTokens": 24,
+      "outputTokens": 10,
+    },
+  },
+]
+`;
+
+exports[`omp: rekaman nyata → event kontrak (snapshot) > tool-deny 1`] = `
+[
+  {
+    "name": "bash",
+    "target": "echo hi > probe.txt",
+    "toolCallId": "call_1",
+    "type": "tool.started",
+  },
+  {
+    "approvalId": "approval-1",
+    "cwd": "C:\\work\\repo",
+    "detail": "echo hi > probe.txt",
+    "kind": "command",
+    "toolCallId": "call_1",
+    "type": "approval.requested",
+  },
+  {
+    "approvalId": "approval-1",
+    "decision": "deny",
+    "remember": false,
+    "type": "approval.resolved",
+  },
+  {
+    "durationMs": 100,
+    "status": "denied",
+    "toolCallId": "call_1",
+    "type": "tool.finished",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "Ditolak, tidak dijalankan.",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "type": "message.completed",
+    "usage": {
+      "inputTokens": 24,
+      "outputTokens": 10,
+    },
+  },
+  {
+    "summary": "Ditolak, tidak dijalankan.",
+    "type": "run.completed",
+    "usage": {
+      "inputTokens": 24,
+      "outputTokens": 10,
+    },
+  },
+]
+`;
+
+exports[`omp: rekaman nyata → event kontrak (snapshot) > write-and-session-approve 1`] = `
+[
+  {
+    "name": "write",
+    "target": "catatan.txt",
+    "toolCallId": "call_w",
+    "type": "tool.started",
+  },
+  {
+    "approvalId": "approval-1",
+    "cwd": "C:\\work\\repo",
+    "detail": "Path: catatan.txt
+Content:
+isi baru
+",
+    "kind": "file_write",
+    "toolCallId": "call_w",
+    "type": "approval.requested",
+  },
+  {
+    "approvalId": "approval-1",
+    "decision": "allow",
+    "remember": false,
+    "type": "approval.resolved",
+  },
+  {
+    "chunk": "Writing 9 bytes to catatan.txt...",
+    "stream": "stdout",
+    "toolCallId": "call_w",
+    "type": "tool.output",
+  },
+  {
+    "durationMs": 100,
+    "status": "ok",
+    "toolCallId": "call_w",
+    "type": "tool.finished",
+  },
+  {
+    "name": "bash",
+    "target": "node --version",
+    "toolCallId": "call_b1",
+    "type": "tool.started",
+  },
+  {
+    "approvalId": "approval-2",
+    "cwd": "C:\\work\\repo",
+    "detail": "node --version",
+    "kind": "command",
+    "toolCallId": "call_b1",
+    "type": "approval.requested",
+  },
+  {
+    "approvalId": "approval-2",
+    "decision": "allow",
+    "remember": true,
+    "type": "approval.resolved",
+  },
+  {
+    "chunk": "v24.18.0
+",
+    "stream": "stdout",
+    "toolCallId": "call_b1",
+    "type": "tool.output",
+  },
+  {
+    "durationMs": 100,
+    "status": "ok",
+    "toolCallId": "call_b1",
+    "type": "tool.finished",
+  },
+  {
+    "name": "bash",
+    "target": "node -e "console.log(1)"",
+    "toolCallId": "call_b2",
+    "type": "tool.started",
+  },
+  {
+    "chunk": "1
+",
+    "stream": "stdout",
+    "toolCallId": "call_b2",
+    "type": "tool.output",
+  },
+  {
+    "durationMs": 100,
+    "status": "ok",
+    "toolCallId": "call_b2",
+    "type": "tool.finished",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "Semua selesai.",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "type": "message.completed",
+    "usage": {
+      "inputTokens": 48,
+      "outputTokens": 20,
+    },
+  },
+  {
+    "summary": "Semua selesai.",
+    "type": "run.completed",
+    "usage": {
+      "inputTokens": 48,
+      "outputTokens": 20,
+    },
+  },
+]
+`;

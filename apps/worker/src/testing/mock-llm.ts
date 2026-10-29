@@ -12,7 +12,7 @@ export interface ChatRequest {
 
 /** Satu langkah jawaban model tiruan: teks, pemanggilan tool, atau galat HTTP. */
 export type MockStep =
-  | { text: string; parts?: string[]; partDelayMs?: number }
+  | { text: string; parts?: string[]; partDelayMs?: number; reasoning?: string[] }
   | { tool: { id?: string; name: string; args: Record<string, unknown> } }
   | { status: number };
 
@@ -67,6 +67,8 @@ export function mockLlm(script: (toolResults: number, request: ChatRequest) => M
           chunk({}, 'tool_calls');
         } else {
           chunk({ role: 'assistant', content: '' });
+          // Penalaran gaya OpenAI-compatible (reasoning_content), mis. DeepSeek/Qwen lewat 9Router.
+          for (const part of step.reasoning ?? []) chunk({ reasoning_content: part });
           for (const part of step.parts ?? [step.text]) {
             if (res.destroyed) return;
             chunk({ content: part });

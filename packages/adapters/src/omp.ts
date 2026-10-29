@@ -260,8 +260,26 @@ class OmpRun implements RunHandle {
     if (!this.finished) this.events.push(event);
   }
 
+  /**
+   * Menutup tool yang masih berjalan: `cancelled` bila run dibatalkan, selain itu `error`. omp belum tentu
+   * mengirim tool_execution_end saat abort atau mati; tanpa ini klien melihat tool "berjalan" selamanya.
+   */
+  private closeOpenTools(): void {
+    const status = this.cancelRequested ? 'cancelled' : 'error';
+    for (const [toolCallId, tool] of this.tools) {
+      this.emit({
+        type: 'tool.finished',
+        toolCallId,
+        status,
+        durationMs: Math.max(0, this.deps.now() - tool.startedAt),
+      });
+    }
+    this.tools.clear();
+  }
+
   private finish(): void {
     if (this.finished) return;
+    this.closeOpenTools();
     this.finished = true;
     clearTimeout(this.readyTimer);
     clearTimeout(this.promptFallback);
@@ -275,6 +293,7 @@ class OmpRun implements RunHandle {
 
   private fail(code: string, message: string, retryable = false): void {
     if (this.finished) return;
+    this.closeOpenTools();
     this.emit({ type: 'error', code, message, retryable });
     this.finish();
   }
@@ -416,12 +435,13 @@ class OmpRun implements RunHandle {
     this.tools.delete(id);
     const result = contentText(frame.result);
     const denied = /^Tool call denied by user/i.test(result);
-    const status = denied
-      ? 'denied'
-      : frame.isError === true
-        ? 'error'
-        : this.cancelRequested
-          ? 'cancelled'
+    // Dibatalkan pengguna: apa pun hasil yang dilaporkan omp (ditolak otomatis, dihentikan) adalah cancelled.
+    const status = this.cancelRequested
+      ? 'cancelled'
+      : denied
+        ? 'denied'
+        : frame.isError === true
+          ? 'error'
           : 'ok';
     this.emit({
       type: 'tool.finished',
@@ -455,6 +475,7 @@ class OmpRun implements RunHandle {
   }
 
   private onPromptResult(frame: Record<string, unknown>): void {
+    this.closeOpenTools();
     const status = frame.status;
     if (status === 'completed') {
       const usage =

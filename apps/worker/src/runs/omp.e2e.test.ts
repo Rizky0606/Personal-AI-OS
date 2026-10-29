@@ -311,6 +311,54 @@ describe.skipIf(ompPath === null)('run coding dengan omp sungguhan', () => {
     expect(git(repo, 'branch', '--list', 'aios/*')).toBe('');
   }, 120_000);
 
+  it('cancel saat tool bash sedang berjalan: tool.finished cancelled mendahului run.status cancelled, proses anak ikut berhenti', async () => {
+    steps = (toolResults) =>
+      toolResults === 0
+        ? { tool: { name: 'bash', args: { command: 'node -e "setTimeout(() => {}, 120000)"' } } }
+        : { text: 'tidak tercapai' };
+    const answers = autoAnswer(RUN_1, () => ({ decision: 'allow', remember: false }));
+
+    sendCommand(startCommand(RUN_1));
+    await until(
+      () => eventsOf(RUN_1).some((e) => e.type === 'approval.resolved'),
+      'izin dijawab, tool berjalan',
+      60_000,
+    );
+    await new Promise((r) => setTimeout(r, 1500)); // beri waktu proses bash benar-benar berjalan
+    expect(eventsOf(RUN_1).some((e) => e.type === 'tool.finished')).toBe(false);
+    sendCommand({ type: 'run.cancel', runId: RUN_1 });
+
+    await until(() => finished(RUN_1), 'run dibatalkan', 30_000);
+    answers.stop();
+    const events = eventsOf(RUN_1);
+    const started = events.find((e) => e.type === 'tool.started');
+    const finishedTool = events.filter((e) => e.type === 'tool.finished');
+    expect(finishedTool).toHaveLength(1);
+    expect(finishedTool[0]).toMatchObject({
+      toolCallId: (started as { toolCallId: string }).toolCallId,
+      status: 'cancelled',
+    });
+    expect(events.indexOf(finishedTool[0]!)).toBeLessThan(events.length - 1);
+    expect(events.at(-1)).toEqual({ type: 'run.status', status: 'cancelled' });
+    await until(() => worker.processes.running === 0, 'proses omp berhenti', 15_000);
+  }, 120_000);
+
+  it('penalaran: reasoning_content dari model menjadi reasoning.delta lewat omp sungguhan, sebelum teks jawaban', async () => {
+    steps = () => ({ text: 'Jawaban akhir.', reasoning: ['Pertama, ', 'periksa berkas.'] });
+
+    sendCommand(startCommand(RUN_1));
+    await until(() => finished(RUN_1), 'run selesai', 60_000);
+
+    const events = eventsOf(RUN_1);
+    const reasoning = events.filter((e) => e.type === 'reasoning.delta');
+    expect(reasoning.map((e) => (e as { text: string }).text).join('')).toBe(
+      'Pertama, periksa berkas.',
+    );
+    const firstText = events.findIndex((e) => e.type === 'message.delta');
+    expect(events.indexOf(reasoning[0]!)).toBeLessThan(firstText);
+    expect(events.at(-1)).toMatchObject({ type: 'run.completed' });
+  }, 120_000);
+
   it('galat model (HTTP 500) menjadi error dengan kode model_http_500 setelah omp selesai mencoba ulang', async () => {
     steps = () => ({ status: 500 });
 
