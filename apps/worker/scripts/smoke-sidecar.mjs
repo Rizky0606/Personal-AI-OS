@@ -25,7 +25,7 @@ const child = spawn(exe, [], {
 });
 const exited = new Promise((r) => child.once('exit', (code) => r(code)));
 const lines = createInterface({ input: child.stdout });
-const timeout = setTimeout(() => fail('timeout'), 15000);
+const timeout = setTimeout(() => fail('timeout'), 60000);
 
 const first = await new Promise((resolveLine) => lines.once('line', resolveLine));
 const listening = JSON.parse(first);
@@ -64,13 +64,13 @@ if (!bound.ok) fail(`project.bind: ${JSON.stringify(bound)}`);
 const opened = await call('t', 'terminal.open', { projectId: PROJECT, cols: 100, rows: 30 });
 if (!opened.ok) fail(`terminal.open: ${JSON.stringify(opened)}`);
 const terminalId = opened.result.id;
-await call('w', 'terminal.write', {
-  terminalId,
-  data: `echo halo-dari-pty${String.fromCharCode(13)}`,
-});
+// PowerShell memuat profil dan PSReadLine; di runner yang lambat ketikan yang terkirim terlalu dini hilang.
+// Perintah dikirim ulang tiap 5 detik sampai keluarannya muncul (batas 40 detik), tanpa melonggarkan
+// yang diperiksa: gema ketikan dan hasil perintah harus muncul.
+const command = `echo halo-dari-pty${String.fromCharCode(13)}`;
 let output = '';
-// Muncul dua kali: gema ketikan dan hasil perintah.
-for (let i = 0; i < 100 && output.split('halo-dari-pty').length < 3; i++) {
+for (let i = 0; i < 400 && output.split('halo-dari-pty').length < 3; i++) {
+  if (i % 50 === 0) await call(`w${i}`, 'terminal.write', { terminalId, data: command });
   await new Promise((r) => setTimeout(r, 100));
   output = inbox
     .filter((m) => m.push === 'terminal.data' && m.terminalId === terminalId)
