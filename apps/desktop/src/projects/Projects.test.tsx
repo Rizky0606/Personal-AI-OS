@@ -107,6 +107,47 @@ describe('ProjectsScreen: daftar', () => {
     expect(await screen.findByText(copy.projects.rules.saved)).toBeInTheDocument();
   });
 
+  it('setup worktree: dialog memuat setelan dari worker, menolak karakter shell, dan menyimpannya', async () => {
+    connected();
+    const user = userEvent.setup();
+    api.listProjects.mockResolvedValue([project()]);
+    workerApi.bindings.mockResolvedValue([]);
+    workerApi.setupGet.mockResolvedValue({
+      commands: ['pnpm install'],
+      linkNodeModules: false,
+      lsp: true,
+    });
+    workerApi.setupSet.mockImplementation((_id, setup) => Promise.resolve(setup));
+    await renderScreen(<ProjectsScreen />, '/projects');
+
+    const table = await screen.findByRole('table', { name: copy.projects.listLabel });
+    await user.click(
+      within(table).getByRole('button', { name: `${copy.projects.setup.edit}: Aplikasi saya` }),
+    );
+    const dialog = await screen.findByRole('dialog', {
+      name: copy.projects.setup.title('Aplikasi saya'),
+    });
+    const field = within(dialog).getByRole('textbox', { name: copy.projects.setup.commandsLabel });
+    await waitFor(() => expect(field).toHaveValue('pnpm install'));
+
+    await user.type(field, '{Enter}pnpm test && rm -rf x');
+    expect(within(dialog).getByText(copy.projects.setup.invalid(2))).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: copy.projects.setup.save })).toBeDisabled();
+
+    await user.clear(field);
+    await user.type(field, 'pnpm install --offline');
+    await user.click(within(dialog).getByRole('switch', { name: copy.projects.setup.link }));
+    await user.click(within(dialog).getByRole('switch', { name: copy.projects.setup.lsp }));
+    await user.click(within(dialog).getByRole('button', { name: copy.projects.setup.save }));
+
+    expect(workerApi.setupSet).toHaveBeenCalledWith(P1, {
+      commands: ['pnpm install --offline'],
+      linkNodeModules: true,
+      lsp: false,
+    });
+    expect(await screen.findByText(copy.projects.setup.saved)).toBeInTheDocument();
+  });
+
   it('ganti branch: branch lokal dari worker dipilih lalu disimpan ke server', async () => {
     connected();
     const user = userEvent.setup();

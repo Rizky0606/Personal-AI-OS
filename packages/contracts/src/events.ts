@@ -94,6 +94,104 @@ export const CheckpointCreatedEventSchema = z.object({
   label: z.string(),
 });
 
+export const TodoStatusSchema = z.enum([
+  'pending',
+  'in_progress',
+  'completed',
+  'abandoned',
+  'blocked',
+]);
+export type TodoStatus = z.infer<typeof TodoStatusSchema>;
+
+export const TODO_MAX_PHASES = 12;
+export const TODO_MAX_TASKS = 30;
+
+export const TodoTaskSchema = z.object({
+  content: z.string().max(200),
+  status: TodoStatusSchema,
+  blocker: z.string().max(200).optional(),
+});
+export const TodoPhaseSchema = z.object({
+  name: z.string().max(80),
+  tasks: z.array(TodoTaskSchema).max(TODO_MAX_TASKS),
+});
+export type TodoPhase = z.infer<typeof TodoPhaseSchema>;
+
+/** Daftar rencana agent (tool `todo` omp) setelah tiap perubahan; selalu seluruh daftar, bukan selisih. */
+export const TodoUpdatedEventSchema = z.object({
+  type: z.literal('todo.updated'),
+  phases: z.array(TodoPhaseSchema).max(TODO_MAX_PHASES),
+});
+
+export const QueueNameSchema = z.enum(['steering', 'followUp']);
+export type QueueName = z.infer<typeof QueueNameSchema>;
+
+/** Pesan arahan yang menunggu giliran di agent: `steering` disisipkan setelah tool berjalan, `followUp` setelah agent selesai. */
+export const QueueUpdatedEventSchema = z.object({
+  type: z.literal('queue.updated'),
+  steering: z.array(z.string().max(500)).max(20),
+  followUp: z.array(z.string().max(500)).max(20),
+});
+
+/** Keadaan satu subagent omp (tool `task`). `running` mencakup menunggu dan berjalan; sisanya final. */
+export const SubagentStatusSchema = z.enum(['running', 'completed', 'failed', 'aborted']);
+export type SubagentStatus = z.infer<typeof SubagentStatusSchema>;
+
+/** Pembaruan satu subagent; selalu seluruh keadaannya, bukan selisih. Dikirim saat status atau jumlah tool berubah. */
+export const SubagentUpdatedEventSchema = z.object({
+  type: z.literal('subagent.updated'),
+  subagentId: z.string().min(1).max(80),
+  agent: z.string().max(80),
+  assignment: z.string().max(300),
+  status: SubagentStatusSchema,
+  toolCount: z.number().int().nonnegative(),
+  durationMs: z.number().int().nonnegative(),
+  tokens: z.number().int().nonnegative(),
+  /** Baris terakhir keluaran subagent, dipangkas. */
+  lastOutput: z.string().max(300).optional(),
+  /** ID panggilan tool `task` milik agent induk yang memulainya. */
+  parentToolCallId: z.string().max(200).optional(),
+});
+
+/** Satu pertanyaan agent (tool `ask` omp). Pilihan "Lainnya" tidak ada di `options`: klien selalu menyediakan teks bebas. */
+export const QuestionSchema = z.object({
+  id: z.string().min(1).max(80),
+  question: z.string().max(1000),
+  header: z.string().max(100).optional(),
+  options: z
+    .array(
+      z.object({
+        label: z.string().max(200),
+        description: z.string().max(500).optional(),
+      }),
+    )
+    .max(12),
+  multi: z.boolean().optional(),
+  recommended: z.number().int().nonnegative().optional(),
+});
+export type Question = z.infer<typeof QuestionSchema>;
+
+export const QuestionAnswerSchema = z.object({
+  id: z.string().min(1).max(80),
+  selectedOptions: z.array(z.string().max(200)).max(12),
+  customInput: z.string().max(2000).optional(),
+});
+export type QuestionAnswer = z.infer<typeof QuestionAnswerSchema>;
+
+/** Agent bertanya ke pengguna dan menunggu jawaban; run tetap `running` sampai `question.resolved`. */
+export const QuestionAskedEventSchema = z.object({
+  type: z.literal('question.asked'),
+  questionId: IdSchema,
+  questions: z.array(QuestionSchema).min(1).max(8),
+});
+
+/** Pertanyaan selesai: dijawab atau dibatalkan (pengguna, run dihentikan, atau batas waktu). */
+export const QuestionResolvedEventSchema = z.object({
+  type: z.literal('question.resolved'),
+  questionId: IdSchema,
+  cancelled: z.boolean(),
+});
+
 export const PreviewReadyEventSchema = z.object({
   type: z.literal('preview.ready'),
   url: z.url(),
@@ -141,6 +239,11 @@ export const AgentEventSchema = z
     ApprovalResolvedEventSchema,
     DiffUpdatedEventSchema,
     CheckpointCreatedEventSchema,
+    TodoUpdatedEventSchema,
+    QueueUpdatedEventSchema,
+    SubagentUpdatedEventSchema,
+    QuestionAskedEventSchema,
+    QuestionResolvedEventSchema,
     PreviewReadyEventSchema,
     ResearchProgressEventSchema,
     ResearchSourceEventSchema,

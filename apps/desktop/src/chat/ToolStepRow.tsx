@@ -11,7 +11,9 @@ export interface ToolStepView {
 }
 
 const statusIcon = {
-  running: <Loader size={14} strokeWidth={1.5} aria-hidden="true" className="text-accent" />,
+  running: (
+    <Loader size={14} strokeWidth={1.5} aria-hidden="true" className="animate-spin text-accent" />
+  ),
   ok: <Check size={14} strokeWidth={1.5} aria-hidden="true" className="text-success" />,
   error: <TriangleAlert size={14} strokeWidth={1.5} aria-hidden="true" className="text-danger" />,
   denied: <CircleSlash size={14} strokeWidth={1.5} aria-hidden="true" className="text-warning" />,

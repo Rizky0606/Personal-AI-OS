@@ -12,10 +12,12 @@ import type { FilesService } from '../files/service.js';
 import type { GitService } from '../git/service.js';
 import type { TerminalService } from '../terminal/service.js';
 import type { ReviewService } from '../runs/review.js';
+import type { ProjectSetupStore } from '../runs/setup.js';
 import type { WorktreeManager } from '../runs/worktree.js';
 
 export interface HandlerDeps {
   allowed: AllowList;
+  setup: ProjectSetupStore;
   bindings: ProjectBindings;
   processes: ProcessManager;
   link: GatewayLink;
@@ -93,6 +95,14 @@ export function createHandler(deps: HandlerDeps): (request: LocalRequest) => Pro
 
       case 'projects.list':
         return { projects: await bindings.list() };
+
+      case 'setup.get':
+        return deps.setup.get(request.params.projectId);
+
+      case 'setup.set': {
+        const { projectId, ...setup } = request.params;
+        return deps.setup.set(projectId, setup);
+      }
 
       case 'review.get':
         return review.get(request.params.runId);

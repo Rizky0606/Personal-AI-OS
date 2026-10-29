@@ -300,6 +300,38 @@ describe('folder yang diizinkan dan project', () => {
     client.close();
   });
 
+  it('setup worktree: disimpan per project, bertahan, dan perintah dengan karakter shell ditolak', async () => {
+    const client = await Client.login(worker.port, TOKEN);
+
+    expect(await client.call('setup.get', { projectId: PROJECT })).toMatchObject({
+      ok: true,
+      result: { commands: [], linkNodeModules: false, lsp: true },
+    });
+    expect(
+      await client.call('setup.set', {
+        projectId: PROJECT,
+        commands: ['pnpm install'],
+        linkNodeModules: true,
+        lsp: false,
+      }),
+    ).toMatchObject({
+      ok: true,
+      result: { commands: ['pnpm install'], linkNodeModules: true, lsp: false },
+    });
+    expect(await client.call('setup.get', { projectId: PROJECT })).toMatchObject({
+      result: { commands: ['pnpm install'] },
+    });
+    expect(
+      await client.call('setup.set', {
+        projectId: PROJECT,
+        commands: ['pnpm i && curl x'],
+        linkNodeModules: false,
+        lsp: true,
+      }),
+    ).toMatchObject({ ok: false, error: { code: 'invalid_request' } });
+    client.close();
+  });
+
   it('permintaan tidak valid dijawab invalid_request dengan id yang sama', async () => {
     const client = await Client.login(worker.port, TOKEN);
 

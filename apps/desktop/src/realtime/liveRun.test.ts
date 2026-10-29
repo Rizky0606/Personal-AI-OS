@@ -16,6 +16,32 @@ const requested = (approvalId: string, detail: string): ServerEvent => ({
   toolCallId: 'c1',
 });
 
+describe('subagent di LiveRun', () => {
+  const update = (id: string, status: 'running' | 'completed', toolCount: number): ServerEvent => ({
+    type: 'subagent.updated',
+    subagentId: id,
+    agent: 'task',
+    assignment: 'uji',
+    status,
+    toolCount,
+    durationMs: 10,
+    tokens: 1,
+  });
+
+  it('pembaruan menggantikan subagent yang sama; subagent baru ditambahkan menurut urutan kemunculan', () => {
+    let run = newLiveRun(RUN);
+    run = reduceLiveRun(run, update('A', 'running', 0));
+    run = reduceLiveRun(run, update('B', 'running', 0));
+    run = reduceLiveRun(run, update('A', 'completed', 3));
+
+    expect(run.subagents.map((s) => [s.subagentId, s.status, s.toolCount])).toEqual([
+      ['A', 'completed', 3],
+      ['B', 'running', 0],
+    ]);
+    expect('type' in (run.subagents[0] ?? {})).toBe(false);
+  });
+});
+
 describe('izin di LiveRun', () => {
   it('permintaan izin menunggu sampai diputuskan; yang lain tidak ikut terhapus', () => {
     let run = newLiveRun(RUN);

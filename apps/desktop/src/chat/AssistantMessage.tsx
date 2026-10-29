@@ -1,3 +1,4 @@
+import type { TodoPhase } from '@aios/contracts';
 import type { RoleInfo } from '../api/gateway';
 import { copy } from '../copy';
 import { Button } from '../ui/Button';
@@ -15,6 +16,7 @@ import { splitSuggestions } from './suggestions';
 import { ReasoningBlock } from './ReasoningBlock';
 import { RoleChip } from './RoleChip';
 import { ToolStepRow, type ToolStepView } from './ToolStepRow';
+import { TodoPanel } from './TodoPanel';
 
 export type AssistantPart =
   | { type: 'text'; text: string }
@@ -25,6 +27,8 @@ export type AssistantPart =
 export interface AssistantMessageProps {
   parts: AssistantPart[];
   reasoning?: string | undefined;
+  /** Rencana agent langsung (hanya run coding yang sedang berjalan). */
+  todos?: readonly TodoPhase[] | undefined;
   role: string | null;
   model: string | null;
   roles: RoleInfo[];
@@ -123,6 +127,7 @@ function downloadZip(files: CodeFile[]) {
 export function AssistantMessage({
   parts,
   reasoning,
+  todos,
   role,
   model,
   roles,
@@ -176,6 +181,7 @@ export function AssistantMessage({
         ) : null}
       </header>
       {reasoning ? <ReasoningBlock text={reasoning} /> : null}
+      {todos && todos.length > 0 ? <TodoPanel phases={todos} /> : null}
       {parts.map((part, i) =>
         part.type === 'tool' ? (
           <ToolStepRow key={part.id} {...part} />

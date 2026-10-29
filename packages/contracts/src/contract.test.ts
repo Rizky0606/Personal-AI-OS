@@ -45,6 +45,8 @@ const DOCUMENTED_ENDPOINTS = [
   'GET /runs/:id/events',
   'POST /runs/:id/steer',
   'POST /runs/:id/cancel',
+  'POST /runs/:id/queue/remove',
+  'POST /runs/:id/questions/:questionId',
   'POST /runs/:id/approvals/:approvalId',
   'POST /runs/:id/review',
   'GET /projects',

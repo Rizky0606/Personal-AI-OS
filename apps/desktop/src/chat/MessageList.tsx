@@ -1,13 +1,16 @@
-import type { Message } from '@aios/contracts';
+import type { Message, QueueName, QuestionAnswer } from '@aios/contracts';
 import type { RoleInfo } from '../api/gateway';
 import { useLayoutEffect, useRef, useState } from 'react';
 import { copy } from '../copy';
+import { X } from 'lucide-react';
+import { IconButton } from '../ui/IconButton';
 import { isSettled, type LiveRun, type PendingApproval } from '../realtime/liveRun';
 import { Button } from '../ui/Button';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { ErrorBanner } from '../ui/ErrorBanner';
 import { RememberDialog } from '../memory/RememberDialog';
 import { ApprovalPanel } from './ApprovalPanel';
+import { QuestionPanel } from './QuestionPanel';
 import { AssistantMessage, type AssistantPart } from './AssistantMessage';
 import { HandoffNote, isHandoffNote } from './HandoffNote';
 import { messageText } from './messageData';
@@ -36,6 +39,13 @@ export interface MessageListProps {
   approvals: PendingApproval[];
   resolvingApprovals: ReadonlySet<string>;
   onResolveApproval: (approvalId: string, decision: 'allow' | 'deny', remember: boolean) => void;
+  /** Jawaban atas pertanyaan agent (id pertanyaan dipakai juga di `resolvingApprovals` selama terkirim). */
+  onAnswerQuestion?: (
+    questionId: string,
+    result: { answers: QuestionAnswer[]; cancelled: boolean },
+  ) => void;
+  /** Menarik arahan dari antrean agent; tanpa ini tombol tarik tidak tampil. */
+  onRemoveQueued?: (queue: QueueName, text: string) => void;
   hasMore: boolean;
   loadingOlder: boolean;
   onLoadOlder: () => void;
@@ -89,6 +99,8 @@ export function MessageList({
   approvals,
   resolvingApprovals,
   onResolveApproval,
+  onAnswerQuestion,
+  onRemoveQueued,
   hasMore,
   loadingOlder,
   onLoadOlder,
@@ -177,6 +189,7 @@ export function MessageList({
             <AssistantMessage
               parts={liveParts(live)}
               reasoning={live.reasoning}
+              todos={live.todos}
               role={live.role}
               model={null}
               roles={roles}
@@ -186,6 +199,45 @@ export function MessageList({
               <p role="status" className="text-meta text-text-2">
                 {copy.runStatus[live.status]}…
               </p>
+            ) : null}
+            {live.queue.steering.length + live.queue.followUp.length > 0 ? (
+              <ul
+                aria-label={copy.chat.queue.title}
+                className="flex animate-aios-enter flex-col gap-1 text-meta text-text-2"
+              >
+                {live.queue.steering.map((text, i) => (
+                  <li key={`s${i}`} className="flex items-baseline gap-2">
+                    <span className="rounded-badge bg-accent-soft px-1.5 py-0.5 font-mono text-caption text-text">
+                      {copy.chat.queue.steering}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate">{text}</span>
+                    {onRemoveQueued ? (
+                      <IconButton
+                        label={copy.chat.queue.remove(text)}
+                        onClick={() => onRemoveQueued('steering', text)}
+                      >
+                        <X size={14} strokeWidth={1.5} aria-hidden="true" />
+                      </IconButton>
+                    ) : null}
+                  </li>
+                ))}
+                {live.queue.followUp.map((text, i) => (
+                  <li key={`f${i}`} className="flex items-baseline gap-2">
+                    <span className="rounded-badge bg-surface-2 px-1.5 py-0.5 font-mono text-caption text-text">
+                      {copy.chat.queue.followUp}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate">{text}</span>
+                    {onRemoveQueued ? (
+                      <IconButton
+                        label={copy.chat.queue.remove(text)}
+                        onClick={() => onRemoveQueued('followUp', text)}
+                      >
+                        <X size={14} strokeWidth={1.5} aria-hidden="true" />
+                      </IconButton>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
             ) : null}
           </div>
         ) : null}
@@ -199,6 +251,16 @@ export function MessageList({
             }
           />
         ))}
+        {onAnswerQuestion
+          ? (live?.questions ?? []).map((pending) => (
+              <QuestionPanel
+                key={pending.questionId}
+                questions={pending.questions}
+                busy={resolvingApprovals.has(pending.questionId)}
+                onSubmit={(result) => onAnswerQuestion(pending.questionId, result)}
+              />
+            ))
+          : null}
         {failure !== null ? (
           <ErrorBanner
             message={failure ? `${copy.chat.runFailed} ${failure}` : copy.chat.runFailed}

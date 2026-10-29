@@ -9,8 +9,7 @@ export function Skeleton({ className }: SkeletonProps) {
   return (
     <div
       aria-hidden="true"
-      className={cn('h-3 rounded-badge bg-surface-2', className)}
-      style={{ animation: 'aios-pulse 1.2s var(--aios-easing) infinite' }}
+      className={cn('aios-shimmer h-3 rounded-badge bg-surface-2', className)}
     />
   );
 }

@@ -235,7 +235,32 @@ Direkam ulang dengan omp sungguhan dan server OpenAI-compatible tiruan; transkri
 - **`abort`**: `message_end` dengan `stopReason:"aborted"`, `agent_end`, lalu `response` untuk `abort`, lalu `prompt_result status:"aborted"`.
 - **Format approval**: `title` = `Allow tool: <nama>\n<detail>` dengan detail `Command: <perintah>` (bash) atau `Path: <path>\nContent:\n<isi>` (write); opsi `["Approve","Approve <tool> for this session","Deny"]`. `tool_execution_start` mendahului `select`. Setelah "Approve bash for this session", panggilan bash berikutnya tidak lagi meminta izin (tanpa `extension_ui_request`). Jawaban Deny menghasilkan `tool_execution_end isError:true` dengan teks "Tool call denied by user".
 - `tool_execution_update.partialResult.content` berisi teks **kumulatif** (bukan potongan baru); adapter mengirim hanya tambahannya sebagai `tool.output`.
-- **Peluncuran**: `omp.exe` ada di `~/.bun/bin`; pembungkus `.cmd` tidak bisa dijalankan tanpa shell. Worker mencari `omp.exe` di PATH (atau `AIOS_OMP_PATH`). Flag yang terbukti jalan bersama: `--mode rpc --approval-mode always-ask --cwd <dir> --no-session --no-skills --no-extensions --no-lsp --no-title --append-system-prompt <berkas> --model aios/<id>` dengan `PI_CODING_AGENT_DIR` terisolasi berisi `models.yml`. Tidak ada berkas `.omp` yang muncul di repo kerja maupun worktree.
+- **Peluncuran**: `omp.exe` ada di `~/.bun/bin`; pembungkus `.cmd` tidak bisa dijalankan tanpa shell. Worker mencari `omp.exe` di PATH (atau `AIOS_OMP_PATH`). Flag yang terbukti jalan bersama: `--mode rpc --approval-mode always-ask --cwd <dir> --no-session --no-skills --no-extensions --no-lsp --no-title --append-system-prompt <berkas> --model aios/<id>` dengan `PI_CODING_AGENT_DIR` terisolasi berisi `models.yml`. Tidak ada berkas `.omp` yang muncul di repo kerja maupun worktree. (Sejak 2026-10-28 adapter memakai `--mode rpc-ui`, lihat bagian Tool `ask`.)
+
+
+
+### Subagent (tool `task`) di `rpc-ui` (omp 18.13.2, Windows, server LLM tiruan)
+
+- `set_subagent_subscription level:"progress"` dijawab `success:true`; bawaannya `off` (tanpa frame subagent).
+- Tool `task` dengan `{context, tasks:[{name, task, solutionSpace}]}` langsung mengembalikan `Spawned agent \`Pekerja\`` (subagent berjalan terlepas dari giliran induk). Frame yang datang: `subagent_lifecycle` `{payload:{id, agent, parentToolCallId, detached, status:"started"|"completed", sessionFile, index}}` dan `subagent_progress` `{payload:{index, agent, task, parentToolCallId, assignment, progress:{id, status:"running"|"completed", recentTools[], recentOutput[], toolCount, requests, tokens, cost, durationMs}}}`.
+- Subagent memakai provider/model yang sama (`modelOverride: ["aios/m"]`), jadi lewat proxy LLM worker. Subagent berjalan headless: menurut dokumen omp, panggilan tool yang butuh izin ditolak (tidak diuji).
+- Status selain `running`/`completed` (`aborted`, `failed`) dipetakan dari dokumen, belum teramati. Bentuk isi `recentTools` tidak teramati (selalu kosong di uji ini), jadi tidak dipakai.
+### Tool `ask` dan mode `rpc-ui` (omp 18.13.2, Windows, server LLM tiruan memanggil tool)
+
+- Di `--mode rpc` tool `ask` **tidak ada** ("Tool ask not found"), dengan atau tanpa `set_ask_dialog`.
+- Di `--mode rpc-ui` tool `ask` ada. Setelah `set_ask_dialog enabled:true` (balasan `success:true`), omp mengirim satu `extension_ui_request` `method:"ask"` berisi semua pertanyaan (`questions[{id, question, options[{label}], recommended?, multi?}]`). Jawaban `{type:"extension_ui_response", id, answers:[{id, selectedOptions, customInput?}]}` sampai ke model sebagai `User answers:\ndb: SQLite\nfitur: [Auth, Billing] + "dan Search"`.
+- Izin tool di `rpc-ui` sama dengan `rpc`: `bash` dan `write` tetap meminta lewat `select` ("Allow tool: …", opsi `Approve` / `Approve <tool> for this session` / `Deny`) dan berjalan setelah disetujui. Dengan `--no-ui` tool yang butuh izin langsung gagal ("requires approval but no interactive UI"), jadi `--no-ui` **tidak** dipakai.
+- `rpc-ui` menyetel `PI_NO_PTY=1` (bash tanpa PTY) menurut dokumen omp; tidak diuji dampaknya pada perintah interaktif.
+### LSP omp (18.13.2, Windows, diuji dengan server LLM tiruan yang memanggil tool `lsp`)
+
+Proyek TypeScript sementara dengan `typescript@5` dan `typescript-language-server` di `node_modules/.bin`, berkas `src/a.ts` berisi `const n: number = "teks"`:
+
+- Dengan `--no-lsp`, tool `lsp` tidak ada ("Tool lsp not found"). Tanpa flag itu, tool berjalan **tanpa permintaan izin** untuk aksi baca (`diagnostics`) pada `--approval-mode always-ask`.
+- Panggilan `diagnostics` pertama (server dingin) memakan ±20-25 detik. Batas bawaan tool 20 detik menghasilkan teks `Operation aborted`. Overlay `--config` berisi `lsp:\n  requestTimeout: 60` membuatnya berhasil (`1 error(s): … a.ts 1:14 [error] [typescript] Type 'string' is not assignable to type 'number'. (2322)`), sama dengan argumen `timeout` pada panggilan.
+- Broker bersama bawaan (`lsp.shared`) dan `lsp.shared: false` memberi hasil sama; tidak ada beda yang terukur, jadi bawaan dipertahankan.
+- Proses `typescript-language-server`/`tsserver` ada selama panggilan (jumlah proses 2 → 6) dan kembali ke 2 (garis dasar) tiga detik setelah omp keluar karena stdin ditutup, untuk kedua mode.
+- Waktu `ready` omp tidak berubah (≈3,5 detik dengan atau tanpa LSP); server baru dimulai saat dipakai. Proyek Rust tanpa toolchain terpasang: `all language servers failed (rust-analyzer)`, tool tetap mengembalikan hasil biasa.
+- Server bahasa hanya dicari di `node_modules/.bin` worktree dan PATH, jadi worktree tanpa `node_modules` (lihat Setup worktree) tidak mendapat LSP TypeScript kecuali server itu ada di PATH.
 
 ### Tool kustom lewat MCP (Fase 21, omp 18.12.6, Windows)
 

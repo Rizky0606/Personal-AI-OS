@@ -20,6 +20,8 @@ export interface ComposerProps {
   onDraft: (text: string) => void;
   onSend: () => void;
   onStop: () => void;
+  /** Run coding berjalan: Enter mengarahkan agent sekarang, Alt+Enter mengantre. Tanpa onSteer tombol dan pintasannya tidak tampil. */
+  onSteer?: ((mode: 'steer' | 'followUp') => void) | undefined;
   /** Jawaban sedang mengalir: tombol kirim berubah menjadi hentikan. */
   streaming: boolean;
   /** Mengirim sedang berlangsung (belum dikonfirmasi server). */
@@ -65,6 +67,7 @@ export function Composer({
   onDraft,
   onSend,
   onStop,
+  onSteer,
   streaming,
   sending,
   models,
@@ -138,7 +141,11 @@ export function Composer({
     }
     if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) return;
     event.preventDefault();
-    if (!streaming && canSend) onSend();
+    if (streaming) {
+      if (onSteer && draft.trim().length > 0) onSteer(event.altKey ? 'followUp' : 'steer');
+      return;
+    }
+    if (canSend) onSend();
   }
 
   const modelName = model
@@ -164,7 +171,10 @@ export function Composer({
             ))}
           </div>
         ) : null}
-        <div className="flex flex-col gap-2 rounded-panel border border-border bg-surface p-2 transition duration-[180ms] ease-aios focus-within:border-border-strong focus-within:shadow-glow has-[[data-composer-field]:focus-visible]:border-accent">
+        <div className="relative flex flex-col gap-2 overflow-hidden rounded-panel border border-border bg-surface p-2 transition duration-[180ms] ease-aios focus-within:border-border-strong focus-within:shadow-glow has-[[data-composer-field]:focus-visible]:border-accent">
+          {streaming ? (
+            <span aria-hidden="true" className="aios-progress absolute inset-x-0 top-0 h-0.5" />
+          ) : null}
           {attachments.length > 0 ? (
             <ul aria-label={copy.preview.attachment.group} className="flex flex-wrap gap-2">
               {attachments.map((a) => (
@@ -251,7 +261,7 @@ export function Composer({
             ref={field}
             rows={1}
             value={draft}
-            placeholder={copy.chat.placeholder}
+            placeholder={streaming && onSteer ? copy.chat.steer.placeholder : copy.chat.placeholder}
             onChange={(event) => onDraft(event.target.value)}
             onKeyDown={onKeyDown}
             onPaste={(event) => {
@@ -350,10 +360,33 @@ export function Composer({
                 </IconButton>
               ) : null}
               {streaming ? (
-                <Button variant="secondary" onClick={onStop}>
-                  <Square size={14} strokeWidth={1.5} aria-hidden="true" />
-                  {copy.chat.stop}
-                </Button>
+                <>
+                  <Button variant="secondary" onClick={onStop}>
+                    <Square size={14} strokeWidth={1.5} aria-hidden="true" />
+                    {copy.chat.stop}
+                  </Button>
+                  {onSteer ? (
+                    <div className="flex animate-aios-pop items-center gap-2">
+                      <Button
+                        variant="secondary"
+                        disabled={draft.trim().length === 0}
+                        title={copy.chat.steer.queueHint}
+                        onClick={() => onSteer('followUp')}
+                      >
+                        {copy.chat.steer.queue}
+                      </Button>
+                      <Button
+                        variant="primary"
+                        disabled={draft.trim().length === 0}
+                        title={copy.chat.steer.nowHint}
+                        onClick={() => onSteer('steer')}
+                      >
+                        <ArrowUp size={14} strokeWidth={1.5} aria-hidden="true" />
+                        {copy.chat.steer.now}
+                      </Button>
+                    </div>
+                  ) : null}
+                </>
               ) : (
                 <Button variant="primary" disabled={!canSend} onClick={onSend}>
                   <ArrowUp size={14} strokeWidth={1.5} aria-hidden="true" />

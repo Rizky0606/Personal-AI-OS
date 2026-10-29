@@ -1,7 +1,12 @@
 import { promises as fs } from 'node:fs';
 import nodePath from 'node:path';
 import { AdapterError, uuidv7, type AgentAdapter, type RunHandle } from '@aios/adapters';
-import type { AgentEvent, WorkerCommand, WorkerReviewResultFrame } from '@aios/contracts';
+import type {
+  AgentEvent,
+  SteerMode,
+  WorkerCommand,
+  WorkerReviewResultFrame,
+} from '@aios/contracts';
 import { PathError } from '../paths/normalize.js';
 import type { ProcessManager } from '../process/manager.js';
 import type { ProjectBindings } from '../projects/bindings.js';
@@ -16,10 +21,14 @@ import { LINK_INSTRUCTION, isLinkFromPrompt } from './links.js';
 import { OmpNotFoundError } from './omp-path.js';
 import { ReviewError, type ReviewService } from './review.js';
 import type { ApprovalRules, RuleKind } from './rules.js';
+import { linkNodeModules } from '../preview/nodemodules.js';
 import { WorktreeError, type Worktree, type WorktreeManager } from './worktree.js';
+import { runSetup, type ProjectSetupStore } from './setup.js';
 
 type StartCommand = Extract<WorkerCommand, { type: 'run.start' }>;
 type ResolveCommand = Extract<WorkerCommand, { type: 'approval.resolve' }>;
+type QuestionCommand = Extract<WorkerCommand, { type: 'question.answer' }>;
+type QueueCommand = Extract<WorkerCommand, { type: 'queue.remove' }>;
 type ReviewCommand = Extract<WorkerCommand, { type: 'review.apply' }>;
 
 export interface CoordinatorDeps {
@@ -28,6 +37,8 @@ export interface CoordinatorDeps {
   review: ReviewService;
   processes: ProcessManager;
   rules: ApprovalRules;
+  /** Perintah setup worktree per project (mis. instal dependensi); tanpa ini hanya node_modules yang ditautkan. */
+  setup?: ProjectSetupStore;
   adapter: AgentAdapter;
   /** Preview website dan tool browser agent; tanpa ini run berjalan tanpa tool browser. */
   preview?: PreviewService;
@@ -148,10 +159,10 @@ export class RunCoordinator {
       this.forward(runId, run, { type: 'preview.ready', url });
   }
 
-  steer(runId: string, text: string): void {
+  steer(runId: string, text: string, mode?: SteerMode): void {
     void this.runs
       .get(runId)
-      ?.handle?.steer(text)
+      ?.handle?.steer(text, mode)
       .catch((error: unknown) => {
         this.deps.log?.(`steer ${runId} gagal: ${String(error)}`);
       });
@@ -162,6 +173,29 @@ export class RunCoordinator {
     if (!run) return;
     run.cancelRequested = true;
     void run.handle?.cancel().catch(() => undefined);
+  }
+
+  /** Menarik arahan dari antrean agent; hasilnya datang sebagai `queue.updated` dari adapter. */
+  async removeQueued(cmd: QueueCommand): Promise<void> {
+    try {
+      await this.runs.get(cmd.runId)?.handle?.removeQueued(cmd.queue, cmd.text);
+    } catch (error) {
+      this.deps.log?.(`antrean ${cmd.runId} gagal ditarik: ${String(error)}`);
+    }
+  }
+
+  /** Jawaban pengguna atas pertanyaan agent; hasilnya (`question.resolved`) datang dari adapter. */
+  async answerQuestion(cmd: QuestionCommand): Promise<void> {
+    const handle = this.runs.get(cmd.runId)?.handle;
+    if (!handle) return;
+    try {
+      await handle.answerQuestion(cmd.questionId, {
+        answers: cmd.answers,
+        cancelled: cmd.cancelled,
+      });
+    } catch (error) {
+      this.deps.log?.(`pertanyaan ${cmd.questionId} gagal dijawab: ${String(error)}`);
+    }
   }
 
   async resolveApproval(cmd: ResolveCommand): Promise<void> {
@@ -257,6 +291,7 @@ export class RunCoordinator {
         this.deps.review.inherit(cmd.continueFromRunId, runId);
       } else {
         worktree = await this.deps.worktrees.create(runId, projectPath);
+        await this.prepareWorktree(runId, run, worktree, projectPath);
       }
       const runDir = nodePath.join(this.deps.dataDir, 'runs', runId);
       await fs.mkdir(runDir, { recursive: true });
@@ -285,6 +320,7 @@ export class RunCoordinator {
         projectId: cmd.projectId,
         role: cmd.bundle.role,
         cwd: worktree.cwd,
+        lsp: this.deps.setup?.get(cmd.projectId).lsp ?? true,
         runDir,
       });
       if (run.cancelRequested) void run.handle.cancel();
@@ -314,6 +350,38 @@ export class RunCoordinator {
       this.fail(runId, run, ...describe(error));
     } finally {
       await this.cleanup(runId, run);
+    }
+  }
+
+  /**
+   * Worktree baru tidak membawa node_modules dan artefak lain yang tidak ikut git. Sesuai setelan project
+   * di worker (hanya pemilik yang mengisinya): perintah setup dijalankan dulu, lalu node_modules project
+   * ditautkan bila diminta dan worktree belum punya sendiri. Run mode rencana tidak menjalankan apa pun.
+   * Kegagalan tidak menghentikan run: langkahnya terlihat di chat.
+   */
+  private async prepareWorktree(
+    runId: string,
+    run: RunState,
+    worktree: Worktree,
+    projectPath: string,
+  ): Promise<void> {
+    const setup = this.deps.setup?.get(run.cmd.projectId);
+    if (!setup || run.cmd.planOnly) return;
+    if (setup.commands.length > 0) {
+      await runSetup({
+        processes: this.deps.processes,
+        commands: setup.commands,
+        cwd: worktree.cwd,
+        runId,
+        emit: (event) => this.forward(runId, run, event),
+        isCancelled: () => run.cancelRequested,
+      });
+    }
+    if (setup.linkNodeModules) {
+      await linkNodeModules(this.deps.processes, projectPath, worktree.cwd).catch(
+        (error: unknown) =>
+          this.deps.log?.(`node_modules tidak ditautkan untuk run ${runId}: ${String(error)}`),
+      );
     }
   }
 

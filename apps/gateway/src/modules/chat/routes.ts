@@ -7,6 +7,9 @@ import {
   ListConversationsQuerySchema,
   ListRunsQuerySchema,
   PageQuerySchema,
+  QuestionAnswerRequestSchema,
+  QuestionParamsSchema,
+  RemoveQueuedRequestSchema,
   ReviewRequestSchema,
   RunEventsQuerySchema,
   SendMessageRequestSchema,
@@ -109,7 +112,22 @@ export const chatRoutes: FastifyPluginCallback<{ chat: ChatService; runs: RunsSe
 
   app.post('/runs/:id/steer', guard, async (req, reply) => {
     const { id } = IdParamsSchema.parse(req.params);
-    await runs.steer(id, SteerRequestSchema.parse(req.body).text);
+    const body = SteerRequestSchema.parse(req.body);
+    await runs.steer(id, body.text, body.mode);
+    return reply.code(204).send();
+  });
+
+  app.post('/runs/:id/questions/:questionId', guard, async (req, reply) => {
+    const { id, questionId } = QuestionParamsSchema.parse(req.params);
+    const body = QuestionAnswerRequestSchema.parse(req.body);
+    await runs.answerQuestion(id, questionId, body);
+    return reply.code(204).send();
+  });
+
+  app.post('/runs/:id/queue/remove', guard, async (req, reply) => {
+    const { id } = IdParamsSchema.parse(req.params);
+    const body = RemoveQueuedRequestSchema.parse(req.body);
+    await runs.removeQueued(id, body.queue, body.text);
     return reply.code(204).send();
   });
 

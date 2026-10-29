@@ -11,9 +11,10 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variants: Record<ButtonVariant, string> = {
   // Gradien satu warna aksen dan cahaya saat hover (DESIGN_SYSTEM: Efek).
-  primary: 'aios-primary text-on-accent enabled:hover:shadow-glow active:opacity-90',
+  primary:
+    'aios-primary text-on-accent enabled:hover:-translate-y-px enabled:hover:shadow-glow active:opacity-90',
   secondary:
-    'border border-border-strong bg-surface text-text hover:bg-surface-2 active:bg-surface-2',
+    'border border-border-strong bg-surface text-text enabled:hover:-translate-y-px hover:bg-surface-2 active:bg-surface-2',
   ghost: 'text-text hover:bg-surface-2 active:bg-surface-2',
   danger: 'border border-danger bg-surface text-danger hover:bg-surface-2 active:bg-surface-2',
 };

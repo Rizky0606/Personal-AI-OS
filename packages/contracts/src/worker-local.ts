@@ -72,6 +72,34 @@ export const ProjectBindingSchema = z.object({
 });
 export type ProjectBinding = z.infer<typeof ProjectBindingSchema>;
 
+export const SETUP_MAX_COMMANDS = 8;
+export const SETUP_COMMAND_MAX = 200;
+/**
+ * Satu perintah setup worktree. Dijalankan tanpa shell (argumen dipisah spasi), jadi karakter yang bermakna
+ * bagi shell, tanda kutip, dan baris baru ditolak; rangkaian perintah ditulis sebagai beberapa baris.
+ */
+export const SetupCommandSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(SETUP_COMMAND_MAX)
+  .regex(/^[^\0\r\n&|;<>`$^%"'()!]+$/, 'Perintah memuat karakter yang tidak diizinkan.');
+
+/**
+ * Penyiapan worktree baru per project (hanya untuk PC ini): perintah yang dijalankan sebelum agent mulai
+ * (mis. `pnpm install --offline`), opsi menautkan node_modules project ke worktree (memberi agent akses tulis
+ * ke node_modules asli, jadi bawaannya mati), dan LSP omp (bawaan nyala; hanya aktif bila server bahasa
+ * ditemukan di worktree atau PATH).
+ */
+export const ProjectSetupSchema = z
+  .object({
+    commands: z.array(SetupCommandSchema).max(SETUP_MAX_COMMANDS),
+    linkNodeModules: z.boolean(),
+    lsp: z.boolean(),
+  })
+  .meta({ id: 'ProjectSetup' });
+export type ProjectSetup = z.infer<typeof ProjectSetupSchema>;
+
 const PathParams = z.object({ path: z.string().min(1) });
 
 /** Yang di-preview: folder project, atau worktree sebuah run bila runId diisi. */
@@ -156,6 +184,16 @@ export const LocalRequestSchema = z.discriminatedUnion('method', [
     params: z.object({ projectId: IdSchema }),
   }),
   z.object({ id: z.string().min(1), method: z.literal('projects.list') }),
+  z.object({
+    id: z.string().min(1),
+    method: z.literal('setup.get'),
+    params: z.object({ projectId: IdSchema }),
+  }),
+  z.object({
+    id: z.string().min(1),
+    method: z.literal('setup.set'),
+    params: ProjectSetupSchema.extend({ projectId: IdSchema }),
+  }),
   z.object({
     id: z.string().min(1),
     method: z.literal('review.get'),

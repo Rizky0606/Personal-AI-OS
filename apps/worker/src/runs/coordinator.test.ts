@@ -18,6 +18,7 @@ import { ProjectBindings } from '../projects/bindings.js';
 import { ReviewService } from './review.js';
 import { RunCoordinator } from './coordinator.js';
 import { OmpNotFoundError } from './omp-path.js';
+import { ProjectSetupStore } from './setup.js';
 import { ApprovalRules } from './rules.js';
 import { WorktreeManager } from './worktree.js';
 
@@ -33,16 +34,31 @@ const APPROVAL_2 = '0192f0c4-7a1b-7c2d-a004-4a5b6c7d8e94';
 class FakeHandle implements RunHandle {
   readonly events = new AsyncQueue<AgentEvent>();
   readonly steered: string[] = [];
+  readonly steerModes: (string | undefined)[] = [];
   readonly resolved: [string, string, boolean | undefined][] = [];
+  readonly answered: { questionId: string; answers: unknown[]; cancelled: boolean }[] = [];
+  readonly unqueued: [string, string][] = [];
+  removeQueued(queue: string, text: string) {
+    this.unqueued.push([queue, text]);
+    return Promise.resolve();
+  }
   cancelled = false;
   constructor(readonly runId: string) {}
-  steer(text: string) {
+  steer(text: string, mode?: string) {
     this.steered.push(text);
+    this.steerModes.push(mode);
     return Promise.resolve();
   }
   cancel() {
     this.cancelled = true;
     this.events.end();
+    return Promise.resolve();
+  }
+  answerQuestion(
+    questionId: string,
+    result: { answers: unknown[]; cancelled: boolean },
+  ): Promise<void> {
+    this.answered.push({ questionId, ...result });
     return Promise.resolve();
   }
   resolveApproval(id: string, decision: 'allow' | 'deny', remember?: boolean) {
@@ -111,7 +127,7 @@ async function until(check: () => boolean, label: string, ms = 5000) {
   }
 }
 
-async function build(over: { maxRunMs?: number } = {}) {
+async function build(over: { maxRunMs?: number; setup?: ProjectSetupStore } = {}) {
   const allowed = new AllowList({ file: path.join(base, 'data', 'allowed.json'), forbidden: [] });
   await allowed.add(path.join(base, 'izin'));
   bindings = new ProjectBindings(path.join(base, 'data', 'projects.json'), allowed);
@@ -242,6 +258,84 @@ describe('RunCoordinator: memulai run', () => {
   });
 });
 
+describe('RunCoordinator: setup worktree', () => {
+  async function withSetup(setup: {
+    commands?: string[];
+    linkNodeModules?: boolean;
+    lsp?: boolean;
+  }) {
+    const store = new ProjectSetupStore(path.join(base, 'data', 'setup.json'));
+    await store.set(PROJECT, { commands: [], linkNodeModules: false, lsp: true, ...setup });
+    await build({ setup: store });
+  }
+
+  it('perintah setup jalan di worktree sebelum agent mulai dan tampil sebagai langkah setup', async () => {
+    await withSetup({ commands: ['node --version'], linkNodeModules: false });
+
+    coordinator.start(command());
+    await until(() => adapter.inputs.length === 1, 'adapter dimulai');
+
+    const seen = events();
+    expect(seen[0]).toMatchObject({
+      type: 'tool.started',
+      name: 'setup',
+      target: 'node --version',
+    });
+    expect(seen.find((e) => e.type === 'tool.output')).toMatchObject({
+      chunk: expect.stringMatching(/^v\d+\./) as string,
+    });
+    expect(seen.find((e) => e.type === 'tool.finished')).toMatchObject({ status: 'ok' });
+  });
+
+  it('perintah gagal: terlihat sebagai galat, perintah berikutnya dilewati, run tetap dimulai', async () => {
+    await withSetup({
+      commands: ['node --bukan-flag-nyata', 'node --version'],
+      linkNodeModules: false,
+    });
+
+    coordinator.start(command());
+    await until(() => adapter.inputs.length === 1, 'adapter dimulai');
+
+    const started = events().filter((e) => e.type === 'tool.started');
+    expect(started).toHaveLength(1);
+    expect(events().find((e) => e.type === 'tool.finished')).toMatchObject({ status: 'error' });
+  });
+
+  it('mode rencana tidak menjalankan perintah setup', async () => {
+    await withSetup({ commands: ['node --version'], linkNodeModules: false });
+
+    coordinator.start(command({ planOnly: true }));
+    await until(() => adapter.inputs.length === 1, 'adapter dimulai');
+
+    expect(types()).not.toContain('tool.started');
+  });
+
+  async function linkedAfterStart(linkNodeModules: boolean) {
+    await fs.writeFile(path.join(repo, '.gitignore'), 'node_modules/\n');
+    git(repo, 'add', '-A');
+    git(repo, 'commit', '-q', '-m', 'ignore');
+    await fs.mkdir(path.join(repo, 'node_modules'));
+    await withSetup({ commands: [], linkNodeModules });
+
+    coordinator.start(command());
+    await until(() => adapter.inputs.length === 1, 'adapter dimulai');
+
+    const link = path.join(worktrees.get(RUN)?.cwd ?? '', 'node_modules');
+    return fs.lstat(link).then(
+      (s) => s.isSymbolicLink(),
+      () => false,
+    );
+  }
+
+  it('node_modules ditautkan ke worktree bila diminta', async () => {
+    expect(await linkedAfterStart(true)).toBe(true);
+  });
+
+  it('node_modules tidak ditautkan secara bawaan (tautan memberi agent akses tulis ke folder asli)', async () => {
+    expect(await linkedAfterStart(false)).toBe(false);
+  });
+});
+
 describe('RunCoordinator: event dan approval', () => {
   async function running() {
     coordinator.start(command());
@@ -364,6 +458,46 @@ describe('RunCoordinator: event dan approval', () => {
     expect(types()).toEqual([]);
   });
 
+  it('penarikan arahan dari antrean diteruskan ke adapter', async () => {
+    const handle = await running();
+
+    await coordinator.removeQueued({
+      type: 'queue.remove',
+      runId: RUN,
+      queue: 'followUp',
+      text: 'lalu lint',
+    });
+
+    expect(handle.unqueued).toEqual([['followUp', 'lalu lint']]);
+  });
+
+  it('jawaban pertanyaan agent diteruskan ke adapter; run yang tidak ada diabaikan', async () => {
+    const handle = await running();
+
+    await coordinator.answerQuestion({
+      type: 'question.answer',
+      runId: RUN,
+      questionId: APPROVAL,
+      answers: [{ id: 'db', selectedOptions: ['SQLite'] }],
+      cancelled: false,
+    });
+    await coordinator.answerQuestion({
+      type: 'question.answer',
+      runId: RUN_2,
+      questionId: APPROVAL,
+      answers: [],
+      cancelled: true,
+    });
+
+    expect(handle.answered).toEqual([
+      {
+        questionId: APPROVAL,
+        answers: [{ id: 'db', selectedOptions: ['SQLite'] }],
+        cancelled: false,
+      },
+    ]);
+  });
+
   it('aturan tidak berlaku untuk perintah lain atau project lain', async () => {
     await rules.add(PROJECT, 'command', 'node --test');
     const handle = await running();
@@ -429,6 +563,15 @@ describe('RunCoordinator: event dan approval', () => {
 
     await until(() => handle.steered.length === 1, 'steer');
     expect(handle.steered).toEqual(['fokus ke tes saja']);
+  });
+
+  it('mode follow-up ikut diteruskan ke adapter', async () => {
+    const handle = await running();
+
+    coordinator.steer(RUN, 'lalu lint', 'followUp');
+
+    await until(() => handle.steered.length === 1, 'steer');
+    expect(handle.steerModes).toEqual(['followUp']);
   });
 });
 
