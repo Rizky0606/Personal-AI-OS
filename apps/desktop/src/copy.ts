@@ -470,6 +470,7 @@ export const copy = {
     newChat: 'Ctrl+N  Chat baru',
     sidebar: 'Ctrl+B  Sidebar',
     rightPanel: 'Ctrl+J  Panel kanan',
+    navigate: 'Ctrl+1…6  Pindah layar: Chat, Project, Kanban, Jadwal, Riset, Pengaturan',
     quickAsk: 'Ctrl+Shift+Spasi  Tanya cepat dari aplikasi mana pun',
   },
   quick: {

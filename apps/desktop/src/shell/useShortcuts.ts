@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { routeForSlot } from './navRoutes';
 
 export interface ShortcutActions {
   palette(): void;
@@ -8,8 +9,6 @@ export interface ShortcutActions {
   /** Ctrl+1..6: Chat, Project, Kanban, Jadwal, Riset, Pengaturan (urutan rail). */
   navigate(slot: number): void;
 }
-
-export const NAV_SLOTS = 6;
 
 /** Peta tombol ke aksi; null bila bukan shortcut aplikasi. Murni, agar mudah dites. */
 export function shortcutFor(
@@ -26,7 +25,7 @@ export function shortcutFor(
     case 'j':
       return 'toggleRightPanel';
     default:
-      return /^[1-6]$/.test(event.key) ? 'navigate' : null;
+      return /^\d$/.test(event.key) && routeForSlot(Number(event.key)) ? 'navigate' : null;
   }
 }
 

@@ -7,6 +7,7 @@ import { useUiStore } from '../state/uiStore';
 import { api, resetApi } from '../test/fakeServices';
 import { CONV, TS, models } from '../test/fixtures';
 import { renderScreen } from '../test/render';
+import { NAV_ROUTES } from '../shell/navRoutes';
 
 vi.mock('../app/services', async () => (await import('../test/fakeServices')).fakeServices);
 
@@ -254,6 +255,28 @@ describe('Palet perintah: aksi', () => {
     await user.keyboard('umum');
     await user.click(await option(copy.palette.generalChat));
     expect(useUiStore.getState().activeProjectId).toBeNull();
+  });
+
+  it('petunjuk Ctrl+1..6 pada perintah navigasi sama dengan pemetaan pintasan keyboard', async () => {
+    await renderScreen(<CommandPalette />);
+    await input();
+
+    const labels = {
+      '/': copy.nav.chat,
+      '/workspace': copy.nav.workspace,
+      '/kanban': copy.nav.kanban,
+      '/schedules': copy.nav.schedules,
+      '/research': copy.nav.research,
+      '/settings': copy.nav.settings,
+    } as const;
+    const texts = screen.getAllByRole('option').map((o) => o.textContent ?? '');
+    for (const [slot, route] of NAV_ROUTES.entries()) {
+      const expected = new RegExp(`^${labels[route]}\\s*Ctrl\\+${slot + 1}$`);
+      expect(
+        texts.filter((t) => expected.test(t)),
+        `${route} → Ctrl+${slot + 1}`,
+      ).toHaveLength(1);
+    }
   });
 
   it('buka Kuota dan Pembanding model dari palet', async () => {

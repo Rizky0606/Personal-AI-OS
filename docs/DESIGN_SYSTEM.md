@@ -92,6 +92,7 @@ Tema mengikuti sistem secara default, dengan pilihan manual terang atau gelap. A
 - **Panel kanan** (bisa diubah lebarnya, tab): Preview, Diff, Terminal, Berkas.
 - **Status bar 24px:** project dan branch, role aktif, model, status worker, kuota.
 - **Command palette** Ctrl+K untuk semua aksi.
+- **Pintasan keyboard** (sumber kebenaran: kode; `apps/desktop/src/shell/navRoutes.ts` dan `useShortcuts.ts`): Ctrl+K palet perintah, Ctrl+N chat baru, Ctrl+B sidebar, Ctrl+J panel kanan, Ctrl+Shift+Spasi tanya cepat. Ctrl+1 Chat, Ctrl+2 Project, Ctrl+3 Kanban, Ctrl+4 Jadwal, Ctrl+5 Riset, Ctrl+6 Pengaturan (urutan rail). Petunjuk di palet diturunkan dari kode yang sama dan daftar di Pengaturan diuji terhadapnya; layar lain (Ruang, Kuota, Status, Pembanding) hanya lewat palet atau rail.
 
 ## Layout Android
 

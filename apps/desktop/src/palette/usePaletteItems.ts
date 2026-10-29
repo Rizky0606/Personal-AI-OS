@@ -6,6 +6,7 @@ import { api } from '../app/services';
 import { copy } from '../copy';
 import { useUiStore, type RightPanelTab, type ThemeMode } from '../state/uiStore';
 import { useProjects } from '../worker/hooks';
+import { shortcutHint } from '../shell/navRoutes';
 import type { PaletteItem } from './rank';
 
 const PANELS: RightPanelTab[] = ['preview', 'diff', 'terminal'];
@@ -83,13 +84,19 @@ export function usePaletteItems(open: boolean, close: () => void): PaletteItem[]
         hint: 'Ctrl+B',
         run: done(() => useUiStore.getState().toggleSidebar()),
       },
-      { id: 'go-chat', group: 'go', label: copy.nav.chat, hint: 'Ctrl+1', run: go('/') },
-      { id: 'go-kanban', group: 'go', label: copy.nav.kanban, hint: 'Ctrl+3', run: go('/kanban') },
+      { id: 'go-chat', group: 'go', label: copy.nav.chat, hint: shortcutHint('/'), run: go('/') },
+      {
+        id: 'go-kanban',
+        group: 'go',
+        label: copy.nav.kanban,
+        hint: shortcutHint('/kanban'),
+        run: go('/kanban'),
+      },
       {
         id: 'go-workspace',
         group: 'go',
         label: copy.nav.workspace,
-        hint: 'Ctrl+2',
+        hint: shortcutHint('/workspace'),
         keywords: 'project ruang kerja run paralel agent worktree status folder',
         run: go('/workspace'),
       },
@@ -97,21 +104,21 @@ export function usePaletteItems(open: boolean, close: () => void): PaletteItem[]
         id: 'go-schedules',
         group: 'go',
         label: copy.nav.schedules,
-        hint: 'Ctrl+4',
+        hint: shortcutHint('/schedules'),
         run: go('/schedules'),
       },
       {
         id: 'go-research',
         group: 'go',
         label: copy.nav.research,
-        hint: 'Ctrl+5',
+        hint: shortcutHint('/research'),
         run: go('/research'),
       },
       {
         id: 'go-settings',
         group: 'go',
         label: copy.nav.settings,
-        hint: 'Ctrl+6',
+        hint: shortcutHint('/settings'),
         run: go('/settings'),
       },
       {

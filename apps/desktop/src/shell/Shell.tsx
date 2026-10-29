@@ -13,6 +13,7 @@ import { useUiStore } from '../state/uiStore';
 import { EmptyState } from '../ui/EmptyState';
 import { IconButton } from '../ui/IconButton';
 import { CommandPalette } from './CommandPalette';
+import { routeForSlot } from './navRoutes';
 import { Rail } from './Rail';
 import { RightPanel } from './RightPanel';
 import { Sidebar } from './Sidebar';
@@ -26,9 +27,6 @@ interface Section {
   /** Aksi utama di header sidebar. */
   action?: { label: string; to: '/' | '/research' };
 }
-
-/** Tujuan Ctrl+1..6, sama dengan urutan rail. */
-const NAV_ROUTES = ['/', '/workspace', '/kanban', '/schedules', '/research', '/settings'] as const;
 
 /** Judul bagian dan isi sidebar menurut rute aktif. */
 function sectionFor(pathname: string): Section {
@@ -106,7 +104,7 @@ export function Shell() {
       toggleSidebar,
       toggleRightPanel,
       navigate: (slot: number) => {
-        const target = NAV_ROUTES[slot - 1];
+        const target = routeForSlot(slot);
         if (target) void navigate({ to: target });
       },
     }),
