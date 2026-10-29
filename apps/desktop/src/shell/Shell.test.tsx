@@ -226,4 +226,81 @@ describe('Shell', () => {
 
     expect(useUiStore.getState().newChatSignal).toBe(before + 1);
   });
+
+  it('panel kanan membuka dengan animasi lebar, menutup menyempit dulu (inert) lalu dilepas setelah 240 ms', async () => {
+    await renderShell();
+    const panel = () => screen.queryByRole('complementary', { name: copy.shell.toggleRightPanel });
+
+    ctrl('j');
+    expect(panel()).toHaveClass('aios-panel-open');
+    expect(panel()).not.toHaveAttribute('inert');
+    // Isi sidebar dan area utama tidak dipasang ulang saat panel membuka.
+    expect(screen.getByRole('main', { name: copy.shell.mainArea })).toBeInTheDocument();
+
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      ctrl('j');
+      expect(panel()).toHaveClass('aios-panel-close');
+      expect(panel()).toHaveAttribute('inert');
+      // Pegangan ubah-lebar hilang selama menutup; panel masih ada sampai animasinya selesai.
+      expect(
+        screen.queryByRole('separator', { name: copy.shell.resizePanel }),
+      ).not.toBeInTheDocument();
+
+      act(() => void vi.advanceTimersByTime(239));
+      expect(panel()).toBeInTheDocument();
+      act(() => void vi.advanceTimersByTime(2));
+      expect(panel()).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('membuka ulang saat masih menutup membatalkan pelepasan panel', async () => {
+    await renderShell();
+    ctrl('j');
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      ctrl('j');
+      ctrl('j');
+      act(() => void vi.advanceTimersByTime(500));
+      const panel = screen.getByRole('complementary', { name: copy.shell.toggleRightPanel });
+      expect(panel).toHaveClass('aios-panel-open');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('tab panel: yang aktif menampilkan label, yang lain ikon dengan nama aksesibel dan tooltip; semua punya ikon', async () => {
+    await renderShell();
+    ctrl('j');
+
+    const tabs = screen.getAllByRole('tab');
+    expect(tabs).toHaveLength(6);
+    for (const tab of tabs) expect(tab.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    const active = screen.getByRole('tab', { selected: true });
+    expect(within(active).getByText(copy.shell.panels.preview)).not.toHaveClass('sr-only');
+    const diff = screen.getByRole('tab', { name: copy.shell.panels.diff });
+    expect(within(diff).getByText(copy.shell.panels.diff)).toHaveClass('sr-only');
+
+    diff.focus();
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(copy.shell.panels.diff);
+  });
+
+  it('tab panel dengan keyboard: panah menggeser fokus dan tab aktif tanpa kehilangan fokus', async () => {
+    await renderShell();
+    ctrl('j');
+
+    const first = screen.getByRole('tab', { selected: true });
+    first.focus();
+    fireEvent.keyDown(first, { key: 'ArrowRight' });
+
+    const next = screen.getByRole('tab', { name: copy.shell.panels.diff });
+    // Radix memindahkan fokus roving secara tertunda (setTimeout), jadi tunggu.
+    await waitFor(() => expect(next).toHaveFocus());
+    await waitFor(() => expect(next).toHaveAttribute('aria-selected', 'true'));
+    // Tab yang menjadi aktif tetap elemen yang sama (tidak dibuat ulang), jadi fokus bertahan.
+    expect(screen.getByRole('tab', { selected: true })).toBe(next);
+    expect(next).toHaveFocus();
+  });
 });
