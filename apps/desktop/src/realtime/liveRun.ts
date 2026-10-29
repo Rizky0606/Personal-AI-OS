@@ -173,7 +173,7 @@ function reduceEvent(run: LiveRun, event: ServerEvent, ts: number | undefined): 
                 ...t,
                 name: event.name,
                 target: event.target ?? t.target,
-                startedAt: t.startedAt === null ? at : t.startedAt,
+                startedAt: t.startedAt ?? at,
               }
             : t,
         ),

@@ -1,4 +1,4 @@
-import type { AgentEvent, ServerEvent } from '@aios/contracts';
+import type { AgentEvent } from '@aios/contracts';
 import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -35,7 +35,7 @@ const fixtures: Fixture[] = readdirSync(DIR)
 function replay(fixture: Fixture, events: Envelope[]): LiveRun {
   let live = newLiveRun(fixture.runId);
   if (fixture.runCreatedAt) live = withRunStart(live, Date.parse(fixture.runCreatedAt));
-  for (const e of events) live = reduceLiveRun(live, e.event as ServerEvent, Date.parse(e.ts));
+  for (const e of events) live = reduceLiveRun(live, e.event, Date.parse(e.ts));
   return live;
 }
 
