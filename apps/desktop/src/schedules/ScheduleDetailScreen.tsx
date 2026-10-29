@@ -9,6 +9,7 @@ import { cn } from '../lib/cn';
 import { formatDateTime } from '../lib/time';
 import { Button } from '../ui/Button';
 import { EmptyState } from '../ui/EmptyState';
+import { PageContainer } from '../ui/PageContainer';
 import { StateView, type ViewState } from '../ui/StateView';
 import { Switch } from '../ui/Switch';
 import { useScheduleActions } from './useScheduleActions';
@@ -69,7 +70,7 @@ export function ScheduleDetailScreen({ scheduleId }: { scheduleId: string }) {
         onRetry={() => void schedulesQuery.refetch()}
       >
         {schedule ? (
-          <div className="flex max-w-3xl flex-col gap-6 p-6">
+          <PageContainer>
             <header className="flex flex-col gap-2">
               <h2 className="text-section font-semibold text-text">{schedule.name}</h2>
               <p className="font-mono text-meta text-text-2">
@@ -235,7 +236,7 @@ export function ScheduleDetailScreen({ scheduleId }: { scheduleId: string }) {
                 </div>
               ) : null}
             </section>
-          </div>
+          </PageContainer>
         ) : null}
       </StateView>
     </div>

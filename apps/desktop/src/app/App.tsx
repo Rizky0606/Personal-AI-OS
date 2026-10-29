@@ -8,6 +8,7 @@ import { TooltipProvider } from '../ui/Tooltip';
 import { useAuthState } from './hooks';
 import { queryClient } from './queryClient';
 import { QuickAskLifecycle } from './QuickAskLifecycle';
+import { ShellSkeleton } from '../shell/ShellSkeleton';
 import { RealtimeLifecycle } from './RealtimeLifecycle';
 import { WorkerLifecycle } from './WorkerLifecycle';
 import { router } from './router';
@@ -52,7 +53,7 @@ export function App() {
         <RealtimeLifecycle />
         <WorkerLifecycle />
         {state.status === 'loading' ? (
-          <div className="h-full bg-bg" />
+          <ShellSkeleton />
         ) : state.status === 'signedOut' ? (
           <LoginScreen initialServer={readLastServer()} fixedServer={BUILT_IN_SERVER} />
         ) : (

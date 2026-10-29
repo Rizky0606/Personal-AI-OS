@@ -3,6 +3,7 @@ import { useOnline } from '../app/hooks';
 import { copy } from '../copy';
 import { Button } from '../ui/Button';
 import { TextArea } from '../ui/TextArea';
+import { PageContainer } from '../ui/PageContainer';
 import { TextField } from '../ui/TextField';
 import { useSpaceActions } from './useSpaceActions';
 
@@ -24,7 +25,7 @@ export function SpacesScreen() {
   }
 
   return (
-    <div className="flex max-w-2xl flex-col gap-6 p-6">
+    <PageContainer>
       <header className="flex flex-col gap-2">
         <h2 className="text-page font-semibold text-text">{s.title}</h2>
         <p className="max-w-[72ch] text-ui text-text-2">{s.intro}</p>
@@ -55,6 +56,6 @@ export function SpacesScreen() {
         </div>
         {!online ? <p className="text-meta text-text-2">{copy.states.offline}</p> : null}
       </form>
-    </div>
+    </PageContainer>
   );
 }

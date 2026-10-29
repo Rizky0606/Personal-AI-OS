@@ -30,13 +30,18 @@ export class RunTracker {
   /** Run yang gagal di sesi ini; bertahan setelah [release] supaya errornya tetap tampil di percakapan. */
   private readonly failures = new Map<string, RunFailure>();
   private readonly pollMs: number;
+  /** Percakapan tiap run yang dilacak (bila pemanggil tahu); untuk penanda "sedang berjalan" di daftar. */
+  private readonly conversations = new Map<string, string>();
+  private readonly allListeners = new Set<() => void>();
+  private liveConversations: ReadonlySet<string> = new Set();
 
   constructor(private readonly deps: RunTrackerDeps) {
     this.pollMs = deps.pollMs ?? RUN_POLL_MS;
   }
 
-  /** Idempotent: run yang sudah dilacak tidak dilanggan dua kali. */
-  track(runId: string): void {
+  /** Idempotent: run yang sudah dilacak tidak dilanggan dua kali. `conversationId` opsional untuk penanda daftar. */
+  track(runId: string, conversationId?: string): void {
+    if (conversationId) this.conversations.set(runId, conversationId);
     if (this.runs.has(runId)) return;
     this.runs.set(runId, newLiveRun(runId));
     const unsubscribe = this.deps.realtime.subscribe(`run:${runId}`, (envelope) => {
@@ -66,11 +71,23 @@ export class RunTracker {
     };
   };
 
+  /** Pelanggan semua perubahan (set percakapan berjalan). */
+  subscribeAll = (listener: () => void): (() => void) => {
+    this.allListeners.add(listener);
+    return () => {
+      this.allListeners.delete(listener);
+    };
+  };
+
+  /** Percakapan yang punya run belum selesai. Referensi sama selama isinya tidak berubah. */
+  liveConversationIds = (): ReadonlySet<string> => this.liveConversations;
+
   /** Dilepas setelah UI menggantikannya dengan data server (pesan akhir). */
   release(runId: string): void {
     this.stops.get(runId)?.();
     this.stops.delete(runId);
     if (this.runs.delete(runId)) this.notify(runId);
+    this.conversations.delete(runId);
   }
 
   /** Pesan run ini dihapus pemilik: lepas tampilannya dan lupakan galatnya. */
@@ -128,5 +145,17 @@ export class RunTracker {
 
   private notify(runId: string): void {
     this.listeners.get(runId)?.forEach((listener) => listener());
+    const live = new Set<string>();
+    for (const [id, run] of this.runs) {
+      const conversation = this.conversations.get(id);
+      if (conversation && !isSettled(run.status)) live.add(conversation);
+    }
+    const changed =
+      live.size !== this.liveConversations.size ||
+      [...live].some((id) => !this.liveConversations.has(id));
+    if (changed) {
+      this.liveConversations = live;
+      this.allListeners.forEach((listener) => listener());
+    }
   }
 }

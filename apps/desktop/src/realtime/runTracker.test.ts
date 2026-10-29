@@ -99,6 +99,36 @@ describe('RunTracker', () => {
     expect(subscribe).toHaveBeenCalledWith(`run:${RUN}`, expect.any(Function));
   });
 
+  it('liveConversationIds: percakapan yang punya run berjalan; hilang saat run selesai; pelanggan diberi tahu', () => {
+    const tracker = make();
+    const listener = vi.fn();
+    tracker.subscribeAll(listener);
+    expect(tracker.liveConversationIds().size).toBe(0);
+
+    tracker.track(RUN, 'conv-1');
+    emit({ type: 'run.status', status: 'running' });
+    expect([...tracker.liveConversationIds()]).toEqual(['conv-1']);
+    expect(listener).toHaveBeenCalled();
+
+    // Snapshot stabil bila tidak berubah (syarat useSyncExternalStore).
+    expect(tracker.liveConversationIds()).toBe(tracker.liveConversationIds());
+
+    emit({ type: 'run.status', status: 'completed' });
+    expect(tracker.liveConversationIds().size).toBe(0);
+  });
+
+  it('liveConversationIds: run tanpa percakapan diabaikan; needs_review bukan berjalan', () => {
+    const tracker = make();
+    tracker.track(RUN);
+    emit({ type: 'run.status', status: 'running' });
+    expect(tracker.liveConversationIds().size).toBe(0);
+
+    const other = make();
+    other.track(RUN, 'conv-2');
+    emit({ type: 'run.status', status: 'needs_review' });
+    expect(other.liveConversationIds().size).toBe(0);
+  });
+
   it('memberi tahu pendengar saat event datang dan menyelesaikan run sekali', () => {
     const tracker = make();
     const listener = vi.fn();

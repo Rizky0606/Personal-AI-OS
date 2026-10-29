@@ -1,0 +1,120 @@
+/*
+ * Shell "pulau" (sesi 4): kanvas gelap berlapis, panel melayang berjarak 8 px, pelat penanda yang meluncur,
+ * panel kanan yang melebar, dan perpindahan layar lewat View Transitions. Semua gerak berhenti di
+ * prefers-reduced-motion (aturan universal di styles.css + pengecualian di bawah).
+ */
+
+/* Pelat penanda (PlateGroup): posisi dari JS (transform), gerak dari CSS. */
+.aios-plate {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: var(--radius-control);
+  pointer-events: none;
+  opacity: 0;
+  will-change: transform;
+}
+.aios-plate[data-visible='true'] {
+  opacity: 1;
+}
+.aios-plate[data-plate='active'][data-ready='true'] {
+  transition:
+    transform var(--aios-duration-slow) var(--aios-easing-spring-move),
+    width var(--aios-duration-slow) var(--aios-easing),
+    height var(--aios-duration-slow) var(--aios-easing),
+    opacity var(--aios-duration-fast) var(--aios-easing);
+}
+/* Pelat hover menyusul kursor: lebih cepat dan tanpa pegas. */
+.aios-plate[data-plate='hover'][data-ready='true'] {
+  transition:
+    transform var(--aios-duration-fast) var(--aios-easing),
+    width var(--aios-duration-fast) var(--aios-easing),
+    height var(--aios-duration-fast) var(--aios-easing),
+    opacity var(--aios-duration-fast) var(--aios-easing);
+}
+
+/* Panel kanan melebar dari 0 ke lebar tersimpan; menutup menyempit lagi. Lebar akhir dari gaya inline. */
+@keyframes aios-panel-open {
+  from {
+    width: 0;
+    opacity: 0;
+  }
+}
+@keyframes aios-panel-close {
+  to {
+    width: 0;
+    opacity: 0;
+  }
+}
+.aios-panel-open {
+  animation: aios-panel-open var(--aios-duration-slow) var(--aios-easing) backwards;
+}
+.aios-panel-close {
+  animation: aios-panel-close var(--aios-duration-slow) var(--aios-easing) forwards;
+}
+
+/* Kerangka pulau saat memuat awal: sapuan aksen pelan di atas permukaan. */
+@keyframes aios-island-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+.aios-island-shimmer {
+  background-image: linear-gradient(
+    100deg,
+    transparent 0%,
+    color-mix(in oklch, var(--aios-accent) 10%, transparent) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: aios-island-shimmer 1800ms linear infinite;
+}
+
+/* Perpindahan layar: hanya isi halaman (aios-page) yang bertransisi; sisa shell tetap diam. */
+.aios-page-transition {
+  view-transition-name: aios-page;
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+@keyframes aios-vt-out {
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+@keyframes aios-vt-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+::view-transition-old(aios-page) {
+  animation: aios-vt-out var(--aios-duration-base) var(--aios-easing) both;
+}
+::view-transition-new(aios-page) {
+  animation: aios-vt-in var(--aios-duration-base) var(--aios-easing) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aios-island-shimmer {
+    animation: none !important;
+    background-image: none;
+  }
+  .aios-plate {
+    transition: none !important;
+  }
+  .aios-panel-open,
+  .aios-panel-close {
+    animation: none !important;
+  }
+  ::view-transition-old(aios-page),
+  ::view-transition-new(aios-page) {
+    animation: none !important;
+  }
+}

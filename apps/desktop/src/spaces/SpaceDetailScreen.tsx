@@ -8,6 +8,7 @@ import { copy } from '../copy';
 import { Button } from '../ui/Button';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { EmptyState } from '../ui/EmptyState';
+import { PageContainer } from '../ui/PageContainer';
 import { StateView, type ViewState } from '../ui/StateView';
 import { useSpaceActions } from './useSpaceActions';
 
@@ -67,7 +68,7 @@ export function SpaceDetailScreen({ spaceId }: { spaceId: string }) {
         onRetry={() => void spacesQuery.refetch()}
       >
         {space ? (
-          <div className="flex max-w-3xl flex-col gap-6 p-6">
+          <PageContainer>
             <header className="flex flex-wrap items-start gap-3">
               <div className="flex min-w-0 flex-1 flex-col gap-1">
                 <h2 className="text-section font-semibold text-text">{space.name}</h2>
@@ -205,7 +206,7 @@ export function SpaceDetailScreen({ spaceId }: { spaceId: string }) {
                 </ul>
               )}
             </section>
-          </div>
+          </PageContainer>
         ) : null}
       </StateView>
       <ConfirmDialog

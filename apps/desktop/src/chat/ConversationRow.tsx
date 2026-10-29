@@ -10,6 +10,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { useState } from 'react';
+import { useLiveConversationIds } from '../app/hooks';
 import { copy } from '../copy';
 import { cn } from '../lib/cn';
 import { ActionMenu } from '../ui/ActionMenu';
@@ -44,6 +45,7 @@ export function ConversationRow({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [title, setTitle] = useState(conversation.title);
   const label = conversation.title || copy.chat.untitled;
+  const running = useLiveConversationIds().has(conversation.id);
 
   const linkClass = 'flex min-w-0 flex-1 items-center gap-2 py-1 pl-3 text-ui text-text';
   const linkContent = (
@@ -57,6 +59,13 @@ export function ConversationRow({
         />
       ) : null}
       <span className="truncate">{label}</span>
+      {running ? (
+        <span
+          role="img"
+          aria-label={copy.chat.running}
+          className="ml-auto size-2 shrink-0 animate-aios-breathe rounded-full bg-writing"
+        />
+      ) : null}
     </>
   );
 

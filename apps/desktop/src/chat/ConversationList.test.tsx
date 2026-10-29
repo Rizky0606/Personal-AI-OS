@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiProblem } from '../auth/authSession';
 import { copy } from '../copy';
 import { CONV, TS, uid } from '../test/fixtures';
-import { api, resetApi } from '../test/fakeServices';
+import { api, resetApi, runs } from '../test/fakeServices';
 import { useUiStore } from '../state/uiStore';
 import { renderScreen } from '../test/render';
 
@@ -50,6 +50,26 @@ describe('ConversationList', () => {
     expect(links.map((l) => l.textContent)).toEqual(['Penting', 'Biasa', copy.chat.untitled]);
   });
 
+  it('percakapan dengan run berjalan diberi penanda "Sedang berjalan"; yang lain dan yang sudah selesai tidak', async () => {
+    const busy = conversation({ title: 'Sedang dikerjakan' });
+    const idle = conversation({ title: 'Diam' });
+    api.listConversations.mockResolvedValue({ items: [busy, idle], nextBefore: null });
+    runs.track('run-busy', busy.id);
+    await renderScreen(<ConversationList />);
+
+    const nav = await screen.findByRole('navigation', { name: copy.chat.listLabel });
+    const marks = within(nav).getAllByRole('img', { name: copy.chat.running });
+    expect(marks).toHaveLength(1);
+    expect(within(nav).getByRole('link', { name: /Sedang dikerjakan/ })).toContainElement(
+      marks[0]!,
+    );
+    expect(within(nav).getByRole('link', { name: 'Diam' })).not.toContainElement(marks[0]!);
+
+    runs.release('run-busy');
+    await waitFor(() =>
+      expect(within(nav).queryByRole('img', { name: copy.chat.running })).not.toBeInTheDocument(),
+    );
+  });
   it('kosong, error dengan Coba lagi, dan offline punya tampilan sendiri', async () => {
     const view = await renderScreen(<ConversationList />);
     expect(await screen.findByText(copy.chat.listEmpty)).toBeInTheDocument();

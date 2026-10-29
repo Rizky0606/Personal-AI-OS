@@ -125,7 +125,7 @@ export function useChatController(conversationId: string | undefined) {
     api
       .getRun(resumeId)
       .then((run) => {
-        if (!isSettled(run.status)) runs.track(resumeId);
+        if (!isSettled(run.status)) runs.track(resumeId, run.conversationId ?? undefined);
       })
       .catch(() => checkedRuns.delete(resumeId));
   }, [resumeId]);
@@ -172,7 +172,7 @@ export function useChatController(conversationId: string | undefined) {
         setSkillPacks([]);
         clearAttachments();
         if (override === undefined) attach.clear();
-        runs.track(response.run.id);
+        runs.track(response.run.id, response.run.conversationId ?? undefined);
         setActiveRunId(response.run.id);
         void queryClient.invalidateQueries({ queryKey: ['conversations'] });
         if (conversationId === undefined) {
@@ -283,7 +283,7 @@ export function useChatController(conversationId: string | undefined) {
         });
         dropFrom(conversationId, messageId);
         addMessageToCache(queryClient, conversationId, response.message);
-        runs.track(response.run.id);
+        runs.track(response.run.id, response.run.conversationId ?? undefined);
         setActiveRunId(response.run.id);
         return true;
       } catch (error) {

@@ -7,6 +7,7 @@ import { EmptyState } from '../ui/EmptyState';
 import { ErrorBanner } from '../ui/ErrorBanner';
 import { IconButton } from '../ui/IconButton';
 import { ListItem } from '../ui/ListItem';
+import { PageContainer } from '../ui/PageContainer';
 import { SkeletonList } from '../ui/Skeleton';
 import { StateView, type ViewState } from '../ui/StateView';
 import { TextField } from '../ui/TextField';
@@ -46,7 +47,7 @@ export function CatalogScreen() {
   const [view, setView] = useState<ViewState>('empty');
   const [text, setText] = useState('');
   return (
-    <div className="flex max-w-3xl flex-col gap-8 p-4">
+    <PageContainer>
       <Section title="Warna">
         <div className="grid grid-cols-7 gap-2">
           {TOKENS.map((token) => (
@@ -172,6 +173,6 @@ export function CatalogScreen() {
           <Button onClick={() => push('Gagal menyimpan. Coba lagi.', 'danger')}>Toast error</Button>
         </div>
       </Section>
-    </div>
+    </PageContainer>
   );
 }

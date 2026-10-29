@@ -1,6 +1,16 @@
 import * as Tabs from '@radix-ui/react-tabs';
-import { Columns2, Rows2, X } from 'lucide-react';
-import { useRef, type KeyboardEvent, type PointerEvent } from 'react';
+import {
+  Activity,
+  Columns2,
+  Eye,
+  FolderTree,
+  GitBranch,
+  GitCompare,
+  Rows2,
+  SquareTerminal,
+  X,
+} from 'lucide-react';
+import { useRef, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
 import { copy } from '../copy';
 import { cn } from '../lib/cn';
 import { ActivityPanel } from '../activity/ActivityPanel';
@@ -11,6 +21,8 @@ import { DiffPanel } from '../review/DiffPanel';
 import { useUiStore } from '../state/uiStore';
 import { TerminalPanel } from '../terminal/TerminalPanel';
 import { IconButton } from '../ui/IconButton';
+import { PlateGroup } from '../ui/PlateGroup';
+import { Tooltip } from '../ui/Tooltip';
 import { MAX_PANES, PANE_TABS, ROOT_ID, countPanes, type PaneNode, type PaneTab } from './tree';
 
 const KEY_STEP = 0.05;
@@ -23,6 +35,15 @@ function PaneContent({ tab }: { tab: PaneTab }) {
   if (tab === 'git') return <GitPanel />;
   return <FilesPanel />;
 }
+
+const TAB_ICONS: Record<PaneTab, ReactNode> = {
+  preview: <Eye size={14} strokeWidth={1.5} aria-hidden="true" />,
+  diff: <GitCompare size={14} strokeWidth={1.5} aria-hidden="true" />,
+  terminal: <SquareTerminal size={14} strokeWidth={1.5} aria-hidden="true" />,
+  files: <FolderTree size={14} strokeWidth={1.5} aria-hidden="true" />,
+  git: <GitBranch size={14} strokeWidth={1.5} aria-hidden="true" />,
+  activity: <Activity size={14} strokeWidth={1.5} aria-hidden="true" />,
+};
 
 interface LeafProps {
   id: string;
@@ -42,19 +63,36 @@ function Leaf({ id, tab, canSplit, canClose }: LeafProps) {
       onValueChange={(v) => setPaneTab(id, v as PaneTab)}
       className="flex min-h-0 min-w-0 flex-1 flex-col"
     >
-      <div className="flex h-10 shrink-0 items-end justify-between border-b border-border px-2">
-        <Tabs.List className="flex items-end gap-1">
-          {PANE_TABS.map((t) => (
-            <Tabs.Trigger
-              key={t}
-              value={t}
-              className="h-8 rounded-t-control border-b-2 border-transparent px-3 text-ui text-text-2 transition-colors duration-[120ms] ease-aios hover:text-text data-[state=active]:border-accent data-[state=active]:text-text"
-            >
-              {copy.shell.panels[t]}
-            </Tabs.Trigger>
-          ))}
+      <div className="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-border px-2">
+        <Tabs.List className="min-w-0 overflow-x-auto">
+          <PlateGroup activeKey={tab} className="flex items-center gap-0.5">
+            {PANE_TABS.map((t) => {
+              const active = t === tab;
+              const trigger = (
+                <Tabs.Trigger
+                  key={t}
+                  value={t}
+                  data-plate-key={t}
+                  className={cn(
+                    'relative z-10 inline-flex h-8 items-center gap-2 rounded-control px-2.5 text-ui whitespace-nowrap transition-colors duration-[120ms] ease-aios',
+                    active ? 'text-text' : 'text-text-2 hover:text-text',
+                  )}
+                >
+                  {TAB_ICONS[t]}
+                  {/* Aktif: label terlihat. Lain: ikon dengan tooltip; label tetap ada untuk pembaca layar. */}
+                  <span className={active ? undefined : 'sr-only'}>{copy.shell.panels[t]}</span>
+                </Tabs.Trigger>
+              );
+              // Selalu dibungkus tooltip (juga yang aktif): pembungkus yang berganti membuat tab dibuat ulang dan fokus hilang.
+              return (
+                <Tooltip key={t} label={copy.shell.panels[t]} side="bottom">
+                  {trigger}
+                </Tooltip>
+              );
+            })}
+          </PlateGroup>
         </Tabs.List>
-        <div className="flex items-center gap-1 pb-1">
+        <div className="flex shrink-0 items-center gap-1">
           {canSplit ? (
             <>
               <IconButton label={copy.panes.splitRow} onClick={() => splitPane(id, 'row')}>

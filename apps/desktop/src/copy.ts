@@ -31,6 +31,11 @@ export const copy = {
       activity: 'Aktivitas',
     },
     panelEmpty: 'Belum ada isi. Panel ini dipakai saat project dan run coding tersedia.',
+    loading: 'Memuat aplikasi',
+    offlineBanner:
+      'Perangkat sedang luring. Tampilan memakai data terakhir dan akan disegarkan saat jaringan kembali.',
+    gatewayError:
+      'Tidak bisa terhubung ke server. Aplikasi mencoba lagi otomatis; Anda juga bisa mencobanya sekarang.',
   },
   git: {
     reload: 'Muat ulang',
@@ -731,6 +736,7 @@ export const copy = {
     listLabel: 'Percakapan',
     listEmpty: 'Belum ada percakapan. Tulis pesan untuk memulai.',
     listLoading: 'Memuat percakapan',
+    running: 'Sedang berjalan',
     startConversation: 'Mulai percakapan',
     startWriting: 'Mulai menulis',
     loadMore: 'Muat lebih banyak',

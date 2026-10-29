@@ -1,5 +1,4 @@
 import { Link } from '@tanstack/react-router';
-import { useConnection, useOnline } from '../app/hooks';
 import { useModels, useQuota, useRoles } from '../api/queries';
 import { formatCost, formatTokens } from '../lib/format';
 import { useUiStore } from '../state/uiStore';
@@ -29,17 +28,8 @@ export function connectionView(connection: ConnectionState, online: boolean): Co
   }
 }
 
-const dotTone: Record<ConnectionView['tone'], string> = {
-  success: 'bg-success',
-  warning: 'bg-warning',
-  muted: 'bg-text-3',
-};
-
-/** Status bar 24px: project dan branch, role, model, worker, kuota, dan status koneksi. */
+/** Kaki status 24 px di kanvas: project dan branch, role, model, worker, dan kuota. Koneksi ada di topbar. */
 export function StatusBar() {
-  const connection = useConnection();
-  const online = useOnline();
-  const view = connectionView(connection, online);
   const worker = workerIndicator(useWorker());
   const activeProjectId = useUiStore((s) => s.activeProjectId);
   const runBranch = useUiStore((s) => s.activeRunBranch);
@@ -69,7 +59,7 @@ export function StatusBar() {
     ? `${project.name} · ${runBranch ?? project.defaultBranch}`
     : copy.status.project;
   return (
-    <footer className="flex h-(--aios-statusbar-height) shrink-0 items-center justify-between border-t border-border bg-surface px-3 font-mono text-caption text-text-2">
+    <footer className="flex h-(--aios-statusbar-height) shrink-0 items-center justify-between px-5 font-mono text-caption text-text-2">
       <div className="flex items-center gap-4">
         <span>{projectLabel}</span>
         {roleLabel ? <span>{roleLabel}</span> : null}
@@ -103,17 +93,6 @@ export function StatusBar() {
             {quotaLabel}
           </Link>
         ) : null}
-        <span role="status" className="flex items-center gap-2">
-          <span
-            aria-hidden="true"
-            className={cn(
-              'size-2 rounded-full',
-              dotTone[view.tone],
-              view.tone === 'warning' && 'animate-aios-breathe',
-            )}
-          />
-          {view.label}
-        </span>
       </div>
     </footer>
   );

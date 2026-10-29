@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import {
   RouterProvider,
   createMemoryHistory,
@@ -48,7 +48,7 @@ beforeEach(() => {
 });
 
 describe('Shell', () => {
-  it('kerangka final: rail 7 tujuan, sidebar, area utama, dan status bar; panel kanan tertutup', async () => {
+  it('kerangka pulau: navigasi 7 tujuan, sidebar, area utama, kaki status, dan indikator koneksi di topbar; panel kanan tertutup', async () => {
     await renderShell();
 
     const rail = screen.getByRole('navigation', { name: copy.shell.rail });
@@ -64,23 +64,34 @@ describe('Shell', () => {
     ]);
     expect(screen.getByRole('complementary', { name: copy.shell.sidebar })).toBeInTheDocument();
     expect(screen.getByRole('main', { name: copy.shell.mainArea })).toBeInTheDocument();
-    expect(screen.getByRole('contentinfo')).toHaveTextContent(copy.status.idle);
+    expect(screen.getByRole('contentinfo')).toBeInTheDocument();
+    // Indikator koneksi pindah ke topbar (teks + titik berwarna status), bukan di kaki.
+    expect(within(screen.getByRole('main')).getByRole('status')).toHaveTextContent(
+      copy.status.idle,
+    );
+    expect(screen.getByRole('contentinfo')).not.toHaveTextContent(copy.status.idle);
     expect(
       screen.queryByRole('complementary', { name: copy.shell.toggleRightPanel }),
     ).not.toBeInTheDocument();
   });
 
-  it('Ctrl+B menutup dan membuka sidebar; tombol di area utama membukanya lagi', async () => {
+  it('Ctrl+B meringkas sidebar menjadi hanya ikon (navigasi tetap, daftar konteks disembunyikan); tombol di sidebar membukanya lagi', async () => {
     await renderShell();
+    const sidebar = () => screen.getByRole('complementary', { name: copy.shell.sidebar });
+    expect(sidebar()).toHaveAttribute('data-compact', 'false');
+    expect(within(sidebar()).getByRole('heading', { level: 2 })).toBeInTheDocument();
 
     ctrl('b');
-    expect(
-      screen.queryByRole('complementary', { name: copy.shell.sidebar }),
-    ).not.toBeInTheDocument();
     expect(useUiStore.getState().sidebarOpen).toBe(false);
+    expect(sidebar()).toHaveAttribute('data-compact', 'true');
+    // Navigasi tetap lengkap dengan nama yang sama; daftar konteks hilang.
+    expect(within(sidebar()).getAllByRole('link')).toHaveLength(7);
+    expect(within(sidebar()).getByRole('link', { name: copy.nav.kanban })).toBeInTheDocument();
+    expect(within(sidebar()).queryByRole('heading', { level: 2 })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: copy.shell.expandSidebar }));
-    expect(screen.getByRole('complementary', { name: copy.shell.sidebar })).toBeInTheDocument();
+    expect(sidebar()).toHaveAttribute('data-compact', 'false');
+    expect(useUiStore.getState().sidebarOpen).toBe(true);
   });
 
   it('Ctrl+J membuka panel kanan dengan 6 tab dan lebar yang diingat', async () => {

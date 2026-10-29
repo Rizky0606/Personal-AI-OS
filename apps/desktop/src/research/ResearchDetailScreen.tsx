@@ -8,6 +8,7 @@ import { copy } from '../copy';
 import { Markdown } from '../markdown/Markdown';
 import { Button } from '../ui/Button';
 import { ErrorBanner } from '../ui/ErrorBanner';
+import { PageContainer } from '../ui/PageContainer';
 import { StateView, type ViewState } from '../ui/StateView';
 import { parseReport } from './reportParser';
 import { ResearchProgress } from './ResearchProgress';
@@ -83,7 +84,7 @@ export function ResearchDetailScreen({ researchId }: { researchId: string }) {
       }
     >
       {job ? (
-        <div className="mx-auto flex max-w-[calc(72ch+4rem)] flex-col gap-6 px-8 py-6">
+        <PageContainer>
           <header className="flex flex-col gap-2">
             <h2 className="text-section font-semibold text-text">{job.question}</h2>
             <p className="text-meta text-text-2">
@@ -159,7 +160,7 @@ export function ResearchDetailScreen({ researchId }: { researchId: string }) {
               <p className="text-ui text-text-2">{copy.research.sourcesEmpty}</p>
             )}
           </section>
-        </div>
+        </PageContainer>
       ) : null}
     </StateView>
   );

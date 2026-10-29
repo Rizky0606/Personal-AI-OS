@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import '@aios/ui-tokens/tokens.css';
+@import './shell/shell.css';
 
 /* IBM Plex dibundel lokal (lisensi OFL di src/fonts); tanpa CDN. */
 @font-face {
@@ -425,4 +426,19 @@ body {
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
   animation: aios-draw-in var(--aios-duration-long) var(--aios-easing) forwards;
+}
+
+/* Palet perintah (sesi 4) */
+@keyframes aios-palette-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.aios-palette-in {
+  animation: aios-palette-in var(--aios-duration-base) var(--aios-easing) both;
 }

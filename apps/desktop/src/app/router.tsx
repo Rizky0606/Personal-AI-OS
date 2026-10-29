@@ -119,6 +119,8 @@ export const router = createRouter({
   routeTree: rootRoute.addChildren(routes),
   history: createHashHistory(),
   defaultPreload: false,
+  // Perpindahan layar memakai View Transitions bila peramban mendukung (CSS di shell/shell.css); jika tidak, tanpa animasi.
+  defaultViewTransition: true,
 });
 
 declare module '@tanstack/react-router' {

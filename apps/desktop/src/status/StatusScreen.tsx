@@ -8,6 +8,7 @@ import { cn } from '../lib/cn';
 import { formatDateTime } from '../lib/time';
 import { IconButton } from '../ui/IconButton';
 import { Button } from '../ui/Button';
+import { PageContainer } from '../ui/PageContainer';
 import { StateView, type ViewState } from '../ui/StateView';
 import { useWorker } from '../worker/hooks';
 
@@ -29,7 +30,7 @@ function Section({ id, title, children }: { id: string; title: string; children:
 
 function Rows({ rows }: { rows: [label: string, value: ReactNode][] }) {
   return (
-    <dl className="flex max-w-xl flex-col">
+    <dl className="flex flex-col">
       {rows.map(([label, value]) => (
         <div
           key={label}
@@ -103,7 +104,7 @@ export function StatusScreen() {
         }
       >
         {status ? (
-          <div className="flex flex-col gap-6 p-4">
+          <PageContainer>
             <p role="status" className="text-ui text-text-2">
               {p.overall[status.readiness.status]}
             </p>
@@ -121,7 +122,7 @@ export function StatusScreen() {
             </Section>
 
             <Section id="st-deps" title={p.dependencies}>
-              <table className="w-full max-w-xl border-collapse">
+              <table className="w-full border-collapse">
                 <thead>
                   <tr>
                     <th scope="col" className={headerClass}>
@@ -180,7 +181,7 @@ export function StatusScreen() {
               {status.workers.length === 0 ? (
                 <p className="text-ui text-text-2">{p.noWorkers}</p>
               ) : (
-                <ul className="flex max-w-xl flex-col">
+                <ul className="flex flex-col">
                   {status.workers.map((w) => (
                     <li
                       key={w.deviceId}
@@ -203,7 +204,7 @@ export function StatusScreen() {
               {status.jobs.length === 0 ? (
                 <p className="text-ui text-text-2">{p.noJobs}</p>
               ) : (
-                <table className="w-full max-w-xl border-collapse">
+                <table className="w-full border-collapse">
                   <thead>
                     <tr>
                       <th scope="col" className={headerClass}>
@@ -243,7 +244,7 @@ export function StatusScreen() {
                 </table>
               )}
             </Section>
-          </div>
+          </PageContainer>
         ) : null}
       </StateView>
     </div>

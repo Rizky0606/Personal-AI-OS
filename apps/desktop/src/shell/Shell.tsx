@@ -1,5 +1,4 @@
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
-import { PanelLeftOpen, PanelRight, Plus } from 'lucide-react';
 import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { ConversationList } from '../chat/ConversationList';
 import { ProjectSwitcher } from '../chat/ProjectSwitcher';
@@ -10,14 +9,16 @@ import { ResearchList } from '../research/ResearchList';
 import { ScheduleList } from '../schedules/ScheduleList';
 import { SpaceList } from '../spaces/SpaceList';
 import { useUiStore } from '../state/uiStore';
-import { IconButton } from '../ui/IconButton';
 import { InfoNote } from '../ui/InfoNote';
 import { CommandPalette } from './CommandPalette';
+import { ConnectionBanner } from './ConnectionBanner';
+import { ISLAND } from './island';
+import { isChatPath } from './navItems';
 import { routeForSlot } from './navRoutes';
-import { Rail } from './Rail';
 import { RightPanel } from './RightPanel';
 import { Sidebar } from './Sidebar';
 import { StatusBar } from './StatusBar';
+import { Topbar } from './Topbar';
 import { useShortcuts } from './useShortcuts';
 
 interface Section {
@@ -74,12 +75,13 @@ function sectionFor(pathname: string): Section {
 }
 
 /**
- * Kerangka final: rail 56px, sidebar 260px (ciut), area utama, panel kanan bertab (lebar bisa diubah), status bar 24px.
+ * Kerangka "pulau": kanvas `bg` dengan sidebar (navigasi + daftar konteks), area utama (topbar + isi), dan panel
+ * kanan bertab sebagai panel melayang berjarak 8 px; kaki status di kanvas. Perpindahan layar memakai View
+ * Transitions pada pembungkus isi (`aios-page-transition`, lihat shell.css), dengan fallback tanpa animasi.
  */
 export function Shell() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
-  const sidebarOpen = useUiStore((s) => s.sidebarOpen);
   const rightPanelOpen = useUiStore((s) => s.rightPanelOpen);
   const toggleSidebar = useUiStore((s) => s.toggleSidebar);
   const toggleRightPanel = useUiStore((s) => s.toggleRightPanel);
@@ -112,57 +114,39 @@ export function Shell() {
   );
   useShortcuts(actions);
   const section = sectionFor(pathname);
-  // Isi area utama memudar masuk saat berpindah bagian; berpindah percakapan di dalam Chat tidak dihitung.
-  const sectionKey = pathname === '/' ? 'chat' : (pathname.split('/')[1] ?? '');
+  const sectionAction = section.action;
 
   return (
     <div className="flex h-full flex-col bg-bg text-text">
-      <div className="flex min-h-0 flex-1">
-        <Rail />
-        {sidebarOpen ? (
-          <Sidebar
+      <div className="flex min-h-0 flex-1 gap-(--aios-island-gap) p-(--aios-island-gap)">
+        <Sidebar title={section.title}>{section.list}</Sidebar>
+        <main
+          aria-label={copy.shell.mainArea}
+          className={`${ISLAND} flex min-w-0 flex-1 flex-col overflow-hidden`}
+        >
+          <Topbar
             title={section.title}
+            chat={isChatPath(pathname)}
             action={
-              section.action ? (
-                <IconButton
-                  label={section.action.label}
-                  onClick={() => {
-                    if (section.action?.to === '/') requestNewChat();
-                    else void navigate({ to: '/research' });
-                  }}
-                >
-                  <Plus size={16} strokeWidth={1.5} aria-hidden="true" />
-                </IconButton>
-              ) : undefined
+              sectionAction
+                ? {
+                    label: sectionAction.label,
+                    onSelect: () => {
+                      if (sectionAction.to === '/') requestNewChat();
+                      else void navigate({ to: '/research' });
+                    },
+                  }
+                : undefined
             }
-          >
-            {section.list}
-          </Sidebar>
-        ) : null}
-        <main aria-label={copy.shell.mainArea} className="flex min-w-0 flex-1 flex-col">
-          <div className="flex h-10 shrink-0 items-center justify-between border-b border-border px-2">
-            <div className="flex items-center gap-2">
-              {sidebarOpen ? null : (
-                <IconButton label={copy.shell.expandSidebar} onClick={toggleSidebar}>
-                  <PanelLeftOpen size={16} strokeWidth={1.5} aria-hidden="true" />
-                </IconButton>
-              )}
-              <h1 className="text-ui font-semibold text-text">{section.title}</h1>
-            </div>
-            <IconButton
-              label={copy.shell.toggleRightPanel}
-              active={rightPanelOpen}
-              aria-pressed={rightPanelOpen}
-              onClick={toggleRightPanel}
-            >
-              <PanelRight size={16} strokeWidth={1.5} aria-hidden="true" />
-            </IconButton>
-          </div>
-          <div key={sectionKey} className="min-h-0 flex-1 animate-aios-fade overflow-auto">
+            rightPanelOpen={rightPanelOpen}
+            onToggleRightPanel={toggleRightPanel}
+          />
+          <ConnectionBanner />
+          <div className="aios-page-transition min-h-0 flex-1 overflow-auto">
             <Outlet />
           </div>
         </main>
-        {rightPanelOpen ? <RightPanel /> : null}
+        <RightPanel open={rightPanelOpen} />
       </div>
       <StatusBar />
       <CommandPalette />

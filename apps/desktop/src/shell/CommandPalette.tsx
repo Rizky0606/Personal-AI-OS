@@ -26,6 +26,8 @@ export function CommandPalette() {
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
   const list = useRef<HTMLUListElement>(null);
+  // Dialog Radix hanya mengembalikan fokus ke Dialog.Trigger; palet dibuka dari pintasan, jadi dicatat sendiri.
+  const opener = useRef<HTMLElement | null>(null);
   const id = useId();
   const close = useCallback(() => setOpen(false), [setOpen]);
   const items = usePaletteItems(open, close);
@@ -70,10 +72,19 @@ export function CommandPalette() {
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-40 bg-bg/60" />
+        <Dialog.Overlay className="aios-blur fixed inset-0 z-40 bg-bg/60" />
         <Dialog.Content
+          onOpenAutoFocus={() => {
+            opener.current =
+              document.activeElement instanceof HTMLElement ? document.activeElement : null;
+          }}
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            opener.current?.focus();
+            opener.current = null;
+          }}
           aria-describedby={`${id}-hint`}
-          className="fixed top-24 left-1/2 z-50 flex max-h-[min(28rem,calc(100vh-8rem))] w-[min(600px,calc(100vw-2rem))] -translate-x-1/2 flex-col overflow-hidden rounded-panel border border-border bg-surface shadow-float"
+          className="aios-palette-in fixed inset-x-0 top-24 z-50 mx-auto flex max-h-[min(28rem,calc(100vh-8rem))] w-[min(600px,calc(100vw-2rem))] flex-col overflow-hidden rounded-sheet border border-border bg-surface-2 shadow-float"
         >
           <Dialog.Title className="sr-only">{copy.palette.title}</Dialog.Title>
           <input
@@ -126,7 +137,7 @@ export function CommandPalette() {
                       onMouseMove={() => setActive(index)}
                       onClick={item.run}
                       className={cn(
-                        'flex h-8 cursor-pointer items-center justify-between gap-3 rounded-control px-3 text-ui text-text',
+                        'flex min-h-9 cursor-pointer items-center justify-between gap-3 rounded-control px-3 text-ui text-text',
                         selected && 'bg-accent-soft',
                       )}
                     >

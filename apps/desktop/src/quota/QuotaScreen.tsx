@@ -8,6 +8,7 @@ import { formatCost, formatCount } from '../lib/format';
 import { IconButton } from '../ui/IconButton';
 import { useUiStore } from '../state/uiStore';
 import { Button } from '../ui/Button';
+import { PageContainer } from '../ui/PageContainer';
 import { StateView, type ViewState } from '../ui/StateView';
 
 const headerClass =
@@ -72,12 +73,12 @@ export function QuotaScreen() {
         }
       >
         {quota ? (
-          <div className="flex flex-col gap-6 p-4">
+          <PageContainer>
             <p className="text-meta text-text-2">{copy.quota.source[quota.source]}</p>
 
             <dl
               aria-label={copy.quota.totals}
-              className="grid max-w-2xl grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4"
+              className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4"
             >
               {[
                 [c.requests, formatCount(quota.totals.requests)],
@@ -189,7 +190,7 @@ export function QuotaScreen() {
                 </tbody>
               </table>
             </section>
-          </div>
+          </PageContainer>
         ) : null}
       </StateView>
     </div>

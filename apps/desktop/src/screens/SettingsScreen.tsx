@@ -8,6 +8,7 @@ import { Button } from '../ui/Button';
 import { Chip } from '../ui/Chip';
 import { MemorySection } from '../memory/MemorySection';
 import { TemplatesSection } from '../templates/TemplatesSection';
+import { PageContainer } from '../ui/PageContainer';
 import { ListItem } from '../ui/ListItem';
 import { UpdateSection } from '../updater/UpdateSection';
 import { AllowedFolders } from '../worker/AllowedFolders';
@@ -36,7 +37,7 @@ export function SettingsScreen() {
   }
 
   return (
-    <div className="flex max-w-2xl flex-col gap-6 p-4">
+    <PageContainer>
       <section aria-labelledby="settings-account" className="flex flex-col">
         <h2 id="settings-account" className="mb-2 text-section font-semibold text-text">
           {copy.settings.account}
@@ -102,6 +103,6 @@ export function SettingsScreen() {
           {loggingOut ? copy.settings.loggingOut : copy.settings.logout}
         </Button>
       </div>
-    </div>
+    </PageContainer>
   );
 }

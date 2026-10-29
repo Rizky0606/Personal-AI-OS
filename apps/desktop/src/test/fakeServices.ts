@@ -33,6 +33,7 @@ export const fakeRealtime = {
     };
   }),
   subscribeState: () => () => undefined,
+  reconnectNow: vi.fn(),
   getState: () => idle,
 };
 

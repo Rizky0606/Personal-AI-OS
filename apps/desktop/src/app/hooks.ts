@@ -35,3 +35,7 @@ export const useRunFailure = (runId: string | null | undefined): RunFailure | un
   useSyncExternalStore(runId ? (listener) => runs.subscribe(runId, listener) : noSubscribe, () =>
     runId ? runs.failureOf(runId) : undefined,
   );
+
+/** Percakapan yang punya run berjalan (dari pelacak run), untuk penanda di daftar percakapan. */
+export const useLiveConversationIds = (): ReadonlySet<string> =>
+  useSyncExternalStore(runs.subscribeAll, runs.liveConversationIds);
