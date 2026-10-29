@@ -95,9 +95,9 @@ object Tokens {
   }
 
   object Radius {
-    val sm = 8.dp
-    val md = 12.dp
-    val lg = 16.dp
+    val sm = 10.dp
+    val md = 14.dp
+    val lg = 20.dp
     val full = 9999.dp
   }
 

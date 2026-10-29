@@ -82,7 +82,7 @@ export const TokensSchema = z.object({
     desktop: z.object({
       rail: z.number().positive(),
       sidebar: z.number().positive(),
-      statusBar: z.number().positive(),
+      header: z.number().positive(),
       row: z.number().positive(),
     }),
     android: z.object({ touchTarget: z.number().positive() }),

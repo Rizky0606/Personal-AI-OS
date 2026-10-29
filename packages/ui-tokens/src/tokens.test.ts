@@ -19,9 +19,9 @@ describe('tokens.json', () => {
     expect(tokens.space).toEqual([4, 8, 12, 16, 20, 24, 32, 40, 48]);
   });
 
-  it('radius desktop 6/8/16 dan Android 8/12/16; gerak 120/180/240 ms', () => {
-    expect(tokens.radius.desktop).toEqual({ sm: 6, md: 8, lg: 16 });
-    expect(tokens.radius.android).toEqual({ sm: 8, md: 12, lg: 16 });
+  it('radius desktop 8/10/14 dan Android 10/14/20; gerak 120/180/240 ms', () => {
+    expect(tokens.radius.desktop).toEqual({ sm: 8, md: 10, lg: 14 });
+    expect(tokens.radius.android).toEqual({ sm: 10, md: 14, lg: 20 });
     expect(tokens.motion.duration).toEqual({ fast: 120, base: 180, slow: 240, emphasis: 320 });
     // Pegas ringan: overshoot kecil (y1 sedikit di atas 1), bukan pantulan.
     expect(tokens.motion.spring[1]).toBeGreaterThan(1);
@@ -174,7 +174,7 @@ describe('file hasil generate', () => {
     const kt = generateKotlin(tokens);
     expect(kt).toContain('package app.aios.ui.tokens');
     expect(kt).toContain(`accent = Color(0xFF${toHex(tokens.color.light.accent)})`);
-    expect(kt).toContain('val md = 12.dp');
+    expect(kt).toContain('val md = 14.dp');
     expect(kt).toContain('val chat = AiosTextStyle(16.sp, 25.6.sp, FontWeight.Normal)');
     expect(kt).toContain('CubicBezierEasing(0.2f, 0f, 0f, 1f)');
     expect(kt).toContain('val touchTarget = 48.dp');
