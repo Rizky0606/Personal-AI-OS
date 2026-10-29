@@ -112,10 +112,15 @@ export const TokensSchema = z.object({
   focus: z.object({ width: z.number().positive(), offset: z.number().nonnegative() }),
   layout: z.object({
     desktop: z.object({
-      rail: z.number().positive(),
       sidebar: z.number().positive(),
+      sidebarCompact: z.number().positive(),
+      topbar: z.number().positive(),
       statusBar: z.number().positive(),
       row: z.number().positive(),
+      /** Jarak antar pulau (panel melayang) di shell. */
+      islandGap: z.number().positive(),
+      /** Lebar isi halaman yang sama untuk semua layar non-chat (PageContainer). */
+      pageMeasure: z.number().positive(),
     }),
     android: z.object({ touchTarget: z.number().positive() }),
     chatMeasureCh: z.number().int().positive(),

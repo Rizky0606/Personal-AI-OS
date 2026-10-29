@@ -61,10 +61,13 @@
   --aios-duration-spring-move: 570ms;
   --aios-focus-width: 2px;
   --aios-focus-offset: 2px;
-  --aios-rail-width: 56px;
-  --aios-sidebar-width: 260px;
+  --aios-sidebar-width: 232px;
+  --aios-sidebar-compact-width: 64px;
+  --aios-topbar-height: 48px;
   --aios-statusbar-height: 24px;
   --aios-row-height: 32px;
+  --aios-island-gap: 8px;
+  --aios-page-measure: 720px;
   --aios-chat-measure: 72ch;
 }
 

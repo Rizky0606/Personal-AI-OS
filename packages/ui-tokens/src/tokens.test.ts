@@ -58,6 +58,29 @@ describe('tokens.json', () => {
     expect(tokens.shadow.androidLayers).toEqual([1, 2, 4]);
   });
 
+  it('layout desktop (shell pulau): sidebar 232 dan ringkas 64, topbar 48, jarak pulau 8, lebar halaman satu token', () => {
+    expect(tokens.layout.desktop).toEqual({
+      sidebar: 232,
+      sidebarCompact: 64,
+      topbar: 48,
+      statusBar: 24,
+      row: 32,
+      islandGap: 8,
+      pageMeasure: 720,
+    });
+    const css = generateCss(tokens);
+    for (const [name, px] of [
+      ['sidebar-width', 232],
+      ['sidebar-compact-width', 64],
+      ['topbar-height', 48],
+      ['island-gap', 8],
+      ['page-measure', 720],
+    ] as const) {
+      expect(css).toContain(`--aios-${name}: ${px}px;`);
+    }
+    expect(css).not.toContain('--aios-rail-width');
+  });
+
   it('skala tipografi sesuai tabel (desktop px, Android sp)', () => {
     const sizes = Object.fromEntries(
       Object.entries(tokens.type).map(([k, v]) => [k, [v.desktop.size, v.android.size]]),

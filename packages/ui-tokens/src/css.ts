@@ -96,10 +96,13 @@ function plainDeclarations(tokens: Tokens): string[] {
     `--aios-duration-spring-move: ${ms(move.durationMs)};`,
     `--aios-focus-width: ${px(tokens.focus.width)};`,
     `--aios-focus-offset: ${px(tokens.focus.offset)};`,
-    `--aios-rail-width: ${px(l.rail)};`,
     `--aios-sidebar-width: ${px(l.sidebar)};`,
+    `--aios-sidebar-compact-width: ${px(l.sidebarCompact)};`,
+    `--aios-topbar-height: ${px(l.topbar)};`,
     `--aios-statusbar-height: ${px(l.statusBar)};`,
     `--aios-row-height: ${px(l.row)};`,
+    `--aios-island-gap: ${px(l.islandGap)};`,
+    `--aios-page-measure: ${px(l.pageMeasure)};`,
     `--aios-chat-measure: ${tokens.layout.chatMeasureCh}ch;`,
   ];
 }
