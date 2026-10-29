@@ -75,7 +75,14 @@ describe('activitySteps', () => {
     const live = {
       ...newLiveRun('r1'),
       tools: [
-        { id: 'x', name: 'grep', target: 'f', status: 'running' as const, durationMs: undefined },
+        {
+          id: 'x',
+          name: 'grep',
+          target: 'f',
+          status: 'running' as const,
+          durationMs: undefined,
+          startedAt: null,
+        },
       ],
     };
     expect(activitySteps(live, [toolMessage()]).map((s) => s.id)).toEqual(['x']);

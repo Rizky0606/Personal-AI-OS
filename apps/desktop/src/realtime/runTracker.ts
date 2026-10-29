@@ -1,5 +1,12 @@
 import type { EventEnvelope, Run } from '@aios/contracts';
-import { isSettled, newLiveRun, reduceLiveRun, type LiveRun, type RunFailure } from './liveRun';
+import {
+  isSettled,
+  newLiveRun,
+  reduceLiveRun,
+  withRunStart,
+  type LiveRun,
+  type RunFailure,
+} from './liveRun';
 
 export interface RunTrackerDeps {
   realtime: { subscribe(channel: string, handler: (envelope: EventEnvelope) => void): () => void };
@@ -33,7 +40,7 @@ export class RunTracker {
     if (this.runs.has(runId)) return;
     this.runs.set(runId, newLiveRun(runId));
     const unsubscribe = this.deps.realtime.subscribe(`run:${runId}`, (envelope) => {
-      this.apply(runId, (run) => reduceLiveRun(run, envelope.event));
+      this.apply(runId, (run) => reduceLiveRun(run, envelope.event, Date.parse(envelope.ts)));
     });
     const timer = setInterval(() => void this.poll(runId), this.pollMs);
     this.stops.set(runId, () => {
@@ -77,11 +84,22 @@ export class RunTracker {
     if (!current || isSettled(current.status)) return;
     try {
       const run = await this.deps.fetchRun(runId);
-      this.apply(runId, (live) => ({
-        ...live,
-        status: run.status,
-        error: run.error ?? live.error,
-      }));
+      this.apply(runId, (live) => {
+        const settledAt = Date.parse(run.updatedAt);
+        return withRunStart(
+          {
+            ...live,
+            status: run.status,
+            error: run.error ?? live.error,
+            // Event penutup tidak pernah sampai: waktu selesai dari server supaya elapsed berhenti.
+            endedAt:
+              live.endedAt === null && isSettled(run.status) && Number.isFinite(settledAt)
+                ? settledAt
+                : live.endedAt,
+          },
+          Date.parse(run.createdAt),
+        );
+      });
     } catch {
       // Jaringan sedang bermasalah; percobaan berikutnya menyusul.
     }
