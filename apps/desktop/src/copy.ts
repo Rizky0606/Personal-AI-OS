@@ -486,6 +486,52 @@ export const copy = {
     navigate: 'Ctrl+1…6  Pindah layar: Chat, Project, Kanban, Jadwal, Riset, Pengaturan',
     quickAsk: 'Ctrl+Shift+Spasi  Tanya cepat dari aplikasi mana pun',
   },
+  /** Baris aktivitas run (judul abu, aksi saat ini, linimasa langkah, ringkasan). Dipakai buildActivity. */
+  runActivity: {
+    /** Kalimat per jenis tool: berjalan, selesai, dan kata benda untuk status gagal/ditolak/dibatalkan. */
+    tools: {
+      command: { running: 'Menjalankan perintah', done: 'Perintah selesai', noun: 'Perintah' },
+      edit: { running: 'Mengubah berkas', done: 'Berkas diubah', noun: 'Perubahan berkas' },
+      read: { running: 'Membaca berkas', done: 'Berkas dibaca', noun: 'Pembacaan berkas' },
+      search: {
+        running: 'Mencari di kode',
+        done: 'Pencarian kode selesai',
+        noun: 'Pencarian kode',
+      },
+      web: { running: 'Mencari di web', done: 'Pencarian web selesai', noun: 'Pencarian web' },
+      browser: {
+        running: 'Membuka halaman',
+        done: 'Halaman dibuka',
+        noun: 'Pembukaan halaman',
+      },
+      subagent: {
+        running: 'Menugaskan subagent',
+        done: 'Subagent ditugaskan',
+        noun: 'Penugasan subagent',
+      },
+      plan: {
+        running: 'Memperbarui rencana',
+        done: 'Rencana diperbarui',
+        noun: 'Pembaruan rencana',
+      },
+    },
+    /** Nama tool yang tidak dikenal; `name` kosong bila event mulai belum diterima. */
+    unknownTool: {
+      running: (name: string) => (name ? `Menjalankan alat: ${name}` : 'Menjalankan alat'),
+      done: (name: string) => (name ? `Alat selesai: ${name}` : 'Alat selesai'),
+      noun: (name: string) => (name ? `Alat ${name}` : 'Alat'),
+    },
+    /** Dirangkai setelah kata benda: "Perintah gagal". */
+    statusSuffix: { error: 'gagal', denied: 'ditolak', cancelled: 'dibatalkan' },
+    summary: {
+      done: 'Selesai',
+      error: 'Gagal',
+      cancelled: 'Dibatalkan',
+      steps: (n: number) => `${n} langkah`,
+      separator: ' · ',
+    },
+    units: { second: 'dtk', minute: 'mnt', hour: 'j' },
+  },
   quick: {
     title: 'Tanya cepat',
     label: 'Pertanyaan',
