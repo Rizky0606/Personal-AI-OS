@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { apiErrorMessage } from '../api/errors';
 import { skillsOfPacks } from './skillPacks';
 import { useMessages, useModels, useRoles } from '../api/queries';
-import { useLiveRun, useOnline, useRunFailure } from '../app/hooks';
+import { useFinishedRun, useLiveRun, useOnline, useRunFailure } from '../app/hooks';
 import { api, runs } from '../app/services';
 import { copy } from '../copy';
 import { isSettled } from '../realtime/liveRun';
@@ -65,6 +65,7 @@ export function useChatController(conversationId: string | undefined) {
   const messages = useMemo(() => chronological(messagesQuery.data), [messagesQuery.data]);
   const runId = activeRunId ?? latestRunId(messages);
   const live = useLiveRun(runId);
+  const finished = useFinishedRun(runId);
   const failure = useRunFailure(runId);
   const streaming = live !== undefined && !isSettled(live.status);
   const reviewRunId = useReviewTarget(runId ?? undefined, live);
@@ -344,6 +345,7 @@ export function useChatController(conversationId: string | undefined) {
   return {
     messages,
     live,
+    finished,
     failure: failure ? failure.message : null,
     pending,
     draft,

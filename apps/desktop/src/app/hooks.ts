@@ -36,6 +36,12 @@ export const useRunFailure = (runId: string | null | undefined): RunFailure | un
     runId ? runs.failureOf(runId) : undefined,
   );
 
+/** Jejak aktivitas run yang sudah selesai (tanpa teks), bertahan setelah tampilan streaming dilepas. */
+export const useFinishedRun = (runId: string | null | undefined): LiveRun | undefined =>
+  useSyncExternalStore(runId ? (listener) => runs.subscribe(runId, listener) : noSubscribe, () =>
+    runId ? runs.finishedOf(runId) : undefined,
+  );
+
 /** Percakapan yang punya run berjalan (dari pelacak run), untuk penanda di daftar percakapan. */
 export const useLiveConversationIds = (): ReadonlySet<string> =>
   useSyncExternalStore(runs.subscribeAll, runs.liveConversationIds);

@@ -29,6 +29,8 @@ export class RunTracker {
   private readonly stops = new Map<string, () => void>();
   /** Run yang gagal di sesi ini; bertahan setelah [release] supaya errornya tetap tampil di percakapan. */
   private readonly failures = new Map<string, RunFailure>();
+  /** Jejak aktivitas (tanpa teks dan penalaran) run selesai; bertahan setelah [release] untuk ringkasan terminal. */
+  private readonly finished = new Map<string, LiveRun>();
   private readonly pollMs: number;
   /** Percakapan tiap run yang dilacak (bila pemanggil tahu); untuk penanda "sedang berjalan" di daftar. */
   private readonly conversations = new Map<string, string>();
@@ -59,6 +61,8 @@ export class RunTracker {
 
   failureOf = (runId: string): RunFailure | undefined => this.failures.get(runId);
 
+  finishedOf = (runId: string): LiveRun | undefined => this.finished.get(runId);
+
   subscribe = (runId: string, listener: () => void): (() => void) => {
     let set = this.listeners.get(runId);
     if (!set) {
@@ -86,14 +90,19 @@ export class RunTracker {
   release(runId: string): void {
     this.stops.get(runId)?.();
     this.stops.delete(runId);
+    const run = this.runs.get(runId);
+    if (run && isSettled(run.status)) {
+      this.finished.set(runId, { ...run, text: '', reasoning: '', approvals: [] });
+    }
     if (this.runs.delete(runId)) this.notify(runId);
     this.conversations.delete(runId);
   }
 
   /** Pesan run ini dihapus pemilik: lepas tampilannya dan lupakan galatnya. */
   forget(runId: string): void {
-    this.failures.delete(runId);
     this.release(runId);
+    this.failures.delete(runId);
+    this.finished.delete(runId);
   }
 
   private async poll(runId: string): Promise<void> {

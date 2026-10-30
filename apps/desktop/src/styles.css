@@ -12,6 +12,13 @@
   .aios-agent-orb-thinking circle:first-child { animation: aios-orb-spin 1400ms linear infinite; transform-origin: center; }
 }
 @keyframes aios-orb-spin { to { transform: rotate(360deg); } }
+.aios-agent-orb circle:last-of-type { transform-box: fill-box; transform-origin: center; transition: transform 320ms var(--aios-ease, ease); }
+.aios-agent-orb-idle circle:last-of-type { transform: scale(0.75); }
+.aios-agent-orb-tool circle:last-of-type { transform: scale(1.25); }
+.aios-agent-orb-writing circle:last-of-type { transform: scale(1.5); }
+.aios-agent-orb-done circle:last-of-type { transform: scale(0.4); }
+.aios-agent-orb [data-orb-check] { stroke-dasharray: 1; animation: aios-orb-draw 320ms ease-out both; }
+@keyframes aios-orb-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
 .aios-composer-frame[data-phase='thinking'] { border-color: var(--status-thinking); }
 .aios-composer-frame[data-phase='tool'] { border-color: var(--status-tool); }
 .aios-composer-frame[data-phase='writing'] { border-color: var(--status-writing); }

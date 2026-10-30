@@ -10,7 +10,7 @@ describe('useNow shared ticker', () => {
     const first = renderHook(() => useNow());
     const second = renderHook(() => useNow());
     const start = first.result.current;
-    act(() => vi.advanceTimersByTime(1_000));
+    void act(() => vi.advanceTimersByTime(1_000));
     expect(first.result.current).toBeGreaterThanOrEqual(start + 1_000);
     expect(second.result.current).toBe(first.result.current);
     first.unmount();

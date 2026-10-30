@@ -184,4 +184,30 @@ describe('RunTracker', () => {
     expect(unsubscribe).toHaveBeenCalledTimes(1);
     expect(vi.getTimerCount()).toBe(0);
   });
+
+  it('run selesai meninggalkan jejak aktivitas tanpa teks setelah release; forget membuangnya', () => {
+    const tracker = make();
+    tracker.track(RUN);
+    emit({ type: 'run.status', status: 'running' });
+    emit({ type: 'message.delta', messageId: MSG, text: 'jawaban panjang' });
+    emit({ type: 'tool.started', toolCallId: 't1', name: 'bash' });
+    emit({ type: 'tool.finished', toolCallId: 't1', status: 'ok', durationMs: 5 });
+    emit({ type: 'run.status', status: 'completed' });
+    tracker.release(RUN);
+
+    const kept = tracker.finishedOf(RUN);
+    expect(kept?.status).toBe('completed');
+    expect(kept?.tools).toHaveLength(1);
+    expect(kept?.text).toBe('');
+    tracker.forget(RUN);
+    expect(tracker.finishedOf(RUN)).toBeUndefined();
+  });
+
+  it('run yang belum selesai tidak meninggalkan jejak', () => {
+    const tracker = make();
+    tracker.track(RUN);
+    emit({ type: 'run.status', status: 'running' });
+    tracker.release(RUN);
+    expect(tracker.finishedOf(RUN)).toBeUndefined();
+  });
 });

@@ -1,3 +1,6 @@
+import { AgentOrb, type OrbState } from '../chat/AgentOrb';
+import { RunActivity } from '../chat/RunActivity';
+import type { Activity } from '../realtime/activity';
 import { Plus } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { copy } from '../copy';
@@ -12,6 +15,30 @@ import { SkeletonList } from '../ui/Skeleton';
 import { StateView, type ViewState } from '../ui/StateView';
 import { TextField } from '../ui/TextField';
 import { useToastStore } from '../ui/Toaster';
+
+const ORB_STATES: OrbState[] = ['idle', 'thinking', 'tool', 'writing', 'done', 'error'];
+
+const phaseActivity = (phase: Activity['phase'], patch: Partial<Activity> = {}): Activity => ({
+  headline: 'Memeriksa konfigurasi build',
+  phase,
+  current: null,
+  stepCount: 1,
+  hiddenCount: 0,
+  elapsedMs: 12_000,
+  steps: [{ id: 's1', label: 'Berkas dibaca', target: 'package.json', status: 'ok', durationMs: 340, startedAt: 0 }],
+  summary: null,
+  needsAttention: false,
+  ...patch,
+});
+
+const RUN_PHASES: Activity[] = [
+  phaseActivity('thinking', { stepCount: 0, steps: [] }),
+  phaseActivity('tool', { current: { label: 'Menjalankan perintah', target: 'pnpm test', parallel: 1 } }),
+  phaseActivity('writing'),
+  phaseActivity('waiting_approval', { needsAttention: true }),
+  phaseActivity('done', { summary: 'Selesai · 12 dtk · 1 langkah' }),
+  phaseActivity('error', { summary: 'Gagal · 12 dtk · 1 langkah' }),
+];
 
 const TOKENS = [
   'bg',
@@ -165,6 +192,19 @@ export function CatalogScreen() {
           action={<Button>Coba lagi</Button>}
         />
         <ErrorBanner tone="warning" message="Offline. Tampilan memakai data terakhir." />
+      </Section>
+
+      <Section title="Aktivitas run">
+        <div className="flex gap-3">
+          {ORB_STATES.map((state) => (
+            <AgentOrb key={state} state={state} />
+          ))}
+        </div>
+        <div className="flex flex-col gap-2">
+          {RUN_PHASES.map((activity) => (
+            <RunActivity key={activity.phase} activity={activity} now={0} />
+          ))}
+        </div>
       </Section>
 
       <Section title="Toast">

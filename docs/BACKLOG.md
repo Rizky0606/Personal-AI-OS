@@ -632,6 +632,4 @@ Disusun 2026-10-26 dari perbandingan dengan Orca, Pi, Cline, Amp, Goose, dan Vib
 ## Sesi 5
 
 - Tambahkan steering/queued chip setelah `AgentHud` tersedia di branch desktop; saat ini tidak ada komponen atau store steering yang dapat dipakai ulang.
-- Tambahkan screenshot fase Chat/RunActivity serta recording Playwright setelah backend run fixture untuk e2e tersedia; branch ini hanya menyediakan chat streaming dasar.
-- Pertahankan ringkasan terminal run setelah `RunTracker.release` (simpan snapshot run di desktop).
-- Morph Orb 320 ms antar-state dan varian screenshot gelap; fake Hermes e2e belum mengirim tool/error yang bisa dikendalikan untuk screenshot per fase.
+- Rekaman `fase-rekaman.webm` dan screenshot fase diambil dari bagian "Aktivitas run" di katalog (data sintetis), bukan dari run nyata; run nyata dengan tool/error butuh fake Hermes e2e yang bisa dikendalikan.

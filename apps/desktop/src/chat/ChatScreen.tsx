@@ -25,6 +25,7 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
   const templates = usePromptTemplates();
   const insert = useTemplateInsert(chat.setDraft);
   const [dragging, setDragging] = useState(false);
+  const shownRun = chat.live ?? chat.finished;
   const { status } = chat;
   const now = useNow();
   const setAgentSteps = useUiStore((s) => s.setAgentSteps);
@@ -119,11 +120,11 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
               loadingOlder={chat.loadingOlder}
               onLoadOlder={chat.loadOlder}
             />
-            {chat.live ? (
+            {shownRun ? (
               <RunActivity
-                activity={buildActivity(chat.live, now)}
+                activity={buildActivity(shownRun, now)}
                 now={now}
-                output={chat.live.tools.at(-1)?.output}
+                output={shownRun.tools.at(-1)?.output}
                 onApproval={() =>
                   document
                     .querySelector('[data-approval-panel]')
