@@ -92,7 +92,7 @@ const text = (value: string, isError = false): ToolResult => ({
   ...(isError ? { isError: true } : {}),
 });
 
-async function callTool(session: BrowserSession, name: string, args: Json): Promise<ToolResult> {
+async function callTool(session: BrowserSession, name: string, args: Json, upload?: (bytes: Buffer) => void): Promise<ToolResult> {
   try {
     switch (name) {
       case 'browser_screenshot': {
@@ -104,12 +104,10 @@ async function callTool(session: BrowserSession, name: string, args: Json): Prom
           fullPage: args.fullPage === true,
           reload: args.reload === true,
         });
+        upload?.(shot.png);
         return {
           content: [
-            {
-              type: 'text',
-              text: `Screenshot ${shot.url} (viewport ${shot.viewport.width}x${shot.viewport.height}). ${shot.layout}`,
-            },
+            { type: 'text', text: `Screenshot ${shot.url} (viewport ${shot.viewport.width}x${shot.viewport.height}). ${shot.layout}` },
             { type: 'image', data: shot.png.toString('base64'), mimeType: 'image/png' },
           ],
         };
@@ -164,6 +162,7 @@ export class McpServer {
   private server: http.Server | undefined;
   private port = 0;
   private readonly sessions = new Map<string, { token: Buffer; session: BrowserSession }>();
+  private readonly uploaders = new Map<string, (bytes: Buffer) => void>();
 
   async start(): Promise<void> {
     if (this.server) return;
@@ -185,25 +184,25 @@ export class McpServer {
     this.sessions.clear();
   }
 
-  register(runId: string, session: BrowserSession): McpRegistration {
+  register(runId: string, session: BrowserSession, uploadArtifact?: (runId: string, bytes: Buffer) => Promise<boolean>): McpRegistration {
     const token = randomBytes(24).toString('hex');
+    if (uploadArtifact) this.uploaders.set(runId, (bytes) => { void uploadArtifact(runId, bytes).catch(() => undefined); });
     this.sessions.set(runId, { token: Buffer.from(token), session });
     return {
       url: `http://127.0.0.1:${this.port}/mcp/${encodeURIComponent(runId)}`,
       headers: { Authorization: `Bearer ${token}` },
-      unregister: () => this.sessions.delete(runId),
+      unregister: () => { this.sessions.delete(runId); this.uploaders.delete(runId); },
     };
   }
 
-  private authorize(req: http.IncomingMessage): BrowserSession | undefined {
+  private authorize(req: http.IncomingMessage): { session: BrowserSession; upload?: (bytes: Buffer) => void } | undefined {
     const match = /^\/mcp\/([^/?#]+)/.exec(req.url ?? '');
-    const entry = match?.[1] ? this.sessions.get(decodeURIComponent(match[1])) : undefined;
+    const runId = match?.[1] ? decodeURIComponent(match[1]) : undefined;
+    const entry = runId ? this.sessions.get(runId) : undefined;
     const header = req.headers.authorization ?? '';
     const given = Buffer.from(header.startsWith('Bearer ') ? header.slice(7) : '');
-    if (given.length !== entry?.token.length || !timingSafeEqual(given, entry.token)) {
-      return undefined;
-    }
-    return entry.session;
+    if (given.length !== entry?.token.length || !timingSafeEqual(given, entry.token)) return undefined;
+    return { session: entry.session, ...(this.uploaders.has(runId!) ? { upload: this.uploaders.get(runId!) } : {}) };
   }
 
   private async handle(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
@@ -211,11 +210,10 @@ export class McpServer {
       res.writeHead(status, { 'content-type': 'application/json' });
       res.end(body === undefined ? undefined : JSON.stringify(body));
     };
-    const session = this.authorize(req);
-    if (!session) return reply(401, { error: 'unauthorized' });
+    const entry = this.authorize(req);
+    if (!entry) return reply(401, { error: 'unauthorized' });
     if (req.method === 'DELETE') return reply(200);
     if (req.method !== 'POST') return reply(405, { error: 'method_not_allowed' });
-
     const chunks: Buffer[] = [];
     let size = 0;
     for await (const chunk of req as AsyncIterable<Buffer>) {
@@ -227,56 +225,34 @@ export class McpServer {
     try {
       message = JSON.parse(Buffer.concat(chunks).toString('utf8'));
     } catch {
-      return reply(400, {
-        jsonrpc: '2.0',
-        id: null,
-        error: { code: -32700, message: 'Parse error' },
-      });
+      return reply(400, { jsonrpc: '2.0', id: null, error: { code: -32700, message: 'Parse error' } });
     }
     const batch = Array.isArray(message);
     const responses: unknown[] = [];
     for (const item of batch ? (message as unknown[]) : [message]) {
-      const response = await this.dispatch(session, item);
+      const response = await this.dispatch(entry, item);
       if (response) responses.push(response);
     }
-    // Hanya notifikasi: tidak ada jawaban.
     if (responses.length === 0) return reply(202);
     reply(200, batch ? responses : responses[0]);
   }
-
-  private async dispatch(session: BrowserSession, item: unknown): Promise<Json | undefined> {
+  private async dispatch(entry: { session: BrowserSession; upload?: (bytes: Buffer) => void }, item: unknown): Promise<Json | undefined> {
     if (!isRecord(item) || typeof item.method !== 'string') return undefined;
     const id = item.id;
-    if (id === undefined || id === null) return undefined; // notifikasi
+    if (id === undefined || id === null) return undefined;
     const ok = (result: unknown) => ({ jsonrpc: '2.0', id, result });
-    const fail = (code: number, message: string) => ({
-      jsonrpc: '2.0',
-      id,
-      error: { code, message },
-    });
+    const fail = (code: number, message: string) => ({ jsonrpc: '2.0', id, error: { code, message } });
     const params = isRecord(item.params) ? item.params : {};
     switch (item.method) {
-      case 'initialize':
-        return ok({
-          protocolVersion: str(params.protocolVersion) ?? PROTOCOL_VERSION,
-          capabilities: { tools: { listChanged: false } },
-          serverInfo: { name: MCP_SERVER_NAME, version: '1.0.0' },
-          instructions:
-            'Tool browser untuk melihat dan menguji preview project: screenshot, klik, isi kolom, baca console.',
-        });
-      case 'ping':
-        return ok({});
-      case 'tools/list':
-        return ok({ tools: TOOLS });
+      case 'initialize': return ok({ protocolVersion: str(params.protocolVersion) ?? PROTOCOL_VERSION, capabilities: { tools: { listChanged: false } }, serverInfo: { name: MCP_SERVER_NAME, version: '1.0.0' }, instructions: 'Tool browser untuk melihat dan menguji preview project: screenshot, klik, isi kolom, baca console.' });
+      case 'ping': return ok({});
+      case 'tools/list': return ok({ tools: TOOLS });
       case 'tools/call': {
         const name = str(params.name);
         if (!name) return fail(-32602, 'name wajib');
-        return ok(
-          await callTool(session, name, isRecord(params.arguments) ? params.arguments : {}),
-        );
+        return ok(await callTool(entry.session, name, isRecord(params.arguments) ? params.arguments : {}, entry.upload));
       }
-      default:
-        return fail(-32601, `Method tidak dikenal: ${item.method}`);
+      default: return fail(-32601, `Method tidak dikenal: ${item.method}`);
     }
   }
 }

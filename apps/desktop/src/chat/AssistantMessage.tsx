@@ -15,7 +15,7 @@ import { splitSuggestions } from './suggestions';
 import { ReasoningBlock } from './ReasoningBlock';
 import { RoleChip } from './RoleChip';
 import { ToolStepRow, type ToolStepView } from './ToolStepRow';
-
+import type { ComponentProps } from 'react';
 export type AssistantPart =
   | { type: 'text'; text: string }
   | ({ type: 'tool'; id: string } & ToolStepView)
@@ -36,6 +36,7 @@ export interface AssistantMessageProps {
   onFork?: (() => void) | undefined;
   /** Mengirim saran lanjutan yang dipilih; hanya diberikan pada jawaban terakhir yang sudah selesai. */
   onSuggest?: ((text: string) => void) | undefined;
+  onRichFollowUp?: ComponentProps<typeof Markdown>['onRichFollowUp'];
 }
 
 /** Tiga titik yang memudar bergiliran selama jawaban masih ditulis. */
@@ -130,7 +131,8 @@ export function AssistantMessage({
   onDelete,
   onFork,
   onSuggest,
-}: AssistantMessageProps) {
+  onRichFollowUp,
+ }: AssistantMessageProps) {
   // Blok kode di jawaban yang sudah selesai bisa diunduh sekaligus sebagai satu zip (struktur folder ikut path).
   const files = useMemo(
     () =>
@@ -180,7 +182,13 @@ export function AssistantMessage({
         part.type === 'tool' ? (
           <ToolStepRow key={part.id} {...part} />
         ) : part.type === 'text' && part.text ? (
-          <Markdown key={i} source={splitSuggestions(part.text).body} />
+          <Markdown
+            key={i}
+            source={splitSuggestions(part.text).body}
+            richBlockId={`assistant-${i}`}
+            richReadOnly={streaming || !onRichFollowUp}
+            onRichFollowUp={onRichFollowUp}
+          />
         ) : null,
       )}
       {streaming ? <TypingDots /> : null}

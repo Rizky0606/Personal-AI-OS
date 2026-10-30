@@ -890,7 +890,7 @@ export const copy = {
     welcome: {
       general: {
         title: 'Mau mengerjakan apa hari ini?',
-        subtitle: 'Tulis di bawah atau mulai dari salah satu saran. Role dipilih otomatis.',
+        subtitle: 'Tulis di bawah atau mulai dari salah satu saran.',
         cards: [
           {
             title: 'Ringkas teks',

@@ -1,0 +1,6 @@
+> {"jsonrpc":"2.0","id":1,"method":"initialize"}
+< {"jsonrpc":"2.0","id":1,"result":{"protocolVersion":1,"agentCapabilities":{"promptCapabilities":{"image":false},"mcpCapabilities":{"http":true},"sessionCapabilities":{"close":{}}},"agentInfo":{"name":"dsh-acp"},"authMethods":[]}}
+> {"jsonrpc":"2.0","id":2,"method":"session/new"}
+< {"jsonrpc":"2.0","id":2,"result":{"sessionId":"s1"}}
+> {"jsonrpc":"2.0","id":3,"method":"session/prompt"}
+< {"jsonrpc":"2.0","id":3,"error":{"code":-32000,"message":"auth_required"}}

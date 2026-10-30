@@ -357,6 +357,7 @@ export function createChatService(deps: {
     prompt: string;
     skills?: readonly string[] | undefined;
     skillsOff?: readonly string[] | undefined;
+    engine?: 'dsh';
   }): LaunchInput['resolveRole'] {
     return async () => {
       const result = routing.route({
@@ -367,7 +368,7 @@ export function createChatService(deps: {
         ...(args.skillsOff ? { skillsOff: args.skillsOff } : {}),
       });
       await routing.record(args.userMessageId, result);
-      const engine = roles.get(result.agent)?.engine === 'omp' ? 'omp' : 'hermes';
+      const engine = args.engine ?? (roles.get(result.agent)?.engine === 'omp' ? 'omp' : 'hermes');
       await db.update(runs).set({ agentRole: result.agent, engine }).where(eq(runs.id, args.runId));
       await db
         .update(messages)
@@ -495,6 +496,13 @@ export function createChatService(deps: {
 
       const { sessionId, history } = await sessionFor(conversation);
       const model = input.model ?? null;
+      if (input.engine === 'dsh' && conversation.projectId) {
+        throw new AppError(
+          422,
+          'engine_not_for_project',
+          'Engine dsh berjalan di server tanpa folder project. Pakai chat umum, atau agent project untuk kode.',
+        );
+      }
 
       const { run, userMessage, assistantMessageId } = await db.transaction(async (tx) => {
         // Agent belum diketahui: ditentukan pada status `routing` di dalam run.
@@ -502,7 +510,7 @@ export function createChatService(deps: {
           .insert(runs)
           .values({
             kind: 'chat',
-            engine: 'hermes',
+            engine: input.engine ?? 'hermes',
             model,
             conversationId,
             planOnly: input.planOnly === true,
@@ -538,7 +546,6 @@ export function createChatService(deps: {
           .where(eq(conversations.id, conversationId));
         return { run: runRow!, userMessage: userRow!, assistantMessageId };
       });
-
       runner.launch({
         run,
         conversationId,
@@ -564,6 +571,7 @@ export function createChatService(deps: {
           prompt: routingText,
           skills: input.skills,
           skillsOff: input.skillsOff,
+          ...(input.engine ? { engine: input.engine } : {}),
         }),
       });
 

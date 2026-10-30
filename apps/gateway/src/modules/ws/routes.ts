@@ -1,3 +1,4 @@
+import type { TeamEvent } from '@aios/contracts';
 import {
   ClientMessageSchema,
   WS_CLOSE_UNAUTHORIZED,
@@ -18,8 +19,9 @@ export interface WsDeps {
   auth: AuthService;
   hub: EventHub;
   store: EventStore;
+  teamStore: { head(teamId: string): Promise<number>; list(teamId: string, afterSeq: number, limit: number): Promise<{ seq: number; ts: string; event: TeamEvent }[]> };
   /** Apakah sumber channel ada; dipakai sebelum berlangganan. */
-  exists: { run(id: string): Promise<boolean>; conversation(id: string): Promise<boolean> };
+  exists: { run(id: string): Promise<boolean>; conversation(id: string): Promise<boolean>; team(id: string): Promise<boolean> };
   heartbeatMs?: number;
   now?: () => number;
 }
@@ -89,7 +91,9 @@ function handleConnection(
         ? await deps.exists.run(id)
         : kind === 'conversation' && id
           ? await deps.exists.conversation(id)
-          : true;
+          : kind === 'team' && id
+            ? await deps.exists.team(id)
+            : true;
     if (!found) {
       send({ type: 'error', code: 'not_found', message: 'Channel tidak ditemukan.', channel });
       return;
@@ -122,10 +126,20 @@ function handleConnection(
           if (batch.length < REPLAY_BATCH) break;
         }
       }
+    } else if (kind === 'team' && id) {
+      const head = await deps.teamStore.head(id);
+      send({ type: 'subscribed', channel, lastSeq: head, replay: true });
+      if (lastSeq === undefined) sub.sentSeq = head;
+      else {
+        for (;;) {
+          const batch = await deps.teamStore.list(id, sub.sentSeq, REPLAY_BATCH);
+          for (const row of batch) deliver(channel, sub, { seq: row.seq, ts: row.ts, event: row.event });
+          if (batch.length < REPLAY_BATCH) break;
+        }
+      }
     } else {
       send({ type: 'subscribed', channel, lastSeq: 0, replay: false });
     }
-
     if (subs.get(channel) !== sub) return; // berhenti berlangganan / koneksi tutup saat replay
     // Tanpa await di bawah ini: antrean dikosongkan dan `ready` menyala dalam satu giliran.
     for (const e of sub.queue) deliver(channel, sub, e);

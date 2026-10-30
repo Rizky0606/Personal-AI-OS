@@ -45,6 +45,9 @@ services:
     build:
       context: ../..
       dockerfile: apps/gateway/Dockerfile
+      args:
+        # Kosong = dsh tidak dipasang. Isi dengan versi terkunci, mis. 0.2.1-rc.5.
+        DSH_VERSION: ${DSH_VERSION:-}
     platform: linux/arm64
     restart: unless-stopped
     # Host network: dari container, 127.0.0.1 adalah VPS, jadi Hermes dan 9Router tetap di localhost.
@@ -63,6 +66,8 @@ services:
       OUTBOX_HOST_DIR: ${AIOS_OUTBOX:-/home/ubuntu/aios-outbox}
     volumes:
       - '${AIOS_OUTBOX:-/home/ubuntu/aios-outbox}:/outbox:ro'
+      # Rumah dan folder kerja dsh (engine dsh, opsional; lihat docs/RUNBOOK_DSH.md). Terpisah dari data lain.
+      - dshdata:/dsh
     command: ['sh', '-c', 'node dist/db/migrate.js && exec node dist/main.js']
     depends_on:
       postgres:
@@ -89,3 +94,4 @@ secrets:
 volumes:
   pgdata:
   kumadata:
+  dshdata:

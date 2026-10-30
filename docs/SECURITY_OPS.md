@@ -4,7 +4,7 @@ Karena worker bisa menjalankan perintah di PC dan gateway memegang akses ke semu
 
 ## Jaringan
 
-Hasil audit terakhir dan temuannya ada di `docs/SECURITY_AUDIT.md`; tes `security.audit.integration.test.ts` menjaga auth dan scope setiap route di CI. Di produksi gateway menolak start bila `HOST` bukan loopback kecuali `ALLOW_PUBLIC_BIND=true`.
+Tinjauan source terbaru untuk persiapan rilis: `docs/SECURITY_REVIEW.md` (bukan audit runtime). Tes `security.audit.integration.test.ts` menjaga auth dan scope setiap route di CI. Di produksi gateway menolak start bila `HOST` bukan loopback kecuali `ALLOW_PUBLIC_BIND=true`.
 
 - Publik hanya 443 (nginx). SSH dibatasi ke Tailscale setelah Tailscale stabil.
 - Hermes, 9Router, Postgres, SearXNG, Uptime Kuma hanya di 127.0.0.1.
@@ -38,6 +38,7 @@ Hasil audit terakhir dan temuannya ada di `docs/SECURITY_AUDIT.md`; tes `securit
 
 ## Berkas buatan agent (folder kiriman)
 
+- Screenshot worker hanya menerima body PNG mentah dengan token scope `worker`, metadata `runId`, batas 10 MiB, serta pemeriksaan run aktif dan kepemilikan device/project. Event hanya metadata; unduhan memakai endpoint terautentikasi dengan `nosniff`, `attachment`, dan `no-store`. SVG/HTML tidak inline.
 - Hermes menulis berkas untuk pemilik ke `/home/ubuntu/aios-outbox/<id-run>/`. Gateway me-mount folder itu read-only (`/outbox`) dan hanya mengambil berkas biasa di dalam folder run yang sedang selesai: symlink dan path yang keluar folder diabaikan, maks 10 berkas, 25 MB per berkas, 50 MB per run.
 - Berkas disalin ke tabel `files` (ikut backup) dan diunduh lewat `GET /files/:id/download` (scope `app`) selalu sebagai attachment dengan `nosniff`, tidak pernah dirender di origin gateway.
 - Timer `aios-outbox-clean` menghapus isi folder kiriman yang lebih tua dari 24 jam.
@@ -45,6 +46,7 @@ Hasil audit terakhir dan temuannya ada di `docs/SECURITY_AUDIT.md`; tes `securit
 ## Pratinjau artifact
 
 - Kode buatan AI (HTML, SVG, React, Mermaid) hanya dijalankan di origin terpisah: desktop lewat custom protocol `aiosartifact` di iframe `sandbox="allow-scripts allow-modals"` (tanpa `allow-same-origin`), Android lewat WebView tanpa jembatan JS, tanpa akses berkas atau content provider, dan tanpa navigasi keluar. Skrip artifact tidak bisa membaca token, IPC, atau DOM aplikasi.
+- Event `artifact.created` tidak membawa byte. Desktop hanya menampilkan gambar PNG/JPEG/WebP/GIF inline melalui unduhan terautentikasi; SVG, HTML, dan MIME lain tetap attachment/teks, tidak dieksekusi sebagai gambar arbitrary.
 - CSP aplikasi desktop tetap melarang skrip inline; hanya `frame-src` yang ditambah `http://aiosartifact.localhost`.
 - React, Babel, dan Mermaid dimuat dari jsDelivr dengan versi terkunci dan hash SRI. Mengganti versi berarti memperbarui URL dan hash di `artifact.ts` dan `ArtifactPage.kt` bersamaan (tes Android membandingkan keduanya).
 

@@ -41,6 +41,15 @@ export interface RunFailure {
 }
 
 /** Keadaan satu run yang sedang (atau baru saja) mengalir lewat WebSocket. Murni, tanpa React. */
+export interface LiveArtifact {
+  fileId: string;
+  name: string;
+  mime: string;
+  size: number;
+  sha256: string;
+  source: 'screenshot' | 'file';
+}
+
 export interface LiveRun {
   runId: string;
   role: string | null;
@@ -53,6 +62,7 @@ export interface LiveRun {
   reasoningSummary: string | null;
   tools: ToolStep[];
   sources: LiveSource[];
+  artifacts: LiveArtifact[];
   approvals: PendingApproval[];
   research: LiveProgress;
   error: RunFailure | null;
@@ -86,6 +96,7 @@ export const newLiveRun = (runId: string): LiveRun => ({
   sources: [],
   approvals: [],
   research: { stage: null, progress: 0, message: undefined },
+  artifacts: [],
   error: null,
   startedAt: null,
   endedAt: null,
@@ -244,6 +255,10 @@ function reduceEvent(run: LiveRun, event: ServerEvent, ts: number | undefined): 
             ...run,
             sources: [...run.sources, { id: event.sourceId, title: event.title, url: event.url }],
           };
+    case 'artifact.created':
+      return run.artifacts.some((artifact) => artifact.fileId === event.fileId)
+        ? run
+        : { ...run, artifacts: [...run.artifacts, event] };
     case 'error':
       return {
         ...run,

@@ -132,6 +132,16 @@ export const ErrorEventSchema = z.object({
   ...RunErrorSchema.shape,
 });
 
+export const ArtifactCreatedEventSchema = z.object({
+  type: z.literal('artifact.created'),
+  fileId: IdSchema,
+  name: z.string().min(1).max(200),
+  mime: z.string().min(1).max(255),
+  size: z.number().int().nonnegative(),
+  sha256: z.string().regex(/^[a-f0-9]{64}$/),
+  source: z.enum(['screenshot', 'file']),
+});
+
 export const RunCompletedEventSchema = z.object({
   type: z.literal('run.completed'),
   summary: z.string(),
@@ -157,6 +167,7 @@ export const AgentEventSchema = z
     ResearchProgressEventSchema,
     ResearchSourceEventSchema,
     ErrorEventSchema,
+    ArtifactCreatedEventSchema,
     RunCompletedEventSchema,
   ])
   .meta({ id: 'AgentEvent' });
@@ -203,9 +214,68 @@ export const UserEventSchema = z
   .meta({ id: 'UserEvent' });
 export type UserEvent = z.infer<typeof UserEventSchema>;
 
+export const TeamStatusSchema = z.enum([
+  'queued',
+  'planning',
+  'running',
+  'reviewing',
+  'completed',
+  'failed',
+  'cancelled',
+  'needs_attention',
+]);
+export const TeamMemberRoleSchema = z.enum(['lead', 'worker']);
+export const TeamMemberStatusSchema = z.enum([
+  'queued',
+  'running',
+  'reviewing',
+  'completed',
+  'failed',
+  'cancelled',
+  'needs_attention',
+]);
+
+export const TeamCreatedEventSchema = z.object({
+  type: z.literal('team.created'),
+  teamId: IdSchema,
+  status: TeamStatusSchema,
+  createdAt: TimestampSchema,
+});
+
+export const TeamMemberUpdatedEventSchema = z.object({
+  type: z.literal('team.member.updated'),
+  teamId: IdSchema,
+  member: z
+    .object({
+      id: IdSchema,
+      role: TeamMemberRoleSchema,
+      status: TeamMemberStatusSchema,
+      updatedAt: TimestampSchema,
+    })
+    .strict(),
+});
+
+export const TeamReviewCompletedEventSchema = z.object({
+  type: z.literal('team.review.completed'),
+  teamId: IdSchema,
+  memberId: IdSchema,
+  decision: z.enum(['accept', 'revise', 'reject']),
+  completedAt: TimestampSchema,
+});
+
+export const TeamEventSchema = z
+  .discriminatedUnion('type', [
+    TeamCreatedEventSchema,
+    TeamMemberUpdatedEventSchema,
+    TeamReviewCompletedEventSchema,
+  ])
+  .meta({ id: 'TeamEvent' });
+export type TeamEvent = z.infer<typeof TeamEventSchema>;
+
+
 /** Semua event yang bisa ada di envelope WebSocket. */
 export const ServerEventSchema = z
-  .union([AgentEventSchema, UserEventSchema])
+  .union([AgentEventSchema, UserEventSchema, TeamEventSchema])
   .meta({ id: 'ServerEvent' });
 export type ServerEvent = z.infer<typeof ServerEventSchema>;
 

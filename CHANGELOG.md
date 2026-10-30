@@ -2,6 +2,13 @@
 
 Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/); versi mengikuti [SemVer](https://semver.org/lang/id/).
 
+## Belum dirilis
+
+### Diubah
+
+- Hapus klaim role otomatis pada teks sambutan desktop dan Android.
+- Perbarui README repo dan tambahkan checklist aksesibilitas serta catatan kesiapan rilis.
+
 ## [1.0.3] - 2026-10-25
 
 ### Diubah

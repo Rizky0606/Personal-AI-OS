@@ -98,6 +98,8 @@ export interface RunnerDeps {
   adapter: AgentAdapter;
   /** Run coding (engine omp) dijalankan di worker Windows lewat relay; tanpa ini role omp tidak tersedia. */
   workerAdapter?: AgentAdapter;
+  /** Engine dsh (ACP) di server; tanpa ini pesan dengan engine dsh gagal dengan `engine_unavailable`. */
+  dsh?: { adapter: AgentAdapter; prepareWorkdir(runId: string): Promise<string> };
   /** Diberi tahu tiap status atau diff run berubah (kartu kanban mengikuti run). */
   observer?: RunObserver;
   /** Bundel role (aturan perilaku + role + skill) yang disuntik sebagai pesan sistem. */
@@ -246,6 +248,8 @@ export function createRunner(deps: RunnerDeps): Runner {
 
   async function execute(input: LaunchInput, ctl: Active): Promise<void> {
     const { run } = input;
+    /** Engine dipilih klien per pesan (`engine: 'dsh'`) dan sudah tercatat di baris run. */
+    const useDsh = run.engine === 'dsh';
     let status: RunStatus = 'queued';
     let text = '';
     let usage: Usage | null = null;
@@ -380,7 +384,24 @@ export function createRunner(deps: RunnerDeps): Runner {
         });
         await advance('preparing');
         const engine = deps.roles.get(decision.role)?.engine;
-        if (engine === 'omp') {
+        if (useDsh) {
+          if (!deps.dsh) {
+            failure = {
+              code: 'engine_unavailable',
+              message: 'Engine dsh belum dikonfigurasi di gateway ini (DSH_COMMAND).',
+              retryable: false,
+            };
+          } else if (input.projectId) {
+            failure = {
+              code: 'engine_not_for_project',
+              message:
+                'Engine dsh berjalan di server tanpa folder project. Pakai chat umum, atau agent project untuk kode.',
+              retryable: false,
+            };
+          } else {
+            runnable = true;
+          }
+        } else if (engine === 'omp') {
           if (!input.projectId) {
             failure = {
               code: 'project_required',
@@ -429,7 +450,9 @@ export function createRunner(deps: RunnerDeps): Runner {
         const chosenRole = decision.role;
         // Mode rencana hanya berarti untuk run coding; di chat biasa dihiraukan.
         const planOnly = coding && run.planOnly;
-        const startAdapter = coding ? deps.workerAdapter! : adapter;
+        const startAdapter = useDsh ? deps.dsh!.adapter : coding ? deps.workerAdapter! : adapter;
+        // dsh: folder kerja terisolasi per run, di bawah akar yang dikonfigurasi (bukan folder project).
+        const dshCwd = useDsh ? await deps.dsh!.prepareWorkdir(run.id) : undefined;
         // "Model otomatis" di run coding: omp memakai combo 9Router milik role (mis. coding-main), bukan nama "default".
         const model = run.model ?? (coding ? deps.roles.get(chosenRole)?.model : undefined);
         const prompt = await enrichedPrompt(input, ctl.abort.signal);
@@ -449,9 +472,10 @@ export function createRunner(deps: RunnerDeps): Runner {
               decision.skills,
             ),
             sessionId: input.sessionId,
-            ...(await historyFor(input, coding)),
+            ...(await historyFor(input, coding || useDsh)),
             ...(input.images?.length ? { images: input.images } : {}),
             ...(coding && input.projectId ? { projectId: input.projectId, role: chosenRole } : {}),
+            ...(dshCwd ? { cwd: dshCwd } : {}),
             ...(coding && input.continueFromRunId
               ? { continueFromRunId: input.continueFromRunId }
               : {}),

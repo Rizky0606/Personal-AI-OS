@@ -132,6 +132,7 @@ export async function startWorker(options: WorkerOptions): Promise<RunningWorker
       }
     },
     log,
+    uploadArtifact: (runId, bytes) => link.uploadArtifact(runId, bytes),
   });
 
   // Terminal PTY per project atau worktree run; keluarannya didorong ke desktop.

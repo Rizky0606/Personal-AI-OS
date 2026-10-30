@@ -12,6 +12,7 @@ import { createAuthService } from './modules/auth/service.js';
 import { deriveAuthKeys } from './modules/auth/secrets.js';
 import { createDevicesService } from './modules/devices/service.js';
 import { createOutbox } from './modules/files/outbox.js';
+import { createDshEngine, dshEngineList } from './modules/dsh/launch.js';
 import { createMemoryService } from './modules/memory/service.js';
 import { createFleetService } from './modules/fleets/service.js';
 import { createForkService } from './modules/fork/service.js';
@@ -49,6 +50,8 @@ import { createRunObserver } from './modules/runs/observer.js';
 import { createRunner } from './modules/runs/runner.js';
 import { createRunsService } from './modules/runs/service.js';
 import { createEventStore } from './modules/runs/store.js';
+import { createTeamsService } from './modules/teams/service.js';
+import { createTeamEventStore } from './modules/teams/store.js';
 
 async function main(): Promise<void> {
   const config = loadConfig();
@@ -73,6 +76,7 @@ async function main(): Promise<void> {
   });
   const boss = createBoss(config.DATABASE_URL, log);
   const hub = createEventHub();
+  const teamStore = createTeamEventStore(db, hub);
   const store = createEventStore(db, hub);
   const projects = createProjectsService({ db });
   const workerHub = createWorkerHub();
@@ -90,6 +94,13 @@ async function main(): Promise<void> {
           log,
         })
       : undefined;
+  const dsh = createDshEngine({
+    config,
+    log: {
+      warn: (obj, msg) => app.log.warn(obj, msg),
+      debug: (obj, msg) => app.log.debug(obj, msg),
+    },
+  });
   const runner = createRunner({
     db,
     store,
@@ -97,6 +108,7 @@ async function main(): Promise<void> {
     observer,
     adapter: createHermesAdapter({ baseUrl: config.HERMES_URL, apiKey: config.HERMES_API_KEY }),
     workerAdapter: createWorkerRelayAdapter({ relay: workerRelay }),
+    ...(dsh ? { dsh } : {}),
     roles,
     memory,
     projectRules: projects,
@@ -123,6 +135,7 @@ async function main(): Promise<void> {
     }),
   });
   const runs = createRunsService({ db, store, runner, hub, relay: workerRelay, chat, observer });
+  const teams = createTeamsService({ db, chat, runs, hub, store: teamStore });
   const tasks = createTasksService({
     db,
     hub,
@@ -186,9 +199,12 @@ async function main(): Promise<void> {
       models: createModelsService({ client, log: { warn: (obj, msg) => app.log.warn(obj, msg) } }),
       quota: createQuotaService(db),
       usage,
+      engines: () => dshEngineList(dsh),
     },
     chat,
     files,
+    runner,
+    store,
     runs,
     roles,
     research,
@@ -202,6 +218,7 @@ async function main(): Promise<void> {
     handoff: createHandoffService({ db, client }),
     fork: createForkService({ db }),
     fleets: createFleetService({ db, chat }),
+    teams,
     spaces,
     search: createSearchService({ db }),
     status: createStatusService({
@@ -214,9 +231,11 @@ async function main(): Promise<void> {
     ws: {
       hub,
       store,
+      teamStore,
       exists: {
         run: (id) => runs.exists(id),
         conversation: (id) => chat.exists(id),
+        team: (id) => teams.exists(id),
       },
     },
   });
@@ -230,6 +249,7 @@ async function main(): Promise<void> {
     push.close();
     await schedules.close();
     await research.close();
+    dsh?.close();
     await boss.stop({ graceful: true, timeout: 10_000 }).catch(() => undefined);
     roles.close();
     await close();

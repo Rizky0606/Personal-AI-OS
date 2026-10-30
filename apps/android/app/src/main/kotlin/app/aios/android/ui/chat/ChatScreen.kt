@@ -137,7 +137,6 @@ fun ChatScreen(viewModel: ChatViewModel, snackbar: SnackbarHostState) {
                     onStartEdit = viewModel::startEdit,
                     onDelete = { toDelete = it },
                     onRemember = { toRemember = it },
-                    onDownload = viewModel::downloadFile,
                     onCopied = { /* umpan balik lewat snackbar di bawah */ },
                     copiedText = copiedText,
                     snackbar = snackbar
@@ -189,7 +188,6 @@ fun ChatScreen(viewModel: ChatViewModel, snackbar: SnackbarHostState) {
     }
 }
 
-@Composable
 private fun MessageList(
     items: List<ChatItem>,
     loadingOlder: Boolean,
@@ -231,7 +229,6 @@ private fun MessageList(
                     roleName = roleName,
                     onEdit = onEdit,
                     onResend = onResend,
-                    onStartEdit = onStartEdit,
                     onDelete = onDelete,
                     onRemember = onRemember,
                     onDownload = onDownload,

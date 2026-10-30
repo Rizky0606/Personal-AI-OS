@@ -39,9 +39,9 @@ export interface PreviewServiceOptions {
   resolve: PreviewResolver;
   browser?: BrowserHost;
   readyTimeoutMs?: number;
-  /** Dipanggil tiap keadaan preview berubah; worker meneruskannya ke desktop. */
   onChange?: (info: PreviewInfo) => void;
   log?: (message: string) => void;
+  uploadArtifact?: (runId: string, bytes: Buffer) => Promise<boolean>;
 }
 
 export const previewKey = (target: PreviewTargetInput): string =>
@@ -219,7 +219,7 @@ export class PreviewService {
       return info.devUrl;
     });
     this.sessions.set(target.runId, session);
-    return this.mcp.register(target.runId, session);
+    return this.mcp.register(target.runId, session, this.options.uploadArtifact);
   }
 
   /** Tangkapan satu elemen (atau viewport) dari preview yang berjalan, untuk lampiran composer. */

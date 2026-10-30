@@ -48,6 +48,9 @@ import { createRunObserver } from '../modules/runs/observer.js';
 import { createRunner, type Runner } from '../modules/runs/runner.js';
 import { createRunsService } from '../modules/runs/service.js';
 import { createEventStore, type EventStore } from '../modules/runs/store.js';
+import { createTeamsService } from '../modules/teams/service.js';
+import { createTeamEventStore } from '../modules/teams/store.js';
+import { createDshEngine, dshEngineList, type DshDeps } from '../modules/dsh/launch.js';
 import { unusedResearch, unusedSchedules } from './stubs.js';
 import { createTestDatabase, type TestDatabase } from './db.js';
 
@@ -140,6 +143,8 @@ export async function createAuthEnv(
     /** Folder kiriman berkas buatan agent (sama untuk gateway dan agent di tes). */
     outboxDir?: string;
     hermesIdleMs?: number;
+    /** Engine dsh ke proses ACP palsu (testing/fake-dsh.mjs); tanpa ini dsh tidak tersedia. */
+    dsh?: DshDeps['config'];
     heartbeatMs?: number;
     /** Masa tunggu relay worker (putus-sambung dan pembatalan) agar tes tidak menunggu puluhan detik. */
     workerRelay?: { disconnectGraceMs?: number; cancelGraceMs?: number };
@@ -189,6 +194,7 @@ export async function createAuthEnv(
         save: (input) => files.saveGenerated(input),
       })
     : undefined;
+  const dsh = options.dsh ? createDshEngine({ config: options.dsh }) : undefined;
   const runner = createRunner({
     db,
     store,
@@ -204,6 +210,7 @@ export async function createAuthEnv(
       relay: workerRelay,
       ...(options.workerRelay ?? {}),
     }),
+    ...(dsh ? { dsh } : {}),
     roles,
     memory,
     projectRules: projects,
@@ -249,7 +256,9 @@ export async function createAuthEnv(
     ...(options.web ? { web: options.web } : {}),
     now,
   });
+  const teamStore = createTeamEventStore(db, hub);
   const runs = createRunsService({ db, store, runner, hub, relay: workerRelay, chat, observer });
+  const teams = createTeamsService({ db, chat, runs, hub, store: teamStore, now });
   const tasks = createTasksService({
     db,
     hub,
@@ -319,9 +328,12 @@ export async function createAuthEnv(
       quota: createQuotaService(db, now),
       usage,
       ...(options.streamIdleMs ? { streamIdleMs: options.streamIdleMs } : {}),
+      engines: () => dshEngineList(dsh),
     },
     chat,
     files,
+    runner,
+    store,
     runs,
     roles,
     research,
@@ -335,15 +347,18 @@ export async function createAuthEnv(
     opinion: createOpinionService({ client }),
     handoff: createHandoffService({ db, client }),
     fork: createForkService({ db }),
+    teams,
     fleets: createFleetService({ db, chat }),
     spaces,
     search: createSearchService({ db }),
     worker: { hub: workerHub, relay: workerRelay },
     ws: {
+      teamStore,
       hub,
       store,
       exists: {
         run: (id) => runs.exists(id),
+        team: (id) => teams.exists(id),
         conversation: (id) => chat.exists(id),
       },
       now,
@@ -409,6 +424,7 @@ export async function createAuthEnv(
     del: (path, token) =>
       app.inject({ method: 'DELETE', url: `/v1${path}`, headers: headers(token) }),
     async close() {
+      dsh?.close();
       push.close();
       await schedules.close().catch(() => undefined);
       await research.close().catch(() => undefined);

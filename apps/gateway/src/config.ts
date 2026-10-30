@@ -56,6 +56,25 @@ const EnvSchema = z.object({
   FCM_SERVICE_ACCOUNT_FILE: optionalString,
   /** Batas waktu tiap cek dependensi di /readyz. */
   READY_TIMEOUT_MS: withDefault(z.coerce.number().int().min(100).max(10_000), 2000),
+  /** Perintah dsh (jalur absolut ke biner atau pembungkus). Kosong = engine dsh mati (docs/RUNBOOK_DSH.md). */
+  DSH_COMMAND: optionalString,
+  /** Argumen dsh, dipisah spasi. */
+  DSH_ARGS: withDefault(z.string().min(1), '--profile acp'),
+  /** Direktori rumah dsh (profil, kredensial, sesi); terpisah dari rumah pengguna layanan lain. */
+  DSH_HOME: optionalString,
+  /** Akar folder kerja terisolasi; tiap run memakai `<akar>/<runId>`. Wajib bila DSH_COMMAND diisi. */
+  DSH_WORKDIR_ROOT: optionalString,
+  /** UID/GID pengguna non-root untuk proses dsh (POSIX); kosong = pengguna yang menjalankan gateway. */
+  DSH_UID: z.preprocess(blankToUndefined, z.coerce.number().int().min(1).optional()),
+  DSH_GID: z.preprocess(blankToUndefined, z.coerce.number().int().min(1).optional()),
+  /** Batas heap Node proses dsh (MB), lewat --max-old-space-size. Batas keras memakai systemd MemoryMax. */
+  DSH_MAX_MEMORY_MB: withDefault(z.coerce.number().int().min(256).max(65_536), 2048),
+  /** Batas total satu run dsh. */
+  DSH_RUN_TIMEOUT_MS: withDefault(z.coerce.number().int().min(10_000).max(86_400_000), 1_800_000),
+  /** Tanpa keluaran dari dsh selama ini dianggap macet. */
+  DSH_IDLE_TIMEOUT_MS: withDefault(z.coerce.number().int().min(5000).max(3_600_000), 600_000),
+  /** Izin yang tidak dijawab sampai batas ini ditolak otomatis. */
+  DSH_APPROVAL_TIMEOUT_MS: withDefault(z.coerce.number().int().min(5000).max(3_600_000), 600_000),
 });
 
 export type Config = z.infer<typeof EnvSchema>;
@@ -88,6 +107,19 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
           message:
             'di produksi gateway hanya boleh mendengarkan di loopback (127.0.0.1). Biarkan nginx yang publik, atau isi ALLOW_PUBLIC_BIND=true bila memang disengaja.',
         },
+      ]);
+    }
+    if (data.DSH_COMMAND && !data.DSH_WORKDIR_ROOT) {
+      throw new ConfigError([
+        {
+          variable: 'DSH_WORKDIR_ROOT',
+          message: 'wajib diisi bila DSH_COMMAND diisi (folder kerja terisolasi per run).',
+        },
+      ]);
+    }
+    if ((data.DSH_UID === undefined) !== (data.DSH_GID === undefined)) {
+      throw new ConfigError([
+        { variable: 'DSH_GID', message: 'DSH_UID dan DSH_GID harus diisi bersama.' },
       ]);
     }
     return data;

@@ -9,12 +9,13 @@ export const WS_MAX_CHANNELS = 20;
 /** Kode penutupan: access token habis atau perangkat dicabut. Klien refresh token lalu sambung ulang. */
 export const WS_CLOSE_UNAUTHORIZED = 4401;
 
-/** `user`, `conversation:<id>`, atau `run:<id>`. */
+/** `user`, `conversation:<id>`, `run:<id>`, atau `team:<id>`. */
 export const ChannelSchema = z
   .union([
     z.literal('user'),
     z.templateLiteral(['conversation:', IdSchema]),
     z.templateLiteral(['run:', IdSchema]),
+    z.templateLiteral(['team:', IdSchema]),
   ])
   .meta({ id: 'Channel' });
 export type Channel = z.infer<typeof ChannelSchema>;

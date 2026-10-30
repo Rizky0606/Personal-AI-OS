@@ -2,6 +2,7 @@ package app.aios.android.ui.chat.activity
 
 import app.aios.android.data.api.TERMINAL_RUN_STATUSES
 import app.aios.android.data.realtime.ServerEvent
+import app.aios.android.ui.chat.Artifact
 
 /** Aktivitas terbaru, untuk membedakan menalar, menulis, dan memutuskan langkah berikutnya. */
 enum class LastActivity { Reasoning, Text, Tool }
@@ -25,6 +26,7 @@ data class TraceTool(
 data class RunTrace(
     val status: String = "queued",
     val tools: List<TraceTool> = emptyList(),
+    val artifacts: List<Artifact> = emptyList(),
     /** ID permintaan izin yang belum diputuskan. */
     val approvals: List<String> = emptyList(),
     val reasoning: String = "",
@@ -67,7 +69,7 @@ data class RunTrace(
         is ServerEvent.ApprovalRequested -> copy(
             approvals = approvals.filterNot { it == event.approvalId } + event.approvalId
         )
-        is ServerEvent.ApprovalResolved -> copy(approvals = approvals.filterNot { it == event.approvalId })
+        is ServerEvent.ArtifactCreated -> copy(artifacts = artifacts.filterNot { it.fileId == event.fileId } + Artifact(event.fileId, event.name, event.mime, event.size, event.sha256, event.source))
         else -> this
     }
 

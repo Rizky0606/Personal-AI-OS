@@ -8,6 +8,7 @@ import { memoryEndpoints } from './endpoints/memory.js';
 import { templateEndpoints } from './endpoints/templates.js';
 import { spaceEndpoints } from './endpoints/spaces.js';
 import { miscEndpoints } from './endpoints/misc.js';
+import { teamEndpoints } from './endpoints/teams.js';
 import type { Endpoint } from './endpoint.js';
 
 /** Semua endpoint REST, urut per area seperti tabel di API_CONTRACT.md. */
@@ -17,6 +18,7 @@ export const endpoints: readonly Endpoint[] = [
   ...chatEndpoints,
   ...workEndpoints,
   ...miscEndpoints,
+  ...teamEndpoints,
   ...memoryEndpoints,
   ...templateEndpoints,
   ...spaceEndpoints,

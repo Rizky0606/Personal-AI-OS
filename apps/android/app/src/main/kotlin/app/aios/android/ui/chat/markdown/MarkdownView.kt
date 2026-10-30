@@ -145,7 +145,14 @@ private fun RenderBlock(block: Block, onCopied: () -> Unit, fade: StreamTail? = 
                 FadingParagraph(inline, fade)
             }
         }
-        is Block.Code -> CodeBlock(block, onCopied)
+        is Block.Code -> {
+            if (block.closed && block.language.equals("aios-ui", ignoreCase = true)) {
+                when (val answer = parseRichAnswer(block.code)) {
+                    is RichAnswerParse.Valid -> RichAnswerView(answer.components)
+                    RichAnswerParse.Unsupported -> CodeBlock(block, onCopied)
+                }
+            } else CodeBlock(block, onCopied)
+        }
         is Block.Quote -> Row(modifier = Modifier.height(IntrinsicSize.Min)) {
             Box(
                 Modifier

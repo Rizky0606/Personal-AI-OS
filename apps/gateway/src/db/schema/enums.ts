@@ -14,6 +14,9 @@ import {
   ScheduleTargetSchema,
   SurfaceSchema,
   TaskStatusSchema,
+  TeamMemberRoleSchema,
+  TeamMemberStatusSchema,
+  TeamStatusSchema,
 } from '@aios/contracts';
 import { pgEnum } from 'drizzle-orm/pg-core';
 
@@ -38,6 +41,12 @@ export const scheduleNotify = pgEnum('schedule_notify', values(ScheduleNotifySch
 export const scheduleRunStatus = pgEnum(
   'schedule_run_status',
   values(ScheduleRunStatusSchema.options),
+);
+export const teamStatus = pgEnum('team_status', values(TeamStatusSchema.options));
+export const teamMemberRole = pgEnum('team_member_role', values(TeamMemberRoleSchema.options));
+export const teamMemberStatus = pgEnum(
+  'team_member_status',
+  values(TeamMemberStatusSchema.options),
 );
 export const researchDepth = pgEnum('research_depth', values(ResearchDepthSchema.options));
 export const researchStatus = pgEnum('research_status', values(ResearchStatusSchema.options));

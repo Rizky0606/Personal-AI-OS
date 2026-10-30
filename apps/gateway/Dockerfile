@@ -28,7 +28,12 @@ FROM ${NODE_IMAGE} AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build --chown=node:node /out ./
-# Pengguna non-root bawaan image node (uid 1000). Gateway tidak menulis ke disk.
+# Opsional: DeepSeek Harness (dsh, developer preview, tidak diaudit) untuk engine `dsh`. Kosong = tidak dipasang.
+# Versi dikunci lewat build arg (docs/RUNBOOK_DSH.md): DSH_VERSION=0.2.1-rc.5 docker compose build gateway
+ARG DSH_VERSION=
+RUN if [ -n "$DSH_VERSION" ]; then npm install -g "@deepseek-ai/dsh@${DSH_VERSION}"; fi \
+    && mkdir -p /dsh/home /dsh/work && chown -R node:node /dsh
+# Pengguna non-root bawaan image node (uid 1000). Gateway tidak menulis ke disk (kecuali /dsh bila engine dsh dipakai).
 USER node
 # Dengan network_mode: host tidak ada EXPOSE; port diatur PORT (default 3000) dan hanya di loopback.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \

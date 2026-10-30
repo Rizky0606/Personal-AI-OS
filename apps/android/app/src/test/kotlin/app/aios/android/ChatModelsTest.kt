@@ -10,13 +10,14 @@ import app.aios.android.data.realtime.Frames
 import app.aios.android.data.realtime.ServerEvent
 import app.aios.android.ui.chat.ChatItem
 import app.aios.android.ui.chat.ChatUiState
+import app.aios.android.ui.chat.Artifact
 import app.aios.android.ui.chat.LiveRun
-import app.aios.android.ui.chat.PendingMessage
 import app.aios.android.ui.chat.buildChatItems
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -110,6 +111,24 @@ class ChatModelsTest {
         assertEquals("ok", live.tools.single().status)
         assertEquals(false, live.finished)
         assertTrue(live.reduce(ServerEvent.RunStatus("failed")).finished)
+    }
+    @Test
+    fun `artifact event is retained in live run and trace with source metadata`() {
+        val event = ServerEvent.ArtifactCreated("f1", "shot.png", "image/png", 12L, "abc", "screenshot")
+        val live = LiveRun("r").reduce(event)
+        val trace = app.aios.android.ui.chat.activity.RunTrace().reduce(event)
+        assertEquals(listOf(Artifact("f1", "shot.png", "image/png", 12L, "abc", "screenshot")), live.artifacts)
+        assertEquals(live.artifacts, trace.artifacts)
+    }
+
+    @Test
+    fun `artifact inline allows only safe image mimes`() {
+        assertTrue(Artifact("1", "a", "image/png", 1, "", "file").inline)
+        assertTrue(Artifact("2", "a", "image/jpeg", 1, "", "file").inline)
+        assertTrue(Artifact("3", "a", "image/webp", 1, "", "file").inline)
+        assertTrue(Artifact("4", "a", "image/gif", 1, "", "file").inline)
+        assertFalse(Artifact("5", "a", "image/svg+xml", 1, "", "file").inline)
+        assertFalse(Artifact("6", "a", "text/plain", 1, "", "file").inline)
     }
 
     @Test

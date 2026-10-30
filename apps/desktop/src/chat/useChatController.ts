@@ -1,5 +1,5 @@
 import { withAttachments } from '../preview/attachment';
-import { workerBranchFor } from '@aios/contracts';
+import { workerBranchFor, type RichAnswerFollowUp } from '@aios/contracts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -138,11 +138,11 @@ export function useChatController(conversationId: string | undefined) {
 
   /** Mengirim isi kolom pesan, atau `override` (kirim ulang) tanpa menyentuh draf yang sedang diketik. */
   const send = useCallback(
-    async (override?: string, options?: { plan?: boolean }) => {
+    async (override?: string, options?: { plan?: boolean; followUp?: RichAnswerFollowUp }) => {
       const text = (override ?? draft).trim();
       // Kirim ulang hanya teks; lampiran di composer ikut pada kiriman biasa.
       const files = override === undefined ? attach.parts : [];
-      if ((!text && files.length === 0) || sending || streaming || attach.uploading) return;
+      if ((!text && files.length === 0 && !options?.followUp) || sending || streaming || attach.uploading) return;
       if (!online) {
         push(copy.chat.offlineSend, 'danger');
         return;
@@ -162,12 +162,13 @@ export function useChatController(conversationId: string | undefined) {
           id = created.id;
         }
         const response = await api.sendMessage(id, {
-          text: body,
+          text: body || (options?.followUp ? `Rich answer ${options.followUp.action}` : ''),
           files: files.length ? files : undefined,
           model: model ?? undefined,
           planOnly: (options?.plan ?? planFirst) && activeProjectId !== null ? true : undefined,
           webSearch: webSearch ? true : undefined,
           skills: skillsOfPacks(skillPacks),
+          followUp: options?.followUp,
         });
         addMessageToCache(queryClient, id, response.message);
         setSkillPacks([]);
@@ -369,20 +370,18 @@ export function useChatController(conversationId: string | undefined) {
     sending,
     streaming,
     send: () => void send(),
-    /** Mengirim teks tertentu (saran lanjutan) tanpa menyentuh draf. */
-    sendText: (text: string) => void send(text),
     stop: () => void stop(),
     editLast,
+    /** Mengirim teks tertentu (saran lanjutan) tanpa menyentuh draf. */
+    sendText: (text: string) => void send(text),
+    sendRichFollowUp: (followUp: RichAnswerFollowUp) => void send(undefined, { followUp }),
     resendLast,
     canEditLast: lastUser !== undefined && !sending && !streaming,
-    /** Pesan pengguna terakhir: satu-satunya yang punya tombol Kirim ulang. */
     editableUserId: lastUser && !sending && !streaming ? lastUser.id : null,
-    /** Ubah dan hapus pesan hanya saat tidak ada jawaban yang berjalan. */
     canModify: !sending && !streaming,
     editMessage,
     deleteMessage,
     forkMessage: (messageId: string) => void forkMessage(messageId),
-    rerunnableId: lastAssistant && !streaming ? lastAssistant.id : null,
     focusNonce,
     planFirst,
     setPlanFirst,

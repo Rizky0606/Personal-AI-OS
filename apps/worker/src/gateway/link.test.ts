@@ -82,6 +82,38 @@ describe('GatewayLink: sambung dan kirim', () => {
   });
 });
 
+describe('GatewayLink: artifact upload', () => {
+  it('mengunggah PNG lewat HTTP terautentikasi dengan metadata run', async () => {
+    const body = Buffer.from('89504e470d0a1a0a', 'hex');
+    let request: { authorization?: string; contentType?: string; metadata?: string; body?: Buffer } = {};
+    gateway.httpHandler = (req, res) => {
+      const chunks: Buffer[] = [];
+      req.on('data', (chunk: Buffer) => chunks.push(chunk));
+      req.on('end', () => {
+        request = {
+          authorization: req.headers.authorization,
+          contentType: req.headers['content-type'],
+          metadata: req.headers['x-aios-metadata'] as string | undefined,
+          body: Buffer.concat(chunks),
+        };
+        res.writeHead(201).end();
+      });
+    };
+    const { link } = makeLink();
+    const current = session();
+    link.setSession(current);
+    await until(() => link.state === 'connected', 'connected');
+
+    await expect(link.uploadArtifact(RUN, body)).resolves.toBe(true);
+    expect(request).toMatchObject({
+      authorization: `Bearer ${current.accessToken}`,
+      contentType: 'image/png',
+      metadata: JSON.stringify({ runId: RUN }),
+      body,
+    });
+  });
+});
+
 describe('GatewayLink: run ditolak gateway', () => {
   it('error run_not_active / run_not_owned memanggil onRunRejected; error lain diabaikan', async () => {
     const rejected: string[] = [];

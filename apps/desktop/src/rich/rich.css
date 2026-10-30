@@ -1,0 +1,28 @@
+.rich-chart-line {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: rich-chart-draw 420ms ease-out forwards;
+  stroke-width: 2;
+}
+
+.rich-chart-bar {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: rich-chart-grow 420ms ease-out both;
+}
+
+@keyframes rich-chart-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes rich-chart-grow {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rich-chart-line,
+  .rich-chart-bar {
+    animation: none;
+  }
+}

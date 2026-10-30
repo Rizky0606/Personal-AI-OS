@@ -1,6 +1,6 @@
 import type { Message } from '@aios/contracts';
 import type { RoleInfo } from '../api/gateway';
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState, type ComponentProps } from 'react';
 import { copy } from '../copy';
 import { isSettled, type LiveRun, type PendingApproval } from '../realtime/liveRun';
 import { Button } from '../ui/Button';
@@ -30,8 +30,8 @@ export interface MessageListProps {
   onDeleteMessage?: (messageId: string) => Promise<boolean>;
   /** Cabangkan percakapan dari jawaban asisten; hanya saat tidak ada jawaban yang berjalan. */
   onForkMessage?: (messageId: string) => void;
-  /** Mengirim saran lanjutan dari jawaban terakhir. */
   onSuggest?: (text: string) => void;
+  onRichFollowUp?: ComponentProps<typeof AssistantMessage>['onRichFollowUp'];
   /** Permintaan izin agent yang menunggu jawaban pengguna. */
   approvals: PendingApproval[];
   resolvingApprovals: ReadonlySet<string>;
@@ -86,6 +86,7 @@ export function MessageList({
   onDeleteMessage,
   onForkMessage,
   onSuggest,
+  onRichFollowUp,
   approvals,
   resolvingApprovals,
   onResolveApproval,
@@ -166,6 +167,7 @@ export function MessageList({
               onDelete={modifiable ? () => setToDelete(message.id) : undefined}
               onFork={canModify && onForkMessage ? () => onForkMessage(message.id) : undefined}
               onSuggest={message.id === lastAssistantId ? onSuggest : undefined}
+              onRichFollowUp={message.id === lastAssistantId ? onRichFollowUp : undefined}
             />
           ) : message.author === 'system' && isHandoffNote(messageText(message)) ? (
             <HandoffNote key={message.id} text={messageText(message)} />

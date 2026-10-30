@@ -49,7 +49,7 @@ sealed interface ServerEvent {
     /** Channel `user`: sebuah job riset selesai. */
     data class ResearchCompleted(val researchId: String, val runId: String?) : ServerEvent
 
-    data class Other(val type: String) : ServerEvent
+    data class ArtifactCreated(val fileId: String, val name: String, val mime: String, val size: Long, val sha256: String, val source: String) : ServerEvent
 }
 
 /** Frame dari server di `/v1/ws`. */
@@ -133,7 +133,7 @@ object Frames {
             e.str("message"),
             e["retryable"]?.jsonPrimitive?.contentOrNull == "true"
         )
-        "run.completed" -> ServerEvent.RunCompleted(e.str("summary"))
+        "artifact.created" -> ServerEvent.ArtifactCreated(e.str("fileId"), e.str("name"), e.str("mime"), e["size"]?.jsonPrimitive?.long ?: 0L, e.str("sha256"), e.str("source"))
         "research.progress" -> ServerEvent.ResearchProgress(
             e.str("stage"),
             e["progress"]?.jsonPrimitive?.contentOrNull?.toDoubleOrNull() ?: 0.0,

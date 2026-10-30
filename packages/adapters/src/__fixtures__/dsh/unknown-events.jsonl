@@ -1,0 +1,15 @@
+> {"jsonrpc":"2.0","id":1,"method":"initialize"}
+< {"jsonrpc":"2.0","id":1,"result":{"protocolVersion":1,"agentCapabilities":{"promptCapabilities":{"image":false},"mcpCapabilities":{"http":true},"sessionCapabilities":{"close":{}}},"agentInfo":{"name":"dsh-acp"},"authMethods":[]}}
+> {"jsonrpc":"2.0","id":2,"method":"session/new"}
+< {"jsonrpc":"2.0","id":2,"result":{"sessionId":"s1"}}
+> {"jsonrpc":"2.0","id":3,"method":"session/prompt"}
+< {"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"s1","update":{"sessionUpdate":"plan","entries":[]}}}
+< {"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"s1","update":{"sessionUpdate":"masa_depan","x":1}}}
+< {"jsonrpc":"2.0","method":"x/unknown","params":{}}
+< {"jsonrpc":"2.0","id":200,"method":"fs/read_text_file","params":{"path":"/x"}}
+> {"jsonrpc":"2.0","id":200,"error":{"code":-32601,"message":"Method not found"}}
+< junk bukan json
+< {"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"s1","update":{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"ok"}}}}
+< {"jsonrpc":"2.0","id":3,"result":{"stopReason":"end_turn"}}
+> {"jsonrpc":"2.0","id":4,"method":"session/close"}
+< {"jsonrpc":"2.0","id":4,"result":{}}

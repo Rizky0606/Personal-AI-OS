@@ -1,3 +1,4 @@
+import { afterAll, beforeAll, describe, expect, inject, it } from 'vitest';
 import {
   GatewayToWorkerFrameSchema,
   LoginResponseSchema,
@@ -7,7 +8,6 @@ import {
 } from '@aios/contracts';
 import type { AddressInfo } from 'node:net';
 import { WebSocket } from 'ws';
-import { afterAll, beforeAll, describe, expect, inject, it } from 'vitest';
 import { conversations, runs } from '../../db/schema/index.js';
 import { createAuthEnv, type AuthEnv } from '../../testing/auth-env.js';
 import { TestWs } from '../../testing/ws-client.js';
@@ -102,6 +102,45 @@ const delta = (text: string): AgentEvent => ({
   text,
 });
 
+
+describe('artifact upload', () => {
+  it('stores an authenticated screenshot and persists metadata event', async () => {
+    const { worker, runId } = await setup('Artifact');
+    const response = await env.app.inject({
+      method: 'POST',
+      url: '/v1/worker/artifacts/screenshot',
+      headers: {
+        authorization: `Bearer ${worker.accessToken}`,
+        'content-type': 'image/png',
+        'x-aios-metadata': JSON.stringify({ runId }),
+      },
+      payload: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x01]),
+    });
+    expect(response.statusCode).toBe(201);
+    const record = response.json<{ id: string; mime: string; size: number }>();
+    expect(record).toMatchObject({ mime: 'image/png', size: 9 });
+    const events = await env.store.list(runId, 0, 10);
+    expect(events.map(({ event }) => event)).toContainEqual(
+      expect.objectContaining({ type: 'artifact.created', fileId: record.id, source: 'screenshot' }),
+    );
+  });
+
+  it('rejects a worker from another project owner', async () => {
+    const { runId } = await setup('Artifact owner');
+    const other = await env.loginOk({ kind: 'worker', name: 'unrelated worker' });
+    const response = await env.app.inject({
+      method: 'POST',
+      url: '/v1/worker/artifacts/screenshot',
+      headers: {
+        authorization: `Bearer ${other.accessToken}`,
+        'content-type': 'image/png',
+        'x-aios-metadata': JSON.stringify({ runId }),
+      },
+      payload: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    });
+    expect(response.statusCode).toBe(403);
+  });
+});
 describe('handshake', () => {
   it('tanpa token 401, token app 403, token worker tersambung dan menerima ready', async () => {
     expect(await TestWs.rejected(url, undefined)).toBe(401);

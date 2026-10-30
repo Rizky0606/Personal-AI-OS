@@ -59,7 +59,7 @@
     <string name="chat_zip_failed">Gagal menyimpan ZIP</string>
     <string name="chat_sent">Terkirim</string>
     <string name="chat_welcome_title">Mau mengerjakan apa hari ini?</string>
-    <string name="chat_welcome_subtitle">Tulis di bawah atau mulai dari salah satu saran. Role dipilih otomatis.</string>
+    <string name="chat_welcome_subtitle">Tulis di bawah atau mulai dari salah satu saran.</string>
     <string name="chat_welcome_summary">Ringkas teks</string>
     <string name="chat_welcome_summary_hint">Tempel teks panjang, dapatkan intinya</string>
     <string name="chat_welcome_summary_prompt">Ringkas teks yang saya tempel: </string>

@@ -496,6 +496,55 @@
               "type": {
                 "type": "string",
                 "enum": [
+                  "artifact.created"
+                ]
+              },
+              "fileId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "mime": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255
+              },
+              "size": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "source": {
+                "type": "string",
+                "enum": [
+                  "screenshot",
+                  "file"
+                ]
+              }
+            },
+            "required": [
+              "type",
+              "fileId",
+              "name",
+              "mime",
+              "size",
+              "sha256",
+              "source"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
                   "run.completed"
                 ]
               },
@@ -1263,6 +1312,55 @@
               "type": {
                 "type": "string",
                 "enum": [
+                  "artifact.created"
+                ]
+              },
+              "fileId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "mime": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255
+              },
+              "size": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "source": {
+                "type": "string",
+                "enum": [
+                  "screenshot",
+                  "file"
+                ]
+              }
+            },
+            "required": [
+              "type",
+              "fileId",
+              "name",
+              "mime",
+              "size",
+              "sha256",
+              "source"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
                   "run.completed"
                 ]
               },
@@ -1401,6 +1499,141 @@
               "title",
               "level"
             ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "team.created"
+                ]
+              },
+              "teamId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "queued",
+                  "planning",
+                  "running",
+                  "reviewing",
+                  "completed",
+                  "failed",
+                  "cancelled",
+                  "needs_attention"
+                ]
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "type",
+              "teamId",
+              "status",
+              "createdAt"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "team.member.updated"
+                ]
+              },
+              "teamId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "member": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "lead",
+                      "worker"
+                    ]
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "queued",
+                      "running",
+                      "reviewing",
+                      "completed",
+                      "failed",
+                      "cancelled",
+                      "needs_attention"
+                    ]
+                  },
+                  "updatedAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "required": [
+                  "id",
+                  "role",
+                  "status",
+                  "updatedAt"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "type",
+              "teamId",
+              "member"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "team.review.completed"
+                ]
+              },
+              "teamId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "memberId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "decision": {
+                "type": "string",
+                "enum": [
+                  "accept",
+                  "revise",
+                  "reject"
+                ]
+              },
+              "completedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "type",
+              "teamId",
+              "memberId",
+              "decision",
+              "completedAt"
+            ]
           }
         ]
       },
@@ -1419,6 +1652,10 @@
           {
             "type": "string",
             "pattern": "^run:.*$"
+          },
+          {
+            "type": "string",
+            "pattern": "^team:.*$"
           }
         ]
       },
@@ -2150,6 +2387,51 @@
           "ownedBy"
         ]
       },
+      "EngineList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EngineInfo"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "EngineInfo": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "enum": [
+              "hermes",
+              "omp",
+              "pi",
+              "research",
+              "dsh"
+            ]
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "experimental": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "available",
+          "experimental"
+        ]
+      },
       "Quota": {
         "type": "object",
         "properties": {
@@ -2858,7 +3140,8 @@
               "hermes",
               "omp",
               "pi",
-              "research"
+              "research",
+              "dsh"
             ]
           },
           "agentRole": {
@@ -3046,11 +3329,70 @@
           },
           "webSearch": {
             "type": "boolean"
+          },
+          "engine": {
+            "type": "string",
+            "enum": [
+              "dsh"
+            ]
+          },
+          "followUp": {
+            "$ref": "#/components/schemas/RichAnswerFollowUp"
           }
         },
         "required": [
           "parts"
         ]
+      },
+      "RichAnswerFollowUp": {
+        "type": "object",
+        "properties": {
+          "blockId": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]{1,80}$"
+          },
+          "componentId": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]{1,80}$"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "choice",
+              "slider",
+              "checklist"
+            ]
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 4000
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-zA-Z0-9_-]{1,80}$"
+                },
+                "maxItems": 20
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          }
+        },
+        "required": [
+          "blockId",
+          "componentId",
+          "action",
+          "value"
+        ],
+        "additionalProperties": false
       },
       "FleetResponse": {
         "type": "object",
@@ -4650,6 +4992,315 @@
           "checks"
         ]
       },
+      "TeamDetail": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "planning",
+              "running",
+              "reviewing",
+              "completed",
+              "failed",
+              "cancelled",
+              "needs_attention"
+            ]
+          },
+          "memberCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "pendingApprovals": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "parentRunId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "prompt": {
+            "type": "string"
+          },
+          "limits": {
+            "$ref": "#/components/schemas/TeamLimits"
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TeamMemberSummary"
+            }
+          },
+          "cancelRequestedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "failureCode": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "finishedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "status",
+          "memberCount",
+          "pendingApprovals",
+          "createdAt",
+          "updatedAt",
+          "parentRunId",
+          "prompt",
+          "limits",
+          "members",
+          "cancelRequestedAt",
+          "failureCode",
+          "finishedAt"
+        ]
+      },
+      "TeamLimits": {
+        "type": "object",
+        "properties": {
+          "maxWorkers": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1,
+            "default": 1
+          },
+          "maxReviewRounds": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2,
+            "default": 2
+          },
+          "teamTimeoutMinutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 120,
+            "default": 120
+          },
+          "memberTimeoutMinutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 30,
+            "default": 30
+          },
+          "stepsPerMember": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 100
+          },
+          "tokensPerTeam": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000,
+            "default": 100000
+          },
+          "tokensPerMember": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 40000,
+            "default": 40000
+          },
+          "inputTokensPerCall": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20000,
+            "default": 20000
+          },
+          "outputTokensPerCall": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 8000,
+            "default": 8000
+          }
+        },
+        "additionalProperties": false
+      },
+      "TeamMemberSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "lead",
+              "worker"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "reviewing",
+              "completed",
+              "failed",
+              "cancelled",
+              "needs_attention"
+            ]
+          },
+          "task": {
+            "type": "string"
+          },
+          "branch": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "runId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "exitReason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "role",
+          "status",
+          "task",
+          "branch",
+          "runId",
+          "updatedAt",
+          "exitReason"
+        ]
+      },
+      "TeamRequest": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "prompt": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20000
+          },
+          "model": {
+            "type": "string",
+            "minLength": 1
+          },
+          "limits": {
+            "$ref": "#/components/schemas/TeamLimits"
+          }
+        },
+        "required": [
+          "projectId",
+          "prompt"
+        ],
+        "additionalProperties": false
+      },
+      "TeamList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TeamSummary"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "TeamSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "planning",
+              "running",
+              "reviewing",
+              "completed",
+              "failed",
+              "cancelled",
+              "needs_attention"
+            ]
+          },
+          "memberCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "pendingApprovals": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "status",
+          "memberCount",
+          "pendingApprovals",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
       "MemoryList": {
         "type": "object",
         "properties": {
@@ -5472,6 +6123,62 @@
           },
           "502": {
             "description": "Layanan model (9Router) gagal atau tidak terjangkau",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/engines": {
+      "get": {
+        "operationId": "listEngines",
+        "tags": [
+          "Model"
+        ],
+        "summary": "Engine yang bisa dipilih per pesan (saat ini dsh) dan ketersediaannya",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daftar engine",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EngineList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Belum login atau token tidak berlaku",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token tidak punya scope yang dibutuhkan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -9720,6 +10427,329 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Readiness"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/teams": {
+      "post": {
+        "operationId": "createTeam",
+        "tags": [
+          "Team"
+        ],
+        "summary": "Mulai tim Lead + Worker opt-in untuk satu tugas project",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tim yang dimulai",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Permintaan tidak valid",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Belum login atau token tidak berlaku",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token tidak punya scope yang dibutuhkan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tidak ditemukan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Konflik dengan status saat ini",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Layanan sementara tidak tersedia",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "listTeams",
+        "tags": [
+          "Team"
+        ],
+        "summary": "Daftar tim project",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daftar tim",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Belum login atau token tidak berlaku",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token tidak punya scope yang dibutuhkan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/teams/{id}": {
+      "get": {
+        "operationId": "getTeam",
+        "tags": [
+          "Team"
+        ],
+        "summary": "Status tim dan anggotanya",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detail tim",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Belum login atau token tidak berlaku",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token tidak punya scope yang dibutuhkan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tidak ditemukan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/teams/{id}/cancel": {
+      "post": {
+        "operationId": "cancelTeam",
+        "tags": [
+          "Team"
+        ],
+        "summary": "Hentikan seluruh tim",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tim setelah pembatalan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Belum login atau token tidak berlaku",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token tidak punya scope yang dibutuhkan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tidak ditemukan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Konflik dengan status saat ini",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             }

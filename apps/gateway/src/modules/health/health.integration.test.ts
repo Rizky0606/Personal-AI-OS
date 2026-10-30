@@ -30,6 +30,7 @@ import {
   unusedRoles,
   unusedRuns,
   unusedWs,
+  unusedTeams,
 } from '../../testing/stubs.js';
 import { createHealthService } from './service.js';
 
@@ -120,6 +121,7 @@ async function makeApp(setup: Setup = {}) {
     handoff: unusedHandoff,
     fork: unusedFork,
     fleets: unusedFleets,
+    teams: unusedTeams,
     spaces: unusedSpaces,
     search: unusedSearch,
     status: unusedStatus,

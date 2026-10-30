@@ -20,6 +20,10 @@ Sumber kebenaran pemetaan adapter (`packages/adapters`). Kontrak ada di `package
 
 - **`todo.updated` dan `subagent.updated` TIDAK ADA di kontrak.** Pemetaannya belum bisa dibuat tanpa menambah jenis event baru, dan sesi ini hanya mengizinkan tambahan field opsional. Datanya terbukti ada di omp (lihat bawah). Butuh keputusan.
 - `run.status` tidak dihasilkan adapter. Gateway (`runs/runner.ts`) yang memegang status run dan menulis `run.status` terminal (`completed`, `needs_review`, `failed`, `cancelled`). Adapter hanya mengakhiri aliran: `run.completed` (sukses), `error` (gagal), atau tanpa event penutup bila dibatalkan lewat `cancel`.
+
+### dsh ACP
+
+Adapter dsh menjalankan `dsh --profile acp` di gateway/VPS melalui stdio. Pemetaan lengkap, batasan, permission, cancel, timeout, dan status bukti ada di `docs/ADAPTER_ACP.md`. Fixture dsh saat ini **Sintetis**; belum ada rekaman binary nyata. `dsh` tidak menghasilkan `todo.updated`, `subagent.updated`, plan, mode, atau workflow event. Project run ditolak; project tetap menggunakan omp worker.
 - `message.delta`/`reasoning.delta` memakai `messageId` pesan asisten yang dibuat gateway, bukan ID dari mesin.
 
 ## omp (`omp --mode rpc`, JSONL)

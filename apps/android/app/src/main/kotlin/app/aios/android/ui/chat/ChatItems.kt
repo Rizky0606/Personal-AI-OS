@@ -37,7 +37,7 @@ sealed interface ChatItem {
         val canModify: Boolean = false,
         /** Berkas buatan agent (folder kiriman) yang bisa diunduh. */
         val files: List<MessagePart.File> = emptyList(),
-        /** Jejak run untuk baris aktivitas (run ini live atau baru selesai di sesi ini); null bila tidak ada. */
+        val artifacts: List<Artifact> = emptyList(),
         val trace: RunTrace? = null
     ) : ChatItem {
         override val key get() = id
@@ -86,6 +86,7 @@ fun buildChatItems(state: ChatUiState): List<ChatItem> {
                         streaming = false,
                         canModify = !state.busy,
                         files = message.parts.filterIsInstance<MessagePart.File>(),
+                        artifacts = emptyList(),
                         trace = message.runId?.let { state.traceFor(it) }
                     )
                 }
@@ -112,6 +113,7 @@ private fun liveItem(id: String, live: LiveRun, persisted: Message?, trace: RunT
     role = live.role ?: persisted?.agentRole,
     model = persisted?.model,
     streaming = !live.finished,
+    artifacts = live.artifacts,
     trace = trace
 )
 

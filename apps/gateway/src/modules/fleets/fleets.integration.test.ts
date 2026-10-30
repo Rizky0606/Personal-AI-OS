@@ -169,3 +169,23 @@ describe('POST /fleets', () => {
     );
   });
 });
+
+describe('team lifecycle', () => {
+  it('creates a team with one linked Lead run and lists its durable status', async () => {
+    const projectId = await newProject();
+    const created = await env.post('/teams', { projectId, prompt: 'Implement Orca' }, desktop);
+    expect(created.statusCode, created.body).toBe(201);
+    const team = created.json<{
+      id: string;
+      projectId: string;
+      status: string;
+      parentRunId: string;
+      members: { role: string; runId: string; status: string }[];
+    }>();
+    expect(team).toMatchObject({ projectId, status: 'running' });
+    expect(team.members).toHaveLength(1);
+    expect(team.members[0]).toMatchObject({ role: 'lead', runId: team.parentRunId, status: 'running' });
+    const listed = await env.get('/teams', desktop);
+    expect(listed.json<{ items: { id: string }[] }>().items.map((item) => item.id)).toContain(team.id);
+  });
+});

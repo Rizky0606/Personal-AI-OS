@@ -326,7 +326,8 @@ fun AssistantMessageRow(
     roleName: (String) -> String,
     onCopied: () -> Unit,
     onDelete: (String) -> Unit = {},
-    onDownload: FileDownload = { _, _ -> }
+    onDownload: FileDownload = { _, _ -> },
+    onDownloadArtifact: ArtifactDownload = { _, _ -> }
 ) {
     val colors = AiosTheme.colors
     var menuOpen by remember { mutableStateOf(false) }
@@ -413,9 +414,6 @@ fun AssistantMessageRow(
         if (!item.streaming) CodeZipButton(item.text)
     }
 }
-
-/** Mengunduh berkas lalu menyerahkan isinya ke penulis yang menyimpan ke tujuan pilihan pemilik. */
-typealias FileDownload = (MessagePart.File, suspend (ByteArray) -> Unit) -> Unit
 
 /** Berkas yang dibuat agent untuk pemilik (folder kiriman); Unduh membuka dialog simpan sistem. */
 @Composable

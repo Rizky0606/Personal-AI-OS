@@ -57,7 +57,7 @@ export interface RunHandle {
 }
 
 export interface AgentAdapter {
-  readonly id: 'hermes' | 'omp' | 'pi';
+  readonly id: 'hermes' | 'omp' | 'pi' | 'dsh';
   capabilities(): AdapterCapabilities;
   startRun(input: StartRunInput): Promise<RunHandle>;
 }

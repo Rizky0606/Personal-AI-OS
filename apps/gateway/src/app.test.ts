@@ -29,6 +29,7 @@ import {
   unusedRoles,
   unusedRuns,
   unusedWs,
+  unusedTeams,
 } from './testing/stubs.js';
 
 const health = {
@@ -75,6 +76,7 @@ function makeApp(logLevel: 'silent' | 'info' = 'silent', logStream?: NodeJS.Writ
     opinion: unusedOpinion,
     handoff: unusedHandoff,
     fork: unusedFork,
+    teams: unusedTeams,
     fleets: unusedFleets,
     spaces: unusedSpaces,
     search: unusedSearch,

@@ -1,4 +1,5 @@
 import type { ModelInfoSchema, RoleInfoSchema } from '@aios/contracts';
+import type { RichAnswerFollowUp } from '@aios/contracts';
 import {
   ApprovalSchema,
   ConversationSchema,
@@ -31,6 +32,8 @@ import {
   ScheduleRunSchema,
   ScheduleSchema,
   FleetResponseSchema,
+  TeamDetailSchema,
+  TeamListSchema,
   SendMessageResponseSchema,
   TaskBreakdownResponseSchema,
   TaskSchema,
@@ -91,7 +94,8 @@ export type WorkerRegistration = z.infer<typeof LoginResponseSchema>;
 
 export const PAGE_SIZE = 50;
 
-export type FileRecord = z.infer<typeof FileRecordSchema>;
+export type Team = z.infer<typeof TeamDetailSchema>;
+export type TeamSummary = z.infer<typeof TeamListSchema>['items'][number];
 /** Lampiran yang sudah diunggah, siap dirujuk dari pesan. */
 export interface FilePart {
   type: 'file';
@@ -111,6 +115,7 @@ export interface MessageInput {
   webSearch?: boolean | undefined;
   /** Skill tambahan untuk pesan ini (menang atas pemilihan otomatis). */
   skills?: readonly string[] | undefined;
+  followUp?: RichAnswerFollowUp | undefined;
 }
 
 /** Teks (bila ada) lalu lampiran; server menolak pesan tanpa keduanya. */
@@ -125,6 +130,7 @@ function messageBody(input: MessageInput) {
     ...(input.planOnly ? { planOnly: true } : {}),
     ...(input.webSearch ? { webSearch: true } : {}),
     ...(input.skills?.length ? { skills: [...input.skills] } : {}),
+    ...(input.followUp ? { followUp: input.followUp } : {}),
   };
 }
 
@@ -175,6 +181,11 @@ export function createGatewayApi(call: Call) {
           ...(input.model ? { model: input.model } : {}),
         },
       }),
+    listTeams: async () => (await get('/teams', TeamListSchema)).items,
+    getTeam: (id: string) => get(`/teams/${id}`, TeamDetailSchema),
+    createTeam: (input: { projectId: string; prompt: string; model?: string }) =>
+      get('/teams', TeamDetailSchema, { method: 'POST', body: input }),
+    cancelTeam: (id: string) => get(`/teams/${id}/cancel`, TeamDetailSchema, { method: 'POST' }),
     listModels: async () => (await get('/models', ModelListSchema)).items,
     listRoles: async () => (await get('/roles', RoleListSchema)).items,
 

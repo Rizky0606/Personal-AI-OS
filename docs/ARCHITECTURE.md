@@ -2,6 +2,8 @@
 
 Semua klien bicara ke satu backend gateway di VPS. Hanya pekerjaan yang menyentuh folder project dijalankan di PC Windows, lewat worker sidecar yang membuka koneksi keluar ke gateway.
 
+> **Status:** diagram menunjukkan jalur komponen yang tersedia/opsional; bukan jaminan semua layanan berjalan. Orca Lead→Worker belum tersedia sebagai orkestrasi yang dapat dipakai.
+
 ## Diagram
 
 ```mermaid
@@ -15,9 +17,8 @@ flowchart TB
     pg["PostgreSQL<br/>Data dan antrean job"]
     hermes["Hermes<br/>Agent umum, memori"]
     router9["9Router<br/>Gateway model"]
-    searx["SearXNG<br/>Mesin pencari riset"]
     ompvps["omp (opsional)<br/>Coding di VPS"]
-  end
+    dsh["dsh ACP (opsional)<br/>Developer preview"]
 
   subgraph pc["PC Windows (lokal)"]
     worker["Worker sidecar<br/>IPC lokal ke aplikasi<br/>WSS keluar ke gateway"]
@@ -34,6 +35,7 @@ flowchart TB
   gateway --> router9
   gateway --> searx
   gateway --> ompvps
+  gateway --> dsh
   worker -- WSS keluar --> proxy
   worker --> aomp --> wt
   worker --> prev
@@ -47,8 +49,7 @@ Hermes, omp, dan research engine memanggil model hanya lewat 9Router. Port semua
 | --- | --- | --- | --- |
 | Backend gateway | VPS | Auth, REST, WebSocket, pemilih agent dan skill, registri agent dan skill, orkestrasi run, scheduler, research engine, proxy model terautentikasi | Node 22, TypeScript, Fastify, Zod, Drizzle ORM, pg-boss |
 | PostgreSQL 16 | VPS (Docker) | Sumber kebenaran: chat, run, kanban, jadwal, riset, log routing; antrean job | Postgres + pg-boss |
-| Hermes | VPS | Agent umum, memori jangka panjang, tool web dan browse | API server kompatibel OpenAI di 127.0.0.1:8642 |
-| 9Router | VPS | Semua panggilan model, fallback, kuota | 127.0.0.1:20128/v1 |
+| dsh (opsional) | VPS | Agent ACP untuk chat non-project; sandbox per run; provider melalui 9Router | `dsh --profile acp` via stdio |
 | SearXNG | VPS (Docker) | Pencarian web untuk deep research | 127.0.0.1:8888 |
 | omp (opsional) | VPS | Role coding untuk repo yang di-clone di server | `omp --mode rpc` |
 | Reverse proxy | VPS | TLS, port 443 satu-satunya yang publik | nginx yang sudah ada, ke gateway |
@@ -62,7 +63,7 @@ Hermes, omp, dan research engine memanggil model hanya lewat 9Router. Port semua
 
 | Jenis tugas | Dijalankan di | Mesin |
 | --- | --- | --- |
-| Chat umum (Android dan Windows) | VPS | Hermes |
+| Chat umum (Android dan Windows) | VPS | Hermes; dsh hanya bila dipilih eksplisit dan tanpa project |
 | Chat per folder dan kartu kanban | PC Windows | omp lewat worker |
 | Deep research | VPS | Research engine di gateway + SearXNG |
 | Jadwal | VPS | pg-boss, lalu Hermes atau research engine |
@@ -80,7 +81,7 @@ Setiap mesin dibungkus satu adapter dengan antarmuka yang sama. UI tidak pernah 
 
 ```ts
 export interface AgentAdapter {
-  readonly id: 'hermes' | 'omp' | 'pi';
+  readonly id: 'hermes' | 'omp' | 'pi' | 'dsh';
   capabilities(): AdapterCapabilities; // streaming, approvals, steer, checkpoints
   startRun(input: StartRunInput): Promise<RunHandle>;
 }
@@ -96,6 +97,7 @@ export interface RunHandle {
 
 - **Adapter Hermes** (di gateway): HTTP streaming ke 127.0.0.1:8642. Role dan skill disuntik sebagai pesan sistem.
 - **Adapter omp** (di worker): menjalankan `omp --mode rpc` dengan cwd = worktree, lalu membaca event dari stdio. Cara menyuntik role dan skill tanpa mengotori worktree diverifikasi di Fase 0. Fallback: role dikirim sebagai pesan sistem pertama lewat RPC.
+- **Adapter dsh** (di gateway): meluncurkan `dsh --profile acp` per run, cwd terisolasi, memetakan ACP ke event kontrak. Developer preview, tidak diaudit; plan, mode, todo, dan subagent ACP tidak tersedia. Project run ditolak.
 - Versi setiap mesin dikunci. Perubahan protokol hanya boleh menyentuh adapter.
 
 ## Alur utama

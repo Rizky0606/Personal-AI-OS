@@ -113,6 +113,7 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
               onDeleteMessage={chat.deleteMessage}
               onForkMessage={chat.forkMessage}
               onSuggest={chat.sendText}
+              onRichFollowUp={chat.sendRichFollowUp}
               approvals={chat.approvals}
               resolvingApprovals={chat.resolvingApprovals}
               onResolveApproval={chat.resolveApproval}
@@ -125,6 +126,7 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
                 activity={buildActivity(shownRun, now)}
                 now={now}
                 output={shownRun.tools.at(-1)?.output}
+                artifacts={shownRun.artifacts}
                 onApproval={() =>
                   document
                     .querySelector('[data-approval-panel]')

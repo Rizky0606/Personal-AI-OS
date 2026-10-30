@@ -26,6 +26,7 @@ import {
 } from './entities.js';
 import {
   DeviceKindSchema,
+  EngineSchema,
   IdSchema,
   PageQuerySchema,
   RoleIdSchema,
@@ -33,8 +34,9 @@ import {
   TimestampSchema,
   UsageSchema,
 } from './common.js';
-import { RunEventSchema } from './events.js';
+import { RunEventSchema, TeamStatusSchema } from './events.js';
 import { MergeSkippedSchema, ReviewCommentSchema } from './worker.js';
+import { RichAnswerFollowUpSchema } from './rich-answers.js';
 
 /*
  * Request dan response setiap endpoint REST (API_CONTRACT.md, "Endpoint REST").
@@ -96,6 +98,19 @@ export const ModelInfoSchema = z
   })
   .meta({ id: 'ModelInfo' });
 export const ModelListSchema = itemsOf(ModelInfoSchema).meta({ id: 'ModelList' });
+
+/** Engine yang bisa dipilih klien per pesan (`SendMessageRequest.engine`). `available=false`: belum dikonfigurasi di server. */
+export const EngineInfoSchema = z
+  .object({
+    id: EngineSchema,
+    label: z.string().min(1),
+    available: z.boolean(),
+    /** Developer preview / tidak diaudit; klien menampilkan penanda. */
+    experimental: z.boolean(),
+  })
+  .meta({ id: 'EngineInfo' });
+export const EngineListSchema = itemsOf(EngineInfoSchema).meta({ id: 'EngineList' });
+export type EngineInfo = z.infer<typeof EngineInfoSchema>;
 
 const UsageTotalsShape = {
   requests: z.number().int().nonnegative(),
@@ -240,6 +255,10 @@ export const SendMessageRequestSchema = z
     planOnly: z.boolean().optional(),
     /** Cari di web untuk pesan ini: hasil pencarian bernomor ditempel ke prompt agent (chat umum dan project). */
     webSearch: z.boolean().optional(),
+    /** Pilih mesin untuk pesan ini: dsh = DeepSeek Harness di server. */
+    engine: z.literal('dsh').optional(),
+    /** Aksi komponen rich answer; dikirim sebagai pesan user baru, bukan efek samping lokal. */
+    followUp: RichAnswerFollowUpSchema.optional(),
   })
   .meta({ id: 'SendMessageRequest' });
 
@@ -271,6 +290,88 @@ export const FleetResponseSchema = z
   })
   .meta({ id: 'FleetResponse' });
 
+export const TeamLimitsSchema = z
+  .object({
+    maxWorkers: z.number().int().min(1).max(1).default(1),
+    maxReviewRounds: z.number().int().min(0).max(2).default(2),
+    teamTimeoutMinutes: z.number().int().min(1).max(120).default(120),
+    memberTimeoutMinutes: z.number().int().min(1).max(30).default(30),
+    stepsPerMember: z.number().int().min(1).max(100).default(100),
+    tokensPerTeam: z.number().int().min(1).max(100_000).default(100_000),
+    tokensPerMember: z.number().int().min(1).max(40_000).default(40_000),
+    inputTokensPerCall: z.number().int().min(1).max(20_000).default(20_000),
+    outputTokensPerCall: z.number().int().min(1).max(8_000).default(8_000),
+  })
+  .strict()
+  .meta({ id: 'TeamLimits' });
+
+export const TeamRequestSchema = z
+  .object({
+    projectId: IdSchema,
+    prompt: z.string().trim().min(1).max(20_000),
+    model: z.string().min(1).optional(),
+    limits: TeamLimitsSchema.default({
+      maxWorkers: 1,
+      maxReviewRounds: 2,
+      teamTimeoutMinutes: 120,
+      memberTimeoutMinutes: 30,
+      stepsPerMember: 100,
+      tokensPerTeam: 100_000,
+      tokensPerMember: 40_000,
+      inputTokensPerCall: 20_000,
+      outputTokensPerCall: 8_000,
+    }),
+  })
+  .strict()
+  .meta({ id: 'TeamRequest' });
+
+export const TeamSummarySchema = z
+  .object({
+    id: IdSchema,
+    projectId: IdSchema,
+    status: TeamStatusSchema,
+    memberCount: z.number().int().nonnegative(),
+    pendingApprovals: z.number().int().nonnegative(),
+    createdAt: TimestampSchema,
+    updatedAt: TimestampSchema,
+  })
+  .meta({ id: 'TeamSummary' });
+
+export const TeamMemberSummarySchema = z
+  .object({
+    id: IdSchema,
+    role: z.enum(['lead', 'worker']),
+    status: z.enum([
+      'queued',
+      'running',
+      'reviewing',
+      'completed',
+      'failed',
+      'cancelled',
+      'needs_attention',
+    ]),
+    task: z.string(),
+    branch: z.string().nullable(),
+    runId: IdSchema,
+    updatedAt: TimestampSchema,
+    exitReason: z.string().nullable(),
+  })
+  .meta({ id: 'TeamMemberSummary' });
+
+export const TeamDetailSchema = z
+  .object({
+    ...TeamSummarySchema.shape,
+    parentRunId: IdSchema.nullable(),
+    prompt: z.string(),
+    limits: TeamLimitsSchema,
+    members: z.array(TeamMemberSummarySchema),
+    cancelRequestedAt: TimestampSchema.nullable(),
+    failureCode: z.string().nullable(),
+    finishedAt: TimestampSchema.nullable(),
+  })
+  .meta({ id: 'TeamDetail' });
+
+export const TeamListSchema = z.object({ items: z.array(TeamSummarySchema) }).meta({ id: 'TeamList' });
 export const SendMessageResponseSchema = z
   .object({ message: MessageSchema, run: RunSchema })
   .meta({ id: 'SendMessageResponse' });

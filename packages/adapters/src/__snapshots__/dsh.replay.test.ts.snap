@@ -1,0 +1,228 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`dsh (ACP) replay > cancel dengan izin menggantung: dijawab cancelled sebelum session/cancel 1`] = `
+[
+  {
+    "name": "execute",
+    "target": "ls -la",
+    "toolCallId": "t1",
+    "type": "tool.started",
+  },
+  {
+    "approvalId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8f01",
+    "cwd": "/work/run-1",
+    "detail": "Run command
+ls -la",
+    "kind": "command",
+    "toolCallId": "t1",
+    "type": "approval.requested",
+  },
+  {
+    "approvalId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8f01",
+    "decision": "deny",
+    "remember": false,
+    "type": "approval.resolved",
+  },
+  {
+    "durationMs": 10,
+    "status": "cancelled",
+    "toolCallId": "t1",
+    "type": "tool.finished",
+  },
+]
+`;
+
+exports[`dsh (ACP) replay > cancel saat tool berjalan: tool cancelled, tanpa event penutup 1`] = `
+[
+  {
+    "name": "execute",
+    "target": "ls -la",
+    "toolCallId": "t1",
+    "type": "tool.started",
+  },
+  {
+    "durationMs": 10,
+    "status": "cancelled",
+    "toolCallId": "t1",
+    "type": "tool.finished",
+  },
+]
+`;
+
+exports[`dsh (ACP) replay > event dan metode tak dikenal diabaikan, dicatat, dan run tetap selesai 1`] = `
+[
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "ok",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "type": "message.completed",
+  },
+  {
+    "summary": "ok",
+    "type": "run.completed",
+  },
+]
+`;
+
+exports[`dsh (ACP) replay > proses mati di tengah run: tool error lalu error acp_exited 1`] = `
+[
+  {
+    "name": "execute",
+    "target": "ls -la",
+    "toolCallId": "t1",
+    "type": "tool.started",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "sebagian",
+    "type": "message.delta",
+  },
+  {
+    "durationMs": 10,
+    "status": "error",
+    "toolCallId": "t1",
+    "type": "tool.finished",
+  },
+  {
+    "code": "acp_exited",
+    "message": "Proses agent berhenti tiba-tiba.",
+    "retryable": true,
+    "type": "error",
+  },
+]
+`;
+
+exports[`dsh (ACP) replay > text-only: reasoning, pesan, penutup 1`] = `
+[
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "Mikir.",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "Halo",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": " dunia",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "type": "message.completed",
+  },
+  {
+    "summary": "Halo dunia",
+    "type": "run.completed",
+  },
+]
+`;
+
+exports[`dsh (ACP) replay > tool disetujui: output hanya tambahan, durasi dari jam adapter 1`] = `
+[
+  {
+    "name": "execute",
+    "target": "ls -la",
+    "toolCallId": "t1",
+    "type": "tool.started",
+  },
+  {
+    "approvalId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8f01",
+    "cwd": "/work/run-1",
+    "detail": "Run command
+ls -la",
+    "kind": "command",
+    "toolCallId": "t1",
+    "type": "approval.requested",
+  },
+  {
+    "approvalId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8f01",
+    "decision": "allow",
+    "remember": false,
+    "type": "approval.resolved",
+  },
+  {
+    "chunk": "a
+",
+    "stream": "stdout",
+    "toolCallId": "t1",
+    "type": "tool.output",
+  },
+  {
+    "chunk": "b
+",
+    "stream": "stdout",
+    "toolCallId": "t1",
+    "type": "tool.output",
+  },
+  {
+    "durationMs": 10,
+    "status": "ok",
+    "toolCallId": "t1",
+    "type": "tool.finished",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "Selesai",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "type": "message.completed",
+  },
+  {
+    "summary": "Selesai",
+    "type": "run.completed",
+  },
+]
+`;
+
+exports[`dsh (ACP) replay > tool ditolak: tool.finished denied 1`] = `
+[
+  {
+    "name": "execute",
+    "target": "ls -la",
+    "toolCallId": "t1",
+    "type": "tool.started",
+  },
+  {
+    "approvalId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8f01",
+    "cwd": "/work/run-1",
+    "detail": "Run command
+ls -la",
+    "kind": "command",
+    "toolCallId": "t1",
+    "type": "approval.requested",
+  },
+  {
+    "approvalId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8f01",
+    "decision": "deny",
+    "remember": false,
+    "type": "approval.resolved",
+  },
+  {
+    "durationMs": 10,
+    "status": "denied",
+    "toolCallId": "t1",
+    "type": "tool.finished",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "text": "Ditolak",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
+    "type": "message.completed",
+  },
+  {
+    "summary": "Ditolak",
+    "type": "run.completed",
+  },
+]
+`;

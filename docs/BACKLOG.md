@@ -2,6 +2,13 @@
 
 Ide di luar scope prompt saat ini dan perbedaan temuan verifikasi terhadap asumsi dokumen.
 
+## dsh ACP
+
+- [ ] Ganti fixture sintetis dengan rekaman dsh nyata dari sandbox; verifikasi kompatibilitas setiap upgrade dsh.
+- [ ] Putuskan kontrak `todo.updated`/`subagent.updated` bila ACP dsh kelak mengekspos `plan` atau event subagent.
+- [ ] Tambahkan dukungan goal/workflow bila dsh ACP mengekspos capability resmi.
+- [ ] Verifikasi sandbox, memory limit, timeout, provider profile, dan non-root pada VPS nyata.
+
 ## Perbedaan VERIFICATION.md terhadap dokumen (Fase 0)
 
 Sumber: `docs/VERIFICATION.md` bagian 4. Selesaikan sebelum fase yang disebut.

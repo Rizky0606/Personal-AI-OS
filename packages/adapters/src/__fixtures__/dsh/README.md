@@ -1,0 +1,1 @@
+Fixture SINTETIS: dibuat dari spesifikasi ACP v1 dan README dsh-acp (docs/ADAPTER_ACP.md), BUKAN rekaman nyata dsh. Format sama dengan `omp/`: `<` keluaran agent, `>` frame yang diharapkan dari klien, `!` agent crash. Ganti dengan rekaman nyata lewat docs/RUNBOOK_DSH.md.

@@ -43,6 +43,22 @@ describe('loadConfig', () => {
     });
   });
 
+  it('dsh mati bila DSH_COMMAND kosong; bila diisi, folder kerja wajib dan UID/GID berpasangan', () => {
+    expect(loadConfig(base).DSH_COMMAND).toBeUndefined();
+    expect(() => loadConfig({ ...base, DSH_COMMAND: '/usr/local/bin/dsh' })).toThrow(
+      /DSH_WORKDIR_ROOT/,
+    );
+    const ok = { ...base, DSH_COMMAND: '/usr/local/bin/dsh', DSH_WORKDIR_ROOT: '/dsh/work' };
+    expect(loadConfig(ok)).toMatchObject({
+      DSH_ARGS: '--profile acp',
+      DSH_MAX_MEMORY_MB: 2048,
+      DSH_RUN_TIMEOUT_MS: 1_800_000,
+    });
+    expect(() => loadConfig({ ...ok, DSH_UID: '1001' })).toThrow(/DSH_GID/);
+    expect(() => loadConfig({ ...ok, DSH_UID: '0', DSH_GID: '0' })).toThrow(ConfigError);
+    expect(loadConfig({ ...ok, DSH_UID: '1001', DSH_GID: '1001' }).DSH_UID).toBe(1001);
+  });
+
   it('gagal cepat bila DATABASE_URL hilang', () => {
     expect(() => loadConfig({})).toThrow(ConfigError);
     try {

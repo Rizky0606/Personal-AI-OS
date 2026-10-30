@@ -56,5 +56,15 @@ describe('RunActivity', () => {
     fireEvent.click(screen.getByRole('button', { name: /approval/i }));
     expect(onApproval).toHaveBeenCalledOnce();
   });
+
+  it('shows four artifact thumbnails and a remainder count', () => {
+    const data = activity('short-no-tools');
+    render(<RunActivity activity={data} now={0} artifacts={Array.from({ length: 6 }, (_, index) => ({
+      fileId: `f${index}`, name: `shot-${index}.png`, mime: 'image/png', size: 1,
+      sha256: 'a'.repeat(64), source: 'screenshot' as const,
+    }))} />);
+    expect(screen.getAllByRole('button', { name: /Preview/ })).toHaveLength(4);
+    expect(screen.getByText('+2')).toBeInTheDocument();
+  });
 });
 

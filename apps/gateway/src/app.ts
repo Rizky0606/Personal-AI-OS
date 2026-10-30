@@ -1,7 +1,10 @@
+import { teamRoutes } from './modules/teams/routes.js';
+import type { TeamsService } from './modules/teams/service.js';
 import { randomUUID } from 'node:crypto';
 import rateLimit from '@fastify/rate-limit';
 import websocket from '@fastify/websocket';
 import Fastify, { LogController, type FastifyInstance, type FastifyServerOptions } from 'fastify';
+import type { EngineInfo } from '@aios/contracts';
 import type { Config } from './config.js';
 import { AppError, registerErrorHandling } from './errors.js';
 import { authenticateHook } from './modules/auth/guard.js';
@@ -30,6 +33,7 @@ import { taskRoutes } from './modules/tasks/routes.js';
 import type { TasksService } from './modules/tasks/service.js';
 import type { WorkerRelay } from './modules/worker/relay.js';
 import { workerRoutes, type createWorkerHub } from './modules/worker/routes.js';
+import { workerArtifactRoutes } from './modules/worker/artifacts.js';
 import { researchRoutes } from './modules/research/routes.js';
 import type { ResearchService } from './modules/research/service.js';
 import { scheduleRoutes } from './modules/schedules/routes.js';
@@ -53,6 +57,8 @@ import { spaceRoutes } from './modules/spaces/routes.js';
 import type { SpacesService } from './modules/spaces/service.js';
 import type { RolesService } from './modules/roles/service.js';
 import type { RunsService } from './modules/runs/service.js';
+import type { Runner } from './modules/runs/runner.js';
+import type { EventStore } from './modules/runs/store.js';
 import { MAX_MESSAGE_BYTES, wsRoutes, type WsDeps } from './modules/ws/routes.js';
 
 export const API_PREFIX = '/v1';
@@ -80,10 +86,14 @@ export interface AppDeps {
     usage: UsageRecorder;
     /** Diam selama ini (ms) berarti stream model dianggap macet. */
     streamIdleMs?: number;
+    /** Engine yang bisa dipilih per pesan (GET /engines). */
+    engines?: () => EngineInfo[];
   };
   chat: ChatService;
   files: FilesService;
   runs: RunsService;
+  runner?: Pick<Runner, 'isActive'>;
+  store?: EventStore;
   roles: RolesService;
   research: ResearchService;
   schedules: ScheduleService;
@@ -97,6 +107,7 @@ export interface AppDeps {
   handoff: HandoffService;
   fork: ForkService;
   fleets: FleetService;
+  teams: TeamsService;
   spaces: SpacesService;
   search: SearchService;
   /** Hub koneksi worker dan relay-nya; dibuat di luar karena runner juga memakai relay. */
@@ -117,6 +128,8 @@ export function buildApp({
   chat,
   files,
   runs,
+  runner,
+  store,
   roles,
   research,
   schedules,
@@ -130,6 +143,7 @@ export function buildApp({
   handoff,
   fork,
   fleets,
+  teams,
   spaces,
   search,
   worker,
@@ -201,7 +215,11 @@ export function buildApp({
         protectedScope.addHook('onRequest', authenticateHook(auth));
         await protectedScope.register(sessionRoutes, { auth });
         await protectedScope.register(deviceRoutes, { devices });
-        await protectedScope.register(catalogRoutes, { models: llm.models, quota: llm.quota });
+        await protectedScope.register(catalogRoutes, {
+          models: llm.models,
+          quota: llm.quota,
+          ...(llm.engines ? { engines: llm.engines } : {}),
+        });
         await protectedScope.register(chatRoutes, { chat, runs });
         await protectedScope.register(fileRoutes, { files });
         await protectedScope.register(roleRoutes, { roles });
@@ -209,6 +227,7 @@ export function buildApp({
         await protectedScope.register(scheduleRoutes, { schedules });
         await protectedScope.register(projectRoutes, { projects });
         await protectedScope.register(taskRoutes, { tasks });
+        await protectedScope.register(teamRoutes, { teams });
         await protectedScope.register(compareRoutes, { compare });
         await protectedScope.register(statusRoutes, { status });
         await protectedScope.register(memoryRoutes, { memory });
@@ -228,6 +247,7 @@ export function buildApp({
           ...(ws.heartbeatMs ? { heartbeatMs: ws.heartbeatMs } : {}),
           ...(ws.now ? { now: ws.now } : {}),
         });
+        if (runner && store) await protectedScope.register(workerArtifactRoutes, { files, runs, runner, projects, store });
       });
     },
     { prefix: API_PREFIX },

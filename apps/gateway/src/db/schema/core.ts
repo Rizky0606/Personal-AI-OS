@@ -1,4 +1,4 @@
-import type { AgentEvent, DiffStat, MessagePart, RunError, Stack, Usage } from '@aios/contracts';
+import type { AgentEvent, DiffStat, MessagePart, RunError, Stack, TeamEvent, Usage } from '@aios/contracts';
 import { sql } from 'drizzle-orm';
 import {
   type AnyPgColumn,
@@ -24,6 +24,9 @@ import {
   runStatus,
   surface,
   taskStatus,
+  teamMemberRole,
+  teamMemberStatus,
+  teamStatus,
 } from './enums.js';
 
 /*
@@ -201,6 +204,57 @@ export const approvals = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index('approvals_run_idx').on(t.runId)],
+);
+
+export const teams = pgTable(
+  'teams',
+  {
+    id: id(),
+    projectId: uuid('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+    parentRunId: uuid('parent_run_id').references(() => runs.id, { onDelete: 'set null' }).unique(),
+    status: teamStatus('status').notNull().default('queued'),
+    prompt: text('prompt').notNull(),
+    limits: jsonb('limits').$type<Record<string, number>>().notNull(),
+    cancelRequestedAt: timestamp('cancel_requested_at', { withTimezone: true }),
+    failureCode: text('failure_code'),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+    finishedAt: timestamp('finished_at', { withTimezone: true }),
+  },
+  (t) => [index('teams_project_created_idx').on(t.projectId, t.createdAt)],
+);
+
+export const teamMembers = pgTable(
+  'team_members',
+  {
+    id: id(),
+    teamId: uuid('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+    runId: uuid('run_id').notNull().references(() => runs.id, { onDelete: 'cascade' }).unique(),
+    role: teamMemberRole('role').notNull(),
+    status: teamMemberStatus('status').notNull().default('queued'),
+    task: text('task').notNull(),
+    acceptanceCriteria: text('acceptance_criteria'),
+    branch: text('branch'),
+    startedAt: timestamp('started_at', { withTimezone: true }),
+    finishedAt: timestamp('finished_at', { withTimezone: true }),
+    exitReason: text('exit_reason'),
+    usage: jsonb('usage').$type<Usage>(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index('team_members_team_idx').on(t.teamId)],
+);
+
+export const teamEvents = pgTable(
+  'team_events',
+  {
+    teamId: uuid('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+    seq: integer('seq').notNull(),
+    type: text('type').notNull(),
+    payload: jsonb('payload').$type<TeamEvent>().notNull(),
+    ts: timestamp('ts', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.teamId, t.seq] })],
 );
 
 export const approvalRules = pgTable(

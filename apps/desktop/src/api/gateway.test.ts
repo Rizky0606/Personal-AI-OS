@@ -75,6 +75,39 @@ describe('createGatewayApi', () => {
     expect(call).toHaveBeenCalledWith(`/research/${ID}/export?format=pdf`, { raw: true });
   });
 
+  it('team cancellation sends POST to the team cancel endpoint', async () => {
+    const call = vi.fn().mockResolvedValue({
+      id: ID,
+      projectId: OTHER,
+      status: 'running',
+      memberCount: 0,
+      pendingApprovals: 0,
+      createdAt: TS,
+      updatedAt: TS,
+      parentRunId: null,
+      prompt: 'x',
+      limits: {
+        maxWorkers: 1,
+        maxReviewRounds: 2,
+        teamTimeoutMinutes: 120,
+        memberTimeoutMinutes: 30,
+        stepsPerMember: 100,
+        tokensPerTeam: 100000,
+        tokensPerMember: 40000,
+        inputTokensPerCall: 20000,
+        outputTokensPerCall: 8000,
+      },
+      members: [],
+      cancelRequestedAt: null,
+      failureCode: null,
+      finishedAt: null,
+    });
+
+    await createGatewayApi(call).cancelTeam(ID);
+
+    expect(call).toHaveBeenCalledWith(`/teams/${ID}/cancel`, { method: 'POST' });
+  });
+
   it('hapus dan arsip menerima 204 tanpa isi', async () => {
     const call = vi.fn().mockResolvedValue(null);
     const api = createGatewayApi(call);

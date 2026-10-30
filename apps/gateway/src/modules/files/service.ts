@@ -134,6 +134,10 @@ export function createFilesService(deps: { db: Database }): FilesService {
 
     async saveGenerated({ name: rawName, bytes }) {
       const name = cleanName(rawName);
+      if (bytes.length === 0) throw new AppError(400, 'file_empty', 'Berkas kosong.');
+      if (bytes.length > MAX_FILE_BYTES) {
+        throw new AppError(413, 'file_too_large', 'Berkas melebihi 25 MB.');
+      }
       const [row] = await db
         .insert(files)
         .values({

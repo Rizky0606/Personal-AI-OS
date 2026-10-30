@@ -55,6 +55,7 @@ export interface RunsService {
   ): Promise<z.infer<typeof ReviewResponseSchema>>;
   /** Ada tidaknya run; dipakai WebSocket sebelum berlangganan. */
   exists(id: string): Promise<boolean>;
+  projectId(id: string): Promise<string | null>;
 }
 
 const notFound = () => new AppError(404, 'run_not_found', 'Run tidak ditemukan.');
@@ -116,6 +117,14 @@ export function createRunsService(deps: {
   return {
     async get(id) {
       return toRunDto(await load(id));
+    },
+    async projectId(id) {
+      const [row] = await db
+        .select({ projectId: conversations.projectId })
+        .from(runs)
+        .leftJoin(conversations, eq(conversations.id, runs.conversationId))
+        .where(eq(runs.id, id));
+      return row?.projectId ?? null;
     },
 
     async list({ kind, limit }) {

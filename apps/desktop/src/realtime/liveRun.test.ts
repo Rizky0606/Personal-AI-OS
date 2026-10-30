@@ -10,4 +10,13 @@ describe('tool output display', () => {
     run = reduceLiveRun(run, { type: 'tool.output', toolCallId: 'unknown', chunk: 'ignored' }, 3);
     expect(run.tools).toHaveLength(1);
   });
+  it('retains artifact.created metadata once for run activity', () => {
+    const event = {
+      type: 'artifact.created' as const,
+      fileId: 'f1', name: 'screen.png', mime: 'image/png', size: 12,
+      sha256: 'a'.repeat(64), source: 'screenshot' as const,
+    };
+    const run = reduceLiveRun(newLiveRun('artifact'), event, 1);
+    expect(run.artifacts).toEqual([event]);
+  });
 });

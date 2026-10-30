@@ -158,6 +158,17 @@ const agentCases: Record<AgentEventType, Cases> = {
       { type: 'error', code: 'x', message: 'x' },
     ],
   },
+  'artifact.created': {
+    valid: [
+      { type: 'artifact.created', fileId: ID_A, name: 'screen.png', mime: 'image/png', size: 512, sha256: 'a'.repeat(64), source: 'screenshot' },
+      { type: 'artifact.created', fileId: ID_B, name: 'report.svg', mime: 'image/svg+xml', size: 8, sha256: 'b'.repeat(64), source: 'file' },
+    ],
+    invalid: [
+      { type: 'artifact.created', fileId: 'bad', name: 'x.png', mime: 'image/png', size: 4, sha256: 'x', source: 'file' },
+      { type: 'artifact.created', fileId: ID_A, name: 'x.png', mime: 'image/png', size: -1, sha256: 'a'.repeat(64), source: 'file' },
+      { type: 'artifact.created', fileId: ID_A, name: 'x.png', mime: 'image/png', size: 1, sha256: 'a'.repeat(64), source: 'unknown' },
+    ],
+  },
   'run.completed': {
     valid: [
       { type: 'run.completed', summary: 'Selesai' },
@@ -250,6 +261,7 @@ describe('AgentEvent', () => {
         'research.progress',
         'research.source',
         'error',
+        'artifact.created',
         'run.completed',
       ].sort(),
     );

@@ -26,7 +26,7 @@ export type DeviceKind = z.infer<typeof DeviceKindSchema>;
 export const ScopeSchema = z.enum(['app', 'worker', 'llm']);
 export type Scope = z.infer<typeof ScopeSchema>;
 
-export const EngineSchema = z.enum(['hermes', 'omp', 'pi', 'research']);
+export const EngineSchema = z.enum(['hermes', 'omp', 'pi', 'research', 'dsh']);
 export type Engine = z.infer<typeof EngineSchema>;
 
 export const UsageSchema = z
