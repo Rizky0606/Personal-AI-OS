@@ -1,4 +1,5 @@
 import { Bug, Code2, FileText, FlaskConical, FolderTree, Mail, Plus, Wrench } from 'lucide-react';
+import { AgentOrb } from './AgentOrb';
 import type { ReactNode } from 'react';
 import { copy } from '../copy';
 
@@ -36,10 +37,7 @@ export function ChatWelcome({ inProject, onPick }: ChatWelcomeProps) {
   const icons = inProject ? PROJECT_ICONS : GENERAL_ICONS;
   return (
     <div className="flex h-full flex-col items-center justify-center gap-6 px-8 py-10">
-      <div className="relative flex size-16 items-center justify-center" aria-hidden="true">
-        <div className="aios-orb absolute -inset-6 animate-aios-orb rounded-full" />
-        <div className="aios-primary relative size-3 rounded-full shadow-glow" />
-      </div>
+      <AgentOrb state="idle" size={28} />
       <div className="flex animate-aios-rise flex-col items-center gap-1 text-center">
         <h2 className="text-page font-semibold text-text">{text.title}</h2>
         <p className="max-w-[56ch] text-ui text-text-2">{text.subtitle}</p>

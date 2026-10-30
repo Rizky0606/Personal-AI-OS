@@ -29,3 +29,16 @@ test('chat: jawaban mengalir bertahap, role terlihat, judul otomatis, dan riwaya
   await page.getByRole('complementary').getByText('Judul uji').first().click();
   await expect(page.getByRole('main').getByText(config.hermesAnswer)).toBeVisible();
 });
+
+test('chat: aktivitas run dapat dibuka dan menampilkan ringkasan terminal', async ({ page }) => {
+  await prepare(page);
+  await login(page);
+  const field = page.getByRole('textbox', { name: 'Pesan' });
+  await field.fill('Jalankan pemeriksaan singkat.');
+  await page.getByRole('button', { name: 'Kirim' }).click();
+  const activity = page.getByRole('button', { name: /aktivitas run/i });
+  await expect(activity).toBeVisible();
+  await activity.click();
+  await expect(activity).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.getByText(/Selesai|Gagal|Dibatalkan/).last()).toBeVisible();
+});

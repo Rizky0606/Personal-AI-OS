@@ -3,6 +3,8 @@ import { apiErrorMessage } from '../api/errors';
 import { usePromptTemplates } from '../api/queries';
 import { useTemplateInsert } from '../templates/useTemplateInsert';
 import { activitySteps } from '../activity/steps';
+import { buildActivity } from '../realtime/activity';
+import { useNow } from '../app/useNow';
 import { copy } from '../copy';
 import { packOptions } from './skillPacks';
 import { useUiStore } from '../state/uiStore';
@@ -12,6 +14,7 @@ import { StateView, type ViewState } from '../ui/StateView';
 import { ChatWelcome } from './ChatWelcome';
 import { Composer } from './Composer';
 import { MessageList } from './MessageList';
+import { RunActivity } from './RunActivity';
 import { PlanBanner } from './PlanBanner';
 import { ReviewBanner } from './ReviewBanner';
 import { useChatController } from './useChatController';
@@ -22,6 +25,7 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
   const insert = useTemplateInsert(chat.setDraft);
   const [dragging, setDragging] = useState(false);
   const { status } = chat;
+  const now = useNow();
   const setAgentSteps = useUiStore((s) => s.setAgentSteps);
   const steps = useMemo(() => activitySteps(chat.live, chat.messages), [chat.live, chat.messages]);
   // Panel Aktivitas dan penanda di tab Berkas membaca langkah agent dari sini; hilang bersama chatnya.
@@ -114,6 +118,14 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
               loadingOlder={chat.loadingOlder}
               onLoadOlder={chat.loadOlder}
             />
+            {chat.live ? (
+              <RunActivity
+                activity={buildActivity(chat.live, now)}
+                now={now}
+                output={chat.live.tools.at(-1)?.output}
+                onApproval={() => undefined}
+              />
+            ) : null}
           </StateView>
         )}
       </div>

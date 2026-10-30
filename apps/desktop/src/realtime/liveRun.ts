@@ -9,6 +9,8 @@ export interface ToolStep {
   durationMs: number | undefined;
   /** Waktu event mulai (ms epoch, dari envelope); null bila tidak diketahui. */
   startedAt: number | null;
+  /** Baris output terbaru untuk aktivitas live. */
+  output?: string;
 }
 
 export interface LiveSource {
@@ -176,6 +178,17 @@ function reduceEvent(run: LiveRun, event: ServerEvent, ts: number | undefined): 
                 startedAt: t.startedAt ?? at,
               }
             : t,
+        ),
+      };
+    }
+    case 'tool.output': {
+      const output = event.chunk.split(/\r?\n/).filter(Boolean).at(-1);
+      if (!output) return run;
+      return {
+        ...run,
+        lastActivity: 'tool',
+        tools: run.tools.map((tool) =>
+          tool.id === event.toolCallId ? { ...tool, output } : tool,
         ),
       };
     }

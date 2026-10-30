@@ -628,3 +628,8 @@ Disusun 2026-10-26 dari perbandingan dengan Orca, Pi, Cline, Amp, Goose, dan Vib
 - [ ] **Banner galat gateway hanya muncul untuk `reconnecting`** (bukan `connecting` pertama atau `idle`); tidak ada batas "n kali gagal" sebelum banner.
 - [ ] **View Transitions** memotret pembungkus isi saja; panel kanan dan sidebar tidak ikut bertransisi saat berpindah layar. Tidak diuji di WebView Tauri nyata (hanya Chromium e2e).
 - [ ] Tooltip sidebar ringkas dan tab panel memakai `Tooltip` bawaan (tunda 400 ms di `TooltipProvider`).
+
+## Sesi 5
+
+- Tambahkan steering/queued chip setelah `AgentHud` tersedia di branch desktop; saat ini tidak ada komponen atau store steering yang dapat dipakai ulang.
+- Tambahkan screenshot fase Chat/RunActivity serta recording Playwright setelah backend run fixture untuk e2e tersedia; branch ini hanya menyediakan chat streaming dasar.

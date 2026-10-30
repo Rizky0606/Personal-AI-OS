@@ -2,6 +2,17 @@
 @import '@aios/ui-tokens/tokens.css';
 @import './shell/shell.css';
 
+.aios-agent-orb { color: var(--accent); transition: color 320ms ease, transform 320ms ease; }
+.aios-agent-orb-thinking { color: var(--status-thinking); }
+.aios-agent-orb-tool { color: var(--status-tool); }
+.aios-agent-orb-writing { color: var(--status-writing); }
+.aios-agent-orb-done { color: var(--status-done); }
+.aios-agent-orb-error { color: var(--status-error); }
+@media (prefers-reduced-motion: no-preference) {
+  .aios-agent-orb-thinking circle:first-child { animation: aios-orb-spin 1400ms linear infinite; transform-origin: center; }
+}
+@keyframes aios-orb-spin { to { transform: rotate(360deg); } }
+
 /* IBM Plex dibundel lokal (lisensi OFL di src/fonts); tanpa CDN. */
 @font-face {
   font-family: 'IBM Plex Sans';
