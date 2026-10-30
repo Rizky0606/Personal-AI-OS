@@ -35,6 +35,12 @@ import app.aios.android.ui.research.ResearchListScreen
 import app.aios.android.ui.chat.ChatEvent
 import app.aios.android.ui.chat.ChatScreen
 import app.aios.android.ui.chat.ChatViewModel
+import app.aios.android.ui.chat.activity.orbDescriptionRes
+import app.aios.android.ui.chat.activity.phase
+import app.aios.android.ui.chat.activity.toAgentPhase
+import app.aios.android.ui.components.AgentOrb
+import app.aios.android.ui.components.OrbSizeCompact
+import app.aios.android.ui.theme.AgentPhase
 import app.aios.android.ui.chat.ConversationDrawer
 import app.aios.android.ui.chat.ConversationsViewModel
 import kotlinx.coroutines.launch
@@ -193,6 +199,7 @@ fun MainScreen(online: Boolean, sessionKey: String, link: AppLink?, onLinkConsum
             topBar = {
                 TopBar(
                     title = if (onChat) chatTitle else stringResource(titleFor(route)),
+                    orbPhase = if (onChat) chatUi.trace?.takeIf { chatUi.streaming }?.phase()?.toAgentPhase() else null,
                     showBack = !isTab,
                     onBack = { nav.popBackStack() },
                     onSettings = { nav.navigate(Routes.SETTINGS) { launchSingleTop = true } },
@@ -331,7 +338,8 @@ private fun TopBar(
     showSettings: Boolean,
     onBack: () -> Unit,
     onSettings: () -> Unit,
-    onMenu: (() -> Unit)? = null
+    onMenu: (() -> Unit)? = null,
+    orbPhase: AgentPhase? = null
 ) {
     val colors = AiosTheme.colors
     Row(
@@ -359,6 +367,14 @@ private fun TopBar(
             color = colors.text,
             modifier = Modifier.weight(1f)
         )
+        // Orb kecil hanya selama agent bekerja di chat; dibacakan sebagai status singkat.
+        if (orbPhase != null) {
+            AgentOrb(
+                phase = orbPhase,
+                size = OrbSizeCompact,
+                contentDescription = stringResource(orbPhase.orbDescriptionRes())
+            )
+        }
         if (showSettings) {
             IconButton(R.drawable.ic_settings, stringResource(R.string.nav_settings), onSettings)
         }

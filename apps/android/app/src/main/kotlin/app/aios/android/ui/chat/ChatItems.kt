@@ -6,6 +6,7 @@ import app.aios.android.data.api.AUTHOR_SYSTEM
 import app.aios.android.data.api.AUTHOR_USER
 import app.aios.android.data.api.Message
 import app.aios.android.data.api.MessagePart
+import app.aios.android.ui.chat.activity.RunTrace
 
 /** Baris yang digambar di daftar chat, urut kronologis (lama ke baru). Tidak berubah setelah dibuat. */
 @Immutable
@@ -35,7 +36,9 @@ sealed interface ChatItem {
         /** Menu Hapus tersedia (jawaban tersimpan dan tidak ada run berjalan). */
         val canModify: Boolean = false,
         /** Berkas buatan agent (folder kiriman) yang bisa diunduh. */
-        val files: List<MessagePart.File> = emptyList()
+        val files: List<MessagePart.File> = emptyList(),
+        /** Jejak run untuk baris aktivitas (run ini live atau baru selesai di sesi ini); null bila tidak ada. */
+        val trace: RunTrace? = null
     ) : ChatItem {
         override val key get() = id
     }
@@ -70,7 +73,7 @@ fun buildChatItems(state: ChatUiState): List<ChatItem> {
             AUTHOR_SYSTEM -> items += ChatItem.System(message)
             AUTHOR_ASSISTANT -> {
                 if (live != null && message.runId == live.runId) {
-                    items += liveItem(message.id, live, message)
+                    items += liveItem(message.id, live, message, state.traceFor(live.runId))
                     liveShown = true
                 } else {
                     items += ChatItem.Assistant(
@@ -82,28 +85,34 @@ fun buildChatItems(state: ChatUiState): List<ChatItem> {
                         model = message.model,
                         streaming = false,
                         canModify = !state.busy,
-                        files = message.parts.filterIsInstance<MessagePart.File>()
+                        files = message.parts.filterIsInstance<MessagePart.File>(),
+                        trace = message.runId?.let { state.traceFor(it) }
                     )
                 }
             }
         }
     }
     state.pending?.let { items += ChatItem.PendingUser(it.text) }
-    if (live != null && !liveShown) items += liveItem(live.messageId ?: "live-${live.runId}", live, null)
+    if (live != null && !liveShown) {
+        items += liveItem(live.messageId ?: "live-${live.runId}", live, null, state.traceFor(live.runId))
+    }
     state.runError?.let {
         items += ChatItem.Failure(it.message, it.retryable)
     }
     return items
 }
 
-private fun liveItem(id: String, live: LiveRun, persisted: Message?) = ChatItem.Assistant(
+private fun ChatUiState.traceFor(runId: String): RunTrace? = if (traceRunId == runId) trace else null
+
+private fun liveItem(id: String, live: LiveRun, persisted: Message?, trace: RunTrace?) = ChatItem.Assistant(
     id = persisted?.id ?: id,
     text = live.text,
     reasoning = live.reasoning,
     tools = live.tools,
     role = live.role ?: persisted?.agentRole,
     model = persisted?.model,
-    streaming = !live.finished
+    streaming = !live.finished,
+    trace = trace
 )
 
 private fun MessagePart.Tool.toStep() = ToolStep(toolCallId, name, target, status, durationMs)

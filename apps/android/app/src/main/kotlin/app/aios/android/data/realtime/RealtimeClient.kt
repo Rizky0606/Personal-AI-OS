@@ -57,7 +57,7 @@ sealed interface ConnectionState {
     data class Reconnecting(val attempt: Int) : ConnectionState
 }
 
-data class ChannelEvent(val seq: Long, val event: ServerEvent)
+data class ChannelEvent(val seq: Long, val event: ServerEvent, val ts: Long? = null)
 
 /** Jeda sambung ulang: 1, 2, 4, ... detik sampai batas 30 detik. */
 class Backoff(
@@ -321,6 +321,6 @@ class RealtimeClient(
             if (frame.seq <= sub.lastSeq) return
             sub.lastSeq = frame.seq
         }
-        sub.events.emit(ChannelEvent(frame.seq, frame.event))
+        sub.events.emit(ChannelEvent(frame.seq, frame.event, frame.ts))
     }
 }

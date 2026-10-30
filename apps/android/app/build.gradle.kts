@@ -86,6 +86,10 @@ android {
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
     }
+
+    // Fixture emas aktivitas dipakai bersama desktop: dibaca langsung dari packages/contracts (tanpa salinan) sebagai
+    // resource tes JVM, tersedia di classpath sebagai activity/*.json.
+    sourceSets.getByName("test").resources.srcDir(rootProject.file("../../packages/contracts/fixtures"))
 }
 
 // Tanpa toolchain: JDK mana pun yang menjalankan Gradle (mis. JBR bawaan Android Studio) boleh dipakai,

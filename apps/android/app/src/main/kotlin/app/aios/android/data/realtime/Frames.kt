@@ -9,6 +9,7 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
+import java.time.Instant
 
 /** Event run dan percakapan yang dipakai chat. Tipe lain (diff, riset, dll.) menjadi [Other]. */
 sealed interface ServerEvent {
@@ -21,6 +22,13 @@ sealed interface ServerEvent {
     data class MessageCompleted(val messageId: String) : ServerEvent
 
     data class ReasoningDelta(val messageId: String, val text: String) : ServerEvent
+
+    /** Judul ringkas dari mesin untuk baris aktivitas. */
+    data class ReasoningSummary(val messageId: String, val text: String) : ServerEvent
+
+    data class ApprovalRequested(val approvalId: String) : ServerEvent
+
+    data class ApprovalResolved(val approvalId: String) : ServerEvent
 
     data class ToolStarted(val toolCallId: String, val name: String, val target: String?) : ServerEvent
 
@@ -46,7 +54,8 @@ sealed interface ServerEvent {
 
 /** Frame dari server di `/v1/ws`. */
 sealed interface Frame {
-    data class Envelope(val channel: String, val seq: Long, val event: ServerEvent) : Frame
+    /** [ts]: waktu event di server (ms epoch); null bila tidak ada atau tak terbaca. */
+    data class Envelope(val channel: String, val seq: Long, val event: ServerEvent, val ts: Long? = null) : Frame
 
     data class Subscribed(val channel: String, val lastSeq: Long, val replay: Boolean) : Frame
 
@@ -95,7 +104,8 @@ object Frames {
         return Frame.Envelope(
             channel = obj.str("channel"),
             seq = obj["seq"]?.jsonPrimitive?.long ?: return Frame.Unknown,
-            event = event(event)
+            event = event(event),
+            ts = obj["ts"]?.str()?.let { runCatching { Instant.parse(it).toEpochMilli() }.getOrNull() }
         )
     }
 
@@ -109,6 +119,9 @@ object Frames {
         "message.delta" -> ServerEvent.MessageDelta(e.str("messageId"), e.str("text"))
         "message.completed" -> ServerEvent.MessageCompleted(e.str("messageId"))
         "reasoning.delta" -> ServerEvent.ReasoningDelta(e.str("messageId"), e.str("text"))
+        "reasoning.summary" -> ServerEvent.ReasoningSummary(e.str("messageId"), e.str("text"))
+        "approval.requested" -> ServerEvent.ApprovalRequested(e.str("approvalId"))
+        "approval.resolved" -> ServerEvent.ApprovalResolved(e.str("approvalId"))
         "tool.started" -> ServerEvent.ToolStarted(e.str("toolCallId"), e.str("name"), e["target"]?.str())
         "tool.finished" -> ServerEvent.ToolFinished(
             e.str("toolCallId"),

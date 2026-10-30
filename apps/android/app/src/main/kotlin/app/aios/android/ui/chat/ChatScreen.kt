@@ -39,6 +39,8 @@ import app.aios.android.ui.components.ErrorBanner
 import app.aios.android.ui.components.OfflineBanner
 import app.aios.android.ui.components.SkeletonBlock
 import app.aios.android.ui.components.SkeletonList
+import app.aios.android.ui.chat.activity.phase
+import app.aios.android.ui.chat.activity.toAgentPhase
 import app.aios.android.ui.theme.AiosTheme
 import app.aios.ui.tokens.Tokens
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -157,7 +159,8 @@ fun ChatScreen(viewModel: ChatViewModel, snackbar: SnackbarHostState) {
             voice = voice,
             attachments = ui.attachments,
             onAttach = { picker.launch(ATTACH_MIME_TYPES) },
-            onRemoveAttachment = viewModel::removeAttachment
+            onRemoveAttachment = viewModel::removeAttachment,
+            phase = ui.trace?.phase()?.toAgentPhase()
         )
     }
 

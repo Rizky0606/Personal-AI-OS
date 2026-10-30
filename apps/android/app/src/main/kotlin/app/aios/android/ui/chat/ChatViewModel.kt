@@ -21,6 +21,7 @@ import app.aios.android.data.chat.ChatRepository
 import app.aios.android.data.realtime.ConnectionState
 import app.aios.android.data.realtime.RealtimeClient
 import app.aios.android.data.realtime.ServerEvent
+import app.aios.android.ui.chat.activity.RunTrace
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -69,6 +70,9 @@ data class ChatUiState(
     val loadingOlder: Boolean = false,
     val pending: PendingMessage? = null,
     val live: LiveRun? = null,
+    /** Jejak waktu dan langkah run untuk baris aktivitas; bertahan setelah run selesai, sampai pesan baru. */
+    val trace: RunTrace? = null,
+    val traceRunId: String? = null,
     /** Error run terakhir (gagal di server); hilang saat pesan baru dikirim. */
     val runError: RunError? = null,
     val draft: String = "",
@@ -107,6 +111,9 @@ sealed interface ChatEvent {
 }
 
 private const val RUN_POLL_MS = 15_000L
+
+/** Event dengan waktu server (null untuk hasil polling). */
+private data class Stamped(val event: ServerEvent, val ts: Long?)
 private const val FINISH_RETRIES = 3
 private const val FINISH_RETRY_MS = 1_000L
 
@@ -423,15 +430,17 @@ class ChatViewModel @Inject constructor(
         runJob?.cancel()
         runJob = viewModelScope.launch {
             var current = LiveRun(runId)
-            state.update { it.copy(live = current) }
-            val streamed = realtime.channel("run:$runId").map { it.event }
-            merge(streamed, pollStatus(runId))
-                .transformWhile { event ->
-                    current = current.reduce(event)
-                    emit(current)
+            var trace = RunTrace()
+            state.update { it.copy(live = current, trace = trace, traceRunId = runId) }
+            val streamed = realtime.channel("run:$runId").map { Stamped(it.event, it.ts) }
+            merge(streamed, pollStatus(runId).map { Stamped(it, null) })
+                .transformWhile { stamped ->
+                    current = current.reduce(stamped.event)
+                    trace = trace.reduce(stamped.event, stamped.ts)
+                    emit(current to trace)
                     !current.finished
                 }
-                .collect { live -> state.update { it.copy(live = live) } }
+                .collect { (live, runTrace) -> state.update { it.copy(live = live, trace = runTrace) } }
             finishRun(current)
         }
     }

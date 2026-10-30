@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Teks baris aktivitas run. Sumber kebenaran perilaku: apps/desktop/src/copy.ts (runActivity). Kunci dipakai
+    ActivityBuilder (activity_tool_<jenis>_running|done|noun, activity_status_*, activity_summary_*, dst.) dan
+    dibaca juga oleh tes paritas JVM; mengganti nama kunci berarti mengubah ActivityBuilder.
+-->
+<resources>
+    <!-- Kalimat per jenis tool: berjalan, selesai, kata benda (untuk gagal/ditolak/dibatalkan). -->
+    <string name="activity_tool_command_running">Menjalankan perintah</string>
+    <string name="activity_tool_command_done">Perintah selesai</string>
+    <string name="activity_tool_command_noun">Perintah</string>
+    <string name="activity_tool_edit_running">Mengubah berkas</string>
+    <string name="activity_tool_edit_done">Berkas diubah</string>
+    <string name="activity_tool_edit_noun">Perubahan berkas</string>
+    <string name="activity_tool_read_running">Membaca berkas</string>
+    <string name="activity_tool_read_done">Berkas dibaca</string>
+    <string name="activity_tool_read_noun">Pembacaan berkas</string>
+    <string name="activity_tool_search_running">Mencari di kode</string>
+    <string name="activity_tool_search_done">Pencarian kode selesai</string>
+    <string name="activity_tool_search_noun">Pencarian kode</string>
+    <string name="activity_tool_web_running">Mencari di web</string>
+    <string name="activity_tool_web_done">Pencarian web selesai</string>
+    <string name="activity_tool_web_noun">Pencarian web</string>
+    <string name="activity_tool_browser_running">Membuka halaman</string>
+    <string name="activity_tool_browser_done">Halaman dibuka</string>
+    <string name="activity_tool_browser_noun">Pembukaan halaman</string>
+    <string name="activity_tool_subagent_running">Menugaskan subagent</string>
+    <string name="activity_tool_subagent_done">Subagent ditugaskan</string>
+    <string name="activity_tool_subagent_noun">Penugasan subagent</string>
+    <string name="activity_tool_plan_running">Memperbarui rencana</string>
+    <string name="activity_tool_plan_done">Rencana diperbarui</string>
+    <string name="activity_tool_plan_noun">Pembaruan rencana</string>
+
+    <!-- Tool yang tidak dikenal; _anon bila nama kosong (event mulai belum diterima). -->
+    <string name="activity_unknown_running">Menjalankan alat: %1$s</string>
+    <string name="activity_unknown_running_anon">Menjalankan alat</string>
+    <string name="activity_unknown_done">Alat selesai: %1$s</string>
+    <string name="activity_unknown_done_anon">Alat selesai</string>
+    <string name="activity_unknown_noun">Alat %1$s</string>
+    <string name="activity_unknown_noun_anon">Alat</string>
+
+    <!-- Dirangkai setelah kata benda: "Perintah gagal". -->
+    <string name="activity_status_error">gagal</string>
+    <string name="activity_status_denied">ditolak</string>
+    <string name="activity_status_cancelled">dibatalkan</string>
+
+    <string name="activity_summary_done">Selesai</string>
+    <string name="activity_summary_error">Gagal</string>
+    <string name="activity_summary_cancelled">Dibatalkan</string>
+    <string name="activity_steps">%1$d langkah</string>
+    <string name="activity_separator">" · "</string>
+
+    <string name="activity_unit_second">dtk</string>
+    <string name="activity_unit_minute">mnt</string>
+    <string name="activity_unit_hour">j</string>
+
+    <!-- Tampilan baris aktivitas (tidak ada padanan di tes paritas). -->
+    <string name="activity_phase_idle">Siap</string>
+    <string name="activity_phase_thinking">Menyiapkan</string>
+    <string name="activity_phase_tool">Bekerja</string>
+    <string name="activity_phase_writing">Menulis</string>
+    <string name="activity_phase_waiting_approval">Menunggu izin</string>
+    <string name="activity_phase_done">Selesai</string>
+    <string name="activity_phase_error">Gagal</string>
+    <string name="activity_phase_cancelled">Dibatalkan</string>
+    <string name="activity_row_label">Aktivitas run: %1$s</string>
+    <string name="activity_state_expanded">Diperluas</string>
+    <string name="activity_state_collapsed">Diciutkan</string>
+    <string name="activity_more_steps">+%1$d</string>
+    <string name="activity_hidden_steps">%1$d langkah lainnya</string>
+    <string name="activity_parallel">%1$d paralel</string>
+    <string name="activity_orb_idle">Agent siap</string>
+    <string name="activity_orb_thinking">Agent sedang menalar</string>
+    <string name="activity_orb_tool">Agent sedang memakai alat</string>
+    <string name="activity_orb_writing">Agent sedang menulis</string>
+    <string name="activity_orb_done">Agent selesai</string>
+    <string name="activity_orb_error">Agent gagal</string>
+</resources>

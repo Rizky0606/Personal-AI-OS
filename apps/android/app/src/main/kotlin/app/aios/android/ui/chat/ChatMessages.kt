@@ -60,6 +60,13 @@ import app.aios.android.ui.components.ErrorBanner
 import app.aios.android.ui.components.SkeletonBlock
 import app.aios.android.ui.components.Hairline
 import app.aios.android.ui.components.accentGlow
+import app.aios.android.ui.chat.activity.RunActivity
+import app.aios.android.ui.chat.activity.orbDescriptionRes
+import app.aios.android.ui.chat.activity.phase
+import app.aios.android.ui.chat.activity.toAgentPhase
+import app.aios.android.ui.components.AgentOrb
+import app.aios.android.ui.components.OrbSizeCompact
+import app.aios.android.ui.theme.AgentPhase
 import app.aios.android.ui.theme.AiosTheme
 import app.aios.android.ui.theme.GeistMono
 import app.aios.ui.tokens.Tokens
@@ -344,6 +351,16 @@ fun AssistantMessageRow(
                     style = AiosTheme.type.ui.copy(fontWeight = FontWeight.SemiBold),
                     color = colors.text
                 )
+                val orbPhase = when {
+                    item.trace != null -> item.trace.phase().toAgentPhase()
+                    item.streaming -> AgentPhase.Thinking
+                    else -> AgentPhase.Done
+                }
+                AgentOrb(
+                    phase = orbPhase,
+                    size = OrbSizeCompact,
+                    contentDescription = stringResource(orbPhase.orbDescriptionRes())
+                )
                 item.role?.let { role ->
                     AiosChip(text = roleName(role), selected = item.streaming)
                 }
@@ -382,9 +399,10 @@ fun AssistantMessageRow(
             }
         }
         if (item.reasoning.isNotBlank()) ReasoningBlock(item.id, item.reasoning)
-        item.tools.forEach { ToolStepRow(it) }
+        // Run yang punya jejak (live atau baru selesai): baris aktivitas; pesan lama dari server: baris langkah biasa.
+        if (item.trace != null) RunActivity(item.trace) else item.tools.forEach { ToolStepRow(it) }
         when {
-            item.text.isNotEmpty() -> MarkdownText(item.text, onCopied = onCopied)
+            item.text.isNotEmpty() -> MarkdownText(item.text, onCopied = onCopied, streaming = item.streaming)
             item.streaming -> Column(verticalArrangement = Arrangement.spacedBy(Tokens.Space.s8)) {
                 SkeletonBlock(height = Tokens.Space.s12)
                 SkeletonBlock(height = Tokens.Space.s12, width = Tokens.Space.s48 * 4)

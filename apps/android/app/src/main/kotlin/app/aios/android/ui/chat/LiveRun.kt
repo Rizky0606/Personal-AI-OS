@@ -46,6 +46,9 @@ data class LiveRun(
         )
         is ServerEvent.Failure -> copy(error = RunError(event.code, event.message, event.retryable))
         is ServerEvent.MessageCompleted,
+        is ServerEvent.ReasoningSummary,
+        is ServerEvent.ApprovalRequested,
+        is ServerEvent.ApprovalResolved,
         is ServerEvent.RunCompleted,
         is ServerEvent.ResearchProgress,
         is ServerEvent.ResearchSourceFound,

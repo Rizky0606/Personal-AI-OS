@@ -655,3 +655,14 @@ Disusun 2026-10-26 dari perbandingan dengan Orca, Pi, Cline, Amp, Goose, dan Vib
 - [ ] **Preview** (`FoundationPreviews.kt`) belum dilihat di Android Studio; hanya dipastikan terkompilasi. Tampilan bilah navigasi di perangkat belum diperiksa mata (tes instrumentasi memeriksa semantik, ukuran, dan klik).
 - [ ] **Tes UI Compose** hanya dijalankan di emulator lokal (`FloatingNavBarTest`, 3 tes); belum ada di CI.
 - [ ] **Bilah navigasi** kini 4 tujuan (Chat, Riset, Jadwal, Ruang) seperti sebelumnya; `DESIGN_SYSTEM.md` sebelumnya menulis 3 tab.
+
+## Temuan Sesi 8 (Android chat dan aktivitas run)
+
+- [ ] **Perubahan di lapisan data (aditif, bukan kontrak):** `Frame.Envelope` kini membawa `ts` (ms epoch) dan `ChannelEvent` meneruskannya; `ServerEvent` mendapat `ReasoningSummary`, `ApprovalRequested`, `ApprovalResolved` (sebelumnya jatuh ke `Other`). Tanpa itu paritas dengan desktop (waktu, judul, izin) tidak mungkin. `LiveRun` hanya menambah tiga cabang `-> this`.
+- [ ] **`RunTrace`** (jejak waktu dan langkah) hidup di `ChatUiState.trace`/`traceRunId` di samping `LiveRun`; bertahan setelah run selesai sampai pesan baru, tetapi **tidak** bertahan setelah aplikasi dimulai ulang atau percakapan dibuka ulang (pesan lama tetap memakai baris langkah biasa). Persistensi butuh waktu mulai/selesai di pesan dari server.
+- [ ] **Regex Android (ICU) berbeda dari JVM:** `(?U)` melempar `PatternSyntaxException` di Android dan tes unit JVM tidak menangkapnya; ketahuan lewat tes instrumentasi. `ActivityBuilder` menulis spasi eksplisit. Tes JVM paritas tidak bisa memverifikasi sifat regex Android; `RunActivityTest` (instrumentasi) yang memverifikasi.
+- [ ] **Fade per potongan** hanya untuk paragraf terakhir (N karakter terakhir dari delta terbaru, perkiraan dari teks mentah); blok kode, daftar, dan tabel muncul tanpa fade. Fade tidak menjangkau tautan/format di tail dengan tepat.
+- [ ] **Persetujuan izin (`approval`) di Android belum punya UI** (belum ada panel izin di chat); baris aktivitas hanya menampilkan fase "Menunggu izin" dan terbuka sendiri.
+- [ ] **Tidak ada tampilan `tool.output`** di Android (event itu masih `Other`); desktop menampilkannya sebagai satu baris.
+- [ ] **Tangkapan layar** diambil dari tes instrumentasi (`ActivityScreenshotsTest`) dengan animasi dimatikan; tidak ada rekaman gerak. Berkas ditarik manual dengan `adb pull` karena `connectedAndroidTest` mencopot aplikasi setelah selesai.
+- [ ] **Tes instrumentasi** (`RunActivityTest`, `FloatingNavBarTest`) hanya dijalankan di emulator lokal, belum di CI; `connectedDebugAndroidTest` penuh juga menjalankan `AiosE2ETest` yang butuh gateway.

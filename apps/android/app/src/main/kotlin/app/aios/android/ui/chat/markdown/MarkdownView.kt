@@ -64,9 +64,12 @@ fun MarkdownText(
     text: String,
     modifier: Modifier = Modifier,
     citations: Map<Int, String> = emptyMap(),
-    onCopied: () -> Unit = {}
+    onCopied: () -> Unit = {},
+    /** Jawaban masih mengalir: potongan terbaru di paragraf terakhir memudar masuk. */
+    streaming: Boolean = false
 ) {
     var blocks by remember { mutableStateOf(Markdown.parse(text.take(SYNC_PARSE_LIMIT))) }
+    val tail = rememberStreamTail(text, streaming)
     LaunchedEffect(text) {
         blocks = if (text.length <= SYNC_PARSE_LIMIT) {
             Markdown.parse(text)
@@ -80,10 +83,41 @@ fun MarkdownText(
                 modifier = modifier.widthIn(max = ReadingWidth),
                 verticalArrangement = Arrangement.spacedBy(Tokens.Space.s12)
             ) {
-                blocks.forEach { RenderBlock(it, onCopied) }
+                blocks.forEachIndexed { index, block ->
+                    RenderBlock(block, onCopied, fade = if (index == blocks.lastIndex) tail else null)
+                }
             }
         }
     }
+}
+
+/** Potongan teks terbaru ([chars] karakter di ujung paragraf) dan keburamannya (dibaca di daun, bukan di daftar). */
+@androidx.compose.runtime.Stable
+class StreamTail(val chars: Int, val alpha: () -> Float)
+
+private const val TAIL_START_ALPHA = 0.15f
+
+/**
+ * Tiap potongan baru memudar masuk (durasi dari MotionSpec). Hanya Text paragraf terakhir yang membaca animasinya,
+ * jadi daftar pesan dan blok lain tidak digambar ulang. Null bila tidak sedang streaming.
+ */
+@Composable
+private fun rememberStreamTail(text: String, streaming: Boolean): StreamTail? {
+    val motion = AiosTheme.motion
+    val progress = remember { androidx.compose.animation.core.Animatable(1f) }
+    var chars by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    var lastLength by remember { androidx.compose.runtime.mutableIntStateOf(text.length) }
+    LaunchedEffect(text, streaming) {
+        val delta = text.length - lastLength
+        lastLength = text.length
+        if (streaming && delta > 0) {
+            chars = delta
+            progress.snapTo(TAIL_START_ALPHA)
+            progress.animateTo(1f, motion.base())
+        }
+    }
+    if (!streaming) return null
+    return remember(chars) { StreamTail(chars) { progress.value } }
 }
 
 private const val SYNC_PARSE_LIMIT = 2_000
@@ -94,7 +128,7 @@ private val LocalCitations = staticCompositionLocalOf<Map<Int, String>> { emptyM
 private val citationRe = Regex("""\[(\d{1,3})]""")
 
 @Composable
-private fun RenderBlock(block: Block, onCopied: () -> Unit) {
+private fun RenderBlock(block: Block, onCopied: () -> Unit, fade: StreamTail? = null) {
     val colors = AiosTheme.colors
     val type = AiosTheme.type
     when (block) {
@@ -103,7 +137,14 @@ private fun RenderBlock(block: Block, onCopied: () -> Unit) {
             style = if (block.level <= 2) type.section else type.chat.copy(fontWeight = FontWeight.SemiBold),
             color = colors.text
         )
-        is Block.Paragraph -> Text(text = rememberInline(block.inlines), style = type.chat, color = colors.text)
+        is Block.Paragraph -> {
+            val inline = rememberInline(block.inlines)
+            if (fade == null) {
+                Text(text = inline, style = type.chat, color = colors.text)
+            } else {
+                FadingParagraph(inline, fade)
+            }
+        }
         is Block.Code -> CodeBlock(block, onCopied)
         is Block.Quote -> Row(modifier = Modifier.height(IntrinsicSize.Min)) {
             Box(
@@ -290,4 +331,20 @@ private fun AnnotatedString.Builder.appendWithCitations(
         last = m.range.last + 1
     }
     append(text.substring(last))
+}
+
+/** Paragraf yang sedang ditulis: [StreamTail.chars] karakter terakhir memakai warna teks dengan keburaman animasi. */
+@Composable
+private fun FadingParagraph(inline: AnnotatedString, fade: StreamTail) {
+    val color = AiosTheme.colors.text
+    // Keburaman dibaca di sini (lambda), sehingga hanya Text ini yang digambar ulang tiap frame animasi.
+    val alpha = fade.alpha()
+    val start = (inline.length - fade.chars).coerceAtLeast(0)
+    val shown = remember(inline, start, alpha) {
+        buildAnnotatedString {
+            append(inline)
+            if (start < inline.length) addStyle(SpanStyle(color = color.copy(alpha = alpha)), start, inline.length)
+        }
+    }
+    Text(text = shown, style = AiosTheme.type.chat, color = color)
 }

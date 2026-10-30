@@ -47,6 +47,10 @@ fun accentGradient(): Brush {
 fun activeWash(): Brush =
     Brush.horizontalGradient(listOf(AiosTheme.colors.accent.copy(alpha = WASH_ALPHA), Color.Transparent))
 
+/** Cahaya berwarna [color] (mis. warna fase) di sekitar elemen; tanpa efek bila warna transparan penuh. */
+fun Modifier.colorGlow(shape: Shape, color: Color): Modifier =
+    shadow(GLOW_ELEVATION, shape, clip = false, ambientColor = color, spotColor = color)
+
 /** Cahaya aksen di sekitar elemen (bayangan berwarna; warna diabaikan di bawah Android 9). */
 @Composable
 fun Modifier.accentGlow(shape: Shape, enabled: Boolean = true): Modifier {

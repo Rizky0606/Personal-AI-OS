@@ -1,6 +1,12 @@
 package app.aios.android.ui.chat
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -36,6 +42,7 @@ import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -48,9 +55,12 @@ import app.aios.android.ui.components.AiosChip
 import app.aios.android.ui.components.AiosIcon
 import app.aios.android.ui.components.Hairline
 import app.aios.android.ui.components.accentGlow
+import app.aios.android.ui.components.colorGlow
 import app.aios.android.ui.components.accentGradient
 import app.aios.android.ui.components.focusRing
+import app.aios.android.ui.theme.AgentPhase
 import app.aios.android.ui.theme.AiosTheme
+import app.aios.android.ui.theme.phase
 import app.aios.ui.tokens.Tokens
 
 private const val MAX_LINES = 6
@@ -74,7 +84,9 @@ fun Composer(
     modifier: Modifier = Modifier,
     attachments: List<PendingAttachment> = emptyList(),
     onAttach: (() -> Unit)? = null,
-    onRemoveAttachment: (String) -> Unit = {}
+    onRemoveAttachment: (String) -> Unit = {},
+    /** Fase run yang berjalan; bingkai input menyala halus dengan warna fase selama [streaming]. */
+    phase: AgentPhase? = null
 ) {
     val colors = AiosTheme.colors
     val source = remember { MutableInteractionSource() }
@@ -84,10 +96,16 @@ fun Composer(
     val hasFiles = attachments.any { it.part != null }
     val canSend = (draft.isNotBlank() || hasFiles) && !sending && !uploading
     val composerLabel = stringResource(R.string.chat_composer_label)
+    val phaseColor = if (streaming && phase != null) colors.phase(phase).fg else null
     val borderColor by animateColorAsState(
-        if (focused) colors.borderStrong else colors.border,
+        phaseColor ?: if (focused) colors.borderStrong else colors.border,
         AiosTheme.motion.base(),
         label = "composerBorder"
+    )
+    val glowColor by animateColorAsState(
+        phaseColor?.copy(alpha = PHASE_GLOW_ALPHA) ?: Color.Transparent,
+        AiosTheme.motion.base(),
+        label = "composerGlow"
     )
 
     Column(
@@ -135,6 +153,7 @@ fun Composer(
                     .weight(1f)
                     .focusRing(focused, colors.accent, Tokens.Radius.md)
                     .defaultMinSize(minHeight = Tokens.touchTarget)
+                    .colorGlow(shape, glowColor)
                     .background(colors.surface, shape)
                     .border(Hairline, borderColor, shape)
                     .padding(horizontal = Tokens.Space.s12, vertical = Tokens.Space.s12),
@@ -168,23 +187,7 @@ fun Composer(
                     }
                 )
             }
-            if (streaming) {
-                ActionButton(
-                    icon = R.drawable.ic_stop,
-                    description = stringResource(R.string.chat_stop),
-                    primary = false,
-                    enabled = true,
-                    onClick = onStop
-                )
-            } else {
-                ActionButton(
-                    icon = R.drawable.ic_arrow_up,
-                    description = stringResource(R.string.chat_send),
-                    primary = true,
-                    enabled = canSend,
-                    onClick = onSend
-                )
-            }
+            ActionButton(streaming = streaming, canSend = canSend, onSend = onSend, onStop = onStop)
         }
     }
 }
@@ -243,38 +246,61 @@ private fun AttachmentRow(attachments: List<PendingAttachment>, onRemove: (Strin
     }
 }
 
-/** Tombol ikon 48dp: kirim (aksen, aksi utama layar) atau hentikan (netral). */
+/**
+ * Tombol ikon 48dp: kirim (aksen, aksi utama layar) yang berubah menjadi hentikan (netral) saat jawaban mengalir.
+ * Satu tombol yang sama: ikon bertukar dengan fade + skala dan latar aksen memudar (durasi dari MotionSpec).
+ */
 @Composable
-private fun ActionButton(icon: Int, description: String, primary: Boolean, enabled: Boolean, onClick: () -> Unit) {
+private fun ActionButton(streaming: Boolean, canSend: Boolean, onSend: () -> Unit, onStop: () -> Unit) {
     val colors = AiosTheme.colors
+    val motion = AiosTheme.motion
     val shape = RoundedCornerShape(Tokens.Radius.md)
     val source = remember { MutableInteractionSource() }
     val focused by source.collectIsFocusedAsState()
-    val alpha by animateFloatAsState(
-        if (enabled) 1f else DISABLED_ALPHA,
-        AiosTheme.motion.fast(),
-        label = "actionAlpha"
-    )
+    val enabled = streaming || canSend
+    val alpha by animateFloatAsState(if (enabled) 1f else DISABLED_ALPHA, motion.fast(), label = "actionAlpha")
+    val primary by animateFloatAsState(if (streaming) 0f else 1f, motion.fast(), label = "actionPrimary")
+    val description = stringResource(if (streaming) R.string.chat_stop else R.string.chat_send)
     Box(
         modifier = Modifier
             .size(Tokens.touchTarget)
             .alpha(alpha)
             .focusRing(focused, colors.accent, Tokens.Radius.md)
-            .accentGlow(shape, enabled = primary && enabled)
+            .accentGlow(shape, enabled = !streaming && canSend)
             .clip(shape)
-            .let { if (primary) it.background(accentGradient()) else it.background(colors.surface2) }
+            .background(colors.surface2)
             .clickable(
                 interactionSource = source,
                 indication = null,
                 enabled = enabled,
                 role = Role.Button,
-                onClick = onClick
-            ),
+                onClick = if (streaming) onStop else onSend
+            )
+            .semantics { contentDescription = description },
         contentAlignment = Alignment.Center
     ) {
-        AiosIcon(icon, contentDescription = description, tint = if (primary) AiosTheme.onAccent else colors.text)
+        Box(Modifier.matchParentSize().alpha(primary).background(accentGradient()))
+        AnimatedContent(
+            targetState = streaming,
+            transitionSpec = {
+                val enter = fadeIn(motion.fast()) +
+                    scaleIn(motion.overshoot(Tokens.Motion.FastMs), initialScale = ICON_SCALE)
+                val exit = fadeOut(motion.instant()) + scaleOut(motion.fast(), targetScale = ICON_SCALE)
+                enter togetherWith exit
+            },
+            label = "actionIcon"
+        ) { stop ->
+            AiosIcon(
+                if (stop) R.drawable.ic_stop else R.drawable.ic_arrow_up,
+                contentDescription = null,
+                tint = if (stop) colors.text else AiosTheme.onAccent
+            )
+        }
     }
 }
+
+private const val PHASE_GLOW_ALPHA = 0.55f
+private const val ICON_SCALE = 0.6f
 
 /**
  * Tahan untuk bicara, lepas untuk berhenti. TalkBack tidak bisa menahan, jadi ada aksi klik semantik
