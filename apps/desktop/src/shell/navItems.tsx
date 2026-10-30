@@ -26,17 +26,24 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/schedules', label: copy.nav.schedules, icon: <CalendarClock {...ICON} /> },
   { to: '/research', label: copy.nav.research, icon: <Search {...ICON} /> },
   { to: '/spaces', label: copy.nav.spaces, icon: <Library {...ICON} /> },
-  { to: '/settings', label: copy.nav.settings, icon: <Settings {...ICON} /> },
 ];
 
-/** Chat aktif di "/" dan di "/chat/<id>"; bagian lain aktif untuk rute turunannya. */
-export function isNavActive(to: string, pathname: string): boolean {
+/** Chat active in root and chat routes; other sections match descendants. */
+export const isActive = (to: string, pathname: string): boolean => {
   if (to === '/') return pathname === '/' || pathname.startsWith('/chat');
-  // Pengelolaan project adalah bagian dari tab Project.
-  if (to === '/workspace')
-    return pathname.startsWith('/workspace') || pathname.startsWith('/projects');
+  if (to === '/workspace') return pathname.startsWith('/workspace') || pathname.startsWith('/projects');
   return pathname === to || pathname.startsWith(`${to}/`);
-}
+};
+
+export const isNavActive = isActive;
+
+/** Pengaturan: tautan di kaki sidebar. */
+export const settingsItem: NavItem = {
+  to: '/settings',
+  label: copy.nav.settings,
+  icon: <Settings {...ICON} />,
+};
+
 
 /** Rute chat (percakapan umum atau di dalam project): topbar menampilkan project, model, dan koneksi. */
 export const isChatPath = (pathname: string): boolean =>

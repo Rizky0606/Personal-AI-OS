@@ -598,6 +598,17 @@ class AcpRun implements RunHandle {
       new AdapterError('steer_unsupported', 'Engine ini tidak mendukung steer.'),
     );
   }
+  removeQueued(): Promise<void> {
+    return Promise.reject(
+      new AdapterError('queue_unsupported', 'Engine ini tidak mendukung antrean arahan.'),
+    );
+  }
+
+  answerQuestion(): Promise<void> {
+    return Promise.reject(
+      new AdapterError('question_unsupported', 'Engine ini tidak mendukung pertanyaan agent.'),
+    );
+  }
 
   async cancel(): Promise<void> {
     if (this.finished || this.cancelRequested) return;

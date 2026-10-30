@@ -21,7 +21,7 @@ export function ApprovalPanel({ approval, busy, onResolve }: ApprovalPanelProps)
       role="group"
       data-approval-panel=""
       aria-label={title}
-      className="flex max-w-[72ch] flex-col gap-3 rounded-panel border border-warning bg-surface p-3"
+      className="ml-10 flex max-w-(--aios-chat-measure) animate-aios-enter flex-col gap-3 rounded-panel border border-warning bg-surface p-4"
     >
       <header className="flex items-center gap-2 text-ui font-medium text-text">
         <ShieldAlert size={16} strokeWidth={1.5} aria-hidden="true" className="text-warning" />

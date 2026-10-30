@@ -8,7 +8,7 @@ import { renderScreen } from '../test/render';
 vi.mock('../app/services', async () => (await import('../test/fakeServices')).fakeServices);
 
 const { WorkerLifecycle } = await import('./WorkerLifecycle');
-const { StatusBar } = await import('../shell/StatusBar');
+const { SidebarStatus } = await import('../shell/SidebarStatus');
 
 beforeEach(() => {
   resetApi();
@@ -32,7 +32,7 @@ describe('WorkerLifecycle', () => {
   });
 });
 
-describe('StatusBar: status worker', () => {
+describe('SidebarStatus: status worker', () => {
   it('tersambung, menyambung ulang, dan mati mengikuti keadaan worker', async () => {
     setWorker({
       local: 'connected',
@@ -45,7 +45,7 @@ describe('StatusBar: status worker', () => {
         browserAvailable: false,
       },
     });
-    await renderScreen(<StatusBar />);
+    await renderScreen(<SidebarStatus />);
     expect(screen.getByRole('status', { name: copy.workerStatus.connected })).toBeInTheDocument();
 
     act(() => setWorker({ local: 'reconnecting', status: null }));

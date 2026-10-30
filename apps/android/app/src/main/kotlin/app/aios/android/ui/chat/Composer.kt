@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -40,8 +39,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.stringResource
@@ -67,8 +65,8 @@ private const val MAX_LINES = 6
 private const val DISABLED_ALPHA = 0.5f
 
 /**
- * Composer menempel di bawah dan naik bersama keyboard (pemanggil memasang `imePadding`).
- * Tombol kirim berubah menjadi hentikan saat jawaban mengalir.
+ * Composer: kartu mengambang membulat di bawah (pemanggil memasang `imePadding`). Garis kartu menjadi aksen
+ * saat kolom teks fokus. Tombol kirim bulat beraksen berubah menjadi hentikan saat jawaban mengalir.
  */
 @Composable
 fun Composer(
@@ -91,7 +89,7 @@ fun Composer(
     val colors = AiosTheme.colors
     val source = remember { MutableInteractionSource() }
     val focused by source.collectIsFocusedAsState()
-    val shape = RoundedCornerShape(Tokens.Radius.md)
+    val shape = RoundedCornerShape(Tokens.Radius.lg)
     val uploading = attachments.any { it.uploading }
     val hasFiles = attachments.any { it.part != null }
     val canSend = (draft.isNotBlank() || hasFiles) && !sending && !uploading
@@ -108,50 +106,29 @@ fun Composer(
         label = "composerGlow"
     )
 
-    Column(
+    Box(
         modifier = modifier
             .fillMaxWidth()
             .background(colors.bg)
-            .drawBehind {
-                drawLine(
-                    colors.border,
-                    Offset(0f, Hairline.toPx() / 2),
-                    Offset(size.width, Hairline.toPx() / 2),
-                    Hairline.toPx()
-                )
-            }
-            .padding(horizontal = Tokens.Space.s12, vertical = Tokens.Space.s8),
-        verticalArrangement = Arrangement.spacedBy(Tokens.Space.s8)
+            .padding(horizontal = Tokens.Space.s12, vertical = Tokens.Space.s8)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            AiosChip(
-                text = modelLabel,
-                onClick = onPickModel,
-                modifier = Modifier.semantics { contentDescription = modelLabel }
-            )
-            Spacer(Modifier.weight(1f))
-            if (onAttach != null) {
-                val attachLabel = stringResource(R.string.chat_attach)
-                Box(
-                    modifier = Modifier
-                        .size(Tokens.touchTarget)
-                        .clip(RoundedCornerShape(Tokens.Radius.md))
-                        .clickable(role = Role.Button, onClick = onAttach)
-                        .semantics { contentDescription = attachLabel },
-                    contentAlignment = Alignment.Center
-                ) { AiosIcon(R.drawable.ic_attach, contentDescription = null) }
-            }
-        }
-        if (attachments.isNotEmpty()) AttachmentRow(attachments, onRemoveAttachment)
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(Tokens.Space.s8),
-            verticalAlignment = Alignment.Bottom
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(Tokens.elevation, shape, clip = false)
+                .background(colors.surface, shape)
+                .border(if (focused) Tokens.Focus.width else Hairline, borderColor, shape)
+                .padding(horizontal = Tokens.Space.s8, vertical = Tokens.Space.s4),
+            verticalArrangement = Arrangement.spacedBy(Tokens.Space.s4)
         ) {
-            MicButton(voice)
+            if (attachments.isNotEmpty()) {
+                Box(modifier = Modifier.padding(top = Tokens.Space.s8)) {
+                    AttachmentRow(attachments, onRemoveAttachment)
+                }
+            }
             Box(
                 modifier = Modifier
-                    .weight(1f)
-                    .focusRing(focused, colors.accent, Tokens.Radius.md)
+                    .fillMaxWidth()
                     .defaultMinSize(minHeight = Tokens.touchTarget)
                     .colorGlow(shape, glowColor)
                     .background(colors.surface, shape)
@@ -187,7 +164,35 @@ fun Composer(
                     }
                 )
             }
-            ActionButton(streaming = streaming, canSend = canSend, onSend = onSend, onStop = onStop)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(Tokens.Space.s4),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                    AiosChip(
+                        text = modelLabel,
+                        onClick = onPickModel,
+                        modifier = Modifier.semantics { contentDescription = modelLabel }
+                    )
+                }
+                if (onAttach != null) {
+                    val attachLabel = stringResource(R.string.chat_attach)
+                    Box(
+                        modifier = Modifier
+                            .size(Tokens.touchTarget)
+                            .clip(RoundedCornerShape(Tokens.Radius.full))
+                            .clickable(role = Role.Button, onClick = onAttach)
+                            .semantics { contentDescription = attachLabel },
+                        contentAlignment = Alignment.Center
+                    ) { AiosIcon(R.drawable.ic_attach, contentDescription = null) }
+                }
+                MicButton(voice)
+                if (streaming) {
+                    ActionButton(streaming = true, canSend = canSend, onSend = onSend, onStop = onStop)
+                } else {
+                    ActionButton(streaming = false, canSend = canSend, onSend = onSend, onStop = onStop)
+                }
+            }
         }
     }
 }
@@ -309,7 +314,7 @@ private const val ICON_SCALE = 0.6f
 @Composable
 private fun MicButton(voice: VoiceInputState) {
     val colors = AiosTheme.colors
-    val shape = RoundedCornerShape(Tokens.Radius.md)
+    val shape = RoundedCornerShape(Tokens.Radius.full)
     val label = stringResource(if (voice.listening) R.string.chat_voice_stop else R.string.chat_voice_hold)
     Box(
         modifier = Modifier

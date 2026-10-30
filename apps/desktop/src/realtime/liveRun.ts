@@ -1,4 +1,13 @@
-import { TERMINAL_RUN_STATUSES, type RunStatus, type ServerEvent } from '@aios/contracts';
+import {
+  TERMINAL_RUN_STATUSES,
+  type RunStatus,
+  type ServerEvent,
+  type Question,
+  type TodoPhase,
+} from '@aios/contracts';
+
+/** Keadaan terbaru satu subagent (event `subagent.updated` tanpa `type`). */
+export type SubagentView = Omit<Extract<ServerEvent, { type: 'subagent.updated' }>, 'type'>;
 
 export interface ToolStep {
   id: string;
@@ -73,6 +82,14 @@ export interface LiveRun {
   lastEventAt: number | null;
   /** Aktivitas terbaru, untuk membedakan menalar, menulis, dan memutuskan langkah berikutnya. */
   lastActivity: 'reasoning' | 'text' | 'tool' | null;
+  /** Rencana agent terbaru (tool `todo` omp); kosong bila agent tidak membuatnya. */
+  todos: TodoPhase[];
+  /** Arahan yang menunggu giliran di agent (antrean omp). */
+  queue: { steering: string[]; followUp: string[] };
+  /** Pertanyaan agent yang menunggu jawaban pengguna. */
+  questions: { questionId: string; questions: Question[] }[];
+  /** Subagent omp (tool `task`) run ini, urutan kemunculan. */
+  subagents: SubagentView[];
 }
 
 export const isTerminal = (status: RunStatus): boolean => TERMINAL_RUN_STATUSES.includes(status);
@@ -102,6 +119,10 @@ export const newLiveRun = (runId: string): LiveRun => ({
   endedAt: null,
   lastEventAt: null,
   lastActivity: null,
+  todos: [],
+  queue: { steering: [], followUp: [] },
+  questions: [],
+  subagents: [],
 });
 
 /** Memajukan waktu mulai ke waktu run dibuat di server bila lebih awal (reload di tengah run). */
@@ -156,6 +177,37 @@ function reduceEvent(run: LiveRun, event: ServerEvent, ts: number | undefined): 
         ...run,
         messageId: run.messageId ?? event.messageId,
         reasoningSummary: event.text,
+      };
+    case 'todo.updated':
+      return { ...run, todos: event.phases };
+    case 'queue.updated':
+      return { ...run, queue: { steering: event.steering, followUp: event.followUp } };
+    case 'subagent.updated': {
+      const view = Object.fromEntries(
+        Object.entries(event).filter(([key]) => key !== 'type'),
+      ) as SubagentView;
+      const known = run.subagents.some((s) => s.subagentId === view.subagentId);
+      return {
+        ...run,
+        subagents: known
+          ? run.subagents.map((s) => (s.subagentId === view.subagentId ? view : s))
+          : [...run.subagents, view],
+      };
+    }
+    case 'question.asked':
+      return run.questions.some((q) => q.questionId === event.questionId)
+        ? run
+        : {
+            ...run,
+            questions: [
+              ...run.questions,
+              { questionId: event.questionId, questions: event.questions },
+            ],
+          };
+    case 'question.resolved':
+      return {
+        ...run,
+        questions: run.questions.filter((q) => q.questionId !== event.questionId),
       };
     case 'tool.started': {
       const existing = run.tools.find((t) => t.id === event.toolCallId);

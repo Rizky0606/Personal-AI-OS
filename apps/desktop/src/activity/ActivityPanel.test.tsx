@@ -44,6 +44,42 @@ describe('ActivityPanel', () => {
     expect(within(steps).getByText('grep')).toBeInTheDocument();
   });
 
+  it('subagent tampil sebagai daftar bersimpul dengan status, tugas, jumlah tool, dan keluaran terakhir', async () => {
+    useUiStore.getState().setAgentSteps([{ id: '1', name: 'task', status: 'running' }]);
+    useUiStore.getState().setAgentSubagents([
+      {
+        subagentId: 'Pekerja',
+        agent: 'task',
+        assignment: 'Baca a.txt',
+        status: 'running',
+        toolCount: 2,
+        durationMs: 1500,
+        tokens: 30,
+        lastOutput: 'membaca berkas',
+      },
+      {
+        subagentId: 'Peninjau',
+        agent: 'scout',
+        assignment: 'Periksa tes',
+        status: 'failed',
+        toolCount: 0,
+        durationMs: 0,
+        tokens: 0,
+      },
+    ]);
+    await renderScreen(<ActivityPanel />);
+
+    const tree = screen.getByRole('region', { name: copy.activity.subagents.title });
+    const items = within(tree).getAllByRole('listitem');
+    expect(items).toHaveLength(2);
+    expect(items[0]).toHaveTextContent('Pekerja');
+    expect(items[0]).toHaveTextContent(copy.activity.subagents.status.running);
+    expect(items[0]).toHaveTextContent(copy.activity.subagents.tools(2));
+    expect(items[0]).toHaveTextContent('1,5 dtk');
+    expect(items[0]).toHaveTextContent('membaca berkas');
+    expect(items[1]).toHaveTextContent(copy.activity.subagents.status.failed);
+  });
+
   it('klik berkas membuka tab Berkas dengan permintaan membuka berkas itu; berkas diubah punya tombol Diff', async () => {
     useUiStore
       .getState()

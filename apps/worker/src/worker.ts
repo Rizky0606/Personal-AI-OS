@@ -18,6 +18,7 @@ import { RunCoordinator } from './runs/coordinator.js';
 import { ReviewService } from './runs/review.js';
 import { readOmpVersion, resolveOmp } from './runs/omp-path.js';
 import { ApprovalRules } from './runs/rules.js';
+import { ProjectSetupStore } from './runs/setup.js';
 import { WorktreeManager } from './runs/worktree.js';
 import { WORKER_VERSION } from './version.js';
 
@@ -64,6 +65,8 @@ export async function startWorker(options: WorkerOptions): Promise<RunningWorker
   await bindings.load();
   const rules = new ApprovalRules(nodePath.join(options.dataDir, 'approval-rules.json'));
   await rules.load();
+  const setup = new ProjectSetupStore(nodePath.join(options.dataDir, 'project-setup.json'));
+  await setup.load();
 
   // Proses anak berjalan di folder yang diizinkan atau di dalam worktree yang worker buat sendiri.
   // ProcessManager dan WorktreeManager saling membutuhkan; pemegang ini memutus lingkarannya.
@@ -158,6 +161,7 @@ export async function startWorker(options: WorkerOptions): Promise<RunningWorker
     review,
     processes,
     rules,
+    setup,
     adapter,
     preview,
     terminal,
@@ -173,13 +177,19 @@ export async function startWorker(options: WorkerOptions): Promise<RunningWorker
         coordinator.start(command);
         break;
       case 'run.steer':
-        coordinator.steer(command.runId, command.text);
+        coordinator.steer(command.runId, command.text, command.mode);
         break;
       case 'run.cancel':
         coordinator.cancel(command.runId);
         break;
       case 'approval.resolve':
         void coordinator.resolveApproval(command);
+        break;
+      case 'question.answer':
+        void coordinator.answerQuestion(command);
+        break;
+      case 'queue.remove':
+        void coordinator.removeQueued(command);
         break;
       case 'review.apply':
         void coordinator
@@ -203,6 +213,7 @@ export async function startWorker(options: WorkerOptions): Promise<RunningWorker
   });
   const deps = {
     allowed,
+    setup,
     bindings,
     processes,
     link,

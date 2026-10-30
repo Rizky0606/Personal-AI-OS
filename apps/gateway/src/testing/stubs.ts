@@ -53,8 +53,17 @@ export const unusedFiles: AppDeps['files'] = {
   save: unused('files.save'), saveGenerated: unused('files.saveGenerated'), download: unused('files.download'), prepare: unused('files.prepare'),
 };
 export const unusedRuns: AppDeps['runs'] = {
-  get: unused('runs.get'), list: unused('runs.list'), events: unused('runs.events'), cancel: unused('runs.cancel'), resolveApproval: unused('runs.resolveApproval'),
-  steer: unused('runs.steer'), review: unused('runs.review'), exists: unused('runs.exists'), projectId: unused('runs.projectId'),
+  get: unused('runs.get'),
+  list: unused('runs.list'),
+  events: unused('runs.events'),
+  cancel: unused('runs.cancel'),
+  resolveApproval: unused('runs.resolveApproval'),
+  steer: unused('runs.steer'),
+  answerQuestion: unused('runs.answerQuestion'),
+  removeQueued: unused('runs.removeQueued'),
+  review: unused('runs.review'),
+  exists: unused('runs.exists'),
+  projectId: unused('runs.projectId'),
 };
 export const unusedRoles: AppDeps['roles'] = {
   list: () => [], has: () => false, get: () => undefined, registry: () => ({ roles: new Map(), skills: new Map() }), bundle: () => { throw new Error('roles.bundle tidak dipakai'); }, close: () => undefined,

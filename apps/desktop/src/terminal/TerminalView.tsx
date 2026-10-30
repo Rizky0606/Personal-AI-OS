@@ -101,8 +101,10 @@ export function TerminalView({ projectId, runId }: TerminalViewProps) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex h-8 shrink-0 items-center justify-between gap-2 px-2 text-caption text-text-3">
-        <span>{runId ? copy.terminal.scope.run : copy.terminal.scope.project}</span>
+      <div className="flex h-11 shrink-0 items-center justify-between gap-2 border-b border-border px-3">
+        <span className="rounded-full bg-surface-2 px-2.5 py-0.5 text-meta text-text-2">
+          {runId ? copy.terminal.scope.run : copy.terminal.scope.project}
+        </span>
         {terminalId ? (
           <IconButton
             label={copy.terminal.close}
@@ -115,7 +117,7 @@ export function TerminalView({ projectId, runId }: TerminalViewProps) {
         ) : null}
       </div>
       {error ? (
-        <div className="p-2">
+        <div className="p-3">
           <ErrorBanner
             message={error}
             action={
@@ -129,7 +131,7 @@ export function TerminalView({ projectId, runId }: TerminalViewProps) {
       {exited !== false ? (
         <div
           role="status"
-          className="flex shrink-0 items-center gap-3 px-2 pb-1 text-meta text-text-2"
+          className="flex shrink-0 items-center gap-3 px-3 pt-3 text-meta text-text-2"
         >
           {copy.terminal.exited(exited)}
           <Button variant="secondary" onClick={() => setAttempt((n) => n + 1)}>
@@ -141,7 +143,10 @@ export function TerminalView({ projectId, runId }: TerminalViewProps) {
         ref={host}
         role="group"
         aria-label={copy.terminal.label}
-        className={cn('min-h-0 flex-1 bg-bg px-2 pb-2', error && 'hidden')}
+        className={cn(
+          'm-3 min-h-0 flex-1 overflow-hidden rounded-panel border border-border bg-bg px-3 py-2',
+          error && 'hidden',
+        )}
       />
     </div>
   );

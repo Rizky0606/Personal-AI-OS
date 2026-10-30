@@ -1,5 +1,5 @@
 import { withAttachments } from '../preview/attachment';
-import { workerBranchFor, type RichAnswerFollowUp } from '@aios/contracts';
+import { workerBranchFor, type QueueName, type QuestionAnswer, type RichAnswerFollowUp } from '@aios/contracts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -217,7 +217,30 @@ export function useChatController(conversationId: string | undefined) {
     }
   }, [live, fail, online]);
 
-  const lastAssistant = [...messages].reverse().find((m) => m.author === 'assistant');
+  /**
+   * Mengarahkan run coding yang sedang berjalan dengan isi kolom pesan. Teks dikosongkan lebih dulu
+   * dan dikembalikan bila gagal, supaya pengetikan berikutnya tidak menunggu jaringan.
+   */
+  const steer = useCallback(
+    async (mode: 'steer' | 'followUp') => {
+      const text = draft.trim();
+      if (!live || !codingLive || !text) return;
+      if (!online) {
+        push(copy.chat.offlineSend, 'danger');
+        return;
+      }
+      setDraft('');
+      try {
+        await api.steerRun(live.runId, text, mode);
+        push(mode === 'followUp' ? copy.chat.steer.queued : copy.chat.steer.sent);
+      } catch (error) {
+        setDraft((current) => current || text);
+        fail(error, `${copy.chat.steer.failed} ${apiErrorMessage(error, online)}`);
+      }
+    },
+    [draft, live, codingLive, online, push, fail],
+  );
+
   const lastUser = [...messages].reverse().find((m) => m.author === 'user');
 
   /** Keputusan atas permintaan izin agent; status run berubah lewat event, bukan dari sini. */
@@ -233,6 +256,39 @@ export function useChatController(conversationId: string | undefined) {
         setResolving((current) => {
           const next = new Set(current);
           next.delete(approvalId);
+          return next;
+        });
+      }
+    },
+    [live, fail, online],
+  );
+
+  /** Menarik arahan dari antrean agent; daftar menyusut lewat event `queue.updated`. */
+  const removeQueued = useCallback(
+    async (queue: QueueName, text: string) => {
+      if (!live) return;
+      try {
+        await api.removeQueued(live.runId, queue, text);
+      } catch (error) {
+        fail(error, `${copy.chat.queue.removeFailed} ${apiErrorMessage(error, online)}`);
+      }
+    },
+    [live, fail, online],
+  );
+
+  /** Jawaban atas pertanyaan agent; panel hilang lewat event `question.resolved`, bukan dari sini. */
+  const answerQuestion = useCallback(
+    async (questionId: string, result: { answers: QuestionAnswer[]; cancelled: boolean }) => {
+      if (!live) return;
+      setResolving((current) => new Set(current).add(questionId));
+      try {
+        await api.answerQuestion(live.runId, questionId, result);
+      } catch (error) {
+        fail(error, `${copy.question.failed} ${apiErrorMessage(error, online)}`);
+      } finally {
+        setResolving((current) => {
+          const next = new Set(current);
+          next.delete(questionId);
           return next;
         });
       }
@@ -367,10 +423,18 @@ export function useChatController(conversationId: string | undefined) {
     resolvingApprovals: resolving,
     resolveApproval: (approvalId: string, decision: 'allow' | 'deny', remember: boolean) =>
       void resolveApproval(approvalId, decision, remember),
+    answerQuestion: (
+      questionId: string,
+      result: { answers: QuestionAnswer[]; cancelled: boolean },
+    ) => void answerQuestion(questionId, result),
     sending,
+    removeQueued: (queue: QueueName, text: string) => void removeQueued(queue, text),
     streaming,
     send: () => void send(),
     stop: () => void stop(),
+    /** Hanya run coding (omp) yang bisa diarahkan di tengah jalan; chat umum (Hermes) tidak. */
+    canSteer: codingLive,
+    steer: (mode: 'steer' | 'followUp') => void steer(mode),
     editLast,
     /** Mengirim teks tertentu (saran lanjutan) tanpa menyentuh draf. */
     sendText: (text: string) => void send(text),

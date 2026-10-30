@@ -340,7 +340,9 @@ export function createHermesAdapter(options: HermesAdapterOptions): AgentAdapter
         runId: input.runId,
         events: events(),
         steer: () => unsupported('steer'),
+        removeQueued: () => unsupported('queue'),
         resolveApproval: () => unsupported('approval'),
+        answerQuestion: () => unsupported('question'),
         cancel: () => {
           stop('cancelled');
           return Promise.resolve();

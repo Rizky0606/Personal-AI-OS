@@ -1,11 +1,11 @@
 import type { Project } from '@aios/contracts';
-import * as Dialog from '@radix-ui/react-dialog';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { apiErrorMessage } from '../api/errors';
 import { useOnline } from '../app/hooks';
 import { api, workerApi } from '../app/services';
 import { copy } from '../copy';
+import { DialogFrame } from '../screens/DialogFrame';
 import { Button } from '../ui/Button';
 import { Chip } from '../ui/Chip';
 import { ErrorBanner } from '../ui/ErrorBanner';
@@ -71,57 +71,55 @@ export function BranchDialog({ project, path, onClose }: BranchDialogProps) {
   }
 
   return (
-    <Dialog.Root open={project !== null} onOpenChange={(open) => !open && onClose()}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-40 animate-aios-fade bg-bg/60" />
-        <Dialog.Content className="fixed top-20 left-1/2 z-50 flex animate-aios-dialog w-[min(520px,calc(100vw-2rem))] -translate-x-1/2 flex-col gap-3 rounded-panel border border-border bg-surface p-4 shadow-float">
-          <Dialog.Title className="text-section font-semibold text-text">
-            {project ? b.title(project.name) : ''}
-          </Dialog.Title>
-          <Dialog.Description className="text-ui text-text-2">{b.intro}</Dialog.Description>
-          {error ? <ErrorBanner message={error} /> : null}
-          {path ? (
-            branches === null ? (
-              <p role="status" className="text-meta text-text-2">
-                {b.loading}
-              </p>
-            ) : branches.length > 0 ? (
-              <div role="group" aria-label={b.localBranches} className="flex flex-wrap gap-2">
-                {branches.map((branch) => (
-                  <Chip key={branch} selected={branch === name} onClick={() => setValue(branch)}>
-                    {branch}
-                  </Chip>
-                ))}
-              </div>
-            ) : null
-          ) : (
-            <p className="text-meta text-text-2">{b.unbound}</p>
-          )}
-          <TextField
-            label={b.label}
-            value={value}
-            disabled={saving}
-            className="font-mono"
-            onChange={(event) => setValue(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') void save();
-            }}
-          />
-          {unknown ? <p className="text-meta text-warning">{b.notLocal(name)}</p> : null}
-          <div className="flex justify-end gap-2">
-            <Button variant="ghost" disabled={saving} onClick={onClose}>
-              {copy.chat.cancel}
-            </Button>
-            <Button
-              variant="primary"
-              disabled={!online || saving || !name}
-              onClick={() => void save()}
-            >
-              {saving ? b.saving : b.save}
-            </Button>
+    <DialogFrame
+      open={project !== null}
+      onOpenChange={(open) => !open && onClose()}
+      title={project ? b.title(project.name) : ''}
+      description={b.intro}
+      footer={
+        <>
+          <Button variant="ghost" disabled={saving} onClick={onClose}>
+            {copy.chat.cancel}
+          </Button>
+          <Button
+            variant="primary"
+            disabled={!online || saving || !name}
+            onClick={() => void save()}
+          >
+            {saving ? b.saving : b.save}
+          </Button>
+        </>
+      }
+    >
+      {error ? <ErrorBanner message={error} /> : null}
+      {path ? (
+        branches === null ? (
+          <p role="status" className="text-meta text-text-2">
+            {b.loading}
+          </p>
+        ) : branches.length > 0 ? (
+          <div role="group" aria-label={b.localBranches} className="flex flex-wrap gap-2">
+            {branches.map((branch) => (
+              <Chip key={branch} selected={branch === name} onClick={() => setValue(branch)}>
+                {branch}
+              </Chip>
+            ))}
           </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+        ) : null
+      ) : (
+        <p className="text-meta text-text-2">{b.unbound}</p>
+      )}
+      <TextField
+        label={b.label}
+        value={value}
+        disabled={saving}
+        className="font-mono"
+        onChange={(event) => setValue(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') void save();
+        }}
+      />
+      {unknown ? <p className="text-meta text-warning">{b.notLocal(name)}</p> : null}
+    </DialogFrame>
   );
 }

@@ -71,12 +71,14 @@ function FileChange({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border px-2">
+      <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border px-3">
         <IconButton label={copy.git.back} onClick={onBack}>
           <ArrowLeft size={16} strokeWidth={1.5} aria-hidden="true" />
         </IconButton>
         <span className="min-w-0 flex-1 truncate font-mono text-ui text-text">{file.path}</span>
-        <span className={cn('shrink-0 rounded-badge px-1.5 text-caption', badgeTone[file.status])}>
+        <span
+          className={cn('shrink-0 rounded-full px-2 py-0.5 text-caption', badgeTone[file.status])}
+        >
           {copy.git.status[file.status]}
         </span>
       </div>
@@ -96,7 +98,7 @@ function FileChange({
           }
         >
           {query.data?.binary ? (
-            <p className="p-3 text-ui text-text-2">{copy.git.binary}</p>
+            <p className="p-4 text-ui text-text-2">{copy.git.binary}</p>
           ) : query.data?.patch ? (
             <>
               <DiffTable
@@ -115,7 +117,9 @@ function FileChange({
                 <p className="p-2 text-meta text-text-3">{copy.git.diffTruncated}</p>
               ) : null}
             </>
-          ) : null}
+          ) : (
+            <p className="p-4 text-ui text-text-2">{copy.git.noDiff}</p>
+          )}
         </StateView>
       </div>
     </div>
@@ -191,7 +195,7 @@ function GitProject({ projectId }: { projectId: string }) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border px-3">
+      <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border px-3">
         <GitBranch
           size={14}
           strokeWidth={1.5}
@@ -262,7 +266,7 @@ function GitProject({ projectId }: { projectId: string }) {
       <div className="min-h-0 flex-1 overflow-auto">
         <section
           aria-label={copy.git.commitLabel}
-          className="flex flex-col gap-2 border-b border-border p-3"
+          className="flex flex-col gap-3 border-b border-border p-4"
         >
           <TextArea
             label={copy.git.commitLabel}
@@ -303,7 +307,7 @@ function GitProject({ projectId }: { projectId: string }) {
               </Button>
             }
           >
-            <div className="flex items-center justify-between gap-2 px-3 pt-3 pb-1">
+            <div className="flex items-center justify-between gap-2 px-4 pt-4 pb-1">
               <h3 className="text-meta font-medium text-text-2">
                 {copy.git.changes(files.length)}
               </h3>
@@ -326,9 +330,12 @@ function GitProject({ projectId }: { projectId: string }) {
                 ) : null}
               </span>
             </div>
-            <ul>
+            <ul className="flex flex-col gap-0.5 px-2">
               {files.map((file) => (
-                <li key={file.path} className="group flex items-center border-b border-border">
+                <li
+                  key={file.path}
+                  className="group flex animate-aios-enter items-center rounded-control transition-colors duration-[120ms] ease-aios hover:bg-surface-2"
+                >
                   <IconButton
                     label={`${file.staged && !file.unstaged ? copy.git.unstage : copy.git.stage}: ${file.path}`}
                     disabled={actions.busy}
@@ -348,7 +355,7 @@ function GitProject({ projectId }: { projectId: string }) {
                     type="button"
                     aria-label={`${copy.git.openDiff}: ${file.path}`}
                     onClick={() => setSelected(file.path)}
-                    className="flex min-h-8 min-w-0 flex-1 items-center gap-2 py-1 pr-1 text-left transition-colors duration-[120ms] ease-aios hover:bg-surface-2"
+                    className="flex min-h-9 min-w-0 flex-1 items-center gap-2 py-1 pr-1 text-left"
                   >
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-mono text-ui text-text">
@@ -365,7 +372,7 @@ function GitProject({ projectId }: { projectId: string }) {
                     ) : null}
                     <span
                       className={cn(
-                        'shrink-0 rounded-badge px-1.5 text-caption',
+                        'shrink-0 rounded-full px-2 py-0.5 text-caption',
                         badgeTone[file.status],
                       )}
                     >
@@ -385,21 +392,21 @@ function GitProject({ projectId }: { projectId: string }) {
               ))}
             </ul>
             {data?.truncated ? (
-              <p className="px-3 py-1 text-meta text-text-3">{copy.git.truncated}</p>
+              <p className="px-4 py-1 text-meta text-text-3">{copy.git.truncated}</p>
             ) : null}
           </StateView>
         </section>
 
-        <section aria-label={copy.git.history} className="pb-3">
-          <h3 className="px-3 pt-4 pb-1 text-meta font-medium text-text-2">{copy.git.history}</h3>
+        <section aria-label={copy.git.history} className="pb-4">
+          <h3 className="px-4 pt-4 pb-2 text-meta font-medium text-text-2">{copy.git.history}</h3>
           {log.data?.commits.length === 0 ? (
-            <p className="px-3 py-1 text-ui text-text-3">{copy.git.historyEmpty}</p>
+            <p className="px-4 py-1 text-ui text-text-3">{copy.git.historyEmpty}</p>
           ) : (
-            <ul aria-label={copy.git.historyLabel}>
+            <ul aria-label={copy.git.historyLabel} className="px-2">
               {log.data?.commits.map((commit) => (
                 <li
                   key={commit.hash}
-                  className="flex items-baseline gap-2 border-b border-border px-3 py-1"
+                  className="flex animate-aios-enter items-baseline gap-2 rounded-control px-2 py-1.5 transition-colors duration-[120ms] ease-aios hover:bg-surface-2"
                 >
                   <span className="shrink-0 font-mono text-caption text-text-3">
                     {commit.shortHash}

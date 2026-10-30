@@ -5,7 +5,6 @@ import { api } from '../app/services';
 import type { Activity } from '../realtime/activity';
 import type { LiveArtifact } from '../realtime/liveRun';
 import { AgentOrb, orbStateOf } from './AgentOrb';
-import { ToolStepRow } from './ToolStepRow';
 
 export interface RunActivityProps {
   activity: Activity;

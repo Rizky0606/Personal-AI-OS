@@ -9,17 +9,16 @@ export function Skeleton({ className }: SkeletonProps) {
   return (
     <div
       aria-hidden="true"
-      className={cn('h-3 rounded-badge bg-surface-2', className)}
-      style={{ animation: 'aios-pulse var(--aios-loop-min) var(--aios-easing) infinite' }}
+      className={cn('aios-shimmer h-3 rounded-full bg-surface-2', className)}
     />
   );
 }
 
 export function SkeletonList({ rows = 5, label }: { rows?: number; label: string }) {
   return (
-    <div role="status" aria-label={label} className="flex flex-col gap-4 p-4">
+    <div role="status" aria-label={label} className="flex flex-col gap-5 p-5">
       {Array.from({ length: rows }, (_, i) => (
-        <div key={i} className="flex flex-col gap-2">
+        <div key={i} className="flex flex-col gap-2.5">
           <Skeleton className="w-full" />
           <Skeleton className="w-1/3" />
         </div>

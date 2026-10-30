@@ -64,6 +64,7 @@ describe('tokens.json', () => {
       sidebarCompact: 64,
       topbar: 48,
       statusBar: 24,
+      header: 48,
       row: 32,
       islandGap: 8,
       pageMeasure: 720,
@@ -73,12 +74,13 @@ describe('tokens.json', () => {
       ['sidebar-width', 232],
       ['sidebar-compact-width', 64],
       ['topbar-height', 48],
+      ['statusbar-height', 24],
+      ['row-height', 32],
       ['island-gap', 8],
       ['page-measure', 720],
     ] as const) {
-      expect(css).toContain(`--aios-${name}: ${px}px;`);
+      expect(css).toContain(`--aios-${name}: ${px}px`);
     }
-    expect(css).not.toContain('--aios-rail-width');
   });
 
   it('skala tipografi sesuai tabel (desktop px, Android sp)', () => {

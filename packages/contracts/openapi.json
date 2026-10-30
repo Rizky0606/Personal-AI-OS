@@ -389,6 +389,262 @@
               "type": {
                 "type": "string",
                 "enum": [
+                  "todo.updated"
+                ]
+              },
+              "phases": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "maxLength": 80
+                    },
+                    "tasks": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "content": {
+                            "type": "string",
+                            "maxLength": 200
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "pending",
+                              "in_progress",
+                              "completed",
+                              "abandoned",
+                              "blocked"
+                            ]
+                          },
+                          "blocker": {
+                            "type": "string",
+                            "maxLength": 200
+                          }
+                        },
+                        "required": [
+                          "content",
+                          "status"
+                        ]
+                      },
+                      "maxItems": 30
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "tasks"
+                  ]
+                },
+                "maxItems": 12
+              }
+            },
+            "required": [
+              "type",
+              "phases"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "queue.updated"
+                ]
+              },
+              "steering": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "maxLength": 500
+                },
+                "maxItems": 20
+              },
+              "followUp": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "maxLength": 500
+                },
+                "maxItems": 20
+              }
+            },
+            "required": [
+              "type",
+              "steering",
+              "followUp"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "subagent.updated"
+                ]
+              },
+              "subagentId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80
+              },
+              "agent": {
+                "type": "string",
+                "maxLength": 80
+              },
+              "assignment": {
+                "type": "string",
+                "maxLength": 300
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "running",
+                  "completed",
+                  "failed",
+                  "aborted"
+                ]
+              },
+              "toolCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "durationMs": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "tokens": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "lastOutput": {
+                "type": "string",
+                "maxLength": 300
+              },
+              "parentToolCallId": {
+                "type": "string",
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "type",
+              "subagentId",
+              "agent",
+              "assignment",
+              "status",
+              "toolCount",
+              "durationMs",
+              "tokens"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "question.asked"
+                ]
+              },
+              "questionId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "questions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 80
+                    },
+                    "question": {
+                      "type": "string",
+                      "maxLength": 1000
+                    },
+                    "header": {
+                      "type": "string",
+                      "maxLength": 100
+                    },
+                    "options": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "label": {
+                            "type": "string",
+                            "maxLength": 200
+                          },
+                          "description": {
+                            "type": "string",
+                            "maxLength": 500
+                          }
+                        },
+                        "required": [
+                          "label"
+                        ]
+                      },
+                      "maxItems": 12
+                    },
+                    "multi": {
+                      "type": "boolean"
+                    },
+                    "recommended": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "question",
+                    "options"
+                  ]
+                },
+                "minItems": 1,
+                "maxItems": 8
+              }
+            },
+            "required": [
+              "type",
+              "questionId",
+              "questions"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "question.resolved"
+                ]
+              },
+              "questionId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "cancelled": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "type",
+              "questionId",
+              "cancelled"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
                   "preview.ready"
                 ]
               },
@@ -1205,6 +1461,262 @@
               "type": {
                 "type": "string",
                 "enum": [
+                  "todo.updated"
+                ]
+              },
+              "phases": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "maxLength": 80
+                    },
+                    "tasks": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "content": {
+                            "type": "string",
+                            "maxLength": 200
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "pending",
+                              "in_progress",
+                              "completed",
+                              "abandoned",
+                              "blocked"
+                            ]
+                          },
+                          "blocker": {
+                            "type": "string",
+                            "maxLength": 200
+                          }
+                        },
+                        "required": [
+                          "content",
+                          "status"
+                        ]
+                      },
+                      "maxItems": 30
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "tasks"
+                  ]
+                },
+                "maxItems": 12
+              }
+            },
+            "required": [
+              "type",
+              "phases"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "queue.updated"
+                ]
+              },
+              "steering": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "maxLength": 500
+                },
+                "maxItems": 20
+              },
+              "followUp": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "maxLength": 500
+                },
+                "maxItems": 20
+              }
+            },
+            "required": [
+              "type",
+              "steering",
+              "followUp"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "subagent.updated"
+                ]
+              },
+              "subagentId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80
+              },
+              "agent": {
+                "type": "string",
+                "maxLength": 80
+              },
+              "assignment": {
+                "type": "string",
+                "maxLength": 300
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "running",
+                  "completed",
+                  "failed",
+                  "aborted"
+                ]
+              },
+              "toolCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "durationMs": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "tokens": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "lastOutput": {
+                "type": "string",
+                "maxLength": 300
+              },
+              "parentToolCallId": {
+                "type": "string",
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "type",
+              "subagentId",
+              "agent",
+              "assignment",
+              "status",
+              "toolCount",
+              "durationMs",
+              "tokens"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "question.asked"
+                ]
+              },
+              "questionId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "questions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 80
+                    },
+                    "question": {
+                      "type": "string",
+                      "maxLength": 1000
+                    },
+                    "header": {
+                      "type": "string",
+                      "maxLength": 100
+                    },
+                    "options": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "label": {
+                            "type": "string",
+                            "maxLength": 200
+                          },
+                          "description": {
+                            "type": "string",
+                            "maxLength": 500
+                          }
+                        },
+                        "required": [
+                          "label"
+                        ]
+                      },
+                      "maxItems": 12
+                    },
+                    "multi": {
+                      "type": "boolean"
+                    },
+                    "recommended": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "question",
+                    "options"
+                  ]
+                },
+                "minItems": 1,
+                "maxItems": 8
+              }
+            },
+            "required": [
+              "type",
+              "questionId",
+              "questions"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "question.resolved"
+                ]
+              },
+              "questionId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "cancelled": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "type",
+              "questionId",
+              "cancelled"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
                   "preview.ready"
                 ]
               },
@@ -1848,6 +2360,13 @@
               "text": {
                 "type": "string",
                 "minLength": 1
+              },
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "steer",
+                  "followUp"
+                ]
               }
             },
             "required": [
@@ -1909,6 +2428,98 @@
               "approvalId",
               "decision",
               "remember"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "question.answer"
+                ]
+              },
+              "runId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "questionId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "answers": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 80
+                    },
+                    "selectedOptions": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "maxLength": 200
+                      },
+                      "maxItems": 12
+                    },
+                    "customInput": {
+                      "type": "string",
+                      "maxLength": 2000
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "selectedOptions"
+                  ]
+                },
+                "maxItems": 8
+              },
+              "cancelled": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "type",
+              "runId",
+              "questionId",
+              "answers",
+              "cancelled"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "queue.remove"
+                ]
+              },
+              "runId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "queue": {
+                "type": "string",
+                "enum": [
+                  "steering",
+                  "followUp"
+                ]
+              },
+              "text": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              }
+            },
+            "required": [
+              "type",
+              "runId",
+              "queue",
+              "text"
             ]
           },
           {
@@ -3563,6 +4174,13 @@
           "text": {
             "type": "string",
             "minLength": 1
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "steer",
+              "followUp"
+            ]
           }
         },
         "required": [
@@ -3638,6 +4256,67 @@
         },
         "required": [
           "decision"
+        ]
+      },
+      "QuestionAnswerRequest": {
+        "type": "object",
+        "properties": {
+          "answers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 80
+                },
+                "selectedOptions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "maxItems": 12
+                },
+                "customInput": {
+                  "type": "string",
+                  "maxLength": 2000
+                }
+              },
+              "required": [
+                "id",
+                "selectedOptions"
+              ]
+            },
+            "maxItems": 8,
+            "default": []
+          },
+          "cancelled": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "RemoveQueuedRequest": {
+        "type": "object",
+        "properties": {
+          "queue": {
+            "type": "string",
+            "enum": [
+              "steering",
+              "followUp"
+            ]
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "queue",
+          "text"
         ]
       },
       "ReviewResponse": {
@@ -8118,6 +8797,213 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Permintaan tidak valid",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Belum login atau token tidak berlaku",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token tidak punya scope yang dibutuhkan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tidak ditemukan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Konflik dengan status saat ini",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/runs/{id}/questions/{questionId}": {
+      "post": {
+        "operationId": "answerQuestion",
+        "tags": [
+          "Run"
+        ],
+        "summary": "Jawab pertanyaan agent",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "questionId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuestionAnswerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Berhasil, tanpa isi"
+          },
+          "400": {
+            "description": "Permintaan tidak valid",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Belum login atau token tidak berlaku",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token tidak punya scope yang dibutuhkan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tidak ditemukan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Konflik dengan status saat ini",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/runs/{id}/queue/remove": {
+      "post": {
+        "operationId": "removeQueuedMessage",
+        "tags": [
+          "Run"
+        ],
+        "summary": "Tarik arahan dari antrean agent",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RemoveQueuedRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Berhasil, tanpa isi"
           },
           "400": {
             "description": "Permintaan tidak valid",

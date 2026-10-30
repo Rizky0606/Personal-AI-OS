@@ -45,8 +45,8 @@ export function UpdateSection() {
   else if (result?.kind === 'available') message = text.available(result.version);
 
   return (
-    <section aria-labelledby="settings-update" className="flex flex-col gap-2">
-      <h3 id="settings-update" className="text-ui font-semibold text-text">
+    <section aria-labelledby="settings-update" className="flex flex-col gap-3">
+      <h3 id="settings-update" className="text-section font-semibold text-text">
         {text.title}
       </h3>
       <div className="flex items-center gap-3">

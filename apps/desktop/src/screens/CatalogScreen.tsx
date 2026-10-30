@@ -5,12 +5,12 @@ import { Plus } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { copy } from '../copy';
 import { Button, type ButtonVariant } from '../ui/Button';
+import { Page, PageHeader } from './PageLayout';
 import { Chip } from '../ui/Chip';
 import { EmptyState } from '../ui/EmptyState';
 import { ErrorBanner } from '../ui/ErrorBanner';
 import { IconButton } from '../ui/IconButton';
 import { ListItem } from '../ui/ListItem';
-import { PageContainer } from '../ui/PageContainer';
 import { SkeletonList } from '../ui/Skeleton';
 import { StateView, type ViewState } from '../ui/StateView';
 import { TextField } from '../ui/TextField';
@@ -74,7 +74,11 @@ export function CatalogScreen() {
   const [view, setView] = useState<ViewState>('empty');
   const [text, setText] = useState('');
   return (
-    <PageContainer>
+    <Page width="md">
+      <PageHeader
+        title="Katalog komponen"
+        description="Komponen dasar beserta keadaannya untuk review visual."
+      />
       <Section title="Warna">
         <div className="grid grid-cols-7 gap-2">
           {TOKENS.map((token) => (
@@ -213,6 +217,6 @@ export function CatalogScreen() {
           <Button onClick={() => push('Gagal menyimpan. Coba lagi.', 'danger')}>Toast error</Button>
         </div>
       </Section>
-    </PageContainer>
+    </Page>
   );
 }

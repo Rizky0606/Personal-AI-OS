@@ -1,6 +1,13 @@
 package app.aios.android.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
+import app.aios.android.ui.components.Hairline
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -47,53 +54,70 @@ fun SettingsScreen(
             // Sesi belum terbaca dari penyimpanan: kerangka berkilau, bukan baris kosong.
             SkeletonList(rows = DEVICE_SKELETON_ROWS)
         } else {
-            AiosListItem(
-                title = stringResource(R.string.settings_device_name),
-                trailing = current.deviceName
-            )
-            AiosListItem(
-                title = stringResource(R.string.settings_device_id),
-                trailing = current.deviceId.take(DEVICE_ID_PREVIEW)
-            )
-            AiosListItem(
-                title = stringResource(R.string.settings_server),
-                trailing = current.serverUrl
-            )
+            Group {
+                AiosListItem(
+                    title = stringResource(R.string.settings_device_name),
+                    trailing = current.deviceName
+                )
+                AiosListItem(
+                    title = stringResource(R.string.settings_device_id),
+                    trailing = current.deviceId.take(DEVICE_ID_PREVIEW)
+                )
+                AiosListItem(
+                    title = stringResource(R.string.settings_server),
+                    trailing = current.serverUrl
+                )
+                AiosListItem(
+                    title = stringResource(R.string.settings_app_version),
+                    trailing = BuildConfig.VERSION_NAME,
+                    showDivider = false
+                )
+            }
         }
-        AiosListItem(
-            title = stringResource(R.string.settings_app_version),
-            trailing = BuildConfig.VERSION_NAME
-        )
 
         Section(R.string.memory_title)
-        AiosListItem(
-            title = stringResource(R.string.memory_settings_item),
-            supporting = stringResource(R.string.memory_settings_supporting),
-            onClick = onOpenMemory
-        )
+        Group {
+            AiosListItem(
+                title = stringResource(R.string.memory_settings_item),
+                supporting = stringResource(R.string.memory_settings_supporting),
+                showDivider = false,
+                onClick = onOpenMemory
+            )
+        }
 
         Section(R.string.assistant_section)
         val context = LocalContext.current
-        AiosListItem(
-            title = stringResource(R.string.assistant_item),
-            supporting = stringResource(R.string.assistant_supporting),
-            onClick = {
-                // Peran asisten tidak bisa diminta lewat dialog; pemilik memilihnya di Aplikasi default.
-                runCatching { context.startActivity(Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)) }
-            }
-        )
+        Group {
+            AiosListItem(
+                title = stringResource(R.string.assistant_item),
+                supporting = stringResource(R.string.assistant_supporting),
+                showDivider = false,
+                onClick = {
+                    // Peran asisten tidak bisa diminta lewat dialog; pemilik memilihnya di Aplikasi default.
+                    runCatching { context.startActivity(Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)) }
+                }
+            )
+        }
 
         Section(R.string.settings_theme_section)
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = Tokens.Space.s16, vertical = Tokens.Space.s8),
-            horizontalArrangement = Arrangement.spacedBy(Tokens.Space.s8)
-        ) {
-            ThemeChip(
-                R.string.settings_theme_system,
-                theme == ThemeMode.System
-            ) { viewModel.setTheme(ThemeMode.System) }
-            ThemeChip(R.string.settings_theme_light, theme == ThemeMode.Light) { viewModel.setTheme(ThemeMode.Light) }
-            ThemeChip(R.string.settings_theme_dark, theme == ThemeMode.Dark) { viewModel.setTheme(ThemeMode.Dark) }
+        Group {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(Tokens.Space.s12),
+                horizontalArrangement = Arrangement.spacedBy(Tokens.Space.s8)
+            ) {
+                ThemeChip(
+                    R.string.settings_theme_system,
+                    theme == ThemeMode.System
+                ) { viewModel.setTheme(ThemeMode.System) }
+                ThemeChip(
+                    R.string.settings_theme_light,
+                    theme == ThemeMode.Light
+                ) { viewModel.setTheme(ThemeMode.Light) }
+                ThemeChip(
+                    R.string.settings_theme_dark,
+                    theme == ThemeMode.Dark
+                ) { viewModel.setTheme(ThemeMode.Dark) }
+            }
         }
 
         Section(R.string.settings_account_section)
@@ -109,7 +133,13 @@ fun SettingsScreen(
 
         if (DebugFeatures.ENABLED) {
             Section(R.string.settings_debug_section)
-            AiosListItem(title = stringResource(R.string.settings_debug_catalog), onClick = onOpenCatalog)
+            Group {
+                AiosListItem(
+                    title = stringResource(R.string.settings_debug_catalog),
+                    showDivider = false,
+                    onClick = onOpenCatalog
+                )
+            }
         }
     }
 }
@@ -121,9 +151,25 @@ private const val DEVICE_SKELETON_ROWS = 3
 private fun Section(titleRes: Int) {
     Text(
         text = stringResource(titleRes),
-        style = AiosTheme.type.section,
-        color = AiosTheme.colors.text,
-        modifier = Modifier.padding(start = Tokens.Space.s16, end = Tokens.Space.s16, top = Tokens.Space.s24)
+        style = AiosTheme.type.meta.copy(fontWeight = FontWeight.SemiBold),
+        color = AiosTheme.colors.text2,
+        modifier = Modifier.padding(start = Tokens.Space.s24, end = Tokens.Space.s16, top = Tokens.Space.s24)
+    )
+}
+
+/** Kelompok pengaturan: kartu `surface` radius md dengan garis halus; baris di dalamnya memakai pemisah. */
+@Composable
+private fun Group(content: @Composable ColumnScope.() -> Unit) {
+    val colors = AiosTheme.colors
+    val shape = RoundedCornerShape(Tokens.Radius.md)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Tokens.Space.s16, vertical = Tokens.Space.s8)
+            .clip(shape)
+            .background(colors.surface, shape)
+            .border(Hairline, colors.border, shape),
+        content = content
     )
 }
 

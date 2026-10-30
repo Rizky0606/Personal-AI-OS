@@ -1,4 +1,4 @@
-import type { Message } from '@aios/contracts';
+import type { Message, QuestionAnswer } from '@aios/contracts';
 import type { RoleInfo } from '../api/gateway';
 import { useLayoutEffect, useRef, useState, type ComponentProps } from 'react';
 import { copy } from '../copy';
@@ -8,6 +8,7 @@ import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { ErrorBanner } from '../ui/ErrorBanner';
 import { RememberDialog } from '../memory/RememberDialog';
 import { ApprovalPanel } from './ApprovalPanel';
+import { QuestionPanel } from './QuestionPanel';
 import { AssistantMessage, type AssistantPart } from './AssistantMessage';
 import { HandoffNote, isHandoffNote } from './HandoffNote';
 import { messageText } from './messageData';
@@ -36,6 +37,11 @@ export interface MessageListProps {
   approvals: PendingApproval[];
   resolvingApprovals: ReadonlySet<string>;
   onResolveApproval: (approvalId: string, decision: 'allow' | 'deny', remember: boolean) => void;
+  /** Jawaban atas pertanyaan agent (id pertanyaan dipakai juga di `resolvingApprovals` selama terkirim). */
+  onAnswerQuestion?: (
+    questionId: string,
+    result: { answers: QuestionAnswer[]; cancelled: boolean },
+  ) => void;
   hasMore: boolean;
   loadingOlder: boolean;
   onLoadOlder: () => void;
@@ -90,6 +96,7 @@ export function MessageList({
   approvals,
   resolvingApprovals,
   onResolveApproval,
+  onAnswerQuestion,
   hasMore,
   loadingOlder,
   onLoadOlder,
@@ -130,7 +137,7 @@ export function MessageList({
       }}
       className="min-h-0 flex-1 overflow-y-auto"
     >
-      <div className="mx-auto flex max-w-[calc(72ch+4rem)] flex-col gap-6 px-8 py-6">
+      <div className="mx-auto flex max-w-[calc(var(--aios-chat-measure)+6.5rem)] flex-col gap-8 px-8 py-8">
         {hasMore ? (
           <Button
             variant="ghost"
@@ -185,7 +192,7 @@ export function MessageList({
               streaming={streaming}
             />
             {streaming && !live.text ? (
-              <p role="status" className="text-meta text-text-2">
+              <p role="status" className="pl-10 text-meta text-text-2">
                 {copy.runStatus[live.status]}…
               </p>
             ) : null}
@@ -201,6 +208,16 @@ export function MessageList({
             }
           />
         ))}
+        {onAnswerQuestion
+          ? (live?.questions ?? []).map((pending) => (
+              <QuestionPanel
+                key={pending.questionId}
+                questions={pending.questions}
+                busy={resolvingApprovals.has(pending.questionId)}
+                onSubmit={(result) => onAnswerQuestion(pending.questionId, result)}
+              />
+            ))
+          : null}
         {failure !== null ? (
           <ErrorBanner
             message={failure ? `${copy.chat.runFailed} ${failure}` : copy.chat.runFailed}

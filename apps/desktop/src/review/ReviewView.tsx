@@ -93,7 +93,7 @@ export function ReviewView({ runId }: { runId: string }) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="flex flex-col gap-2 border-b border-border p-3">
+      <header className="flex flex-col gap-3 border-b border-border p-4">
         <div className="flex items-baseline gap-2">
           <h2 className="text-section font-semibold text-text">{copy.review.title}</h2>
           {state ? (
@@ -144,19 +144,21 @@ export function ReviewView({ runId }: { runId: string }) {
       </header>
 
       <Tabs.Root defaultValue="changes" className="flex min-h-0 flex-1 flex-col">
-        <Tabs.List className="flex h-9 shrink-0 gap-1 border-b border-border px-2">
-          {(['changes', 'checkpoints'] as const).map((id) => (
-            <Tabs.Trigger
-              key={id}
-              value={id}
-              className="h-8 border-b-2 border-transparent px-3 text-ui text-text-2 hover:text-text data-[state=active]:border-accent data-[state=active]:text-text"
-            >
-              {tab[id]}
-              {id === 'checkpoints' && state ? ` (${state.checkpoints.length})` : ''}
-            </Tabs.Trigger>
-          ))}
-        </Tabs.List>
-        <Tabs.Content value="changes" className="min-h-0 flex-1 overflow-auto">
+        <div className="shrink-0 border-b border-border px-4 py-2">
+          <Tabs.List className="inline-flex items-center gap-0.5 rounded-full bg-surface-2 p-1">
+            {(['changes', 'checkpoints'] as const).map((id) => (
+              <Tabs.Trigger
+                key={id}
+                value={id}
+                className="h-7 rounded-full border border-transparent px-3 text-ui text-text-2 transition duration-[180ms] ease-aios hover:text-text data-[state=active]:border-border data-[state=active]:bg-surface data-[state=active]:text-text data-[state=active]:shadow-lift"
+              >
+                {tab[id]}
+                {id === 'checkpoints' && state ? ` (${state.checkpoints.length})` : ''}
+              </Tabs.Trigger>
+            ))}
+          </Tabs.List>
+        </div>
+        <Tabs.Content value="changes" className="min-h-0 flex-1 animate-aios-fade overflow-auto">
           <StateView
             state={viewState}
             loadingLabel={copy.review.loading}
@@ -172,7 +174,7 @@ export function ReviewView({ runId }: { runId: string }) {
             onRetry={refresh}
           >
             {state ? (
-              <div className="flex flex-col gap-3 p-3">
+              <div className="flex flex-col gap-4 p-4">
                 <OpinionPanel
                   files={state.files}
                   disabled={busy}
@@ -210,7 +212,10 @@ export function ReviewView({ runId }: { runId: string }) {
             ) : null}
           </StateView>
         </Tabs.Content>
-        <Tabs.Content value="checkpoints" className="min-h-0 flex-1 overflow-auto">
+        <Tabs.Content
+          value="checkpoints"
+          className="min-h-0 flex-1 animate-aios-fade overflow-auto"
+        >
           {state ? (
             <CheckpointList
               checkpoints={state.checkpoints}

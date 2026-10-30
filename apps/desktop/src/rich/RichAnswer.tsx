@@ -10,12 +10,12 @@ const toneClass: Record<string, string> = {
   danger: 'border-danger/40 bg-danger/10 text-text',
 };
 
-type Props = {
+interface Props {
   value?: RichAnswer;
   blockId: string;
   readOnly: boolean;
   onFollowUp?: (value: RichAnswerFollowUp) => void;
-};
+}
 
 const send = (props: Props, componentId: string, action: RichAnswerFollowUp['action'], value: RichAnswerFollowUp['value']) => {
   if (!props.readOnly) props.onFollowUp?.({ blockId: props.blockId, componentId, action, value });
@@ -77,7 +77,7 @@ function Component({ component, props }: { component: RichComponent; props: Prop
 
 function Checklist({ component, props }: { component: Extract<RichComponent, { type: 'checklist' }>; props: Props }) {
   const [checked, setChecked] = useState(() => new Set(component.items.filter((i) => i.checked).map((i) => i.id)));
-  return <fieldset className="flex flex-col gap-2"><legend className="font-semibold">{component.label}</legend>{component.items.map((item) => <label key={item.id} className="flex items-center gap-2"><input type="checkbox" checked={checked.has(item.id)} disabled={props.readOnly} onChange={(e) => { const next = new Set(checked); e.currentTarget.checked ? next.add(item.id) : next.delete(item.id); setChecked(next); send(props, component.id, 'checklist', [...next]); }} />{item.label}</label>)}</fieldset>;
+  return <fieldset className="flex flex-col gap-2"><legend className="font-semibold">{component.label}</legend>{component.items.map((item) => <label key={item.id} className="flex items-center gap-2"><input type="checkbox" checked={checked.has(item.id)} disabled={props.readOnly} onChange={(e) => { const next = new Set(checked); if (e.currentTarget.checked) next.add(item.id); else next.delete(item.id); setChecked(next); send(props, component.id, 'checklist', [...next]); }} />{item.label}</label>)}</fieldset>;
 }
 
 function Choices({ component, props }: { component: Extract<RichComponent, { type: 'choices' }>; props: Props }) {

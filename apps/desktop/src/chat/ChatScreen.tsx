@@ -11,6 +11,7 @@ import { useUiStore } from '../state/uiStore';
 import { ErrorBanner } from '../ui/ErrorBanner';
 import { Button } from '../ui/Button';
 import { StateView, type ViewState } from '../ui/StateView';
+import { AgentHud } from './AgentHud';
 import { ChatWelcome } from './ChatWelcome';
 import { Composer } from './Composer';
 import { MessageList } from './MessageList';
@@ -35,6 +36,12 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
     setAgentSteps(steps);
     return () => setAgentSteps([]);
   }, [steps, setAgentSteps]);
+  const setAgentSubagents = useUiStore((s) => s.setAgentSubagents);
+  const subagents = chat.live?.subagents;
+  useEffect(() => {
+    setAgentSubagents(subagents ?? []);
+    return () => setAgentSubagents([]);
+  }, [subagents, setAgentSubagents]);
 
   const hasContent = chat.messages.length > 0 || chat.pending !== null || chat.live !== undefined;
   const view: ViewState =
@@ -117,6 +124,7 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
               approvals={chat.approvals}
               resolvingApprovals={chat.resolvingApprovals}
               onResolveApproval={chat.resolveApproval}
+              onAnswerQuestion={chat.answerQuestion}
               hasMore={chat.hasMore}
               loadingOlder={chat.loadingOlder}
               onLoadOlder={chat.loadOlder}
@@ -141,11 +149,13 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
       {chat.awaitingPlanApproval ? (
         <PlanBanner onApprove={chat.approvePlan} disabled={chat.sending || !chat.online} />
       ) : null}
+      <AgentHud live={chat.live} onRemoveQueued={chat.removeQueued} />
       <Composer
         draft={chat.draft}
         onDraft={chat.setDraft}
         onSend={chat.send}
         onStop={chat.stop}
+        onSteer={chat.canSteer ? chat.steer : undefined}
         streaming={chat.streaming}
         phase={chat.live ? orbStateOf(buildActivity(chat.live, now).phase) : undefined}
         sending={chat.sending}

@@ -10,7 +10,7 @@ import { taskErrorMessage } from './errors';
 import { useUiStore } from '../state/uiStore';
 import { Button } from '../ui/Button';
 import { EmptyState } from '../ui/EmptyState';
-import { PageHeader } from '../ui/PageHeader';
+import { PageHeader } from '../screens/PageLayout';
 import { StateView, type ViewState } from '../ui/StateView';
 import { useToastStore } from '../ui/Toaster';
 import { useProjects } from '../worker/hooks';
@@ -31,7 +31,7 @@ export function KanbanScreen() {
   if (!projectId || (projects.isSuccess && !project)) {
     return (
       <div className="flex flex-col">
-        <PageHeader title={copy.kanban.title} />
+        <PageHeader className="px-6 pt-6 pb-4" title={copy.kanban.title} />
         <EmptyState
           message={copy.kanban.noProject}
           action={
@@ -89,9 +89,15 @@ function Board({ projectId, projectName }: { projectId: string; projectName: str
   return (
     <div className="flex h-full min-h-0 flex-col">
       <PageHeader
+        className="shrink-0 px-6 pt-6 pb-4"
         title={projectName ? `${copy.kanban.title} · ${projectName}` : copy.kanban.title}
-        secondary={breakdownButton}
-        primary={newButton}
+        description={copy.kanban.description}
+        actions={
+          <>
+            {breakdownButton}
+            {newButton}
+          </>
+        }
       />
       <StateView
         state={view}

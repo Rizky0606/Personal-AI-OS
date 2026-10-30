@@ -7,12 +7,15 @@ import { useOnline } from '../app/hooks';
 import { copy } from '../copy';
 import { cn } from '../lib/cn';
 import { formatDateTime } from '../lib/time';
+import { enterDelay, Page, PageHeader } from '../screens/PageLayout';
 import { Button } from '../ui/Button';
 import { EmptyState } from '../ui/EmptyState';
 import { PageContainer } from '../ui/PageContainer';
 import { StateView, type ViewState } from '../ui/StateView';
 import { Switch } from '../ui/Switch';
 import { useScheduleActions } from './useScheduleActions';
+
+const runHeaderClass = 'px-4 py-3 text-left text-meta font-medium text-text-3';
 
 const statusTone = {
   running: 'text-accent',
@@ -44,17 +47,23 @@ export function ScheduleDetailScreen({ scheduleId }: { scheduleId: string }) {
         ? 'content'
         : 'empty';
 
+  const backLink = (
+    <Link
+      to="/schedules"
+      className="flex w-fit items-center gap-1 rounded-control text-ui text-text-2 hover:text-text"
+    >
+      <ArrowLeft size={14} strokeWidth={1.5} aria-hidden="true" />
+      {d.back}
+    </Link>
+  );
+
   return (
-    <div className="flex flex-col">
-      <div className="flex h-12 items-center border-b border-border px-4">
-        <Link
-          to="/schedules"
-          className="flex items-center gap-1 rounded-control text-ui text-text-2 hover:text-text"
-        >
-          <ArrowLeft size={14} strokeWidth={1.5} aria-hidden="true" />
-          {d.back}
-        </Link>
-      </div>
+    <Page width="md">
+      <PageHeader
+        back={backLink}
+        title={schedule ? schedule.name : copy.schedules.title}
+        {...(schedule ? { description: `${schedule.cron} · ${schedule.timezone}` } : {})}
+      />
       <StateView
         state={view}
         loadingLabel={copy.schedules.loading}
@@ -71,11 +80,8 @@ export function ScheduleDetailScreen({ scheduleId }: { scheduleId: string }) {
       >
         {schedule ? (
           <PageContainer>
-            <header className="flex flex-col gap-2">
-              <h2 className="text-section font-semibold text-text">{schedule.name}</h2>
-              <p className="font-mono text-meta text-text-2">
-                {schedule.cron} · {schedule.timezone}
-              </p>
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-2">
               <p className="text-ui text-text-2">
                 {copy.schedules.targets[schedule.target]}
                 {schedule.agentRole ? ` · ${schedule.agentRole}` : ''}
@@ -89,9 +95,9 @@ export function ScheduleDetailScreen({ scheduleId }: { scheduleId: string }) {
                   ? formatDateTime(schedule.nextRunAt, schedule.timezone)
                   : copy.schedules.never}
               </p>
-            </header>
+            </div>
 
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3 rounded-panel border border-border bg-surface p-4">
               <Switch
                 checked={schedule.enabled}
                 disabled={busy === `toggle:${schedule.id}`}
@@ -153,8 +159,8 @@ export function ScheduleDetailScreen({ scheduleId }: { scheduleId: string }) {
               </span>
             </div>
 
-            <section className="flex flex-col gap-2">
-              <h3 className="text-chat font-semibold text-text">{d.history}</h3>
+            <section className="flex flex-col gap-3">
+              <h3 className="text-section font-semibold text-text">{d.history}</h3>
               {runsQuery.isPending ? (
                 <p role="status" className="text-ui text-text-2">
                   {copy.states.loading}
@@ -177,52 +183,51 @@ export function ScheduleDetailScreen({ scheduleId }: { scheduleId: string }) {
                   }
                 />
               ) : (
-                <table aria-label={d.history} className="w-full border-collapse">
-                  <thead>
-                    <tr>
-                      <th
-                        scope="col"
-                        className="border-b border-border-strong px-3 py-2 text-left text-meta font-medium text-text-2"
-                      >
-                        {d.started}
-                      </th>
-                      <th
-                        scope="col"
-                        className="border-b border-border-strong px-3 py-2 text-left text-meta font-medium text-text-2"
-                      >
-                        {d.finished}
-                      </th>
-                      <th
-                        scope="col"
-                        className="border-b border-border-strong px-3 py-2 text-left text-meta font-medium text-text-2"
-                      >
-                        {copy.schedules.columns.status}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {runs.map((run) => (
-                      <tr key={run.id}>
-                        <td className="border-b border-border px-3 py-1 text-ui">
-                          {formatDateTime(run.startedAt, schedule.timezone)}
-                        </td>
-                        <td className="border-b border-border px-3 py-1 text-ui text-text-2">
-                          {run.finishedAt ? formatDateTime(run.finishedAt, schedule.timezone) : '-'}
-                        </td>
-                        <td
-                          className={cn(
-                            'border-b border-border px-3 py-1 text-ui',
-                            run.changed === false ? 'text-text-2' : statusTone[run.status],
-                          )}
-                        >
-                          {run.changed === false
-                            ? copy.schedules.unchanged
-                            : copy.schedules.runStatus[run.status]}
-                        </td>
+                <div className="overflow-hidden rounded-panel border border-border bg-surface">
+                  <table aria-label={d.history} className="w-full border-collapse">
+                    <thead className="bg-surface-2">
+                      <tr>
+                        <th scope="col" className={runHeaderClass}>
+                          {d.started}
+                        </th>
+                        <th scope="col" className={runHeaderClass}>
+                          {d.finished}
+                        </th>
+                        <th scope="col" className={runHeaderClass}>
+                          {copy.schedules.columns.status}
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {runs.map((run, index) => (
+                        <tr
+                          key={run.id}
+                          style={enterDelay(index)}
+                          className="animate-aios-enter transition-colors duration-[120ms] ease-aios hover:bg-surface-2"
+                        >
+                          <td className="px-4 py-3 text-ui">
+                            {formatDateTime(run.startedAt, schedule.timezone)}
+                          </td>
+                          <td className="px-4 py-3 text-ui text-text-2">
+                            {run.finishedAt
+                              ? formatDateTime(run.finishedAt, schedule.timezone)
+                              : '-'}
+                          </td>
+                          <td
+                            className={cn(
+                              'px-4 py-3 text-ui',
+                              run.changed === false ? 'text-text-2' : statusTone[run.status],
+                            )}
+                          >
+                            {run.changed === false
+                              ? copy.schedules.unchanged
+                              : copy.schedules.runStatus[run.status]}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
               {runsQuery.hasNextPage ? (
                 <div>
@@ -236,9 +241,10 @@ export function ScheduleDetailScreen({ scheduleId }: { scheduleId: string }) {
                 </div>
               ) : null}
             </section>
+          </div>
           </PageContainer>
         ) : null}
       </StateView>
-    </div>
+    </Page>
   );
 }

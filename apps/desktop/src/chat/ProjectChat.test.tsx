@@ -12,7 +12,7 @@ import { renderScreen } from '../test/render';
 vi.mock('../app/services', async () => (await import('../test/fakeServices')).fakeServices);
 
 const { ChatScreen } = await import('./ChatScreen');
-const { StatusBar } = await import('../shell/StatusBar');
+const { Header } = await import('../shell/Header');
 
 const PROJECT = '0192f0c4-7a1b-7c2d-a001-4a5b6c7d8e91';
 const APPROVAL = '0192f0c4-7a1b-7c2d-a003-4a5b6c7d8e93';
@@ -409,7 +409,9 @@ describe('panel izin inline', () => {
   });
 });
 
-describe('status bar: project dan branch', () => {
+describe('header: project dan branch', () => {
+  const crumb = () => screen.getByRole('group', { name: copy.shell.location });
+
   it('menampilkan project dan branch bawaan; saat run coding berjalan, branch kerja agent', async () => {
     useUiStore.getState().setActiveProject(PROJECT);
     api.listMessages.mockResolvedValue(
@@ -419,10 +421,11 @@ describe('status bar: project dan branch', () => {
     await renderScreen(
       <>
         <ChatScreen conversationId={CONV} />
-        <StatusBar />
+        <Header title={copy.nav.chat} />
       </>,
     );
-    expect(await screen.findByText('Toko Online · main')).toBeInTheDocument();
+    expect(await within(crumb()).findByText('Toko Online')).toBeInTheDocument();
+    expect(within(crumb()).getByText('main')).toBeInTheDocument();
     await waitFor(() => expect(runs.get(RUN_X)).toBeDefined());
 
     act(() => {
@@ -434,13 +437,14 @@ describe('status bar: project dan branch', () => {
       });
       emit(`run:${RUN_X}`, { type: 'run.status', status: 'running' });
     });
-    expect(await screen.findByText(`Toko Online · ${workerBranchFor(RUN_X)}`)).toBeInTheDocument();
+    expect(await within(crumb()).findByText(workerBranchFor(RUN_X))).toBeInTheDocument();
+    expect(within(crumb()).getByText('Toko Online')).toBeInTheDocument();
 
     act(() => emit(`run:${RUN_X}`, { type: 'run.status', status: 'needs_review' }));
-    expect(await screen.findByText('Toko Online · main')).toBeInTheDocument();
+    expect(await within(crumb()).findByText('main')).toBeInTheDocument();
   });
 
-  it('role Umum di dalam project tidak mengubah branch di status bar', async () => {
+  it('role Umum di dalam project tidak mengubah branch di header', async () => {
     useUiStore.getState().setActiveProject(PROJECT);
     api.listMessages.mockResolvedValue(
       page(message({ author: 'user', text: 'tulis catatan', runId: RUN_X })),
@@ -449,7 +453,7 @@ describe('status bar: project dan branch', () => {
     await renderScreen(
       <>
         <ChatScreen conversationId={CONV} />
-        <StatusBar />
+        <Header title={copy.nav.chat} />
       </>,
     );
     await waitFor(() => expect(runs.get(RUN_X)).toBeDefined());
@@ -459,13 +463,17 @@ describe('status bar: project dan branch', () => {
       emit(`run:${RUN_X}`, { type: 'run.status', status: 'running' });
     });
 
-    expect(await screen.findByText('Toko Online · main')).toBeInTheDocument();
+    expect(await within(crumb()).findByText('main')).toBeInTheDocument();
+    expect(within(crumb()).queryByText(/^aios\//)).not.toBeInTheDocument();
   });
 
-  it('tanpa project aktif: Chat umum', async () => {
-    await renderScreen(<StatusBar />);
+  it('tanpa project aktif: breadcrumb hanya judul bagian', async () => {
+    await renderScreen(<Header title={copy.nav.chat} />);
 
-    expect(await screen.findByText(copy.status.project)).toBeInTheDocument();
+    expect(
+      within(crumb()).getByRole('heading', { level: 1, name: copy.nav.chat }),
+    ).toBeInTheDocument();
+    expect(within(crumb()).queryByText('Toko Online')).not.toBeInTheDocument();
   });
 });
 
@@ -646,6 +654,254 @@ describe('mode rencana', () => {
     await renderScreen(<ChatScreen conversationId={CONV} />);
     await screen.findByRole('textbox');
     expect(screen.queryByText(copy.chat.plan.ready)).not.toBeInTheDocument();
+  });
+});
+
+describe('rencana agent langsung', () => {
+  it('event todo.updated menampilkan daftar tugas dengan kemajuan; pembaruan berikutnya mengganti daftar', async () => {
+    useUiStore.getState().setActiveProject(PROJECT);
+    api.listMessages.mockResolvedValue(
+      page(message({ author: 'user', text: 'tambahkan tes', runId: RUN_X })),
+    );
+    api.getRun.mockResolvedValue(run({ id: RUN_X, status: 'running' }));
+    await renderScreen(<ChatScreen conversationId={CONV} />);
+    await waitFor(() => expect(runs.get(RUN_X)).toBeDefined());
+
+    act(() => {
+      emit(`run:${RUN_X}`, { type: 'run.status', status: 'running' });
+      emit(`run:${RUN_X}`, {
+        type: 'todo.updated',
+        phases: [
+          {
+            name: 'Tahap',
+            tasks: [
+              { content: 'Baca kode', status: 'completed' },
+              { content: 'Tulis tes', status: 'in_progress' },
+              { content: 'Jalankan lint', status: 'blocked', blocker: 'menunggu izin' },
+            ],
+          },
+        ],
+      });
+    });
+
+    const panel = await screen.findByRole('region', { name: copy.chat.todo.title });
+    expect(within(panel).getByText('Tulis tes')).toBeInTheDocument();
+    expect(within(panel).getByText('menunggu izin')).toBeInTheDocument();
+    expect(within(panel).getByRole('progressbar')).toHaveAttribute('aria-valuenow', '1');
+    expect(within(panel).getByText('1/3')).toBeInTheDocument();
+
+    act(() => {
+      emit(`run:${RUN_X}`, {
+        type: 'todo.updated',
+        phases: [{ name: 'Tahap', tasks: [{ content: 'Tulis tes', status: 'completed' }] }],
+      });
+    });
+    expect(await screen.findByText('1/1')).toBeInTheDocument();
+    expect(screen.queryByText('Baca kode')).not.toBeInTheDocument();
+  });
+
+  it('arahan yang diantre di agent tampil sebagai daftar Menunggu giliran dan hilang saat antrean kosong', async () => {
+    useUiStore.getState().setActiveProject(PROJECT);
+    api.listMessages.mockResolvedValue(
+      page(message({ author: 'user', text: 'tambahkan tes', runId: RUN_X })),
+    );
+    api.getRun.mockResolvedValue(run({ id: RUN_X, status: 'running' }));
+    await renderScreen(<ChatScreen conversationId={CONV} />);
+    await waitFor(() => expect(runs.get(RUN_X)).toBeDefined());
+
+    act(() => {
+      emit(`run:${RUN_X}`, { type: 'run.status', status: 'running' });
+      emit(`run:${RUN_X}`, {
+        type: 'queue.updated',
+        steering: ['fokus ke tes saja'],
+        followUp: ['lalu jalankan lint'],
+      });
+    });
+    const list = await screen.findByRole('list', { name: copy.chat.queue.title });
+    expect(within(list).getByText('fokus ke tes saja')).toBeInTheDocument();
+    expect(within(list).getByText('lalu jalankan lint')).toBeInTheDocument();
+
+    act(() => emit(`run:${RUN_X}`, { type: 'queue.updated', steering: [], followUp: [] }));
+    await waitFor(() =>
+      expect(screen.queryByRole('list', { name: copy.chat.queue.title })).not.toBeInTheDocument(),
+    );
+  });
+});
+
+describe('tarik arahan dari antrean', () => {
+  it('tombol tarik mengirim antrean dan teks persis; gagal menampilkan pesan', async () => {
+    api.removeQueued.mockResolvedValueOnce(undefined);
+    api.removeQueued.mockRejectedValueOnce(new ApiProblem(409, 'run_not_active', 'selesai'));
+    useUiStore.getState().setActiveProject(PROJECT);
+    api.listMessages.mockResolvedValue(
+      page(message({ author: 'user', text: 'tambahkan tes', runId: RUN_X })),
+    );
+    api.getRun.mockResolvedValue(run({ id: RUN_X, status: 'running' }));
+    const user = userEvent.setup();
+    await renderScreen(<ChatScreen conversationId={CONV} />);
+    await waitFor(() => expect(runs.get(RUN_X)).toBeDefined());
+    act(() => {
+      emit(`run:${RUN_X}`, { type: 'run.status', status: 'running' });
+      emit(`run:${RUN_X}`, {
+        type: 'queue.updated',
+        steering: ['fokus ke tes saja'],
+        followUp: ['lalu jalankan lint'],
+      });
+    });
+
+    await user.click(
+      await screen.findByRole('button', { name: copy.chat.queue.remove('lalu jalankan lint') }),
+    );
+    expect(api.removeQueued).toHaveBeenLastCalledWith(RUN_X, 'followUp', 'lalu jalankan lint');
+
+    await user.click(
+      screen.getByRole('button', { name: copy.chat.queue.remove('fokus ke tes saja') }),
+    );
+    expect(api.removeQueued).toHaveBeenLastCalledWith(RUN_X, 'steering', 'fokus ke tes saja');
+    expect(await screen.findByText(new RegExp(copy.chat.queue.removeFailed))).toBeInTheDocument();
+  });
+});
+
+describe('pertanyaan agent', () => {
+  const QUESTION = '0192f0c4-7a1b-7c2d-a00a-4a5b6c7d8e9a';
+
+  async function asked() {
+    useUiStore.getState().setActiveProject(PROJECT);
+    api.listMessages.mockResolvedValue(
+      page(message({ author: 'user', text: 'buat database', runId: RUN_X })),
+    );
+    api.getRun.mockResolvedValue(run({ id: RUN_X, status: 'running' }));
+    await renderScreen(<ChatScreen conversationId={CONV} />);
+    await waitFor(() => expect(runs.get(RUN_X)).toBeDefined());
+    act(() => {
+      emit(`run:${RUN_X}`, { type: 'run.status', status: 'running' });
+      emit(`run:${RUN_X}`, {
+        type: 'question.asked',
+        questionId: QUESTION,
+        questions: [
+          {
+            id: 'db',
+            question: 'Database mana?',
+            options: [{ label: 'Postgres' }, { label: 'SQLite', description: 'Berkas lokal' }],
+            recommended: 0,
+          },
+          {
+            id: 'fitur',
+            question: 'Fitur apa?',
+            options: [{ label: 'Auth' }, { label: 'Billing' }],
+            multi: true,
+          },
+        ],
+      });
+    });
+    return screen.findByRole('region', { name: copy.question.title });
+  }
+
+  it('panel menampilkan pilihan dengan saran terpilih; jawaban (pilihan, ganda, teks bebas) dikirim lalu panel hilang saat selesai', async () => {
+    api.answerQuestion.mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    const panel = await asked();
+
+    expect(within(panel).getByText('Berkas lokal')).toBeInTheDocument();
+    expect(within(panel).getByRole('radio', { name: /Postgres/ })).toBeChecked();
+    // Pilihan ganda belum dijawab: Kirim tertahan.
+    expect(within(panel).getByRole('button', { name: copy.question.submit })).toBeDisabled();
+
+    await user.click(within(panel).getByRole('radio', { name: /SQLite/ }));
+    await user.click(within(panel).getByRole('checkbox', { name: 'Auth' }));
+    await user.click(within(panel).getByRole('checkbox', { name: 'Billing' }));
+    const [other] = within(panel).getAllByRole('textbox');
+    await user.type(other!, 'pakai WAL');
+    // Teks bebas pada pilihan tunggal menggantikan pilihannya (omp menolak keduanya sekaligus).
+    expect(within(panel).getByRole('radio', { name: /SQLite/ })).not.toBeChecked();
+    await user.click(within(panel).getByRole('button', { name: copy.question.submit }));
+
+    expect(api.answerQuestion).toHaveBeenCalledWith(RUN_X, QUESTION, {
+      cancelled: false,
+      answers: [
+        { id: 'db', selectedOptions: [], customInput: 'pakai WAL' },
+        { id: 'fitur', selectedOptions: ['Auth', 'Billing'] },
+      ],
+    });
+    act(() =>
+      emit(`run:${RUN_X}`, { type: 'question.resolved', questionId: QUESTION, cancelled: false }),
+    );
+    await waitFor(() =>
+      expect(screen.queryByRole('region', { name: copy.question.title })).not.toBeInTheDocument(),
+    );
+  });
+
+  it('Pakai yang disarankan mengirim cancelled=true; gagal kirim menampilkan pesan dan panel tetap ada', async () => {
+    api.answerQuestion.mockRejectedValue(new ApiProblem(503, 'worker_offline', 'x'));
+    const user = userEvent.setup();
+    const panel = await asked();
+
+    await user.click(within(panel).getByRole('button', { name: copy.question.useRecommended }));
+
+    expect(api.answerQuestion).toHaveBeenCalledWith(RUN_X, QUESTION, {
+      answers: [],
+      cancelled: true,
+    });
+    expect(await screen.findByText(new RegExp(copy.question.failed))).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: copy.question.title })).toBeInTheDocument();
+  });
+});
+
+describe('arahkan agent di tengah run', () => {
+  async function liveRun(projectId: string | null) {
+    if (projectId) useUiStore.getState().setActiveProject(projectId);
+    api.listMessages.mockResolvedValue(
+      page(message({ author: 'user', text: 'tambahkan tes', runId: RUN_X })),
+    );
+    api.getRun.mockResolvedValue(run({ id: RUN_X, status: 'running' }));
+    await renderScreen(<ChatScreen conversationId={CONV} />);
+    await waitFor(() => expect(runs.get(RUN_X)).toBeDefined());
+    act(() => {
+      emit(`run:${RUN_X}`, {
+        type: 'route.decided',
+        role: projectId ? 'project' : 'general',
+        confidence: 0.9,
+        reason: 'x',
+      });
+      emit(`run:${RUN_X}`, { type: 'run.status', status: 'running' });
+    });
+  }
+
+  it('Enter mengarahkan sekarang, Alt+Enter mengantre; draf dikosongkan', async () => {
+    api.steerRun.mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    await liveRun(PROJECT);
+
+    await user.type(field(), 'fokus ke tes saja{Enter}');
+    expect(api.steerRun).toHaveBeenLastCalledWith(RUN_X, 'fokus ke tes saja', 'steer');
+    expect(await screen.findByText(copy.chat.steer.sent)).toBeInTheDocument();
+    expect(field()).toHaveValue('');
+
+    await user.type(field(), 'lalu jalankan lint{Alt>}{Enter}{/Alt}');
+    expect(api.steerRun).toHaveBeenLastCalledWith(RUN_X, 'lalu jalankan lint', 'followUp');
+    expect(await screen.findByText(copy.chat.steer.queued)).toBeInTheDocument();
+  });
+
+  it('gagal: teks dikembalikan ke kolom pesan', async () => {
+    api.steerRun.mockRejectedValue(new ApiProblem(409, 'run_not_active', 'selesai'));
+    const user = userEvent.setup();
+    await liveRun(PROJECT);
+
+    await user.type(field(), 'terlambat{Enter}');
+
+    expect(await screen.findByText(/Arahan belum terkirim/)).toBeInTheDocument();
+    expect(field()).toHaveValue('terlambat');
+  });
+
+  it('chat umum (Hermes) tidak bisa diarahkan: hanya Hentikan', async () => {
+    const user = userEvent.setup();
+    await liveRun(null);
+
+    await user.type(field(), 'tambah{Enter}');
+
+    expect(api.steerRun).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: copy.chat.steer.now })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: copy.chat.stop })).toBeInTheDocument();
   });
 });
 

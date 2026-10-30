@@ -151,9 +151,23 @@ export function createWorkerRelayAdapter(options: WorkerRelayOptions): AgentAdap
       const handle: RunHandle = {
         runId: input.runId,
         events: queue,
-        async steer(text) {
+        async removeQueued(queue, text) {
           if (ended) throw new AdapterError('run_finished', 'Run sudah selesai.');
-          await options.relay.send(projectId, { type: 'run.steer', runId: input.runId, text });
+          await options.relay.send(projectId, {
+            type: 'queue.remove',
+            runId: input.runId,
+            queue,
+            text,
+          });
+        },
+        async steer(text, mode) {
+          if (ended) throw new AdapterError('run_finished', 'Run sudah selesai.');
+          await options.relay.send(projectId, {
+            type: 'run.steer',
+            runId: input.runId,
+            text,
+            ...(mode === 'followUp' ? { mode } : {}),
+          });
         },
         async cancel() {
           if (ended || cancelRequested) return;
@@ -172,6 +186,16 @@ export function createWorkerRelayAdapter(options: WorkerRelayOptions): AgentAdap
             approvalId: id,
             decision,
             remember,
+          });
+        },
+        async answerQuestion(questionId, { answers, cancelled }) {
+          if (ended) throw new AdapterError('run_finished', 'Run sudah selesai.');
+          await options.relay.send(projectId, {
+            type: 'question.answer',
+            runId: input.runId,
+            questionId,
+            answers,
+            cancelled,
           });
         },
       };

@@ -76,11 +76,11 @@ export function FileViewer({
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
-      <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border px-2">
+      <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border px-3">
         <IconButton label={copy.files.back} onClick={onBack}>
           <ArrowLeft size={16} strokeWidth={1.5} aria-hidden="true" />
         </IconButton>
-        <span className="min-w-0 flex-1 truncate text-ui text-text" title={path}>
+        <span className="min-w-0 flex-1 truncate font-mono text-ui text-text" title={path}>
           {path}
         </span>
         {data?.kind === 'text' && isMarkdown(path) ? (
@@ -131,7 +131,10 @@ export function FileViewer({
             </div>
           ) : (
             <>
-              <ol aria-label={copy.files.content} className="font-mono text-ui leading-5 text-text">
+              <ol
+                aria-label={copy.files.content}
+                className="py-2 font-mono text-ui leading-5 text-text"
+              >
                 {lines.map((html, i) => (
                   <li key={i} className="flex gap-3 px-3">
                     <span

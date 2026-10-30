@@ -116,6 +116,7 @@ export const TokensSchema = z.object({
       sidebarCompact: z.number().positive(),
       topbar: z.number().positive(),
       statusBar: z.number().positive(),
+      header: z.number().positive(),
       row: z.number().positive(),
       /** Jarak antar pulau (panel melayang) di shell. */
       islandGap: z.number().positive(),

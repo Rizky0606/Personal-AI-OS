@@ -51,6 +51,9 @@ const DOCUMENTED_TABLES = [
   'spaces',
   'space_documents',
   'space_chunks',
+  'teams',
+  'team_members',
+  'team_events',
 ];
 
 describe('skema Drizzle', () => {

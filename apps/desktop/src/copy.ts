@@ -13,14 +13,17 @@ export const copy = {
     catalog: 'Katalog komponen',
   },
   shell: {
-    rail: 'Navigasi utama',
-    brand: 'Personal AI OS',
+    navigation: 'Navigasi utama',
     sidebar: 'Daftar',
     collapseSidebar: 'Ciutkan sidebar',
     expandSidebar: 'Buka sidebar',
     toggleRightPanel: 'Panel kanan',
     resizePanel: 'Ubah lebar panel kanan',
     mainArea: 'Area utama',
+    location: 'Lokasi saat ini',
+    search: 'Cari perintah',
+    searchHint: 'Ctrl K',
+    runActive: 'Berjalan',
     palette: 'Palet perintah',
     panels: {
       preview: 'Preview',
@@ -105,6 +108,16 @@ export const copy = {
   },
   activity: {
     start: 'Mulai percakapan',
+    subagents: {
+      title: 'Subagent',
+      tools: (n: number) => `${n} tool`,
+      status: {
+        running: 'Berjalan',
+        completed: 'Selesai',
+        failed: 'Gagal',
+        aborted: 'Dihentikan',
+      },
+    },
     empty: 'Belum ada aktivitas agent. Kirim pesan di project agar langkah agent muncul di sini.',
     now: 'Sedang dikerjakan',
     idle: 'Agent tidak sedang bekerja.',
@@ -156,10 +169,12 @@ export const copy = {
     idle: 'Tidak tersambung',
     offline: 'Offline',
     project: 'Chat umum',
-    model: 'Model otomatis',
+    role: 'Otomatis',
+    model: 'Otomatis',
     statusColumn: 'Status',
     page: {
       title: 'Status sistem',
+      description: 'Periksa versi, dependensi, worker, dan antrean job.',
       sidebar: 'Versi, dependensi, worker, dan antrean job.',
       loading: 'Memuat status',
       refresh: 'Muat ulang',
@@ -245,6 +260,7 @@ export const copy = {
   screens: {},
   spaces: {
     title: 'Ruang pengetahuan',
+    summary: 'Kumpulkan dokumen, lalu tanya di chat ruang itu dengan sumber tercantum.',
     intro:
       'Kumpulkan dokumen (PDF, DOCX, teks) dalam satu ruang, lalu bertanya di chat ruang itu. Jawaban memakai isi dokumen dan menyebut sumbernya.',
     loading: 'Memuat ruang',
@@ -342,6 +358,12 @@ export const copy = {
   settings: {
     tools: 'Alat',
     title: 'Pengaturan',
+    description: 'Atur akun, tampilan, memori, templat, pembaruan, dan pintasan.',
+    accountHint: 'Server dan perangkat yang sedang dipakai.',
+    appearance: 'Tampilan',
+    appearanceHint: 'Pilih tema terang, gelap, atau ikuti sistem.',
+    toolsHint: 'Halaman pendukung untuk memantau dan membandingkan.',
+    shortcutsHint: 'Pintasan keyboard yang berlaku di seluruh aplikasi.',
     account: 'Akun dan perangkat',
     server: 'Server',
     device: 'Perangkat',
@@ -422,6 +444,9 @@ export const copy = {
   },
   projects: {
     title: 'Project',
+    description: 'Daftarkan folder kerja, atur branch, setup worktree, dan aturan untuk agent.',
+    rowMenu: (name: string) => `Aksi project: ${name}`,
+    menu: { branch: 'Ganti branch' },
     listLabel: 'Daftar project',
     loading: 'Memuat project',
     empty: 'Belum ada project. Pilih folder project untuk mendaftarkannya.',
@@ -439,7 +464,6 @@ export const copy = {
     noActivity: 'Belum ada aktivitas',
     openChat: 'Buka chat',
     branch: {
-      change: 'Ganti',
       title: (name: string) => `Branch kerja ${name}`,
       intro:
         'Branch dasar tiap tugas coding (worktree dibuat dari sini) dan tujuan merge saat hasil diterima.',
@@ -468,9 +492,31 @@ export const copy = {
         `"${name}" dan kartu kanbannya dihapus. Percakapannya tetap ada sebagai chat biasa, dan folder di PC tidak disentuh.`,
       done: 'Project dihapus.',
     },
+    setup: {
+      edit: 'Atur setup',
+      title: (name: string) => `Setup worktree ${name}`,
+      intro:
+        'Dijalankan di worktree baru sebelum agent mulai, supaya agent bisa langsung menjalankan tes dan typecheck. Disimpan di PC ini saja, tidak di repo.',
+      commandsLabel: 'Perintah (satu per baris)',
+      commandsHint: (n: number, max: number) =>
+        `${n}/${max} perintah. Tanpa shell: tanda kutip, & | ; < > $ dan % tidak boleh. Hasilnya harus diabaikan git (mis. node_modules), kalau tidak run tanpa perubahan pun masuk antrean review.`,
+      commandsPlaceholder: 'pnpm install --frozen-lockfile --offline',
+      invalid: (line: number) =>
+        `Baris ${line} memuat karakter yang tidak diizinkan atau terlalu panjang.`,
+      tooMany: (max: number) => `Maksimal ${max} perintah.`,
+      link: 'Tautkan node_modules project',
+      linkHint:
+        'Hemat waktu instal, tetapi agent bisa mengubah node_modules asli lewat tautan itu. Mati secara bawaan.',
+      lsp: 'Nyalakan LSP agent',
+      lspHint:
+        'Agent mendapat diagnostik tipe setelah mengubah berkas, plus definisi dan referensi. Aktif hanya bila server bahasa (mis. typescript-language-server di node_modules/.bin) ditemukan di worktree; instal pertama bisa memakan belasan detik dan memori.',
+      save: 'Simpan setup',
+      saving: 'Menyimpan…',
+      saved: 'Setup worktree disimpan.',
+      loading: 'Membaca setup…',
+    },
     rules: {
       edit: 'Ubah aturan',
-      none: 'Belum ada',
       title: (name: string) => `Aturan project ${name}`,
       intro:
         'Instruksi untuk AI di setiap tugas coding dan chat project ini: gaya kode, perintah tes, hal yang dilarang.',
@@ -490,6 +536,7 @@ export const copy = {
     noStack: 'Tidak terdeteksi',
     dialog: {
       title: 'Tambah project',
+      intro: 'Pilih folder project di PC ini. Stack dan branch dibaca otomatis.',
       pick: 'Pilih folder',
       pickTitle: 'Pilih folder project',
       change: 'Pilih folder lain',
@@ -610,6 +657,15 @@ export const copy = {
     server: 'Server mengalami masalah. Coba lagi; bila berulang, periksa log gateway.',
     shape: 'Respons server tidak dikenali. Perbarui aplikasi atau gateway.',
     unknown: 'Terjadi kesalahan yang tidak dikenali. Coba lagi.',
+  },
+  question: {
+    title: 'Agent bertanya',
+    multiHint: 'Boleh pilih lebih dari satu.',
+    recommended: 'Disarankan',
+    other: 'Jawaban lain (opsional)',
+    submit: 'Kirim jawaban',
+    useRecommended: 'Pakai yang disarankan',
+    failed: 'Jawaban belum terkirim. Coba lagi.',
   },
   approval: {
     title: {
@@ -748,6 +804,7 @@ export const copy = {
   },
   workspace: {
     title: 'Project',
+    description: 'Pantau semua run coding dan mulai tugas paralel.',
     manage: 'Kelola project',
     expand: 'Buka percakapan',
     collapse: 'Tutup percakapan',
@@ -830,6 +887,41 @@ export const copy = {
     placeholder: 'Tulis pesan. Enter mengirim, Shift+Enter baris baru.',
     send: 'Kirim',
     stop: 'Hentikan',
+    queue: {
+      title: 'Menunggu giliran',
+      steering: 'Arahan',
+      followUp: 'Antre',
+      remove: (text: string) => `Tarik dari antrean: ${text}`,
+      removeFailed: 'Belum bisa menarik pesan dari antrean.',
+    },
+    todo: {
+      title: 'Rencana agent',
+      progress: (done: number, total: number) => `${done}/${total}`,
+      status: {
+        pending: 'Menunggu',
+        in_progress: 'Dikerjakan',
+        completed: 'Selesai',
+        abandoned: 'Dibatalkan',
+        blocked: 'Terhambat',
+      },
+    },
+    hud: {
+      title: 'Agent bekerja',
+      tasks: (done: number, total: number) => `${done}/${total} tugas`,
+      queued: (n: number) => `${n} antre`,
+      subagents: (n: number) => `${n} subagent`,
+      openActivity: (n: number) => `Buka Aktivitas: ${n} subagent`,
+    },
+    steer: {
+      placeholder: 'Arahkan agent. Enter menyisipkan sekarang, Alt+Enter mengantre sampai selesai.',
+      now: 'Arahkan',
+      nowHint: 'Disisipkan setelah langkah yang sedang berjalan (Enter)',
+      queue: 'Antre',
+      queueHint: 'Dikirim setelah agent selesai (Alt+Enter)',
+      sent: 'Arahan terkirim ke agent.',
+      queued: 'Pesan diantre; dikirim setelah agent selesai.',
+      failed: 'Arahan belum terkirim. Teks dikembalikan ke kolom pesan.',
+    },
     editLast: 'Ubah pesan terakhir',
     edit: 'Ubah',
     resend: 'Kirim ulang',
@@ -985,6 +1077,7 @@ export const copy = {
     backToList: 'Kembali ke riset',
     form: {
       title: 'Riset baru',
+      description: 'Tulis pertanyaan; AI mencari, membaca, dan menyusun laporan bersitasi.',
       question: 'Pertanyaan riset',
       questionHint: 'Contoh: bandingkan SQLite dan Postgres untuk aplikasi pribadi',
       depth: 'Kedalaman',
@@ -1031,6 +1124,7 @@ export const copy = {
   },
   schedules: {
     title: 'Jadwal',
+    description: 'Atur tugas yang berjalan otomatis pada waktu tertentu.',
     newSchedule: 'Jadwal baru',
     create: 'Buat jadwal',
     empty:
@@ -1142,6 +1236,7 @@ export const copy = {
   },
   quota: {
     title: 'Kuota',
+    description: 'Pantau pemakaian token dan biaya per model dan per hari.',
     loading: 'Memuat pemakaian',
     empty: 'Belum ada pemakaian yang tercatat.',
     source: {
@@ -1232,6 +1327,7 @@ export const copy = {
   },
   kanban: {
     title: 'Kanban',
+    description: 'Pantau tugas project aktif dari ide sampai selesai.',
     board: 'Papan kartu',
     sidebarHint: 'Pilih project untuk melihat papan kartunya.',
     noProject: 'Pilih project di sidebar untuk melihat papan kartunya.',

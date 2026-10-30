@@ -8,7 +8,7 @@ import { cn } from '../lib/cn';
 import type { PendingFile } from './useFileAttachments';
 import type { ContextAttachment } from '../state/uiStore';
 import { Button } from '../ui/Button';
-import { Chip } from '../ui/Chip';
+import { Chip, type ChipProps } from '../ui/Chip';
 import { IconButton } from '../ui/IconButton';
 import { CheckboxMenu, type CheckboxOption } from '../ui/CheckboxMenu';
 import { RadioMenu } from '../ui/RadioMenu';
@@ -21,6 +21,8 @@ export interface ComposerProps {
   onDraft: (text: string) => void;
   onSend: () => void;
   onStop: () => void;
+  /** Run coding berjalan: Enter mengarahkan agent sekarang, Alt+Enter mengantre. Tanpa onSteer tombol dan pintasannya tidak tampil. */
+  onSteer?: ((mode: 'steer' | 'followUp') => void) | undefined;
   /** Jawaban sedang mengalir: tombol kirim berubah menjadi hentikan. */
   streaming: boolean;
   /** Fase run untuk warna bingkai (sama dengan Orb). */
@@ -59,6 +61,26 @@ export interface ComposerProps {
 
 const MAX_HEIGHT_PX = 192;
 
+/** Pil seragam untuk mode, model, dan skill: bulat penuh, garis aksen saat aktif. */
+function Pill({ selected = false, className, children, type = 'button', ...props }: ChipProps) {
+  return (
+    <button
+      type={type}
+      aria-pressed={props.role === 'radio' ? undefined : selected}
+      className={cn(
+        'inline-flex h-7 items-center gap-1.5 rounded-full border px-3 text-meta transition-colors duration-[120ms] ease-aios',
+        selected
+          ? 'border-accent bg-accent-soft text-text'
+          : 'border-border bg-surface-2 text-text-2 hover:border-border-strong hover:text-text',
+        className,
+      )}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+}
+
 /**
  * Composer langsung siap ketik. Satu tombol primer: Kirim, atau Hentikan saat menjawab. Role tidak dipilih
  * di sini: router yang memutuskan dari isi pesan dan konteks (chat umum atau project).
@@ -68,6 +90,7 @@ export function Composer({
   onDraft,
   onSend,
   onStop,
+  onSteer,
   streaming,
   phase,
   sending,
@@ -142,7 +165,11 @@ export function Composer({
     }
     if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) return;
     event.preventDefault();
-    if (!streaming && canSend) onSend();
+    if (streaming) {
+      if (onSteer && draft.trim().length > 0) onSteer(event.altKey ? 'followUp' : 'steer');
+      return;
+    }
+    if (canSend) onSend();
   }
 
   const modelName = model
@@ -153,8 +180,8 @@ export function Composer({
   const canSend = (draft.trim().length > 0 || hasFiles) && !sending && !uploading;
 
   return (
-    <div className="shrink-0 border-t border-border bg-bg px-8 pt-3 pb-3">
-      <div className="mx-auto flex max-w-[calc(72ch+4rem)] flex-col gap-2">
+    <div className="shrink-0 bg-bg px-8 pt-3 pb-4">
+      <div className="mx-auto flex max-w-[calc(var(--aios-chat-measure)+2.5rem)] flex-col gap-2">
         {suggestions && suggestions.length > 0 && draft === '' ? (
           <div
             role="group"
@@ -172,6 +199,9 @@ export function Composer({
           data-phase={phase}
           className="aios-composer-frame flex flex-col gap-2 rounded-panel border border-border bg-surface p-2 transition duration-[180ms] ease-aios focus-within:border-border-strong focus-within:shadow-glow has-[[data-composer-field]:focus-visible]:border-accent"
         >
+          {streaming ? (
+            <span aria-hidden="true" className="aios-progress absolute inset-x-0 top-0 h-0.5" />
+          ) : null}
           {attachments.length > 0 ? (
             <ul aria-label={copy.preview.attachment.group} className="flex flex-wrap gap-2">
               {attachments.map((a) => (
@@ -258,7 +288,7 @@ export function Composer({
             ref={field}
             rows={1}
             value={draft}
-            placeholder={copy.chat.placeholder}
+            placeholder={streaming && onSteer ? copy.chat.steer.placeholder : copy.chat.placeholder}
             onChange={(event) => onDraft(event.target.value)}
             onKeyDown={onKeyDown}
             onPaste={(event) => {
@@ -270,7 +300,7 @@ export function Composer({
             }}
             className="max-h-48 w-full resize-none bg-transparent px-1 py-1 text-chat text-text outline-none placeholder:text-text-3"
           />
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <RadioMenu
               label={copy.chat.model.pick}
               value={model ?? AUTO}
@@ -280,32 +310,32 @@ export function Composer({
                 ...models.map((m) => ({ value: m.id, label: m.label, hint: m.kind })),
               ]}
               trigger={
-                <Chip
+                <Pill
                   aria-label={`${copy.chat.model.label}: ${modelName}`}
                   selected={model !== null}
                 >
                   <span className="max-w-40 truncate">{modelName}</span>
-                  <ChevronDown size={12} strokeWidth={1.5} aria-hidden="true" className="ml-1" />
-                </Chip>
+                  <ChevronDown size={12} strokeWidth={1.5} aria-hidden="true" />
+                </Pill>
               }
             />
             {onPlanMode ? (
-              <Chip
+              <Pill
                 selected={planMode}
                 title={copy.chat.plan.chipHint}
                 onClick={() => onPlanMode(!planMode)}
               >
                 {copy.chat.plan.chip}
-              </Chip>
+              </Pill>
             ) : null}
             {onWebSearch ? (
-              <Chip
+              <Pill
                 selected={webSearch}
                 title={copy.chat.web.chipHint}
                 onClick={() => onWebSearch(!webSearch)}
               >
                 {copy.chat.web.chip}
-              </Chip>
+              </Pill>
             ) : null}
             {onSkillPacks ? (
               <CheckboxMenu
@@ -314,12 +344,12 @@ export function Composer({
                 onValuesChange={onSkillPacks}
                 options={skillOptions}
                 trigger={
-                  <Chip selected={skillPacks.length > 0} title={copy.chat.skills.hint}>
+                  <Pill selected={skillPacks.length > 0} title={copy.chat.skills.hint}>
                     {skillPacks.length > 0
                       ? copy.chat.skills.chipActive(skillPacks.length)
                       : copy.chat.skills.chip}
-                    <ChevronDown size={12} strokeWidth={1.5} aria-hidden="true" className="ml-1" />
-                  </Chip>
+                    <ChevronDown size={12} strokeWidth={1.5} aria-hidden="true" />
+                  </Pill>
                 }
               />
             ) : null}
@@ -356,18 +386,18 @@ export function Composer({
                   <Pencil size={16} strokeWidth={1.5} aria-hidden="true" />
                 </IconButton>
               ) : null}
-              <Button
-                variant={streaming ? 'secondary' : 'primary'}
-                disabled={!streaming && !canSend}
-                onClick={streaming ? onStop : onSend}
-              >
-                {streaming ? (
-                  <Square size={14} strokeWidth={1.5} aria-hidden="true" />
-                ) : (
-                  <ArrowUp size={14} strokeWidth={1.5} aria-hidden="true" />
-                )}
-                {streaming ? copy.chat.stop : copy.chat.send}
-              </Button>
+                <div className={cn('flex animate-aios-pop items-center gap-1', onSteer && 'rounded-control bg-surface-2 p-0.5')}>
+                  <Button variant={streaming ? 'secondary' : 'primary'} onClick={streaming ? onStop : onSend} disabled={!streaming && !canSend} className="animate-aios-pop">
+                    {streaming ? <Square size={14} strokeWidth={1.5} aria-hidden="true" /> : <ArrowUp size={14} strokeWidth={1.5} aria-hidden="true" />}
+                    {streaming ? copy.chat.stop : copy.chat.send}
+                  </Button>
+                  {streaming && onSteer ? (
+                    <>
+                      <Button variant="secondary" disabled={draft.trim().length === 0} title={copy.chat.steer.queueHint} onClick={() => onSteer('followUp')}>{copy.chat.steer.queue}</Button>
+                      <Button variant="primary" disabled={draft.trim().length === 0} title={copy.chat.steer.nowHint} onClick={() => onSteer('steer')}><ArrowUp size={14} strokeWidth={1.5} aria-hidden="true" />{copy.chat.steer.now}</Button>
+                    </>
+                  ) : null}
+                </div>
             </span>
           </div>
         </div>

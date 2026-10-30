@@ -115,6 +115,13 @@ exports[`omp: rekaman nyata → event kontrak (snapshot) > steer 1`] = `
     "type": "message.delta",
   },
   {
+    "followUp": [],
+    "steering": [
+      "fokus ke tes saja",
+    ],
+    "type": "queue.updated",
+  },
+  {
     "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
     "text": "a12 ",
     "type": "message.delta",
@@ -153,6 +160,11 @@ exports[`omp: rekaman nyata → event kontrak (snapshot) > steer 1`] = `
     "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
     "text": "a19 ",
     "type": "message.delta",
+  },
+  {
+    "followUp": [],
+    "steering": [],
+    "type": "queue.updated",
   },
   {
     "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",
@@ -335,6 +347,24 @@ exports[`omp: rekaman nyata → event kontrak (snapshot) > todo 1`] = `
     "status": "ok",
     "toolCallId": "call_1",
     "type": "tool.finished",
+  },
+  {
+    "phases": [
+      {
+        "name": "Rencana",
+        "tasks": [
+          {
+            "content": "Baca berkas",
+            "status": "in_progress",
+          },
+          {
+            "content": "Tulis tes",
+            "status": "pending",
+          },
+        ],
+      },
+    ],
+    "type": "todo.updated",
   },
   {
     "messageId": "0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e91",

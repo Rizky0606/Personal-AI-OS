@@ -15,6 +15,7 @@ skills:
     minimal-diff,
     answer-first,
     clarify-once,
+    find-skills,
   ]
 ---
 

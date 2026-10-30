@@ -41,11 +41,11 @@ export function CheckpointList({ checkpoints, busy, onRestore, onRefresh }: Chec
   ];
   return (
     <>
-      <ol aria-label={copy.review.checkpoints.listLabel} className="flex flex-col p-2">
+      <ol aria-label={copy.review.checkpoints.listLabel} className="flex flex-col gap-0.5 p-3">
         {entries.map((entry) => (
           <li
             key={entry.id}
-            className="flex items-center gap-2 border-b border-border px-2 py-1.5 last:border-b-0"
+            className="flex animate-aios-enter items-center gap-2 rounded-control px-3 py-2 transition-colors duration-[120ms] ease-aios hover:bg-surface-2"
           >
             <span className="min-w-0 flex-1 truncate font-mono text-ui text-text">
               {entry.label}

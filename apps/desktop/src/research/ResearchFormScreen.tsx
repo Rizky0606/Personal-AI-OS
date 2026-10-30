@@ -1,10 +1,9 @@
 import type { ResearchDepth } from '@aios/contracts';
 import { useState, type FormEvent } from 'react';
 import { copy } from '../copy';
+import { Page, PageHeader } from '../screens/PageLayout';
 import { Button } from '../ui/Button';
 import { Chip } from '../ui/Chip';
-import { PageContainer } from '../ui/PageContainer';
-import { PageHeader } from '../ui/PageHeader';
 import { TextArea } from '../ui/TextArea';
 import { useResearchActions } from './useResearchActions';
 
@@ -31,10 +30,12 @@ export function ResearchFormScreen() {
   }
 
   return (
-    <div className="flex flex-col">
-      <PageHeader title={copy.research.form.title} />
-      <PageContainer>
-        <form onSubmit={submit} className="flex flex-col gap-4">
+    <Page width="md">
+      <PageHeader title={copy.research.form.title} description={copy.research.form.description} />
+      <form
+        onSubmit={submit}
+        className="flex flex-col gap-4 rounded-panel border border-border bg-surface p-5"
+      >
         <TextArea
           label={copy.research.form.question}
           hint={copy.research.form.questionHint}
@@ -65,8 +66,7 @@ export function ResearchFormScreen() {
             {submitting ? copy.research.form.submitting : copy.research.form.submit}
           </Button>
         </div>
-        </form>
-      </PageContainer>
-    </div>
+      </form>
+    </Page>
   );
 }

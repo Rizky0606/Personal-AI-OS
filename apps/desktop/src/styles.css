@@ -267,6 +267,47 @@
   animation-delay: 0.3s;
 }
 
+/* Kerangka memuat: sapuan aksen tipis melintas (bukan kedip), tanpa spinner. */
+@keyframes aios-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+.aios-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.aios-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklch, var(--aios-accent) 14%, transparent),
+    transparent
+  );
+  animation: aios-sweep 1.4s var(--aios-easing) infinite;
+}
+/* Garis kemajuan tak tentu di tepi atas composer selama agent bekerja: indikator status, bukan hiasan. */
+@keyframes aios-progress {
+  from {
+    background-position: -40% 0;
+  }
+  to {
+    background-position: 140% 0;
+  }
+}
+.aios-progress {
+  background-image: linear-gradient(90deg, transparent, var(--aios-accent), transparent);
+  background-repeat: no-repeat;
+  background-size: 40% 100%;
+  animation: aios-progress 1.6s var(--aios-easing) infinite;
+}
+
 html,
 body,
 #root {

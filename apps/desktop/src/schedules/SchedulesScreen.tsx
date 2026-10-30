@@ -6,16 +6,15 @@ import { useSchedules } from '../api/queries';
 import { useOnline } from '../app/hooks';
 import { copy } from '../copy';
 import { formatDateTime } from '../lib/time';
+import { enterDelay, Page, PageHeader } from '../screens/PageLayout';
 import { Button } from '../ui/Button';
-import { PageHeader } from '../ui/PageHeader';
 import { StateView, type ViewState } from '../ui/StateView';
 import { Switch } from '../ui/Switch';
 import { NewScheduleDialog } from './NewScheduleDialog';
 import { useScheduleActions } from './useScheduleActions';
 
-const headerClass =
-  'border-b border-border-strong px-3 py-2 text-left text-meta font-medium text-text-2';
-const cellClass = 'border-b border-border px-3 py-1 align-middle text-ui';
+const headerClass = 'px-4 py-3 text-left text-meta font-medium text-text-3';
+const cellClass = 'px-4 py-3 align-middle text-ui';
 
 /** Tabel jadwal. Jadwal baru dibuat lewat dialog bahasa alami dengan konfirmasi hasil parse. */
 export function SchedulesScreen() {
@@ -44,8 +43,12 @@ export function SchedulesScreen() {
   );
 
   return (
-    <div className="flex flex-col">
-      <PageHeader title={copy.schedules.title} primary={view === 'content' ? newButton : null} />
+    <Page>
+      <PageHeader
+        title={copy.schedules.title}
+        description={copy.schedules.description}
+        actions={view === 'content' ? newButton : undefined}
+      />
       <StateView
         state={view}
         loadingLabel={copy.schedules.loading}
@@ -56,75 +59,78 @@ export function SchedulesScreen() {
         retryLabel={copy.states.retry}
         onRetry={() => void query.refetch()}
       >
-        <table aria-label={copy.schedules.table} className="w-full border-collapse">
-          <thead>
-            <tr>
-              <th scope="col" className={headerClass}>
-                {copy.schedules.columns.name}
-              </th>
-              <th scope="col" className={headerClass}>
-                {copy.schedules.columns.when}
-              </th>
-              <th scope="col" className={headerClass}>
-                {copy.schedules.columns.next}
-              </th>
-              <th scope="col" className={headerClass}>
-                {copy.schedules.columns.target}
-              </th>
-              <th scope="col" className={headerClass}>
-                {copy.schedules.columns.status}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {schedules.map((s) => (
-              <tr
-                key={s.id}
-                onClick={() =>
-                  void navigate({ to: '/schedules/$scheduleId', params: { scheduleId: s.id } })
-                }
-                className="cursor-pointer transition-colors duration-[120ms] ease-aios hover:bg-surface-2"
-              >
-                <td className={cellClass}>
-                  <Link
-                    to="/schedules/$scheduleId"
-                    params={{ scheduleId: s.id }}
-                    onClick={(event) => event.stopPropagation()}
-                    className="font-medium text-text underline-offset-2 hover:underline"
-                  >
-                    {s.name}
-                  </Link>
-                </td>
-                <td className={`${cellClass} font-mono text-meta text-text-2`}>
-                  {s.cron}
-                  <span className="block text-caption text-text-3">{s.timezone}</span>
-                </td>
-                <td className={`${cellClass} text-text-2`}>
-                  {s.enabled && s.nextRunAt
-                    ? formatDateTime(s.nextRunAt, s.timezone)
-                    : copy.schedules.never}
-                </td>
-                <td className={`${cellClass} text-text-2`}>
-                  {copy.schedules.targets[s.target]}
-                  {s.agentRole ? ` · ${s.agentRole}` : ''}
-                </td>
-                <td className={cellClass} onClick={(event) => event.stopPropagation()}>
-                  <span className="flex items-center gap-2">
-                    <Switch
-                      checked={s.enabled}
-                      disabled={busy === `toggle:${s.id}`}
-                      label={`${s.enabled ? copy.schedules.detail.disable : copy.schedules.detail.enable}: ${s.name}`}
-                      onChange={(enabled) => void setEnabled(s.id, enabled)}
-                    />
-                    <span className="text-meta text-text-2">
-                      {s.enabled ? copy.schedules.enabled : copy.schedules.disabled}
-                    </span>
-                  </span>
-                </td>
+        <div className="overflow-hidden rounded-panel border border-border bg-surface">
+          <table aria-label={copy.schedules.table} className="w-full border-collapse">
+            <thead className="bg-surface-2">
+              <tr>
+                <th scope="col" className={headerClass}>
+                  {copy.schedules.columns.name}
+                </th>
+                <th scope="col" className={headerClass}>
+                  {copy.schedules.columns.when}
+                </th>
+                <th scope="col" className={headerClass}>
+                  {copy.schedules.columns.next}
+                </th>
+                <th scope="col" className={headerClass}>
+                  {copy.schedules.columns.target}
+                </th>
+                <th scope="col" className={headerClass}>
+                  {copy.schedules.columns.status}
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {schedules.map((s, index) => (
+                <tr
+                  key={s.id}
+                  style={enterDelay(index)}
+                  onClick={() =>
+                    void navigate({ to: '/schedules/$scheduleId', params: { scheduleId: s.id } })
+                  }
+                  className="animate-aios-enter cursor-pointer transition-colors duration-[120ms] ease-aios hover:bg-surface-2"
+                >
+                  <td className={cellClass}>
+                    <Link
+                      to="/schedules/$scheduleId"
+                      params={{ scheduleId: s.id }}
+                      onClick={(event) => event.stopPropagation()}
+                      className="font-medium text-text underline-offset-2 hover:underline"
+                    >
+                      {s.name}
+                    </Link>
+                  </td>
+                  <td className={`${cellClass} font-mono text-meta text-text-2`}>
+                    {s.cron}
+                    <span className="block text-caption text-text-3">{s.timezone}</span>
+                  </td>
+                  <td className={`${cellClass} text-text-2`}>
+                    {s.enabled && s.nextRunAt
+                      ? formatDateTime(s.nextRunAt, s.timezone)
+                      : copy.schedules.never}
+                  </td>
+                  <td className={`${cellClass} text-text-2`}>
+                    {copy.schedules.targets[s.target]}
+                    {s.agentRole ? ` · ${s.agentRole}` : ''}
+                  </td>
+                  <td className={cellClass} onClick={(event) => event.stopPropagation()}>
+                    <span className="flex items-center gap-2">
+                      <Switch
+                        checked={s.enabled}
+                        disabled={busy === `toggle:${s.id}`}
+                        label={`${s.enabled ? copy.schedules.detail.disable : copy.schedules.detail.enable}: ${s.name}`}
+                        onChange={(enabled) => void setEnabled(s.id, enabled)}
+                      />
+                      <span className="text-meta text-text-2">
+                        {s.enabled ? copy.schedules.enabled : copy.schedules.disabled}
+                      </span>
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </StateView>
       <NewScheduleDialog
         open={dialogOpen}
@@ -133,6 +139,6 @@ export function SchedulesScreen() {
           void navigate({ to: '/schedules/$scheduleId', params: { scheduleId: id } })
         }
       />
-    </div>
+    </Page>
   );
 }

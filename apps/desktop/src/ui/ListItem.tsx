@@ -13,7 +13,7 @@ export interface ListItemProps {
   index?: number;
 }
 
-/** Baris 32px (tinggi baris desktop) dengan pemisah 1px; tombol bila bisa diklik. */
+/** Baris 36px dengan pemisah halus; aktif: garis aksen kiri dan latar `accent-soft`; tombol bila bisa diklik. */
 export function ListItem({
   title,
   supporting,
@@ -25,22 +25,22 @@ export function ListItem({
 }: ListItemProps) {
   const content = (
     <>
-      {icon ? <span className="text-text-2">{icon}</span> : null}
+      {icon ? <span className="shrink-0 text-text-2">{icon}</span> : null}
       <span className="min-w-0 flex-1 text-left">
         <span className="block truncate text-ui text-text">{title}</span>
         {supporting ? (
           <span className="block truncate text-meta text-text-2">{supporting}</span>
         ) : null}
       </span>
-      {trailing ? <span className="text-meta text-text-3">{trailing}</span> : null}
+      {trailing ? <span className="shrink-0 text-meta text-text-3">{trailing}</span> : null}
     </>
   );
   const enter = index === undefined ? {} : enterProps(index);
   const classes = cn(
-    'flex min-h-8 w-full items-center gap-2 border-b border-border px-3 py-1',
-    selected && 'bg-accent-soft',
-    onClick && 'transition-colors duration-[120ms] ease-aios hover:bg-surface-2',
-    enter.className,
+    'flex min-h-9 w-full items-center gap-3 border-b border-l-2 border-b-border px-3 py-1.5',
+    selected ? 'border-l-accent bg-accent-soft' : 'border-l-transparent',
+    onClick && 'transition-colors duration-[120ms] ease-aios',
+    onClick && !selected && 'hover:bg-surface-2',
   );
   return onClick ? (
     <button type="button" onClick={onClick} style={enter.style} className={classes}>

@@ -8,7 +8,7 @@ import { useUiStore } from '../state/uiStore';
 import { Button } from '../ui/Button';
 import { IconButton } from '../ui/IconButton';
 import { useProjects } from '../worker/hooks';
-import { connectionView } from './StatusBar';
+import { connectionView } from './connectionView';
 
 export type ConnectionTone = 'connected' | 'pending' | 'lost';
 

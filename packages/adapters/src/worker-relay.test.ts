@@ -188,6 +188,55 @@ describe('createWorkerRelayAdapter', () => {
     await expect(handle.resolveApproval(APPROVAL, 'deny')).rejects.toBeInstanceOf(AdapterError);
   });
 
+  it('follow-up diteruskan dengan mode; steer biasa tetap tanpa mode (kompatibel dengan worker lama)', async () => {
+    const t = fakePort();
+    const handle = await createWorkerRelayAdapter({ relay: t.port }).startRun(input());
+
+    await handle.steer('lalu lint', 'followUp');
+    await handle.steer('fokus', 'steer');
+
+    expect(t.sent.slice(1)).toEqual([
+      { type: 'run.steer', runId: RUN, text: 'lalu lint', mode: 'followUp' },
+      { type: 'run.steer', runId: RUN, text: 'fokus' },
+    ]);
+  });
+
+  it('removeQueued menjadi perintah queue.remove ke worker', async () => {
+    const t = fakePort();
+    const handle = await createWorkerRelayAdapter({ relay: t.port }).startRun(input());
+
+    await handle.removeQueued('followUp', 'lalu lint');
+
+    expect(t.sent.slice(1)).toEqual([
+      { type: 'queue.remove', runId: RUN, queue: 'followUp', text: 'lalu lint' },
+    ]);
+  });
+
+  it('jawaban pertanyaan agent menjadi perintah question.answer; setelah selesai ditolak', async () => {
+    const t = fakePort();
+    const handle = await createWorkerRelayAdapter({ relay: t.port }).startRun(input());
+
+    await handle.answerQuestion(APPROVAL, {
+      answers: [{ id: 'db', selectedOptions: ['SQLite'], customInput: 'dan Search' }],
+      cancelled: false,
+    });
+
+    expect(t.sent.slice(1)).toEqual([
+      {
+        type: 'question.answer',
+        runId: RUN,
+        questionId: APPROVAL,
+        answers: [{ id: 'db', selectedOptions: ['SQLite'], customInput: 'dan Search' }],
+        cancelled: false,
+      },
+    ]);
+    t.emit({ type: 'run.completed', summary: 's' });
+    await drain(handle);
+    await expect(
+      handle.answerQuestion(APPROVAL, { answers: [], cancelled: true }),
+    ).rejects.toBeInstanceOf(AdapterError);
+  });
+
   it('worker tidak tersambung saat mulai: startRun gagal dan pendengar dilepas', async () => {
     const t = fakePort();
     t.port.send = () =>

@@ -23,35 +23,31 @@ export function TextField({
   const id = useId();
   const noteId = `${id}-note`;
   const note = error ?? hint;
-  const input = (
-    <input
-      id={id}
-      ref={ref}
-      aria-invalid={error ? true : undefined}
-      aria-describedby={note ? noteId : undefined}
-      className={cn(
-        'h-8 rounded-control border bg-surface px-3 text-ui text-text placeholder:text-text-3',
-        error ? 'border-danger' : 'border-border focus:border-border-strong',
-        'disabled:cursor-not-allowed disabled:opacity-50',
-        trailing ? 'w-full pr-10' : false,
-        className,
-      )}
-      {...props}
-    />
+  const field = (
+    <div className="relative">
+      <input
+        id={id}
+        ref={ref}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={note ? noteId : undefined}
+        className={cn(
+          'h-9 rounded-control border bg-surface px-3 text-ui text-text transition-colors duration-[120ms] ease-aios placeholder:text-text-3',
+          error ? 'border-danger' : 'border-border hover:border-border-strong focus:border-accent',
+          'disabled:cursor-not-allowed disabled:opacity-50',
+          trailing ? 'w-full pr-10' : false,
+          className,
+        )}
+        {...props}
+      />
+      {trailing ? <span className="absolute top-0 right-1">{trailing}</span> : null}
+    </div>
   );
   return (
-    <div className="flex flex-col gap-1">
-      <label htmlFor={id} className="text-meta text-text-2">
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={id} className="text-meta font-medium text-text-2">
         {label}
       </label>
-      {trailing ? (
-        <div className="relative">
-          {input}
-          <div className="absolute right-0 top-0 flex h-8 items-center">{trailing}</div>
-        </div>
-      ) : (
-        input
-      )}
+      {field}
       {note ? (
         <p id={noteId} className={cn('text-caption', error ? 'text-danger' : 'text-text-3')}>
           {note}

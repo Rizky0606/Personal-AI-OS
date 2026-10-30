@@ -10,7 +10,7 @@ import {
   SquareTerminal,
   X,
 } from 'lucide-react';
-import { useRef, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
+import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { copy } from '../copy';
 import { cn } from '../lib/cn';
 import { ActivityPanel } from '../activity/ActivityPanel';
@@ -21,11 +21,11 @@ import { DiffPanel } from '../review/DiffPanel';
 import { useUiStore } from '../state/uiStore';
 import { TerminalPanel } from '../terminal/TerminalPanel';
 import { IconButton } from '../ui/IconButton';
-import { PlateGroup } from '../ui/PlateGroup';
-import { Tooltip } from '../ui/Tooltip';
 import { MAX_PANES, PANE_TABS, ROOT_ID, countPanes, type PaneNode, type PaneTab } from './tree';
 
 const KEY_STEP = 0.05;
+
+/** Ikon tiap tab; label tetap teks asli (hanya disembunyikan visual di pane sempit). */
 
 function PaneContent({ tab }: { tab: PaneTab }) {
   if (tab === 'diff') return <DiffPanel />;
@@ -36,13 +36,13 @@ function PaneContent({ tab }: { tab: PaneTab }) {
   return <FilesPanel />;
 }
 
-const TAB_ICONS: Record<PaneTab, ReactNode> = {
-  preview: <Eye size={14} strokeWidth={1.5} aria-hidden="true" />,
-  diff: <GitCompare size={14} strokeWidth={1.5} aria-hidden="true" />,
-  terminal: <SquareTerminal size={14} strokeWidth={1.5} aria-hidden="true" />,
-  files: <FolderTree size={14} strokeWidth={1.5} aria-hidden="true" />,
-  git: <GitBranch size={14} strokeWidth={1.5} aria-hidden="true" />,
-  activity: <Activity size={14} strokeWidth={1.5} aria-hidden="true" />,
+const TAB_ICONS: Record<PaneTab, typeof Eye> = {
+  preview: Eye,
+  diff: GitCompare,
+  terminal: SquareTerminal,
+  files: FolderTree,
+  git: GitBranch,
+  activity: Activity,
 };
 
 interface LeafProps {
@@ -54,6 +54,7 @@ interface LeafProps {
 
 /** Satu pane: tab Preview/Diff/Terminal/Berkas, tombol bagi ke samping atau ke bawah, dan tutup. */
 function Leaf({ id, tab, canSplit, canClose }: LeafProps) {
+  const [focusedTab, setFocusedTab] = useState<PaneTab | null>(null);
   const setPaneTab = useUiStore((s) => s.setPaneTab);
   const splitPane = useUiStore((s) => s.splitPane);
   const closePane = useUiStore((s) => s.closePane);
@@ -63,36 +64,50 @@ function Leaf({ id, tab, canSplit, canClose }: LeafProps) {
       onValueChange={(v) => setPaneTab(id, v as PaneTab)}
       className="flex min-h-0 min-w-0 flex-1 flex-col"
     >
-      <div className="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-border px-2">
-        <Tabs.List className="min-w-0 overflow-x-auto">
-          <PlateGroup activeKey={tab} className="flex items-center gap-0.5">
-            {PANE_TABS.map((t) => {
-              const active = t === tab;
-              const trigger = (
-                <Tabs.Trigger
-                  key={t}
-                  value={t}
-                  data-plate-key={t}
-                  className={cn(
-                    'relative z-10 inline-flex h-8 items-center gap-2 rounded-control px-2.5 text-ui whitespace-nowrap transition-colors duration-[120ms] ease-aios',
-                    active ? 'text-text' : 'text-text-2 hover:text-text',
-                  )}
-                >
-                  {TAB_ICONS[t]}
-                  {/* Aktif: label terlihat. Lain: ikon dengan tooltip; label tetap ada untuk pembaca layar. */}
-                  <span className={active ? undefined : 'sr-only'}>{copy.shell.panels[t]}</span>
-                </Tabs.Trigger>
-              );
-              // Selalu dibungkus tooltip (juga yang aktif): pembungkus yang berganti membuat tab dibuat ulang dan fokus hilang.
-              return (
-                <Tooltip key={t} label={copy.shell.panels[t]} side="bottom">
-                  {trigger}
-                </Tooltip>
-              );
-            })}
-          </PlateGroup>
+      <div
+        className="@container flex h-12 shrink-0 items-center justify-between gap-2 border-b border-border px-3"
+        onFocusCapture={(event) => {
+          const value = (event.target as HTMLElement).closest<HTMLElement>('[data-pane-tab]')
+            ?.dataset.paneTab;
+          if (value) setFocusedTab(value as PaneTab);
+        }}
+      >
+        <Tabs.List className="flex min-w-0 items-center gap-0.5 overflow-x-auto rounded-full bg-surface-2 p-1">
+          {PANE_TABS.map((t) => {
+            const Icon = TAB_ICONS[t];
+            return tab === t ? (
+              <Tabs.Trigger
+                key={t}
+                value={t}
+                data-pane-tab={t}
+                title={copy.shell.panels[t]}
+                onFocus={() => setFocusedTab(t)}
+                className="group inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-transparent px-2.5 text-ui text-text-2"
+              >
+                <Icon size={14} strokeWidth={1.5} aria-hidden="true" />
+                <span>{copy.shell.panels[t]}</span>
+              </Tabs.Trigger>
+            ) : (
+              <Tabs.Trigger
+                key={t}
+                value={t}
+                data-pane-tab={t}
+                title={copy.shell.panels[t]}
+                onFocus={() => setFocusedTab(t)}
+                className="group inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-transparent px-2.5 text-ui text-text-2"
+              >
+                <Icon size={14} strokeWidth={1.5} aria-hidden="true" />
+                <span className="sr-only">{copy.shell.panels[t]}</span>
+              </Tabs.Trigger>
+            );
+          })}
         </Tabs.List>
-        <div className="flex shrink-0 items-center gap-1">
+        {focusedTab ? (
+          <span role="tooltip" className="sr-only">
+            {copy.shell.panels[focusedTab]}
+          </span>
+        ) : null}
+        <div className="flex shrink-0 items-center gap-0.5">
           {canSplit ? (
             <>
               <IconButton label={copy.panes.splitRow} onClick={() => splitPane(id, 'row')}>
@@ -110,7 +125,7 @@ function Leaf({ id, tab, canSplit, canClose }: LeafProps) {
           ) : null}
         </div>
       </div>
-      <Tabs.Content value={tab} className="min-h-0 flex-1 overflow-auto">
+      <Tabs.Content value={tab} className="min-h-0 flex-1 animate-aios-fade overflow-auto">
         <PaneContent tab={tab} />
       </Tabs.Content>
     </Tabs.Root>
@@ -169,8 +184,10 @@ function SplitHandle({ direction, ratio, onRatio, container }: SplitHandleProps)
       }}
       onKeyDown={onKeyDown}
       className={cn(
-        'shrink-0 bg-border transition-colors duration-[120ms] ease-aios hover:bg-border-strong',
-        horizontal ? 'w-1 cursor-col-resize' : 'h-1 cursor-row-resize',
+        'relative shrink-0 bg-border transition-colors duration-[120ms] ease-aios hover:bg-accent',
+        horizontal
+          ? 'w-px cursor-col-resize before:absolute before:inset-y-0 before:-inset-x-1'
+          : 'h-px cursor-row-resize before:absolute before:-inset-y-1 before:inset-x-0',
       )}
     />
   );

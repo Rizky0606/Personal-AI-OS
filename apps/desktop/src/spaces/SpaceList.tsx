@@ -4,8 +4,8 @@ import { useSpaces } from '../api/queries';
 import { useOnline } from '../app/hooks';
 import { copy } from '../copy';
 import { cn } from '../lib/cn';
+import { enterDelay } from '../screens/PageLayout';
 import { Button } from '../ui/Button';
-import { enterProps } from '../ui/enter';
 import { StateView, type ViewState } from '../ui/StateView';
 
 /** Daftar ruang di sidebar beserta jumlah dokumennya. */
@@ -42,18 +42,19 @@ export function SpaceList() {
       retryLabel={copy.states.retry}
       onRetry={() => void query.refetch()}
     >
-      <nav aria-label={s.listLabel}>
-        {items.map((space, i) => (
+      <nav aria-label={s.listLabel} className="flex flex-col gap-0.5 p-1">
+        {items.map((space, index) => (
           <Link
             key={space.id}
             to="/spaces/$spaceId"
             params={{ spaceId: space.id }}
             aria-current={space.id === params.spaceId ? 'page' : undefined}
-            style={enterProps(i).style}
+            style={enterDelay(index)}
             className={cn(
-              'flex min-h-8 flex-col justify-center border-b border-border px-3 py-1 transition-colors duration-[120ms] ease-aios',
-              space.id === params.spaceId ? 'bg-accent-soft' : 'hover:bg-surface-2',
-              enterProps(i).className,
+              'flex min-h-9 animate-aios-enter flex-col justify-center rounded-control border-l-2 px-3 py-1.5 transition-colors duration-[120ms] ease-aios',
+              space.id === params.spaceId
+                ? 'border-l-accent bg-accent-soft'
+                : 'border-l-transparent hover:bg-surface-2',
             )}
           >
             <span className="truncate text-ui text-text">{space.name}</span>

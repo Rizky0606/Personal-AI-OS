@@ -82,6 +82,7 @@ Tema mengikuti sistem secara default, dengan pilihan manual terang atau gelap. A
 - **Efek:** cahaya aksen (`glow`, bayangan berwarna aksen transparan) untuk tombol primer saat hover, item aktif, indikator sedang menulis, dan cahaya layar sambutan; gradien dari token aksen dan status; kartu interaktif terangkat dengan bayangan lembut saat hover; blur hanya pada lapisan melayang (lihat daftar larangan). Tetap dilarang: gradien multiwarna di luar token, partikel, dan efek yang terus bergerak di area kerja selain indikator status.
 - **Keyframe dasar** (`styles.css`, belum dipakai komponen): `aios-shimmer` (kilau teks status), `aios-pulse-ring` (cincin denyut), `aios-draw-in` (goresan SVG tergambar), semuanya dimatikan di `prefers-reduced-motion`.
 - **Pola gerak yang dipakai** (desktop: utilitas `animate-aios-*` di `styles.css`; Android: `Tokens.Motion`): pesan baru muncul naik 4px sambil memudar (180 ms); jawaban yang sedang ditulis menampilkan tiga titik yang memudar bergiliran dan titik chip role beraksen yang berdenyut; menu dan tooltip muncul dari skala 0,98; dialog turun 6px (240 ms); toast naik 8px; pindah bagian memudar; penanda aktif rail dan percakapan berupa garis aksen 2px yang tumbuh dari tengah; tombol mengecil 2% saat ditekan; titik status yang sedang menyambung ulang berdenyut. Tanpa pantulan, tanpa stagger panjang.
+- **Pembaruan gerak (2026-10-28, permintaan pemilik: lebih modern dan beranimasi):** tetap dalam batas di atas (durasi 120/180/240/320 ms, gradien hanya warna aksen, tanpa blur). Yang ditambah: sakelar dengan kenop yang meluncur dengan pegas ringan dan cahaya saat aktif; kerangka memuat dengan sapuan aksen tipis (`aios-shimmer`) menggantikan kedip; garis kemajuan tak tentu 2 px di tepi atas composer selama agent bekerja (`aios-progress`, indikator status); ikon langkah tool yang sedang berjalan berputar; tombol primer dan sekunder terangkat 1 px saat hover; tombol Arahkan/Antre muncul dengan skala 0,98 saat run coding berjalan; baris tabel Project masuk bertahap (maks. 4 × 40 ms). Semua mengikuti `prefers-reduced-motion` (animasi berhenti, tanpa perpindahan).
 - **Fokus:** ring 2px warna `accent` dengan offset 2px, selalu terlihat saat navigasi keyboard.
 
 ## Layout Windows
@@ -106,18 +107,20 @@ Shell berupa **pulau** di atas kanvas gelap berlapis: kanvas `bg`, tiap pulau `s
 
 ## Komponen inti
 
-| Komponen        | Aturan                                                                                                                                                                                           |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Pesan asisten   | Kartu `surface` berbingkai, radius 16. Header: avatar bot dengan titik status (emerald selesai, cyan berdenyut saat menulis), nama "Personal AI", chip role, model mono. Teks sampai 72 karakter |
-| Pesan pengguna  | Gelembung `surface-2` rata kanan, radius 16 dengan sudut kanan atas kecil; jam kirim mono dan tanda terkirim di bawah teks                                                                       |
-| Langkah tool    | Satu baris mono yang bisa dibuka: ikon, nama tool, target, status, durasi                                                                                                                        |
-| Blok kode       | Header berisi bahasa atau path file plus tombol salin; isi mono 12–13 px                                                                                                                         |
-| Permintaan izin | Panel inline berwarna `warning`, berisi perintah persis, tombol Izinkan sekali, Selalu untuk project ini, Tolak                                                                                  |
-| Chip role       | Pil `accent-soft` dengan titik (cyan berdenyut saat menulis); klik pada jawaban terakhir membuka koreksi role                                                                                    |
-| Kartu kanban    | Judul, chip role, titik status, branch, diff stat mono (+12 −3)                                                                                                                                  |
-| Diff            | Tampilan split atau unified, komentar per baris, tombol Terima dan Tolak per file dan semua                                                                                                      |
-| Toast           | Pojok kanan bawah, 4 detik, maksimal 3 bertumpuk                                                                                                                                                 |
-| Empty state     | Satu kalimat apa yang bisa dilakukan + satu tombol aksi. Tanpa ilustrasi besar                                                                                                                   |
+| Komponen | Aturan |
+| --- | --- |
+| Pesan asisten | Tanpa kartu: avatar bot kecil di kiri (titik status: emerald selesai, cyan berdenyut saat menulis), baris meta redup (nama "Personal AI", chip role, model mono), isi langsung selebar `--aios-chat-measure` (72 karakter). Blok kode tetap berkartu |
+| Pesan pengguna | Gelembung `accent-soft` rata kanan, radius panel dengan sudut kanan atas kecil; jam kirim kecil di dalam gelembung |
+| Langkah tool | Chip kecil berderet (`rounded-control`, bergaris): ikon status, nama mono, target terpotong, durasi; bisa dibuka untuk target penuh |
+| Agent HUD | Satu bilah lipat di atas composer: rencana agent (bilah kemajuan), antrean "Menunggu giliran" dengan tombol tarik, chip jumlah subagent (membuka tab Aktivitas). Hilang bila kosong. Pertanyaan dan izin agent tetap panel penuh inline |
+| Composer | Kartu mengambang (`rounded-panel`, bayangan lift); garis aksen dan glow saat fokus; pil mode/model/skill; Kirim berubah jadi grup Hentikan/Antre/Arahkan saat run coding |
+| Blok kode | Header berisi bahasa atau path file plus tombol salin; isi mono 12–13 px |
+| Permintaan izin | Panel inline berwarna `warning`, berisi perintah persis, tombol Izinkan sekali, Selalu untuk project ini, Tolak |
+| Chip role | Pil `accent-soft` dengan titik (cyan berdenyut saat menulis); klik pada jawaban terakhir membuka koreksi role |
+| Kartu kanban | Judul, chip role, titik status, branch, diff stat mono (+12 −3) |
+| Diff | Tampilan split atau unified, komentar per baris, tombol Terima dan Tolak per file dan semua |
+| Toast | Pojok kanan bawah, 4 detik, maksimal 3 bertumpuk |
+| Empty state | Satu kalimat apa yang bisa dilakukan + satu tombol aksi. Tanpa ilustrasi besar |
 
 ## Copy dan suara
 

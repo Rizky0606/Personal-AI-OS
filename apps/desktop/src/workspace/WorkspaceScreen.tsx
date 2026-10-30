@@ -8,6 +8,7 @@ import { goConversation } from '../chat/paths';
 import { copy } from '../copy';
 import { cn } from '../lib/cn';
 import { relativeTime } from '../lib/time';
+import { enterDelay, Page, PageHeader } from '../screens/PageLayout';
 import { Button } from '../ui/Button';
 import { useToastStore } from '../ui/Toaster';
 import { FleetDialog } from './FleetDialog';
@@ -72,41 +73,49 @@ export function WorkspaceScreen() {
   }
 
   return (
-    <div className="flex flex-col">
-      <div className="flex h-12 items-center justify-between border-b border-border px-4">
-        <h2 className="text-section font-semibold text-text">{copy.workspace.title}</h2>
-        <div
-          role="group"
-          aria-label={copy.workspace.filterLabel}
-          className="flex items-center gap-1"
-        >
-          {RUN_FILTERS.map((id) => (
-            <button
-              key={id}
-              type="button"
-              aria-pressed={filter === id}
-              onClick={() => setFilter(id)}
-              className={cn(
-                'h-8 rounded-control px-3 text-ui transition-colors duration-[120ms] ease-aios',
-                filter === id ? 'bg-accent-soft text-text' : 'text-text-2 hover:bg-surface-2',
-              )}
+    <Page>
+      <PageHeader
+        title={copy.workspace.title}
+        description={copy.workspace.description}
+        actions={
+          <>
+            {running.length > 1 ? (
+              <Button variant="secondary" disabled={stopping} onClick={() => void stopAll()}>
+                <Square size={14} strokeWidth={1.5} aria-hidden="true" />
+                {copy.fleet.stopAll}
+              </Button>
+            ) : null}
+            <Button
+              variant="primary"
+              title={copy.fleet.openHint}
+              onClick={() => setFleetOpen(true)}
             >
-              {copy.workspace.filters[id]} <span className="text-text-3">{counts[id]}</span>
-            </button>
-          ))}
-        </div>
-        <div className="flex items-center gap-2">
-          {running.length > 1 ? (
-            <Button variant="secondary" disabled={stopping} onClick={() => void stopAll()}>
-              <Square size={14} strokeWidth={1.5} aria-hidden="true" />
-              {copy.fleet.stopAll}
+              <Rocket size={14} strokeWidth={1.5} aria-hidden="true" />
+              {copy.fleet.open}
             </Button>
-          ) : null}
-          <Button variant="primary" title={copy.fleet.openHint} onClick={() => setFleetOpen(true)}>
-            <Rocket size={14} strokeWidth={1.5} aria-hidden="true" />
-            {copy.fleet.open}
-          </Button>
-        </div>
+          </>
+        }
+      />
+      <div
+        role="group"
+        aria-label={copy.workspace.filterLabel}
+        className="flex flex-wrap items-center gap-1"
+      >
+        {RUN_FILTERS.map((id) => (
+          <button
+            key={id}
+            type="button"
+            aria-pressed={filter === id}
+            onClick={() => setFilter(id)}
+            className={cn(
+              'h-8 rounded-control px-3 text-ui transition-colors duration-[120ms] ease-aios',
+              filter === id ? 'bg-accent-soft text-text' : 'text-text-2 hover:bg-surface-2',
+            )}
+          >
+            {copy.workspace.filters[id]}{' '}
+            <span className="text-text-3 tabular-nums">{counts[id]}</span>
+          </button>
+        ))}
       </div>
       <FleetDialog open={fleetOpen} onOpenChange={setFleetOpen} />
       <StateView
@@ -129,11 +138,15 @@ export function WorkspaceScreen() {
         retryLabel={copy.states.retry}
         onRetry={() => void query.refetch()}
       >
-        <ul aria-label={copy.workspace.title}>
-          {items.map((item) => (
+        <ul
+          aria-label={copy.workspace.title}
+          className="divide-y divide-border overflow-hidden rounded-panel border border-border bg-surface"
+        >
+          {items.map((item, index) => (
             <li
               key={item.run.id}
-              className="flex items-center gap-3 border-b border-border px-4 py-2 transition-colors duration-[120ms] ease-aios hover:bg-surface-2"
+              style={enterDelay(index)}
+              className="flex animate-aios-enter items-center gap-3 px-4 py-3 transition-colors duration-[120ms] ease-aios hover:bg-surface-2"
             >
               <span
                 role="img"
@@ -176,6 +189,6 @@ export function WorkspaceScreen() {
           ))}
         </ul>
       </StateView>
-    </div>
+    </Page>
   );
 }

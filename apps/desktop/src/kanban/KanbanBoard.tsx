@@ -83,12 +83,13 @@ export function KanbanBoard({ tasks, roles, actions }: KanbanBoardProps) {
     <div
       role="group"
       aria-label={copy.kanban.board}
-      className="flex min-h-0 flex-1 gap-3 overflow-x-auto p-3"
+      className="flex min-h-0 flex-1 gap-4 overflow-x-auto px-6 pb-6"
     >
-      {COLUMNS.map((status) => (
+      {COLUMNS.map((status, index) => (
         <KanbanColumn
           key={status}
           status={status}
+          index={index}
           count={board[status].length}
           accepting={dragging !== null && canDrop(dragging, status)}
           dragActive={dragging !== null}

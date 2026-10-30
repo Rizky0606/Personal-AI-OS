@@ -8,6 +8,8 @@ export interface ResizeHandleProps {
 }
 
 const KEY_STEP = 16;
+/** Jarak panel kanan dari tepi jendela (mr-2), agar lebar mengikuti pointer. */
+const EDGE_GAP = 8;
 
 /**
  * Pegangan di celah kiri panel kanan. Bisa diseret dengan pointer dan diubah dengan panah kiri/kanan,
@@ -21,8 +23,7 @@ export function ResizeHandle({ label, width, onResize }: ResizeHandleProps) {
     event.currentTarget.setPointerCapture(event.pointerId);
   };
   const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
-    // Panel menempel di tepi kanan jendela dengan jarak pulau; lebar = jarak dari kursor ke tepi dikurangi jarak itu.
-    if (dragging.current) onResize(window.innerWidth - event.clientX - 8);
+    if (dragging.current) onResize(window.innerWidth - event.clientX - EDGE_GAP);
   };
   const onPointerUp = (event: PointerEvent<HTMLDivElement>) => {
     dragging.current = false;

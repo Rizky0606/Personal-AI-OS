@@ -41,7 +41,7 @@ export function StateView({
       return <EmptyState message={emptyMessage} action={emptyAction} />;
     case 'error':
       return (
-        <div className="p-4">
+        <div className="p-5">
           <ErrorBanner
             message={errorMessage ?? ''}
             action={
@@ -56,7 +56,7 @@ export function StateView({
       );
     case 'offline':
       return (
-        <div className="flex items-center gap-2 p-4 text-ui text-text-2">
+        <div className="flex animate-aios-enter items-center gap-2 px-6 py-8 text-ui text-text-2">
           <WifiOff size={16} strokeWidth={1.5} aria-hidden="true" />
           <span>{offlineMessage}</span>
         </div>

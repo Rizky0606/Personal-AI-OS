@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { IdSchema, RoleIdSchema } from './common.js';
-import { ApprovalDecisionSchema } from './entities.js';
-import { AgentEventSchema } from './events.js';
+import { ApprovalDecisionSchema, SteerModeSchema } from './entities.js';
+import { AgentEventSchema, QueueNameSchema, QuestionAnswerSchema } from './events.js';
 
 /*
  * Protokol worker (API_CONTRACT.md, "Protokol worker"): WebSocket keluar dari worker
@@ -38,6 +38,8 @@ export const RunSteerCommandSchema = z.object({
   type: z.literal('run.steer'),
   runId: IdSchema,
   text: z.string().min(1),
+  /** Kosong = `steer`. */
+  mode: SteerModeSchema.optional(),
 });
 
 export const RunCancelCommandSchema = z.object({
@@ -51,6 +53,21 @@ export const ApprovalResolveCommandSchema = z.object({
   approvalId: IdSchema,
   decision: ApprovalDecisionSchema,
   remember: z.boolean(),
+});
+
+export const QuestionAnswerCommandSchema = z.object({
+  type: z.literal('question.answer'),
+  runId: IdSchema,
+  questionId: IdSchema,
+  answers: z.array(QuestionAnswerSchema).max(8),
+  cancelled: z.boolean(),
+});
+
+export const QueueRemoveCommandSchema = z.object({
+  type: z.literal('queue.remove'),
+  runId: IdSchema,
+  queue: QueueNameSchema,
+  text: z.string().min(1).max(500),
 });
 
 export const ReviewApplyCommandSchema = z.object({
@@ -69,6 +86,8 @@ export const WorkerCommandSchema = z
     RunSteerCommandSchema,
     RunCancelCommandSchema,
     ApprovalResolveCommandSchema,
+    QuestionAnswerCommandSchema,
+    QueueRemoveCommandSchema,
     ReviewApplyCommandSchema,
   ])
   .meta({ id: 'WorkerCommand' });

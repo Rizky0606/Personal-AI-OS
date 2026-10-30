@@ -83,7 +83,7 @@ export function OpinionPanel({
   return (
     <section
       aria-label={o.title}
-      className="flex flex-col gap-2 rounded-control border border-border p-3"
+      className="flex flex-col gap-3 rounded-panel border border-border bg-surface-2 p-4"
     >
       <div className="flex items-center gap-2">
         <h3 className="text-ui font-semibold text-text">{o.title}</h3>
@@ -112,7 +112,7 @@ export function OpinionPanel({
                   return (
                     <li
                       key={`${f.path}:${f.line}:${i}`}
-                      className="flex flex-col gap-1 border-t border-border pt-2"
+                      className="flex animate-aios-enter flex-col gap-1 border-t border-border pt-3"
                     >
                       <div className="flex items-center gap-2 text-meta text-text-2">
                         <span

@@ -75,6 +75,7 @@ function Directory({
       <ul
         role={depth === 0 ? 'tree' : 'group'}
         aria-label={depth === 0 ? copy.files.tree : undefined}
+        className={cn('flex flex-col gap-0.5', depth === 0 && 'px-2 py-2')}
       >
         {query.data?.entries.map((entry) => {
           const indent = INDENT[Math.min(depth, INDENT.length - 1)];
@@ -85,9 +86,11 @@ function Directory({
                   type="button"
                   onClick={() => onOpenFile(entry.path)}
                   className={cn(
-                    'flex min-h-8 w-full items-center gap-2 pr-2 text-left text-ui transition-colors duration-[120ms] ease-aios',
+                    'relative flex min-h-8 w-full items-center gap-2 rounded-control pr-2 text-left text-ui transition-colors duration-[120ms] ease-aios',
                     indent,
-                    open === entry.path ? 'bg-accent-soft' : 'hover:bg-surface-2',
+                    open === entry.path
+                      ? 'bg-accent-soft before:absolute before:inset-y-1.5 before:left-0 before:w-0.5 before:rounded-full before:bg-accent'
+                      : 'hover:bg-surface-2',
                   )}
                 >
                   <FileIcon
@@ -100,7 +103,7 @@ function Directory({
                   {touched.has(entry.path) ? (
                     <span
                       className={cn(
-                        'ml-auto shrink-0 rounded-badge px-1.5 text-caption',
+                        'ml-auto shrink-0 rounded-full px-2 py-0.5 text-caption',
                         touched.get(entry.path) === 'edit'
                           ? 'bg-accent-soft text-text'
                           : 'bg-surface-2 text-text-2',
@@ -128,7 +131,7 @@ function Directory({
                   })
                 }
                 className={cn(
-                  'flex min-h-8 w-full items-center gap-2 pr-2 text-left text-ui transition-colors duration-[120ms] ease-aios hover:bg-surface-2',
+                  'flex min-h-8 w-full items-center gap-2 rounded-control pr-2 text-left text-ui transition-colors duration-[120ms] ease-aios hover:bg-surface-2',
                   indent,
                 )}
               >
@@ -209,7 +212,7 @@ function QuickOpen({
 
   return (
     <div className="border-b border-border">
-      <label className="flex h-9 items-center gap-2 px-3">
+      <label className="m-3 flex h-9 items-center gap-2 rounded-full border border-border bg-surface-2 px-3 transition-colors duration-[120ms] ease-aios focus-within:border-accent">
         <Search size={14} strokeWidth={1.5} aria-hidden="true" className="shrink-0 text-text-3" />
         <input
           ref={inputRef}
@@ -225,7 +228,7 @@ function QuickOpen({
       {debounced.length > 0 ? (
         <ul
           aria-label={copy.files.results}
-          className="max-h-48 overflow-auto border-t border-border"
+          className="max-h-48 overflow-auto border-t border-border p-1"
         >
           {paths.length === 0 && !results.isPending ? (
             <li className="px-3 py-2 text-meta text-text-3">{copy.files.noResults}</li>
@@ -238,7 +241,7 @@ function QuickOpen({
                     onOpenFile(path);
                     setText('');
                   }}
-                  className="block w-full truncate px-3 py-1 text-left text-ui text-text transition-colors duration-[120ms] ease-aios hover:bg-surface-2"
+                  className="block w-full truncate rounded-control px-3 py-1.5 text-left text-ui text-text transition-colors duration-[120ms] ease-aios hover:bg-surface-2"
                 >
                   {path}
                 </button>

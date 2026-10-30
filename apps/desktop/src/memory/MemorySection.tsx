@@ -11,6 +11,7 @@ import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { StateView, type ViewState } from '../ui/StateView';
 import { Switch } from '../ui/Switch';
 import { TextArea } from '../ui/TextArea';
+import { enterDelay } from '../screens/PageLayout';
 import { useMemoryActions } from './useMemoryActions';
 
 /**
@@ -43,15 +44,15 @@ export function MemorySection() {
   }
 
   return (
-    <section aria-labelledby="settings-memory" className="flex flex-col gap-3">
+    <section aria-labelledby="settings-memory" className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
-        <h3 id="settings-memory" className="text-ui font-semibold text-text">
+        <h3 id="settings-memory" className="text-section font-semibold text-text">
           {m.title}
         </h3>
-        <p className="text-meta text-text-2">{m.intro}</p>
+        <p className="text-ui text-text-2">{m.intro}</p>
       </div>
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-3 rounded-panel border border-border bg-surface p-4">
         <TextArea
           label={m.addLabel}
           hint={m.counter(draft.trim().length, MEMORY_TEXT_MAX)}
@@ -69,7 +70,7 @@ export function MemorySection() {
             }
           }}
         />
-        <div>
+        <div className="flex justify-end">
           <Button
             variant="primary"
             disabled={!online || !draft.trim() || actions.busy === 'create'}
@@ -94,9 +95,13 @@ export function MemorySection() {
         retryLabel={copy.states.retry}
         onRetry={() => void query.refetch()}
       >
-        <ul aria-label={m.listLabel} className="flex flex-col rounded-control border border-border">
-          {items.map((memory) => (
+        <ul
+          aria-label={m.listLabel}
+          className="flex flex-col divide-y divide-border overflow-hidden rounded-panel border border-border bg-surface"
+        >
+          {items.map((memory, index) => (
             <MemoryRow
+              index={index}
               key={memory.id}
               memory={memory}
               disabled={!online || actions.busy !== null}
@@ -127,13 +132,14 @@ export function MemorySection() {
 
 interface MemoryRowProps {
   memory: Memory;
+  index: number;
   disabled: boolean;
   onToggle: (enabled: boolean) => void;
   onSave: (text: string) => Promise<boolean>;
   onDelete: () => void;
 }
 
-function MemoryRow({ memory, disabled, onToggle, onSave, onDelete }: MemoryRowProps) {
+function MemoryRow({ memory, index, disabled, onToggle, onSave, onDelete }: MemoryRowProps) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(memory.text);
   const m = copy.memory;
@@ -144,7 +150,10 @@ function MemoryRow({ memory, disabled, onToggle, onSave, onDelete }: MemoryRowPr
   }
 
   return (
-    <li className="flex flex-col gap-2 border-b border-border px-3 py-2 last:border-b-0">
+    <li
+      style={enterDelay(index)}
+      className="flex animate-aios-enter flex-col gap-2 px-4 py-3 transition-colors duration-[120ms] ease-aios hover:bg-surface-2"
+    >
       {editing ? (
         <>
           <TextArea

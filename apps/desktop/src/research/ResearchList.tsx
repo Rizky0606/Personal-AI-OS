@@ -5,8 +5,8 @@ import { useOnline } from '../app/hooks';
 import { copy } from '../copy';
 import { cn } from '../lib/cn';
 import { relativeTime } from '../lib/time';
+import { enterDelay } from '../screens/PageLayout';
 import { Button } from '../ui/Button';
-import { enterProps } from '../ui/enter';
 import { StateView, type ViewState } from '../ui/StateView';
 
 /** Daftar riset di sidebar, terbaru dulu. */
@@ -42,8 +42,8 @@ export function ResearchList() {
         </Button>
       }
     >
-      <nav aria-label={copy.research.listLabel}>
-        {items.map((job, i) => {
+      <nav aria-label={copy.research.listLabel} className="flex flex-col gap-0.5 p-1">
+        {items.map((job, index) => {
           const active = job.id === params.researchId;
           return (
             <Link
@@ -51,11 +51,12 @@ export function ResearchList() {
               to="/research/$researchId"
               params={{ researchId: job.id }}
               aria-current={active ? 'page' : undefined}
-              style={enterProps(i).style}
+              style={enterDelay(index)}
               className={cn(
-                'flex min-h-8 flex-col border-b border-border px-3 py-1 transition-colors duration-[120ms] ease-aios',
-                active ? 'bg-accent-soft' : 'hover:bg-surface-2',
-                enterProps(i).className,
+                'flex min-h-9 animate-aios-enter flex-col rounded-control border-l-2 px-3 py-1.5 transition-colors duration-[120ms] ease-aios',
+                active
+                  ? 'border-l-accent bg-accent-soft'
+                  : 'border-l-transparent hover:bg-surface-2',
               )}
             >
               <span className="truncate text-ui text-text">{job.question}</span>

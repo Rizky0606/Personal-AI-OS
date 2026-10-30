@@ -18,6 +18,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -32,6 +34,7 @@ import app.aios.android.data.api.Memory
 import app.aios.android.ui.components.AiosButton
 import app.aios.android.ui.components.AiosTextField
 import app.aios.android.ui.components.ButtonKind
+import app.aios.android.ui.components.Hairline
 import app.aios.android.ui.components.ScreenState
 import app.aios.android.ui.components.StateHost
 import app.aios.android.ui.theme.AiosTheme
@@ -146,7 +149,14 @@ private fun MemoryRow(
     val colors = AiosTheme.colors
     val toggleLabel = stringResource(R.string.memory_toggle, memory.text.take(TOGGLE_LABEL_CHARS))
     Column(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = Tokens.Space.s16, vertical = Tokens.Space.s8),
+        modifier = Modifier
+            .fillMaxWidth()
+            .drawBehind {
+                val y = size.height - Hairline.toPx() / 2
+                val inset = Tokens.Space.s16.toPx()
+                drawLine(colors.border, Offset(inset, y), Offset(size.width - inset, y), Hairline.toPx())
+            }
+            .padding(horizontal = Tokens.Space.s16, vertical = Tokens.Space.s12),
         verticalArrangement = Arrangement.spacedBy(Tokens.Space.s4)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {

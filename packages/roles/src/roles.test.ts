@@ -22,8 +22,12 @@ const registry = loadRegistry();
 
 /** Agent di ROLES_AND_SKILLS.md: grup, mesin, dan skill milik agent itu sendiri (di luar skill inti). */
 const SPEC: Record<string, { group: string; engine: string; skills: string[] }> = {
-  general: { group: 'umum', engine: 'hermes', skills: ['answer-first', 'clarify-once'] },
-  project: { group: 'coding', engine: 'omp', skills: [] },
+  general: {
+    group: 'umum',
+    engine: 'hermes',
+    skills: ['answer-first', 'clarify-once', 'find-skills'],
+  },
+  project: { group: 'coding', engine: 'omp', skills: ['find-skills'] },
   researcher: {
     group: 'umum',
     engine: 'research',
@@ -132,7 +136,7 @@ describe('bundel system prompt', () => {
     const withUi = buildBundle(registry, 'project', {
       extraSkills: ['ui-baseline', 'a11y-check', 'ui-baseline', 'skill-hantu'],
     });
-    expect(withUi.skills).toEqual([...CORE_SKILLS, 'ui-baseline', 'a11y-check']);
+    expect(withUi.skills).toEqual([...CORE_SKILLS, 'find-skills', 'ui-baseline', 'a11y-check']);
     expect(withUi.systemPrompt).toContain(registry.skills.get('ui-baseline')!.body);
     expect(withUi.systemPrompt.match(/## ui-baseline/g)).toHaveLength(1);
   });

@@ -1,16 +1,15 @@
 import type { ProjectInspection } from '@aios/contracts';
-import * as Dialog from '@radix-ui/react-dialog';
 import { useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, FolderOpen, X } from 'lucide-react';
+import { ChevronDown, FolderOpen } from 'lucide-react';
 import { useState } from 'react';
 import { apiErrorMessage } from '../api/errors';
 import { useOnline } from '../app/hooks';
 import { api, workerApi } from '../app/services';
 import { copy } from '../copy';
 import { pickFolder } from '../lib/pickFolder';
+import { DialogFrame } from '../screens/DialogFrame';
 import { Button } from '../ui/Button';
 import { ErrorBanner } from '../ui/ErrorBanner';
-import { IconButton } from '../ui/IconButton';
 import { RadioMenu } from '../ui/RadioMenu';
 import { TextField } from '../ui/TextField';
 import { useToastStore } from '../ui/Toaster';
@@ -148,135 +147,120 @@ export function AddProjectDialog({ open, onOpenChange }: AddProjectDialogProps) 
 
   const d = copy.projects.dialog;
   return (
-    <Dialog.Root open={open} onOpenChange={change}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-40 bg-bg/60" />
-        <Dialog.Content
-          aria-describedby={undefined}
-          className="fixed top-20 left-1/2 z-50 flex max-h-[calc(100vh-10rem)] w-[min(560px,calc(100vw-2rem))] -translate-x-1/2 flex-col gap-4 overflow-y-auto rounded-panel border border-border bg-surface p-4 shadow-float"
-        >
-          <div className="flex items-center justify-between">
-            <Dialog.Title className="text-section font-semibold text-text">{d.title}</Dialog.Title>
-            <Dialog.Close asChild>
-              <IconButton label={d.close}>
-                <X size={16} strokeWidth={1.5} aria-hidden="true" />
-              </IconButton>
-            </Dialog.Close>
-          </div>
-
-          {error ? (
-            <ErrorBanner
-              message={error}
-              action={
-                blockedPath ? (
-                  <Button
-                    variant="secondary"
-                    disabled={working !== null}
-                    onClick={() => void allow()}
-                  >
-                    {d.allow}
-                  </Button>
-                ) : undefined
-              }
-            />
-          ) : null}
-          {blockedPath ? <p className="text-meta text-text-2">{d.allowHint}</p> : null}
-
-          {inspection === null ? (
-            <div className="flex items-center gap-3">
-              <Button
-                variant="primary"
-                disabled={working !== null || worker.local !== 'connected'}
-                onClick={() => void choose()}
-              >
-                <FolderOpen size={14} strokeWidth={1.5} aria-hidden="true" />
-                {d.pick}
+    <DialogFrame
+      open={open}
+      onOpenChange={change}
+      title={d.title}
+      description={d.intro}
+      closeLabel={d.close}
+      footer={
+        inspection === null ? undefined : (
+          <>
+            <Button
+              variant="secondary"
+              disabled={working !== null}
+              onClick={() => {
+                setInspection(null);
+                setError(null);
+              }}
+            >
+              {d.change}
+            </Button>
+            <Button variant="primary" disabled={working !== null} onClick={() => void register()}>
+              {working === 'register' ? d.registering : d.register}
+            </Button>
+          </>
+        )
+      }
+    >
+      {error ? (
+        <ErrorBanner
+          message={error}
+          action={
+            blockedPath ? (
+              <Button variant="secondary" disabled={working !== null} onClick={() => void allow()}>
+                {d.allow}
               </Button>
-              {working === 'inspect' ? (
-                <span role="status" className="text-meta text-text-2">
-                  {d.inspecting}
-                </span>
-              ) : null}
+            ) : undefined
+          }
+        />
+      ) : null}
+      {blockedPath ? <p className="text-meta text-text-2">{d.allowHint}</p> : null}
+
+      {inspection === null ? (
+        <div className="flex items-center gap-3 pb-2">
+          <Button
+            variant="primary"
+            disabled={working !== null || worker.local !== 'connected'}
+            onClick={() => void choose()}
+          >
+            <FolderOpen size={14} strokeWidth={1.5} aria-hidden="true" />
+            {d.pick}
+          </Button>
+          {working === 'inspect' ? (
+            <span role="status" className="text-meta text-text-2">
+              {d.inspecting}
+            </span>
+          ) : null}
+        </div>
+      ) : (
+        <>
+          <dl className="flex flex-col divide-y divide-border rounded-control border border-border">
+            <div className="grid grid-cols-[6rem_1fr] gap-3 px-3 py-2 text-ui">
+              <dt className="text-text-2">{d.folder}</dt>
+              <dd className="min-w-0 font-mono break-all text-text">{inspection.path}</dd>
+            </div>
+            <div className="grid grid-cols-[6rem_1fr] gap-3 px-3 py-2 text-ui">
+              <dt className="text-text-2">{d.stack}</dt>
+              <dd>
+                <StackChips stack={inspection.stack} />
+              </dd>
+            </div>
+          </dl>
+          {inspection.git.isRepo ? null : <ErrorBanner tone="warning" message={d.notRepo} />}
+          <TextField
+            label={d.name}
+            value={name}
+            error={fieldErrors.name}
+            onChange={(e) => setName(e.target.value)}
+          />
+          {branchChoices.length > 0 ? (
+            <div className="flex flex-col gap-1">
+              <span className="text-meta text-text-2">{d.branch}</span>
+              <RadioMenu
+                label={d.branchPick}
+                value={branch}
+                onValueChange={setBranch}
+                options={branchChoices.map((b) => ({ value: b, label: b }))}
+                trigger={
+                  <button
+                    type="button"
+                    aria-label={`${d.branch}: ${branch}`}
+                    className="flex h-8 w-full items-center justify-between gap-2 rounded-control border border-border bg-surface px-3 font-mono text-ui text-text transition-colors duration-[120ms] ease-aios hover:bg-surface-2"
+                  >
+                    <span className="truncate">{branch}</span>
+                    <ChevronDown
+                      size={14}
+                      strokeWidth={1.5}
+                      aria-hidden="true"
+                      className="shrink-0 text-text-2"
+                    />
+                  </button>
+                }
+              />
+              <span className="text-caption text-text-3">{d.branchHint}</span>
             </div>
           ) : (
-            <div className="flex flex-col gap-3">
-              <dl className="flex flex-col">
-                <div className="grid grid-cols-[8rem_1fr] gap-3 border-b border-border py-2 text-ui">
-                  <dt className="text-text-2">{d.folder}</dt>
-                  <dd className="min-w-0 font-mono break-all text-text">{inspection.path}</dd>
-                </div>
-                <div className="grid grid-cols-[8rem_1fr] gap-3 border-b border-border py-2 text-ui">
-                  <dt className="text-text-2">{d.stack}</dt>
-                  <dd>
-                    <StackChips stack={inspection.stack} />
-                  </dd>
-                </div>
-              </dl>
-              {inspection.git.isRepo ? null : <ErrorBanner tone="warning" message={d.notRepo} />}
-              <TextField
-                label={d.name}
-                value={name}
-                error={fieldErrors.name}
-                onChange={(e) => setName(e.target.value)}
-              />
-              {branchChoices.length > 0 ? (
-                <div className="flex flex-col gap-1">
-                  <span className="text-meta text-text-2">{d.branch}</span>
-                  <RadioMenu
-                    label={d.branchPick}
-                    value={branch}
-                    onValueChange={setBranch}
-                    options={branchChoices.map((b) => ({ value: b, label: b }))}
-                    trigger={
-                      <button
-                        type="button"
-                        aria-label={`${d.branch}: ${branch}`}
-                        className="flex h-9 w-full items-center justify-between gap-2 rounded-control border border-border bg-surface px-3 font-mono text-ui text-text transition-colors duration-[120ms] ease-aios hover:bg-surface-2"
-                      >
-                        <span className="truncate">{branch}</span>
-                        <ChevronDown
-                          size={14}
-                          strokeWidth={1.5}
-                          aria-hidden="true"
-                          className="shrink-0 text-text-2"
-                        />
-                      </button>
-                    }
-                  />
-                  <span className="text-caption text-text-3">{d.branchHint}</span>
-                </div>
-              ) : (
-                <TextField
-                  label={d.branch}
-                  value={branch}
-                  error={fieldErrors.branch}
-                  className="font-mono"
-                  onChange={(e) => setBranch(e.target.value)}
-                />
-              )}
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="secondary"
-                  disabled={working !== null}
-                  onClick={() => {
-                    setInspection(null);
-                    setError(null);
-                  }}
-                >
-                  {d.change}
-                </Button>
-                <Button
-                  variant="primary"
-                  disabled={working !== null}
-                  onClick={() => void register()}
-                >
-                  {working === 'register' ? d.registering : d.register}
-                </Button>
-              </div>
-            </div>
+            <TextField
+              label={d.branch}
+              value={branch}
+              error={fieldErrors.branch}
+              className="font-mono"
+              onChange={(e) => setBranch(e.target.value)}
+            />
           )}
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+        </>
+      )}
+    </DialogFrame>
   );
 }

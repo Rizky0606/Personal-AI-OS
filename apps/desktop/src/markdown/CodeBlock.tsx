@@ -50,8 +50,8 @@ export function CodeBlock({ language, code, closed = true }: CodeBlockProps) {
 
   const showPreview = kind !== null && previewing;
   return (
-    <figure className="overflow-hidden rounded-control border border-border bg-surface">
-      <figcaption className="flex h-8 items-center justify-between border-b border-border bg-surface-2 pr-1 pl-3">
+    <figure className="overflow-hidden rounded-panel border border-border bg-surface">
+      <figcaption className="flex h-9 items-center justify-between border-b border-border bg-surface-2 pr-1.5 pl-4">
         <span className="font-mono text-caption text-text-2">{language || 'teks'}</span>
         <span className="flex items-center">
           {kind ? (

@@ -47,7 +47,7 @@ export function PreviewFrame({ url, size, reloadNonce, inspecting, onMessage }: 
 
   const width = SIZE_WIDTH[size];
   return (
-    <div className="flex min-h-0 flex-1 justify-center overflow-auto bg-surface-2 p-2">
+    <div className="flex min-h-0 flex-1 justify-center overflow-auto bg-surface-2 p-3">
       <iframe
         key={reloadNonce}
         ref={frame}
@@ -57,7 +57,7 @@ export function PreviewFrame({ url, size, reloadNonce, inspecting, onMessage }: 
         sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
         style={width ? { width } : undefined}
         className={cn(
-          'h-full min-h-0 rounded-control border border-border bg-bg',
+          'h-full min-h-0 rounded-panel border border-border bg-bg',
           width ? 'shrink-0' : 'w-full',
         )}
       />

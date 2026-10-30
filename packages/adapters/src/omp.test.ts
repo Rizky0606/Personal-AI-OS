@@ -80,7 +80,7 @@ describe('peluncuran omp', () => {
     expect(launched.args).toEqual(
       expect.arrayContaining([
         '--mode',
-        'rpc',
+        'rpc-ui',
         '--approval-mode',
         'always-ask',
         '--cwd',
@@ -140,6 +140,190 @@ describe('peluncuran omp', () => {
     expect(launched.env.OMP_MCP_STARTUP_TIMEOUT_MS).toBeUndefined();
   });
 
+  describe('pertanyaan agent (tool ask)', () => {
+    const ASK = {
+      type: 'extension_ui_request',
+      id: 'ui_9',
+      method: 'ask',
+      questions: [
+        {
+          id: 'db',
+          question: 'Database mana?',
+          options: [{ label: 'Postgres' }, { label: 'SQLite' }],
+          recommended: 0,
+        },
+        { id: 'fitur', question: 'Fitur apa?', options: [{ label: 'Auth' }], multi: true },
+      ],
+    };
+
+    async function start() {
+      const transport = manualTransport();
+      const written: Record<string, unknown>[] = [];
+      transport.write = (frame: string) =>
+        written.push(JSON.parse(frame) as Record<string, unknown>);
+      const handle = await createOmpAdapter({
+        launch: () => transport,
+        llm: { baseUrl: 'http://x', apiKey: 'k' },
+        abortGraceMs: 50,
+      }).startRun(input());
+      const push = (frame: Record<string, unknown>) => transport.queue.push(JSON.stringify(frame));
+      return { transport, handle, written, push };
+    }
+
+    it('mengaktifkan dialog ask sebelum prompt, meneruskan pertanyaan, dan mengirim jawaban ke omp', async () => {
+      const { handle, written, push } = await start();
+      push({ type: 'ready' });
+      push(ASK);
+
+      const events = await collect(handle, async (event) => {
+        if (event.type !== 'question.asked') return;
+        await handle.answerQuestion(event.questionId, {
+          answers: [
+            { id: 'db', selectedOptions: ['SQLite'] },
+            { id: 'fitur', selectedOptions: ['Auth'], customInput: 'dan Search' },
+          ],
+          cancelled: false,
+        });
+        push({ type: 'prompt_result', status: 'completed' });
+      });
+
+      expect(written.slice(0, 3).map((f) => f.type)).toEqual([
+        'set_ask_dialog',
+        'set_subagent_subscription',
+        'set_auto_retry',
+      ]);
+      expect(written.find((f) => f.type === 'set_ask_dialog')).toMatchObject({ enabled: true });
+      const asked = events.find((e) => e.type === 'question.asked');
+      expect(asked).toMatchObject({ questions: [{ id: 'db' }, { id: 'fitur', multi: true }] });
+      expect(written.find((f) => f.type === 'extension_ui_response')).toEqual({
+        type: 'extension_ui_response',
+        id: 'ui_9',
+        answers: [
+          { id: 'db', selectedOptions: ['SQLite'] },
+          { id: 'fitur', selectedOptions: ['Auth'], customInput: 'dan Search' },
+        ],
+      });
+      expect(events.find((e) => e.type === 'question.resolved')).toMatchObject({
+        cancelled: false,
+      });
+    });
+
+    it('pertanyaan yang tidak sah dibatalkan ke omp tanpa menampilkannya; jawaban untuk id tak dikenal ditolak', async () => {
+      const { handle, written, push } = await start();
+      push({ type: 'ready' });
+      push({ ...ASK, questions: [{ id: 'x', question: 'q' }] });
+      push({ type: 'prompt_result', status: 'completed' });
+
+      const events = await collect(handle);
+
+      expect(events.some((e) => e.type === 'question.asked')).toBe(false);
+      expect(written.find((f) => f.type === 'extension_ui_response')).toEqual({
+        type: 'extension_ui_response',
+        id: 'ui_9',
+        cancelled: true,
+      });
+      await expect(
+        handle.answerQuestion('0192f0c4-7a1b-7c2d-9e3f-000000000000', {
+          answers: [],
+          cancelled: true,
+        }),
+      ).rejects.toMatchObject({ code: 'question_unknown' });
+    });
+
+    it('omp menutup dialog sendiri (cancel) atau run dibatalkan: pertanyaan selesai sebagai dibatalkan', async () => {
+      const { handle, written, push } = await start();
+      push({ type: 'ready' });
+      push(ASK);
+      push({ type: 'extension_ui_request', id: 'ui_10', method: 'cancel', targetId: 'ui_9' });
+      push({ ...ASK, id: 'ui_11' });
+
+      const seen: string[] = [];
+      const collecting = collect(handle, async (event) => {
+        if (event.type === 'question.asked') seen.push(event.questionId);
+        if (seen.length === 2) await handle.cancel();
+      });
+      const events = await collecting;
+
+      const resolved = events.filter((e) => e.type === 'question.resolved');
+      expect(resolved).toHaveLength(2);
+      expect(resolved.every((e) => e.cancelled)).toBe(true);
+      expect(written.find((f) => f.type === 'extension_ui_response' && f.id === 'ui_11')).toEqual({
+        type: 'extension_ui_response',
+        id: 'ui_11',
+        cancelled: true,
+      });
+    });
+  });
+
+  it('tool todo yang sukses menjadi event todo.updated berisi seluruh daftar; yang gagal atau berbentuk lain diabaikan', async () => {
+    const transport = manualTransport();
+    const handle = await createOmpAdapter({
+      launch: () => transport,
+      llm: { baseUrl: 'http://x', apiKey: 'k' },
+      abortGraceMs: 100,
+    }).startRun(input());
+    const push = (frame: Record<string, unknown>) => transport.queue.push(JSON.stringify(frame));
+    const phases = [
+      {
+        name: 'Tahap',
+        tasks: [
+          { content: 'Baca kode', status: 'completed' },
+          { content: 'Tulis tes', status: 'in_progress' },
+          { content: 'ngawur', status: 'tidak-dikenal' },
+        ],
+      },
+    ];
+    push({ type: 'ready' });
+    push({ type: 'tool_execution_start', toolCallId: 't1', toolName: 'todo', args: {} });
+    push({ type: 'tool_execution_end', toolCallId: 't1', result: { details: { phases } } });
+    push({ type: 'tool_execution_start', toolCallId: 't2', toolName: 'todo', args: {} });
+    push({
+      type: 'tool_execution_end',
+      toolCallId: 't2',
+      isError: true,
+      result: { details: { phases: [] } },
+    });
+    push({ type: 'tool_execution_start', toolCallId: 't3', toolName: 'bash', args: {} });
+    push({ type: 'tool_execution_end', toolCallId: 't3', result: { details: { phases } } });
+    push({ type: 'prompt_result', status: 'completed' });
+
+    const events = await collect(handle);
+
+    const todos = events.filter((e) => e.type === 'todo.updated');
+    expect(todos).toEqual([
+      {
+        type: 'todo.updated',
+        phases: [
+          {
+            name: 'Tahap',
+            tasks: [
+              { content: 'Baca kode', status: 'completed' },
+              { content: 'Tulis tes', status: 'in_progress' },
+            ],
+          },
+        ],
+      },
+    ]);
+  });
+
+  it('LSP mati secara bawaan (--no-lsp); bila dinyalakan, batas waktu diperpanjang lewat overlay dan digabung dengan overlay MCP', async () => {
+    const off = await launchReplay('text-only');
+    await collect(off.handle);
+    expect(off.launched.args).toContain('--no-lsp');
+    expect(off.launched.args).not.toContain('--config');
+
+    const on = await launchReplay('text-only', {
+      lsp: true,
+      mcpServers: { aios_browser: { url: 'http://127.0.0.1:5555/mcp/run1' } },
+    });
+    await collect(on.handle);
+    expect(on.launched.args).not.toContain('--no-lsp');
+    const overlay = on.launched.args[on.launched.args.indexOf('--config') + 1] ?? '';
+    expect(await readFile(overlay, 'utf8')).toBe(
+      'tools:\n  xdev: false\nlsp:\n  requestTimeout: 60\n',
+    );
+  });
+
   it('models.yml mengarahkan provider ke proxy lokal dengan kunci lokal, bukan token perangkat', async () => {
     const { handle } = await launchReplay('text-only', { model: 'combo/code' });
     await collect(handle);
@@ -188,10 +372,17 @@ describe('transkrip nyata: teks biasa', () => {
         (e) => e.type !== 'message.delta' || (e as { messageId: string }).messageId === MESSAGE,
       ),
     ).toBe(true);
-    // set_auto_retry (mencegah 10x percobaan ulang ke LLM) lalu prompt berisi teks pengguna.
-    expect(transport.sent.map((f) => f.type)).toEqual(['set_auto_retry', 'prompt']);
-    expect(transport.sent[0]).toMatchObject({ enabled: false });
-    expect(transport.sent[1]).toMatchObject({ message: 'kerjakan tugas' });
+    // set_ask_dialog (tool ask), set_auto_retry (mencegah 10x percobaan ulang ke LLM), lalu prompt berisi teks pengguna.
+    expect(transport.sent.map((f) => f.type)).toEqual([
+      'set_ask_dialog',
+      'set_subagent_subscription',
+      'set_auto_retry',
+      'prompt',
+    ]);
+    expect(transport.sent[0]).toMatchObject({ enabled: true });
+    expect(transport.sent[1]).toMatchObject({ level: 'progress' });
+    expect(transport.sent[2]).toMatchObject({ enabled: false });
+    expect(transport.sent[3]).toMatchObject({ message: 'kerjakan tugas' });
     expect(transport.mismatches).toEqual([]);
     expect(transport.inputClosed).toBe(true);
   });
@@ -346,6 +537,10 @@ describe('transkrip nyata: batal, arahkan, galat', () => {
     expect(transport.sent.find((f) => f.type === 'steer')).toMatchObject({
       message: 'fokus ke tes saja',
     });
+    expect(events.filter((e) => e.type === 'queue.updated')).toEqual([
+      { type: 'queue.updated', steering: ['fokus ke tes saja'], followUp: [] },
+      { type: 'queue.updated', steering: [], followUp: [] },
+    ]);
     expect(events.at(-1)?.type).toBe('run.completed');
     expect(transport.mismatches).toEqual([]);
   });
@@ -365,6 +560,108 @@ describe('transkrip nyata: batal, arahkan, galat', () => {
     await collect(handle);
 
     await expect(handle.steer('terlambat')).rejects.toBeInstanceOf(AdapterError);
+  });
+
+  it('frame subagent menjadi event subagent.updated hanya saat status atau jumlah tool berubah', async () => {
+    const transport = manualTransport();
+    const handle = await createOmpAdapter({
+      launch: () => transport,
+      llm: { baseUrl: 'http://x', apiKey: 'k' },
+      abortGraceMs: 100,
+    }).startRun(input());
+    const push = (frame: Record<string, unknown>) => transport.queue.push(JSON.stringify(frame));
+    const progress = (status: string, toolCount: number, extra: Record<string, unknown> = {}) =>
+      push({
+        type: 'subagent_progress',
+        payload: {
+          agent: 'task',
+          parentToolCallId: 'call_t',
+          progress: {
+            id: 'Pekerja',
+            status,
+            assignment: 'Baca a.txt',
+            toolCount,
+            tokens: 12,
+            durationMs: 300,
+            recentOutput: ['', 'membaca berkas'],
+            ...extra,
+          },
+        },
+      });
+    push({ type: 'ready' });
+    push({
+      type: 'subagent_lifecycle',
+      payload: { id: 'Pekerja', agent: 'task', status: 'started' },
+    });
+    progress('running', 0);
+    progress('running', 0); // sama: tidak diulang
+    progress('running', 1);
+    progress('completed', 1);
+    push({
+      type: 'subagent_lifecycle',
+      payload: { id: 'Pekerja', agent: 'task', status: 'completed' },
+    });
+    push({ type: 'prompt_result', status: 'completed' });
+
+    const events = (await collect(handle)).filter((e) => e.type === 'subagent.updated');
+
+    expect(events.map((e) => [e.status, e.toolCount])).toEqual([
+      ['running', 0],
+      ['running', 1],
+      ['completed', 1],
+    ]);
+    expect(events[1]).toMatchObject({
+      subagentId: 'Pekerja',
+      agent: 'task',
+      assignment: 'Baca a.txt',
+      tokens: 12,
+      lastOutput: 'membaca berkas',
+      parentToolCallId: 'call_t',
+    });
+  });
+
+  it('removeQueued mengirim remove_queued_message dengan nama antrean omp; setelah run selesai ditolak', async () => {
+    const transport = manualTransport();
+    const written: Record<string, unknown>[] = [];
+    transport.write = (frame: string) => written.push(JSON.parse(frame) as Record<string, unknown>);
+    const handle = await createOmpAdapter({
+      launch: () => transport,
+      llm: { baseUrl: 'http://x', apiKey: 'k' },
+      abortGraceMs: 100,
+    }).startRun(input());
+
+    await handle.removeQueued('followUp', 'lalu lint');
+    await handle.removeQueued('steering', 'fokus');
+
+    expect(written.map(({ type, message, queue }) => ({ type, message, queue }))).toEqual([
+      { type: 'remove_queued_message', message: 'lalu lint', queue: 'followUp' },
+      { type: 'remove_queued_message', message: 'fokus', queue: 'steering' },
+    ]);
+    transport.kill();
+    await collect(handle);
+    await expect(handle.removeQueued('steering', 'x')).rejects.toBeInstanceOf(AdapterError);
+  });
+
+  it('follow-up memakai frame follow_up (antre sampai giliran selesai), bukan steer', async () => {
+    const transport = manualTransport();
+    const written: Record<string, unknown>[] = [];
+    transport.write = (frame: string) => written.push(JSON.parse(frame) as Record<string, unknown>);
+    const handle = await createOmpAdapter({
+      launch: () => transport,
+      llm: { baseUrl: 'http://x', apiKey: 'k' },
+      abortGraceMs: 100,
+    }).startRun(input());
+
+    await handle.steer('lalu jalankan lint', 'followUp');
+    await handle.steer('fokus ke tes', 'steer');
+    await handle.steer('tanpa mode');
+
+    expect(written.map(({ type, message }) => ({ type, message }))).toEqual([
+      { type: 'follow_up', message: 'lalu jalankan lint' },
+      { type: 'steer', message: 'fokus ke tes' },
+      { type: 'steer', message: 'tanpa mode' },
+    ]);
+    transport.kill();
   });
 });
 

@@ -17,7 +17,6 @@ const NAMES = [
   copy.nav.schedules,
   copy.nav.research,
   copy.nav.spaces,
-  copy.nav.settings,
 ];
 
 beforeEach(() => {
@@ -32,7 +31,7 @@ const renderSidebar = (path = '/kanban') =>
     </Sidebar>,
     path,
   );
-const nav = () => screen.getByRole('navigation', { name: copy.shell.rail });
+const nav = () => screen.getByRole('navigation', { name: copy.shell.navigation });
 const link = (name: string) => within(nav()).getByRole('link', { name });
 
 describe('Sidebar (pulau)', () => {
@@ -72,11 +71,11 @@ describe('Sidebar (pulau)', () => {
     expect(link(copy.nav.workspace)).toHaveFocus();
     await user.keyboard('{ArrowUp}{ArrowUp}');
     // Dari Chat ke atas: berputar ke item terakhir.
-    expect(link(copy.nav.settings)).toHaveFocus();
+    expect(link(copy.nav.spaces)).toHaveFocus();
     await user.keyboard('{ArrowDown}');
     expect(link(copy.nav.chat)).toHaveFocus();
     await user.keyboard('{End}');
-    expect(link(copy.nav.settings)).toHaveFocus();
+    expect(link(copy.nav.spaces)).toHaveFocus();
     await user.keyboard('{Home}');
     expect(link(copy.nav.chat)).toHaveFocus();
 

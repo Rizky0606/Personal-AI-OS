@@ -100,7 +100,7 @@ private val tabs = listOf(
     Tab(Routes.SPACES, R.string.nav_spaces, R.drawable.ic_library)
 )
 
-/** Kerangka setelah login: top bar dengan ikon Pengaturan, konten, dan bottom nav 3 tab. */
+/** Kerangka setelah login: top bar dengan ikon Pengaturan, konten, dan bottom nav 4 tab dengan indikator pil. */
 /**
  * [sessionKey] (ID perangkat) membuat ViewModel chat baru untuk setiap sesi, sehingga percakapan
  * akun sebelumnya tidak terbawa setelah logout lalu login lagi.

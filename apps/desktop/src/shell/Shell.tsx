@@ -1,4 +1,5 @@
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
+import { Plus } from 'lucide-react';
 import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { ConversationList } from '../chat/ConversationList';
 import { ProjectSwitcher } from '../chat/ProjectSwitcher';
@@ -9,16 +10,13 @@ import { ResearchList } from '../research/ResearchList';
 import { ScheduleList } from '../schedules/ScheduleList';
 import { SpaceList } from '../spaces/SpaceList';
 import { useUiStore } from '../state/uiStore';
-import { InfoNote } from '../ui/InfoNote';
+import { IconButton } from '../ui/IconButton';
 import { CommandPalette } from './CommandPalette';
-import { ConnectionBanner } from './ConnectionBanner';
-import { ISLAND } from './island';
-import { isChatPath } from './navItems';
-import { routeForSlot } from './navRoutes';
+import { Header } from './Header';
 import { RightPanel } from './RightPanel';
 import { Sidebar } from './Sidebar';
-import { StatusBar } from './StatusBar';
-import { Topbar } from './Topbar';
+import { routeForSlot } from './navRoutes';
+import { InfoNote } from '../ui/InfoNote';
 import { useShortcuts } from './useShortcuts';
 
 interface Section {
@@ -75,9 +73,8 @@ function sectionFor(pathname: string): Section {
 }
 
 /**
- * Kerangka "pulau": kanvas `bg` dengan sidebar (navigasi + daftar konteks), area utama (topbar + isi), dan panel
- * kanan bertab sebagai panel melayang berjarak 8 px; kaki status di kanvas. Perpindahan layar memakai View
- * Transitions pada pembungkus isi (`aios-page-transition`, lihat shell.css), dengan fallback tanpa animasi.
+ * Kerangka: satu sidebar (232px, ciut 64px), area utama dengan header 48px, dan panel kanan bertab
+ * (lebar bisa diubah) yang mengambang sebagai kartu.
  */
 export function Shell() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -114,41 +111,35 @@ export function Shell() {
   );
   useShortcuts(actions);
   const section = sectionFor(pathname);
-  const sectionAction = section.action;
-
+  const sectionKey = pathname;
   return (
-    <div className="flex h-full flex-col bg-bg text-text">
-      <div className="flex min-h-0 flex-1 gap-(--aios-island-gap) p-(--aios-island-gap)">
-        <Sidebar title={section.title}>{section.list}</Sidebar>
-        <main
-          aria-label={copy.shell.mainArea}
-          className={`${ISLAND} flex min-w-0 flex-1 flex-col overflow-hidden`}
-        >
-          <Topbar
-            title={section.title}
-            chat={isChatPath(pathname)}
-            action={
-              sectionAction
-                ? {
-                    label: sectionAction.label,
-                    onSelect: () => {
-                      if (sectionAction.to === '/') requestNewChat();
-                      else void navigate({ to: '/research' });
-                    },
-                  }
-                : undefined
-            }
-            rightPanelOpen={rightPanelOpen}
-            onToggleRightPanel={toggleRightPanel}
-          />
-          <ConnectionBanner />
-          <div className="aios-page-transition min-h-0 flex-1 overflow-auto">
-            <Outlet />
-          </div>
-        </main>
-        <RightPanel open={rightPanelOpen} />
-      </div>
-      <StatusBar />
+    <div className="flex h-full bg-bg text-text">
+      <Sidebar
+        showExpand={false}
+        title={section.title}
+        action={
+          section.action ? (
+            <IconButton
+              label={section.action.label}
+              onClick={() => {
+                if (section.action?.to === '/') requestNewChat();
+                else void navigate({ to: '/research' });
+              }}
+            >
+              <Plus size={16} strokeWidth={1.5} aria-hidden="true" />
+            </IconButton>
+          ) : undefined
+        }
+      >
+        {section.list}
+      </Sidebar>
+      <main aria-label={copy.shell.mainArea} className="flex min-w-0 flex-1 flex-col bg-bg">
+        <Header title={section.title} />
+        <div key={sectionKey} className="min-h-0 flex-1 animate-aios-fade overflow-auto">
+          <Outlet />
+        </div>
+      </main>
+      <RightPanel open={rightPanelOpen} />
       <CommandPalette />
     </div>
   );

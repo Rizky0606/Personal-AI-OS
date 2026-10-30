@@ -14,6 +14,7 @@ import {
   PreviewInfoSchema,
   PreviewShotSchema,
   ProjectsResultSchema,
+  ProjectSetupSchema,
   ReviewStateSchema,
   TerminalInfoSchema,
   type FileContent,
@@ -28,6 +29,7 @@ import {
   type PreviewShot,
   type PreviewTarget,
   type ProjectBinding,
+  type ProjectSetup,
   type ProjectInspection,
   type ReviewState,
   type TerminalInfo,
@@ -53,6 +55,11 @@ export function createWorkerApi(call: WorkerCall) {
       ProjectsResultSchema.parse(await call('project.unbind', { projectId })).projects,
     bindings: async (): Promise<ProjectBinding[]> =>
       ProjectsResultSchema.parse(await call('projects.list')).projects,
+    /** Penyiapan worktree baru project ini di PC ini (perintah dan tautan node_modules). */
+    setupGet: async (projectId: string): Promise<ProjectSetup> =>
+      ProjectSetupSchema.parse(await call('setup.get', { projectId })),
+    setupSet: async (projectId: string, setup: ProjectSetup): Promise<ProjectSetup> =>
+      ProjectSetupSchema.parse(await call('setup.set', { projectId, ...setup })),
     /** Diff worktree terhadap base, checkpoint, dan pesan commit usulan agent. */
     reviewGet: async (runId: string): Promise<ReviewState> =>
       ReviewStateSchema.parse(await call('review.get', { runId })),

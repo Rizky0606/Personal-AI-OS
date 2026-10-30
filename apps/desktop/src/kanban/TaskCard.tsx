@@ -139,7 +139,7 @@ export function TaskCard({
       aria-label={task.title}
       data-landed={landed ? 'true' : undefined}
       className={cn(
-        'flex flex-col gap-2 rounded-control border border-border bg-surface p-2 transition duration-[180ms] ease-spring',
+        'flex flex-col gap-2 rounded-panel border border-border bg-surface p-3 transition duration-[180ms] ease-spring',
         'focus-within:border-border-strong hover:-translate-y-0.5 hover:border-border-strong hover:shadow-lift',
         !locked && 'cursor-grab',
         dragging && 'opacity-50',

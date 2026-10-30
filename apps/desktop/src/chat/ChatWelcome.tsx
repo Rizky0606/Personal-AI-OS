@@ -1,5 +1,4 @@
 import { Bug, Code2, FileText, FlaskConical, FolderTree, Mail, Plus, Wrench } from 'lucide-react';
-import { AgentOrb } from './AgentOrb';
 import type { ReactNode } from 'react';
 import { copy } from '../copy';
 
@@ -36,15 +35,18 @@ export function ChatWelcome({ inProject, onPick }: ChatWelcomeProps) {
   const text = inProject ? copy.chat.welcome.project : copy.chat.welcome.general;
   const icons = inProject ? PROJECT_ICONS : GENERAL_ICONS;
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-6 px-8 py-10">
-      <AgentOrb state="idle" size={28} />
-      <div className="flex animate-aios-rise flex-col items-center gap-1 text-center">
+    <div className="flex h-full flex-col items-center justify-center gap-8 px-8 py-10">
+      <div className="relative flex size-12 items-center justify-center" aria-hidden="true">
+        <div className="aios-orb absolute -inset-4 animate-aios-orb rounded-full" />
+        <div className="aios-primary relative size-2.5 rounded-full shadow-glow" />
+      </div>
+      <div className="flex animate-aios-rise flex-col items-center gap-1.5 text-center">
         <h2 className="text-page font-semibold text-text">{text.title}</h2>
         <p className="max-w-[56ch] text-ui text-text-2">{text.subtitle}</p>
       </div>
       <ul
         aria-label={copy.chat.suggestionsLabel}
-        className="grid w-full max-w-[calc(72ch+4rem)] grid-cols-1 gap-3 sm:grid-cols-2"
+        className="grid w-full max-w-[calc(var(--aios-chat-measure)+2.5rem)] grid-cols-1 gap-4 sm:grid-cols-2"
       >
         {text.cards.map((card, i) => (
           <li
@@ -55,12 +57,12 @@ export function ChatWelcome({ inProject, onPick }: ChatWelcomeProps) {
             <button
               type="button"
               onClick={() => onPick(card.prompt)}
-              className="group flex w-full items-start gap-3 rounded-panel border border-border bg-surface p-3 text-left transition duration-[180ms] ease-spring hover:-translate-y-0.5 hover:border-border-strong hover:shadow-lift active:translate-y-0"
+              className="group flex w-full items-start gap-3 rounded-panel border border-border bg-surface p-4 text-left transition duration-[180ms] ease-spring hover:-translate-y-0.5 hover:border-border-strong hover:shadow-lift active:translate-y-0"
             >
-              <span className="mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-control bg-surface-2 text-text-2 transition-colors duration-[180ms] ease-aios group-hover:bg-accent-soft group-hover:text-text">
+              <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-control bg-surface-2 text-text-2 transition-colors duration-[180ms] ease-aios group-hover:bg-accent-soft group-hover:text-text">
                 {icons[i]}
               </span>
-              <span className="flex min-w-0 flex-col gap-0.5">
+              <span className="flex min-w-0 flex-col gap-1">
                 <span className="text-ui font-medium text-text">{card.title}</span>
                 <span className="text-meta text-text-2">{card.hint}</span>
               </span>

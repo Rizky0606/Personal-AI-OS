@@ -1,6 +1,18 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { AgentEvent, Usage } from '@aios/contracts';
+import {
+  QuestionSchema,
+  type QuestionAnswer,
+  TODO_MAX_PHASES,
+  TODO_MAX_TASKS,
+  TodoStatusSchema,
+  type AgentEvent,
+  type SteerMode,
+  type QueueName,
+  type SubagentStatus,
+  type TodoPhase,
+  type Usage,
+} from '@aios/contracts';
 import { summarize } from './events.js';
 import { AsyncQueue } from './queue.js';
 import {
@@ -47,6 +59,9 @@ export interface OmpAdapterOptions {
 /** Provider di `models.yml` per run; model dipilih sebagai `aios/<id>`. */
 export const OMP_PROVIDER = 'aios';
 
+/** Batas waktu tool `lsp` (detik) bila LSP dinyalakan; lihat komentar di `startRun`. */
+const LSP_REQUEST_TIMEOUT_S = 60;
+
 const CAPABILITIES: AdapterCapabilities = {
   streaming: true,
   approvals: true,
@@ -59,6 +74,31 @@ const isRecord = (v: unknown): v is Record<string, unknown> =>
 const str = (v: unknown): string | undefined => (typeof v === 'string' ? v : undefined);
 const clip = (text: string, max: number) =>
   text.length > max ? `${text.slice(0, max - 1)}…` : text;
+
+/**
+ * Daftar rencana dari `result.details.phases` tool `todo`, dipangkas ke batas kontrak. Bentuk yang tidak
+ * dikenal menghasilkan undefined (tidak ada event), bukan galat: ini hanya tampilan.
+ */
+function todoPhases(details: unknown): TodoPhase[] | undefined {
+  if (!isRecord(details) || !Array.isArray(details.phases)) return undefined;
+  return details.phases.slice(0, TODO_MAX_PHASES).flatMap((phase): TodoPhase[] => {
+    if (!isRecord(phase) || !Array.isArray(phase.tasks)) return [];
+    const tasks = phase.tasks.slice(0, TODO_MAX_TASKS).flatMap((task): TodoPhase['tasks'] => {
+      if (!isRecord(task)) return [];
+      const status = TodoStatusSchema.safeParse(task.status);
+      if (!status.success || typeof task.content !== 'string') return [];
+      const blocker = str(task.blocker);
+      return [
+        {
+          content: clip(task.content, 200),
+          status: status.data,
+          ...(blocker ? { blocker: clip(blocker, 200) } : {}),
+        },
+      ];
+    });
+    return [{ name: clip(str(phase.name) ?? '', 80), tasks }];
+  });
+}
 
 /** Teks hasil tool dari `result.content` / `partialResult.content`. */
 function contentText(result: unknown): string {
@@ -146,6 +186,8 @@ export function createOmpAdapter(options: OmpAdapterOptions): AgentAdapter {
       await mkdir(agentDir, { recursive: true });
       await writeFile(join(agentDir, 'models.yml'), modelsYaml(options.llm, model));
       await writeFile(systemFile, input.systemPrompt ?? '');
+      // Pengaturan per run lewat overlay di folder run (bukan di repo kerja).
+      const overlay: string[] = [];
       // Server MCP per run (tool browser worker) di direktori agent terisolasi, bukan di repo kerja.
       if (input.mcpServers && Object.keys(input.mcpServers).length > 0) {
         const servers = Object.fromEntries(
@@ -156,14 +198,19 @@ export function createOmpAdapter(options: OmpAdapterOptions): AgentAdapter {
         );
         await writeFile(join(agentDir, 'mcp.json'), JSON.stringify({ mcpServers: servers }));
         // Tanpa ini omp menyembunyikan tool MCP di balik perangkat xd:// dan model tidak melihatnya langsung.
-        await writeFile(overlayFile, 'tools:\n  xdev: false\n');
+        overlay.push('tools:', '  xdev: false');
       }
+      // LSP (diagnostik setelah edit, definisi, referensi). Server bahasa dingin butuh ±20-25 detik di
+      // panggilan pertama, lebih lama dari batas bawaan tool (20 detik, hasilnya "Operation aborted"); 60 detik
+      // diuji cukup (VERIFICATION.md). Server bahasa hanya jalan bila ditemukan di worktree atau PATH.
+      if (input.lsp === true) overlay.push('lsp:', `  requestTimeout: ${LSP_REQUEST_TIMEOUT_S}`);
+      if (overlay.length > 0) await writeFile(overlayFile, `${overlay.join('\n')}\n`);
 
       const transport = await options.launch({
         runId: input.runId,
         args: [
           '--mode',
-          'rpc',
+          'rpc-ui',
           // Default omp adalah yolo: tanpa ini, aturan approval SECURITY_OPS.md tidak berlaku.
           '--approval-mode',
           'always-ask',
@@ -172,11 +219,11 @@ export function createOmpAdapter(options: OmpAdapterOptions): AgentAdapter {
           '--no-session',
           '--no-skills',
           '--no-extensions',
-          '--no-lsp',
+          ...(input.lsp === true ? [] : ['--no-lsp']),
           '--no-title',
           '--append-system-prompt',
           systemFile,
-          ...(input.mcpServers ? ['--config', overlayFile] : []),
+          ...(overlay.length > 0 ? ['--config', overlayFile] : []),
           '--model',
           `${OMP_PROVIDER}/${model}`,
         ],
@@ -217,6 +264,11 @@ class OmpRun implements RunHandle {
   readonly runId: string;
   readonly events = new AsyncQueue<AgentEvent>();
   private readonly pending = new Map<string, PendingApproval>();
+  private readonly questions = new Map<string, string>();
+  private readonly subagents = new Map<
+    string,
+    { key: string; toolCount: number; durationMs: number }
+  >();
   private readonly tools = new Map<string, { name: string; startedAt: number; text: string }>();
   private readonly usage: Usage = { inputTokens: 0, outputTokens: 0 };
   private text = '';
@@ -327,6 +379,11 @@ class OmpRun implements RunHandle {
         clearTimeout(this.readyTimer);
         // Percobaan ulang otomatis omp (hingga 10x ke LLM) dimatikan dulu; prompt baru dikirim setelah
         // pengaturan itu dikonfirmasi, kalau tidak galat model tetap diulang. Cadangan bila balasan tak datang.
+        // Tool `ask` hanya ada di mode rpc-ui dan baru memakai satu permintaan `ask` setelah diaktifkan di sini;
+        // tanpa ini ia meminta tiap pilihan lewat `select`/`editor` biasa (VERIFICATION.md).
+        this.send({ id: 'cfg-ask', type: 'set_ask_dialog', enabled: true });
+        // Subagent (tool `task`) dilaporkan sebagai frame lifecycle dan progress; bawaannya mati.
+        this.send({ id: 'cfg-sub', type: 'set_subagent_subscription', level: 'progress' });
         this.send({ id: 'cfg-retry', type: 'set_auto_retry', enabled: false });
         this.promptFallback = setTimeout(() => this.sendPrompt(), 3000);
         return;
@@ -354,10 +411,79 @@ class OmpRun implements RunHandle {
       case 'prompt_result':
         this.onPromptResult(frame);
         return;
+      case 'queue_update':
+        this.onQueueUpdate(frame);
+        return;
+      case 'subagent_lifecycle':
+      case 'subagent_progress':
+        this.onSubagent(frame);
+        return;
       default:
-        // available_commands_update, queue_update, agent_start, session_settled, response, dst.
+        // available_commands_update, agent_start, session_settled, response, dst.
         return;
     }
+  }
+
+  /** Antrean arahan di omp (steering dan follow-up) sebagai teks; frame tak berbentuk dugaan diabaikan. */
+  private onQueueUpdate(frame: Record<string, unknown>): void {
+    const list = (v: unknown) =>
+      Array.isArray(v)
+        ? v.flatMap((s) => (typeof s === 'string' ? [clip(s, 500)] : [])).slice(0, 20)
+        : [];
+    this.emit({
+      type: 'queue.updated',
+      steering: list(frame.steering),
+      followUp: list(frame.followUp),
+    });
+  }
+
+  /**
+   * Subagent: frame progress membawa seluruh keadaan; lifecycle hanya status akhir/awal. Event dikirim saat
+   * status atau jumlah tool berubah, bukan tiap potongan keluaran, supaya tidak membanjiri gateway.
+   */
+  private onSubagent(frame: Record<string, unknown>): void {
+    const payload = isRecord(frame.payload) ? frame.payload : undefined;
+    if (!payload) return;
+    const progress = isRecord(payload.progress) ? payload.progress : undefined;
+    const id = str(progress?.id) ?? str(payload.id);
+    if (!id) return;
+    const num = (v: unknown) => (typeof v === 'number' && v > 0 ? Math.trunc(v) : 0);
+    const raw = str(progress?.status) ?? str(payload.status);
+    const status: SubagentStatus =
+      raw === 'completed'
+        ? 'completed'
+        : raw === 'aborted' || raw === 'cancelled'
+          ? 'aborted'
+          : raw === 'failed' || raw === 'error'
+            ? 'failed'
+            : 'running';
+    const previous = this.subagents.get(id);
+    const tools = num(progress?.toolCount);
+    const toolCount = tools > 0 ? tools : (previous?.toolCount ?? 0);
+    const elapsed = num(progress?.durationMs);
+    const durationMs = elapsed > 0 ? elapsed : (previous?.durationMs ?? 0);
+    const key = `${status}:${toolCount}`;
+    if (previous?.key === key) return;
+    const output = Array.isArray(progress?.recentOutput)
+      ? (progress.recentOutput as unknown[])
+      : [];
+    const last = [...output]
+      .reverse()
+      .find((o): o is string => typeof o === 'string' && o.trim() !== '');
+    const parent = str(payload.parentToolCallId);
+    this.subagents.set(id, { key, toolCount, durationMs });
+    this.emit({
+      type: 'subagent.updated',
+      subagentId: clip(id, 80),
+      agent: clip(str(payload.agent) ?? str(progress?.agent) ?? '', 80),
+      assignment: clip(str(progress?.assignment) ?? str(payload.assignment) ?? '', 300),
+      status,
+      toolCount,
+      durationMs,
+      tokens: num(progress?.tokens),
+      ...(last ? { lastOutput: clip(last.trim(), 300) } : {}),
+      ...(parent ? { parentToolCallId: clip(parent, 200) } : {}),
+    });
   }
 
   private sendPrompt(): void {
@@ -449,9 +575,58 @@ class OmpRun implements RunHandle {
       status,
       durationMs: Math.max(0, this.deps.now() - tool.startedAt),
     });
+    // Rencana agent: tool `todo` mengembalikan seluruh daftar di result.details.phases.
+    if (tool.name === 'todo' && status === 'ok') {
+      const phases = todoPhases(isRecord(frame.result) ? frame.result.details : undefined);
+      if (phases) this.emit({ type: 'todo.updated', phases });
+    }
+  }
+
+  /** Pertanyaan agent (tool `ask`): diteruskan ke pengguna; bentuk yang tidak sah dibatalkan agar omp memakai bawaannya. */
+  private onAsk(frame: Record<string, unknown>): void {
+    const ompId = str(frame.id);
+    if (!ompId) return;
+    const raw = Array.isArray(frame.questions) ? frame.questions : [];
+    const parsed = raw.map((q) => QuestionSchema.safeParse(q));
+    const questions = parsed.flatMap((p) => (p.success ? [p.data] : []));
+    if (questions.length === 0 || questions.length !== raw.length || questions.length > 8) {
+      this.send({ type: 'extension_ui_response', id: ompId, cancelled: true });
+      return;
+    }
+    const questionId = this.deps.newId();
+    this.questions.set(questionId, ompId);
+    this.emit({ type: 'question.asked', questionId, questions });
+  }
+
+  /** omp menutup dialog sendiri (batas waktu atau abort): jawaban belakangan diabaikan, jadi tampilan dibersihkan. */
+  private onAskCancelled(targetId: string | undefined): void {
+    const entry = [...this.questions.entries()].find(([, ompId]) => ompId === targetId);
+    if (!entry) return;
+    this.questions.delete(entry[0]);
+    this.emit({ type: 'question.resolved', questionId: entry[0], cancelled: true });
+  }
+
+  answerQuestion(
+    questionId: string,
+    result: { answers: QuestionAnswer[]; cancelled: boolean },
+  ): Promise<void> {
+    const ompId = this.questions.get(questionId);
+    if (!ompId) {
+      return Promise.reject(new AdapterError('question_unknown', 'Pertanyaan tidak ditemukan.'));
+    }
+    this.questions.delete(questionId);
+    this.send(
+      result.cancelled
+        ? { type: 'extension_ui_response', id: ompId, cancelled: true }
+        : { type: 'extension_ui_response', id: ompId, answers: result.answers },
+    );
+    this.emit({ type: 'question.resolved', questionId, cancelled: result.cancelled });
+    return Promise.resolve();
   }
 
   private onUiRequest(frame: Record<string, unknown>): void {
+    if (frame.method === 'ask') return this.onAsk(frame);
+    if (frame.method === 'cancel') return this.onAskCancelled(str(frame.targetId));
     if (frame.method !== 'select') return; // setWidget dan sejenisnya: fire-and-forget.
     const ompId = str(frame.id);
     const title = str(frame.title) ?? '';
@@ -517,11 +692,24 @@ class OmpRun implements RunHandle {
     this.finish();
   }
 
-  steer(text: string): Promise<void> {
+  steer(text: string, mode: SteerMode = 'steer'): Promise<void> {
     if (this.finished) {
       return Promise.reject(new AdapterError('run_finished', 'Run sudah selesai.'));
     }
-    this.send({ id: `steer-${++this.seq}`, type: 'steer', message: text });
+    this.send(
+      mode === 'followUp'
+        ? { id: `follow-up-${++this.seq}`, type: 'follow_up', message: text }
+        : { id: `steer-${++this.seq}`, type: 'steer', message: text },
+    );
+    return Promise.resolve();
+  }
+
+  /** Hasilnya (`queue_update`) datang sebagai event `queue.updated`; arahan yang sudah diproses tidak bisa ditarik. */
+  removeQueued(queue: QueueName, text: string): Promise<void> {
+    if (this.finished) {
+      return Promise.reject(new AdapterError('run_finished', 'Run sudah selesai.'));
+    }
+    this.send({ id: `unqueue-${++this.seq}`, type: 'remove_queued_message', message: text, queue });
     return Promise.resolve();
   }
 
@@ -531,6 +719,11 @@ class OmpRun implements RunHandle {
     // Approval yang menggantung membuat tool menunggu selamanya; tolak dulu supaya abort bisa selesai.
     for (const approvalId of [...this.pending.keys()]) {
       await this.resolveApproval(approvalId, 'deny').catch(() => undefined);
+    }
+    for (const questionId of [...this.questions.keys()]) {
+      await this.answerQuestion(questionId, { answers: [], cancelled: true }).catch(
+        () => undefined,
+      );
     }
     this.send({ id: 'abort', type: 'abort' });
     const grace = this.deps.options.abortGraceMs ?? 5000;

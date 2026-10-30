@@ -25,15 +25,15 @@ export function ConsolePane({ entries, onClear }: ConsolePaneProps) {
   return (
     <section
       aria-label={c.title}
-      className="flex max-h-48 shrink-0 flex-col border-t border-border"
+      className="flex max-h-48 shrink-0 flex-col border-t border-border bg-surface"
     >
-      <div className="flex h-8 items-center justify-between px-2">
+      <div className="flex h-10 items-center justify-between px-3">
         <button
           type="button"
           aria-expanded={open}
           aria-label={c.toggle}
           onClick={() => setOpen((v) => !v)}
-          className="flex items-center gap-1 text-meta font-medium text-text"
+          className="flex items-center gap-1.5 rounded-control text-meta font-medium text-text transition-colors duration-[120ms] ease-aios hover:text-accent"
         >
           {open ? (
             <ChevronDown size={14} strokeWidth={1.5} aria-hidden="true" />
@@ -52,7 +52,7 @@ export function ConsolePane({ entries, onClear }: ConsolePaneProps) {
         ) : null}
       </div>
       {open ? (
-        <ul className="min-h-0 flex-1 overflow-y-auto px-2 pb-2 font-mono text-meta">
+        <ul className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 font-mono text-meta">
           {entries.length === 0 ? (
             <li className="font-sans text-text-3">{c.empty}</li>
           ) : (
@@ -60,7 +60,7 @@ export function ConsolePane({ entries, onClear }: ConsolePaneProps) {
               <li
                 key={entry.id}
                 className={cn(
-                  'border-b border-border py-1 break-words whitespace-pre-wrap',
+                  'animate-aios-enter border-b border-border py-1.5 break-words whitespace-pre-wrap',
                   isError(entry.level)
                     ? 'text-danger'
                     : entry.level === 'warn'
