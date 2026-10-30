@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
+  applyReduceMotion,
   RIGHT_PANEL_DEFAULT,
   RIGHT_PANEL_MAX,
   RIGHT_PANEL_MIN,
@@ -106,5 +107,17 @@ describe('tema', () => {
     expect(root.getAttribute('data-theme')).toBe('light');
     applyTheme('system', root);
     expect(root.hasAttribute('data-theme')).toBe(false);
+  });
+});
+
+describe('kurangi gerakan', () => {
+  it('eksplisit memasang data-reduce-motion; null (ikut sistem) melepasnya', () => {
+    const root = document.createElement('html');
+    applyReduceMotion(true, root);
+    expect(root.getAttribute('data-reduce-motion')).toBe('true');
+    applyReduceMotion(false, root);
+    expect(root.getAttribute('data-reduce-motion')).toBe('false');
+    applyReduceMotion(null, root);
+    expect(root.hasAttribute('data-reduce-motion')).toBe(false);
   });
 });

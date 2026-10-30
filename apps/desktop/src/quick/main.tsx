@@ -1,6 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { applyTheme, useUiStore } from '../state/uiStore';
+import { applyReduceMotion, applyTheme, useUiStore } from '../state/uiStore';
 import { TooltipProvider } from '../ui/Tooltip';
 import {
   MAIN_LABEL,
@@ -50,8 +50,12 @@ const channel: QuickChannel = {
     }),
 };
 
-useUiStore.subscribe((state) => applyTheme(state.theme));
+useUiStore.subscribe((state) => {
+  applyTheme(state.theme);
+  applyReduceMotion(state.reduceMotion);
+});
 applyTheme(useUiStore.getState().theme);
+applyReduceMotion(useUiStore.getState().reduceMotion);
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Elemen #root tidak ada di quick.html.');

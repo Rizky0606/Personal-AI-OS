@@ -9,6 +9,7 @@ import { formatDateTime } from '../lib/time';
 import { IconButton } from '../ui/IconButton';
 import { Button } from '../ui/Button';
 import { PageContainer } from '../ui/PageContainer';
+import { PageHeader } from '../ui/PageHeader';
 import { StateView, type ViewState } from '../ui/StateView';
 import { useWorker } from '../worker/hooks';
 
@@ -83,12 +84,14 @@ export function StatusScreen() {
 
   return (
     <div className="flex flex-col">
-      <div className="flex h-12 items-center justify-between border-b border-border px-4">
-        <h2 className="text-section font-semibold text-text">{p.title}</h2>
-        <IconButton label={p.refresh} onClick={() => void query.refetch()}>
-          <RefreshCw size={16} strokeWidth={1.5} aria-hidden="true" />
-        </IconButton>
-      </div>
+      <PageHeader
+        title={p.title}
+        secondary={
+          <IconButton label={p.refresh} onClick={() => void query.refetch()}>
+            <RefreshCw size={16} strokeWidth={1.5} aria-hidden="true" />
+          </IconButton>
+        }
+      />
       <StateView
         state={view}
         loadingLabel={p.loading}

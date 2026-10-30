@@ -64,9 +64,9 @@ export function AllowedFolders() {
 
   return (
     <section aria-labelledby="settings-folders" className="flex flex-col gap-2">
-      <h2 id="settings-folders" className="text-section font-semibold text-text">
+      <h3 id="settings-folders" className="text-ui font-semibold text-text">
         {copy.settings.folders.title}
-      </h2>
+      </h3>
       <p className="max-w-[72ch] text-meta text-text-2">{copy.settings.folders.hint}</p>
       <StateView
         state={view}

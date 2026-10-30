@@ -5,6 +5,7 @@ import { useOnline } from '../app/hooks';
 import { copy } from '../copy';
 import { cn } from '../lib/cn';
 import { Button } from '../ui/Button';
+import { enterProps } from '../ui/enter';
 import { StateView, type ViewState } from '../ui/StateView';
 
 /** Daftar ruang di sidebar beserta jumlah dokumennya. */
@@ -42,15 +43,17 @@ export function SpaceList() {
       onRetry={() => void query.refetch()}
     >
       <nav aria-label={s.listLabel}>
-        {items.map((space) => (
+        {items.map((space, i) => (
           <Link
             key={space.id}
             to="/spaces/$spaceId"
             params={{ spaceId: space.id }}
             aria-current={space.id === params.spaceId ? 'page' : undefined}
+            style={enterProps(i).style}
             className={cn(
               'flex min-h-8 flex-col justify-center border-b border-border px-3 py-1 transition-colors duration-[120ms] ease-aios',
               space.id === params.spaceId ? 'bg-accent-soft' : 'hover:bg-surface-2',
+              enterProps(i).className,
             )}
           >
             <span className="truncate text-ui text-text">{space.name}</span>

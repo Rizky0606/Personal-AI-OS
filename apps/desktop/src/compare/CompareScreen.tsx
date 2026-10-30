@@ -13,6 +13,7 @@ import { ErrorBanner } from '../ui/ErrorBanner';
 import { IconButton } from '../ui/IconButton';
 import { RadioMenu } from '../ui/RadioMenu';
 import { PageContainer } from '../ui/PageContainer';
+import { PageHeader } from '../ui/PageHeader';
 import { Skeleton, SkeletonList } from '../ui/Skeleton';
 import { TextArea } from '../ui/TextArea';
 
@@ -105,9 +106,7 @@ export function CompareScreen() {
 
   return (
     <div className="flex flex-col" onKeyDown={onKeyDown}>
-      <div className="flex h-12 items-center border-b border-border px-4">
-        <h2 className="text-section font-semibold text-text">{c.title}</h2>
-      </div>
+      <PageHeader title={c.title} />
       <PageContainer>
         <p className="max-w-[72ch] text-ui text-text-2">{c.intro}</p>
         <TextArea

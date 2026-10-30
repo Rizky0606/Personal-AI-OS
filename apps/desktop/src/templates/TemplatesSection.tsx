@@ -47,9 +47,9 @@ export function TemplatesSection() {
   return (
     <section aria-labelledby="settings-templates" className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
-        <h2 id="settings-templates" className="text-section font-semibold text-text">
+        <h3 id="settings-templates" className="text-ui font-semibold text-text">
           {t.title}
-        </h2>
+        </h3>
         <p className="text-meta text-text-2">{t.intro}</p>
       </div>
 

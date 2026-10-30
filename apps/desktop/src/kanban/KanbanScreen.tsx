@@ -10,6 +10,7 @@ import { taskErrorMessage } from './errors';
 import { useUiStore } from '../state/uiStore';
 import { Button } from '../ui/Button';
 import { EmptyState } from '../ui/EmptyState';
+import { PageHeader } from '../ui/PageHeader';
 import { StateView, type ViewState } from '../ui/StateView';
 import { useToastStore } from '../ui/Toaster';
 import { useProjects } from '../worker/hooks';
@@ -30,7 +31,7 @@ export function KanbanScreen() {
   if (!projectId || (projects.isSuccess && !project)) {
     return (
       <div className="flex flex-col">
-        <Header title={copy.kanban.title} />
+        <PageHeader title={copy.kanban.title} />
         <EmptyState
           message={copy.kanban.noProject}
           action={
@@ -43,15 +44,6 @@ export function KanbanScreen() {
     );
   }
   return <Board projectId={projectId} projectName={project?.name} />;
-}
-
-function Header({ title, children }: { title: string; children?: React.ReactNode }) {
-  return (
-    <div className="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-border px-4">
-      <h2 className="min-w-0 truncate text-section font-semibold text-text">{title}</h2>
-      <div className="flex shrink-0 items-center gap-2">{children}</div>
-    </div>
-  );
 }
 
 function Board({ projectId, projectName }: { projectId: string; projectName: string | undefined }) {
@@ -96,10 +88,11 @@ function Board({ projectId, projectName }: { projectId: string; projectName: str
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <Header title={projectName ? `${copy.kanban.title} · ${projectName}` : copy.kanban.title}>
-        {breakdownButton}
-        {newButton}
-      </Header>
+      <PageHeader
+        title={projectName ? `${copy.kanban.title} · ${projectName}` : copy.kanban.title}
+        secondary={breakdownButton}
+        primary={newButton}
+      />
       <StateView
         state={view}
         loadingLabel={copy.kanban.loading}

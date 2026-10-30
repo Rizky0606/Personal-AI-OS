@@ -46,9 +46,9 @@ export function UpdateSection() {
 
   return (
     <section aria-labelledby="settings-update" className="flex flex-col gap-2">
-      <h2 id="settings-update" className="text-section font-semibold text-text">
+      <h3 id="settings-update" className="text-ui font-semibold text-text">
         {text.title}
-      </h2>
+      </h3>
       <div className="flex items-center gap-3">
         {result?.kind === 'available' ? (
           <Button onClick={() => void install(result)} disabled={offline}>

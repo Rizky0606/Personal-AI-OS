@@ -48,6 +48,10 @@ interface UiState {
   /** Pembagian panel kanan menjadi beberapa pane; null = satu pane yang menampilkan `rightPanelTab`. */
   paneTree: PaneNode | null;
   theme: ThemeMode;
+  /** Kurangi gerakan: null = ikuti sistem. Diingat antar sesi. */
+  reduceMotion: boolean | null;
+  /** Notifikasi info sebagai toast di aplikasi; error selalu tampil. Diingat antar sesi. */
+  inAppToasts: boolean;
   paletteOpen: boolean;
   /** Naik tiap Ctrl+N; layar chat memakainya untuk memulai percakapan baru. */
   newChatSignal: number;
@@ -97,6 +101,8 @@ interface UiState {
   setPaneTab: (leafId: string, tab: RightPanelTab) => void;
   setPaneRatio: (splitId: string, ratio: number) => void;
   setTheme: (theme: ThemeMode) => void;
+  setReduceMotion: (value: boolean | null) => void;
+  setInAppToasts: (on: boolean) => void;
   setPaletteOpen: (open: boolean) => void;
   requestNewChat: () => void;
 }
@@ -111,6 +117,8 @@ export const useUiStore = create<UiState>()(
       rightPanelTab: 'preview',
       paneTree: null,
       theme: 'system',
+      reduceMotion: null,
+      inAppToasts: true,
       paletteOpen: false,
       newChatSignal: 0,
       activeProjectId: null,
@@ -185,6 +193,8 @@ export const useUiStore = create<UiState>()(
         if (tree) set({ paneTree: setSplitRatio(tree, splitId, ratio) });
       },
       setTheme: (theme) => set({ theme }),
+      setReduceMotion: (reduceMotion) => set({ reduceMotion }),
+      setInAppToasts: (inAppToasts) => set({ inAppToasts }),
       setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
       requestNewChat: () => set((s) => ({ newChatSignal: s.newChatSignal + 1 })),
     }),
@@ -201,6 +211,8 @@ export const useUiStore = create<UiState>()(
         model: s.model,
         webSearch: s.webSearch,
         theme: s.theme,
+        reduceMotion: s.reduceMotion,
+        inAppToasts: s.inAppToasts,
       }),
       // Nilai tersimpan yang rusak atau di luar batas dikembalikan ke aman.
       merge: (persisted, current) => {
@@ -220,4 +232,13 @@ export const useUiStore = create<UiState>()(
 export function applyTheme(theme: ThemeMode, root: HTMLElement = document.documentElement): void {
   if (theme === 'system') root.removeAttribute('data-theme');
   else root.setAttribute('data-theme', theme);
+}
+
+/** Kurangi gerakan aplikasi: true/false = pilihan pengguna, null = ikuti sistem (tanpa atribut). */
+export function applyReduceMotion(
+  value: boolean | null,
+  root: HTMLElement = document.documentElement,
+): void {
+  if (value === null) root.removeAttribute('data-reduce-motion');
+  else root.setAttribute('data-reduce-motion', String(value));
 }

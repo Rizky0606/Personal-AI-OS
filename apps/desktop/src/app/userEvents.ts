@@ -1,6 +1,7 @@
 import type { ServerEvent, Task } from '@aios/contracts';
 import type { QueryClient } from '@tanstack/react-query';
 import { upsertTask } from '../kanban/board';
+import { useUiStore } from '../state/uiStore';
 import { useToastStore } from '../ui/Toaster';
 
 /** Event channel `user`: menyegarkan layar yang terbuka dan menampilkan notifikasi. */
@@ -21,6 +22,7 @@ export function handleUserEvent(event: ServerEvent, queryClient: QueryClient): v
       break;
     }
     case 'notification':
+      if (event.level === 'info' && !useUiStore.getState().inAppToasts) break;
       useToastStore.getState().push(event.title, event.level === 'info' ? 'info' : 'danger');
       break;
     case 'research.completed':

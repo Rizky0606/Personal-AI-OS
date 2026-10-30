@@ -45,9 +45,9 @@ export function MemorySection() {
   return (
     <section aria-labelledby="settings-memory" className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
-        <h2 id="settings-memory" className="text-section font-semibold text-text">
+        <h3 id="settings-memory" className="text-ui font-semibold text-text">
           {m.title}
-        </h2>
+        </h3>
         <p className="text-meta text-text-2">{m.intro}</p>
       </div>
 

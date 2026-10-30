@@ -55,3 +55,46 @@ test('kanban: kartu baru, pindah dengan keyboard, pecah dengan AI, dan Kerjakan 
     page.getByRole('region', { name: /^Running, 1 kartu/ }).getByText('Tambah halaman profil'),
   ).toBeVisible();
 });
+
+test('kanban: seret kartu dari Backlog ke Todo dengan penanda tujuan, dan tetap di Todo setelah dimuat ulang', async ({
+  page,
+}) => {
+  const repo = await control.repo();
+  await prepare(page, { pickFolder: repo });
+  await login(page);
+
+  await page.keyboard.press('Control+2');
+  await page.getByRole('link', { name: 'Kelola project' }).click();
+  await page.getByRole('button', { name: 'Tambah project' }).first().click();
+  const add = page.getByRole('dialog', { name: 'Tambah project' });
+  await add.getByRole('button', { name: 'Pilih folder' }).click();
+  await add.getByRole('button', { name: 'Izinkan folder ini' }).click();
+  await add.getByRole('button', { name: 'Daftarkan project' }).click();
+  await expect(page.getByText('Project terdaftar.').first()).toBeVisible();
+
+  await page.keyboard.press('Control+3');
+  await page.getByRole('button', { name: /^Project:/ }).click();
+  await page.getByRole('menuitemradio').first().click();
+
+  await page.getByRole('button', { name: 'Kartu baru' }).first().click();
+  const dialog = page.getByRole('dialog', { name: 'Kartu baru' });
+  await dialog.getByLabel('Judul').fill('Kartu seret');
+  await dialog.getByRole('button', { name: 'Simpan' }).click();
+  const backlog = page.getByRole('region', { name: /^Backlog, 1 kartu/ });
+  await expect(backlog.getByText('Kartu seret')).toBeVisible();
+
+  const todo = page.getByRole('region', { name: /^Todo, 0 kartu/ });
+  await backlog.getByRole('article', { name: 'Kartu seret' }).dragTo(todo);
+  await expect(
+    page.getByRole('region', { name: /^Todo, 1 kartu/ }).getByText('Kartu seret'),
+  ).toBeVisible();
+  await expect(page.getByRole('region', { name: /^Backlog, 0 kartu/ })).toBeVisible();
+
+  // Tidak ada penanda sisip yang tertinggal setelah lepas.
+  await expect(page.getByTestId('drop-marker')).toHaveCount(0);
+
+  await page.reload();
+  await expect(
+    page.getByRole('region', { name: /^Todo, 1 kartu/ }).getByText('Kartu seret'),
+  ).toBeVisible();
+});

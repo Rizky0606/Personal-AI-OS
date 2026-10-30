@@ -6,6 +6,7 @@ import { copy } from '../copy';
 import { cn } from '../lib/cn';
 import { relativeTime } from '../lib/time';
 import { Button } from '../ui/Button';
+import { enterProps } from '../ui/enter';
 import { StateView, type ViewState } from '../ui/StateView';
 
 /** Daftar riset di sidebar, terbaru dulu. */
@@ -42,7 +43,7 @@ export function ResearchList() {
       }
     >
       <nav aria-label={copy.research.listLabel}>
-        {items.map((job) => {
+        {items.map((job, i) => {
           const active = job.id === params.researchId;
           return (
             <Link
@@ -50,9 +51,11 @@ export function ResearchList() {
               to="/research/$researchId"
               params={{ researchId: job.id }}
               aria-current={active ? 'page' : undefined}
+              style={enterProps(i).style}
               className={cn(
                 'flex min-h-8 flex-col border-b border-border px-3 py-1 transition-colors duration-[120ms] ease-aios',
                 active ? 'bg-accent-soft' : 'hover:bg-surface-2',
+                enterProps(i).className,
               )}
             >
               <span className="truncate text-ui text-text">{job.question}</span>

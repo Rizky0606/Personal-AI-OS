@@ -7,6 +7,7 @@ import { useOnline } from '../app/hooks';
 import { copy } from '../copy';
 import { cn } from '../lib/cn';
 import { Button } from '../ui/Button';
+import { enterProps } from '../ui/enter';
 import { StateView, type ViewState } from '../ui/StateView';
 import { NewScheduleDialog } from './NewScheduleDialog';
 
@@ -47,15 +48,17 @@ export function ScheduleList() {
         onRetry={() => void query.refetch()}
       >
         <nav aria-label={copy.schedules.title}>
-          {items.map((s) => (
+          {items.map((s, i) => (
             <Link
               key={s.id}
               to="/schedules/$scheduleId"
               params={{ scheduleId: s.id }}
               aria-current={s.id === params.scheduleId ? 'page' : undefined}
+              style={enterProps(i).style}
               className={cn(
                 'flex min-h-8 items-center gap-2 border-b border-border px-3 py-1 text-ui transition-colors duration-[120ms] ease-aios',
                 s.id === params.scheduleId ? 'bg-accent-soft' : 'hover:bg-surface-2',
+                enterProps(i).className,
               )}
             >
               <span

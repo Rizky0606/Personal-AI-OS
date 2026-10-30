@@ -7,6 +7,7 @@ import { useOnline } from '../app/hooks';
 import { copy } from '../copy';
 import { formatDateTime } from '../lib/time';
 import { Button } from '../ui/Button';
+import { PageHeader } from '../ui/PageHeader';
 import { StateView, type ViewState } from '../ui/StateView';
 import { Switch } from '../ui/Switch';
 import { NewScheduleDialog } from './NewScheduleDialog';
@@ -44,10 +45,7 @@ export function SchedulesScreen() {
 
   return (
     <div className="flex flex-col">
-      <div className="flex h-12 items-center justify-between border-b border-border px-4">
-        <h2 className="text-section font-semibold text-text">{copy.schedules.title}</h2>
-        {view === 'content' ? newButton : null}
-      </div>
+      <PageHeader title={copy.schedules.title} primary={view === 'content' ? newButton : null} />
       <StateView
         state={view}
         loadingLabel={copy.schedules.loading}

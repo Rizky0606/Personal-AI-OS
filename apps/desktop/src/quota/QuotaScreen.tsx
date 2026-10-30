@@ -9,6 +9,7 @@ import { IconButton } from '../ui/IconButton';
 import { useUiStore } from '../state/uiStore';
 import { Button } from '../ui/Button';
 import { PageContainer } from '../ui/PageContainer';
+import { PageHeader } from '../ui/PageHeader';
 import { StateView, type ViewState } from '../ui/StateView';
 
 const headerClass =
@@ -46,12 +47,14 @@ export function QuotaScreen() {
 
   return (
     <div className="flex flex-col">
-      <div className="flex h-12 items-center justify-between border-b border-border px-4">
-        <h2 className="text-section font-semibold text-text">{copy.quota.title}</h2>
-        <IconButton label={copy.quota.refresh} onClick={() => void query.refetch()}>
-          <RefreshCw size={16} strokeWidth={1.5} aria-hidden="true" />
-        </IconButton>
-      </div>
+      <PageHeader
+        title={copy.quota.title}
+        secondary={
+          <IconButton label={copy.quota.refresh} onClick={() => void query.refetch()}>
+            <RefreshCw size={16} strokeWidth={1.5} aria-hidden="true" />
+          </IconButton>
+        }
+      />
       <StateView
         state={view}
         loadingLabel={copy.quota.loading}

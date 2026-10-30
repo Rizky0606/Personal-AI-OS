@@ -2,7 +2,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
 import { useEffect } from 'react';
 import { LoginScreen } from '../screens/LoginScreen';
-import { applyTheme, useUiStore } from '../state/uiStore';
+import { applyReduceMotion, applyTheme, useUiStore } from '../state/uiStore';
 import { Toaster } from '../ui/Toaster';
 import { TooltipProvider } from '../ui/Tooltip';
 import { useAuthState } from './hooks';
@@ -31,12 +31,14 @@ function readLastServer(): string {
 export function App() {
   const state = useAuthState();
   const theme = useUiStore((s) => s.theme);
+  const reduceMotion = useUiStore((s) => s.reduceMotion);
 
   useEffect(() => {
     void auth.init();
   }, []);
 
   useEffect(() => applyTheme(theme), [theme]);
+  useEffect(() => applyReduceMotion(reduceMotion), [reduceMotion]);
 
   useEffect(() => {
     if (state.status !== 'signedIn') return;

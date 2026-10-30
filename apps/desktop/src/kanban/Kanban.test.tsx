@@ -411,3 +411,66 @@ describe('KanbanScreen: kartu baru dan pecah dengan AI', () => {
     );
   });
 });
+
+describe('KanbanScreen: tampilan sesi 6', () => {
+  it('header tiap kolom memuat penanda warna status (token), bukan hanya teks', async () => {
+    api.listTasks.mockResolvedValue([task({ title: 'Satu', status: 'todo' })]);
+    await renderScreen(<KanbanScreen />, '/kanban');
+    const todo = await column('todo', 1);
+    expect(todo).toHaveAttribute('data-status', 'todo');
+    expect(within(todo).getByTestId('column-dot')).toHaveClass('bg-info');
+    expect((await column('done', 0)).querySelector('[data-testid="column-dot"]')).toHaveClass(
+      'bg-success',
+    );
+  });
+
+  it('kartu yang dikerjakan agent menampilkan Orb kecil dan fase singkat; kartu lain tidak', async () => {
+    api.listTasks.mockResolvedValue([
+      task({ title: 'Jalan', status: 'running', runId: RUN }),
+      task({ title: 'Diam', status: 'todo' }),
+    ]);
+    await renderScreen(<KanbanScreen />, '/kanban');
+    const running = await screen.findByRole('article', { name: 'Jalan' });
+    expect(within(running).getByTestId('agent-orb')).toHaveAttribute('width', '16');
+    expect(within(running).getByText(copy.runActivity.ui.phase.tool)).toBeInTheDocument();
+    const idle = await screen.findByRole('article', { name: 'Diam' });
+    expect(within(idle).queryByTestId('agent-orb')).not.toBeInTheDocument();
+  });
+
+  it('saat diseret: penanda sisip tampil di atas kartu tujuan, hilang setelah dilepas', async () => {
+    const a = task({ title: 'Satu', status: 'backlog' });
+    const b = task({ title: 'Dua', status: 'todo', position: 0 });
+    api.listTasks.mockResolvedValue([a, b]);
+    api.updateTask.mockResolvedValue({ ...a, status: 'todo' });
+    await renderScreen(<KanbanScreen />, '/kanban');
+
+    const dataTransfer = { setData: vi.fn(), effectAllowed: '', dropEffect: '' };
+    fireEvent.dragStart(await screen.findByRole('article', { name: 'Satu' }), { dataTransfer });
+    const target = (await screen.findByRole('article', { name: 'Dua' })).closest('li')!;
+    expect(screen.queryByTestId('drop-marker')).not.toBeInTheDocument();
+    fireEvent.dragOver(target, { dataTransfer });
+    expect(screen.getByTestId('drop-marker')).toBeInTheDocument();
+    fireEvent.drop(target, { dataTransfer });
+    await waitFor(() => expect(api.updateTask).toHaveBeenCalled());
+    expect(screen.queryByTestId('drop-marker')).not.toBeInTheDocument();
+  });
+
+  it('kartu yang baru dilepas ditandai mendarat (animasi pegas) lalu dibersihkan', async () => {
+    const a = task({ title: 'Satu', status: 'backlog' });
+    api.listTasks.mockResolvedValue([a]);
+    api.updateTask.mockResolvedValue({ ...a, status: 'todo' });
+    await renderScreen(<KanbanScreen />, '/kanban');
+
+    const dataTransfer = { setData: vi.fn(), effectAllowed: '', dropEffect: '' };
+    fireEvent.dragStart(await screen.findByRole('article', { name: 'Satu' }), { dataTransfer });
+    const todo = await column('todo', 0);
+    fireEvent.dragOver(todo, { dataTransfer });
+    fireEvent.drop(todo, { dataTransfer });
+    expect(screen.getByRole('article', { name: 'Satu' })).toHaveAttribute('data-landed', 'true');
+    await waitFor(
+      () =>
+        expect(screen.getByRole('article', { name: 'Satu' })).not.toHaveAttribute('data-landed'),
+      { timeout: 1500 },
+    );
+  });
+});

@@ -1,6 +1,7 @@
 import type { Task } from '@aios/contracts';
 import { QueryClient } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { useUiStore } from '../state/uiStore';
 import { useToastStore } from '../ui/Toaster';
 import { handleUserEvent } from './userEvents';
 
@@ -58,5 +59,15 @@ describe('handleUserEvent', () => {
       ['Kartu gagal', 'danger'],
       ['Selesai', 'info'],
     ]);
+  });
+
+  it('notifikasi di aplikasi dimatikan: info disembunyikan, error tetap tampil', () => {
+    const client = new QueryClient();
+    useUiStore.setState({ inAppToasts: false });
+    handleUserEvent({ type: 'notification', title: 'Selesai', level: 'info' }, client);
+    handleUserEvent({ type: 'notification', title: 'Kartu gagal', level: 'error' }, client);
+    useUiStore.setState({ inAppToasts: true });
+
+    expect(useToastStore.getState().toasts.map((t) => t.message)).toEqual(['Kartu gagal']);
   });
 });

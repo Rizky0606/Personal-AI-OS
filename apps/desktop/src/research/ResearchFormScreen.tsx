@@ -4,6 +4,7 @@ import { copy } from '../copy';
 import { Button } from '../ui/Button';
 import { Chip } from '../ui/Chip';
 import { PageContainer } from '../ui/PageContainer';
+import { PageHeader } from '../ui/PageHeader';
 import { TextArea } from '../ui/TextArea';
 import { useResearchActions } from './useResearchActions';
 
@@ -30,9 +31,10 @@ export function ResearchFormScreen() {
   }
 
   return (
-    <PageContainer>
-      <form onSubmit={submit} className="flex flex-col gap-4">
-        <h2 className="text-section font-semibold text-text">{copy.research.form.title}</h2>
+    <div className="flex flex-col">
+      <PageHeader title={copy.research.form.title} />
+      <PageContainer>
+        <form onSubmit={submit} className="flex flex-col gap-4">
         <TextArea
           label={copy.research.form.question}
           hint={copy.research.form.questionHint}
@@ -63,7 +65,8 @@ export function ResearchFormScreen() {
             {submitting ? copy.research.form.submitting : copy.research.form.submit}
           </Button>
         </div>
-      </form>
-    </PageContainer>
+        </form>
+      </PageContainer>
+    </div>
   );
 }

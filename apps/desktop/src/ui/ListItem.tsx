@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { cn } from '../lib/cn';
+import { enterProps } from './enter';
 
 export interface ListItemProps {
   title: string;
@@ -8,6 +9,8 @@ export interface ListItemProps {
   icon?: ReactNode;
   selected?: boolean;
   onClick?: () => void;
+  /** Urutan di daftar: 8 item pertama masuk bergantian (40 ms). */
+  index?: number;
 }
 
 /** Baris 32px (tinggi baris desktop) dengan pemisah 1px; tombol bila bisa diklik. */
@@ -18,6 +21,7 @@ export function ListItem({
   icon,
   selected = false,
   onClick,
+  index,
 }: ListItemProps) {
   const content = (
     <>
@@ -31,16 +35,20 @@ export function ListItem({
       {trailing ? <span className="text-meta text-text-3">{trailing}</span> : null}
     </>
   );
+  const enter = index === undefined ? {} : enterProps(index);
   const classes = cn(
     'flex min-h-8 w-full items-center gap-2 border-b border-border px-3 py-1',
     selected && 'bg-accent-soft',
     onClick && 'transition-colors duration-[120ms] ease-aios hover:bg-surface-2',
+    enter.className,
   );
   return onClick ? (
-    <button type="button" onClick={onClick} className={classes}>
+    <button type="button" onClick={onClick} style={enter.style} className={classes}>
       {content}
     </button>
   ) : (
-    <div className={classes}>{content}</div>
+    <div style={enter.style} className={classes}>
+      {content}
+    </div>
   );
 }

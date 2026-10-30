@@ -4,9 +4,11 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiProblem } from '../auth/authSession';
 import { copy } from '../copy';
-import { TS } from '../test/fixtures';
+import { TS, run } from '../test/fixtures';
 import { api, resetApi, setWorker, workerApi } from '../test/fakeServices';
 import { renderScreen } from '../test/render';
+import { useUiStore } from '../state/uiStore';
+import type { WorkspaceRun } from '../workspace/runs';
 import { WorkerCallError } from '../worker/localClient';
 
 vi.mock('../app/services', async () => (await import('../test/fakeServices')).fakeServices);
@@ -258,6 +260,65 @@ describe('ProjectsScreen: daftar', () => {
     api.listProjects.mockRejectedValue(new ApiProblem(0, 'network', 'x'));
     await renderScreen(<ProjectsScreen />, '/projects');
     expect(await screen.findByText(copy.states.offline)).toBeInTheDocument();
+  });
+});
+
+describe('ProjectsScreen: ringkasan dan akses cepat (sesi 6)', () => {
+  const runOf = (
+    projectId: string,
+    status: 'running' | 'completed',
+    title: string,
+    updatedAt: string,
+  ): WorkspaceRun => ({
+    run: run({ kind: 'coding', engine: 'omp', status, updatedAt }),
+    title,
+    projectId,
+    projectName: 'Aplikasi saya',
+  });
+
+  it('kolom aktivitas terakhir: judul run terbaru dan statusnya; project tanpa run diberi tanda kosong', async () => {
+    connected();
+    api.listProjects.mockResolvedValue([project(), project({ id: P2, name: 'Proyek baru' })]);
+    api.listRuns.mockResolvedValue([
+      runOf(P1, 'completed', 'Perbaiki login', '2026-10-22T09:00:00Z'),
+      runOf(P1, 'running', 'Tambah dark mode', '2026-10-22T08:00:00Z'),
+    ]);
+    await renderScreen(<ProjectsScreen />, '/projects');
+
+    const table = await screen.findByRole('table', { name: copy.projects.listLabel });
+    const first = within(table).getByText('Aplikasi saya').closest('tr') as HTMLElement;
+    expect(await within(first).findByText('Perbaiki login')).toBeInTheDocument();
+    expect(within(first).getByText(copy.runStatus.completed)).toBeInTheDocument();
+    const second = within(table).getByText('Proyek baru').closest('tr') as HTMLElement;
+    expect(within(second).getByText(copy.projects.noActivity)).toBeInTheDocument();
+  });
+
+  it('Buka chat: memilih project aktif dan membuka percakapan project', async () => {
+    connected();
+    const user = userEvent.setup();
+    api.listProjects.mockResolvedValue([project()]);
+    const { router } = await renderScreen(<ProjectsScreen />, '/projects');
+
+    await user.click(
+      await screen.findByRole('button', { name: `${copy.projects.openChat}: Aplikasi saya` }),
+    );
+
+    expect(useUiStore.getState().activeProjectId).toBe(P1);
+    expect(router.state.location.pathname).toBe(`/workspace/${P1}`);
+  });
+
+  it('daftar ringkas: project aktif ditandai pelat, klik memilihnya dan membuka chat project', async () => {
+    connected();
+    const user = userEvent.setup();
+    api.listProjects.mockResolvedValue([project(), project({ id: P2, name: 'Proyek lain' })]);
+    useUiStore.setState({ activeProjectId: P2 });
+    const { router, container } = await renderScreen(<ProjectList />, '/projects');
+
+    await screen.findByText('Aplikasi saya');
+    expect(container.querySelector('[data-plate="active"]')).toHaveAttribute('data-visible', 'true');
+    await user.click(screen.getByRole('button', { name: /Aplikasi saya/ }));
+    expect(useUiStore.getState().activeProjectId).toBe(P1);
+    expect(router.state.location.pathname).toBe(`/workspace/${P1}`);
   });
 });
 

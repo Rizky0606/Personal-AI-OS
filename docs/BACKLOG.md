@@ -633,3 +633,15 @@ Disusun 2026-10-26 dari perbandingan dengan Orca, Pi, Cline, Amp, Goose, dan Vib
 
 - Tambahkan steering/queued chip setelah `AgentHud` tersedia di branch desktop; saat ini tidak ada komponen atau store steering yang dapat dipakai ulang.
 - Rekaman `fase-rekaman.webm` dan screenshot fase diambil dari bagian "Aktivitas run" di katalog (data sintetis), bukan dari run nyata; run nyata dengan tool/error butuh fake Hermes e2e yang bisa dikendalikan.
+
+## Temuan Sesi 6 (layar lain desktop)
+
+- [ ] **Login Google tidak ada**: kontrak hanya punya password + TOTP (satu akun pemilik); menambah jalur Google berarti mengubah kontrak/API, jadi tidak dikerjakan. Alur login sudah satu layar dan langsung terhubung ke gateway.
+- [ ] **Onboarding tidak ada** di repo, jadi tidak ada yang dibatasi ke 3 langkah.
+- [ ] **Keterangan model** diturunkan dari `kind` dan `ownedBy` (kontrak `ModelInfo` tidak punya deskripsi). Deskripsi per model dari server butuh perubahan kontrak.
+- [ ] **"Kurangi gerakan"**: bawaan mengikuti sistem; pilihan eksplisit disimpan (`data-reduce-motion`). Memilih "mati" saat sistem meminta gerakan dikurangi diberlakukan lewat selektor `:not([data-reduce-motion='false'])`; belum diuji di WebView Tauri nyata.
+- [ ] **Notifikasi di aplikasi**: sakelar baru hanya menyembunyikan toast `info`; error selalu tampil. Belum ada notifikasi OS.
+- [ ] **Kartu kanban agent**: fase di kartu memakai run live bila ada; tanpa run live (mis. setelah muat ulang) menampilkan fase "Bekerja" generik, bukan fase sebenarnya.
+- [ ] **Ringkasan aktivitas proyek** memakai `GET /runs?kind=coding&limit=100`; project yang run-nya di luar 100 terbaru tampil "Belum ada aktivitas".
+- [ ] **`schedule.spec.ts` gagal di suite penuh** (dua kali, juga sebelum perubahan Sesi 6) tetapi lulus bila dijalankan sendiri: tombol "Jalankan sekarang" belum muncul. Perlu diselidiki urutannya (kemungkinan data bersama antar tes).
+- [ ] **Screenshot 06-screens** diambil dari stack e2e (data seadanya); layar Jadwal/Riset/Ruang tampil kosong, keadaan memuat dan error hanya teruji di RTL. Rekaman gerak tidak dibuat di sesi ini.

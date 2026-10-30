@@ -87,3 +87,12 @@ export function formatDiffStat(stat: Task['diffStat']): string | null {
   if (!stat || (stat.additions === 0 && stat.deletions === 0)) return null;
   return `+${stat.additions} −${stat.deletions}`;
 }
+
+/** Warna titik/penanda status per kolom (token). Teks status tetap dibacakan; warna bukan satu-satunya penanda. */
+export const STATUS_DOT: Record<TaskStatus, string> = {
+  backlog: 'bg-text-3',
+  todo: 'bg-info',
+  running: 'bg-accent',
+  review: 'bg-warning',
+  done: 'bg-success',
+};

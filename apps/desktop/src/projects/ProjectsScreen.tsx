@@ -1,4 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from '@tanstack/react-router';
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import { apiErrorMessage } from '../api/errors';
@@ -8,6 +9,7 @@ import { copy } from '../copy';
 import { pickFolder } from '../lib/pickFolder';
 import { Button } from '../ui/Button';
 import { ErrorBanner } from '../ui/ErrorBanner';
+import { PageHeader } from '../ui/PageHeader';
 import { StateView, type ViewState } from '../ui/StateView';
 import { useToastStore } from '../ui/Toaster';
 import { workerErrorMessage } from '../worker/errors';
@@ -19,6 +21,9 @@ import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { api } from '../app/services';
 import { StackChips } from './StackChips';
 import { useProjectRows } from './useProjectRows';
+import { LastActivity } from './LastActivity';
+import { useLatestRuns } from './useLatestRuns';
+import { useUiStore } from '../state/uiStore';
 
 const headerClass =
   'border-b border-border-strong px-3 py-2 text-left text-meta font-medium text-text-2';
@@ -27,6 +32,13 @@ const cellClass = 'border-b border-border px-3 py-2 align-top text-ui';
 /** Daftar project terdaftar dan penambahan project baru lewat worker lokal. */
 export function ProjectsScreen() {
   const { rows, projects, worker } = useProjectRows();
+  const latest = useLatestRuns();
+  const navigate = useNavigate();
+  const setActive = useUiStore((s) => s.setActiveProject);
+  const openChat = (projectId: string) => {
+    setActive(projectId);
+    void navigate({ to: '/workspace/$projectId', params: { projectId } });
+  };
   const online = useOnline();
   const queryClient = useQueryClient();
   const push = useToastStore((s) => s.push);
@@ -103,10 +115,7 @@ export function ProjectsScreen() {
 
   return (
     <div className="flex flex-col">
-      <div className="flex h-12 items-center justify-between border-b border-border px-4">
-        <h2 className="text-section font-semibold text-text">{copy.projects.title}</h2>
-        {view === 'content' ? addButton : null}
-      </div>
+      <PageHeader title={copy.projects.title} primary={view === 'content' ? addButton : null} />
       {workerReady ? null : (
         <ErrorBanner tone="warning" message={copy.projects.workerOff} className="m-4 mb-0" />
       )}
@@ -123,7 +132,7 @@ export function ProjectsScreen() {
         <table aria-label={copy.projects.listLabel} className="w-full border-collapse">
           <thead>
             <tr>
-              {(['name', 'stack', 'branch', 'folder', 'rules'] as const).map((column) => (
+              {(['name', 'stack', 'activity', 'branch', 'folder', 'rules'] as const).map((column) => (
                 <th key={column} scope="col" className={headerClass}>
                   {copy.projects.columns[column]}
                 </th>
@@ -143,10 +152,20 @@ export function ProjectsScreen() {
                     >
                       {copy.projects.remove.action}
                     </Button>
+                    <Button
+                      variant="secondary"
+                      aria-label={`${copy.projects.openChat}: ${project.name}`}
+                      onClick={() => openChat(project.id)}
+                    >
+                      {copy.projects.openChat}
+                    </Button>
                   </span>
                 </td>
                 <td className={cellClass}>
                   <StackChips stack={project.stack} />
+                </td>
+                <td className={cellClass}>
+                  <LastActivity entry={latest[project.id]} />
                 </td>
                 <td className={cellClass}>
                   <span className="flex items-center gap-2">
