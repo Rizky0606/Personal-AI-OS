@@ -26,6 +26,7 @@ import app.aios.android.ui.components.AiosButton
 import app.aios.android.ui.components.AiosChip
 import app.aios.android.ui.components.AiosListItem
 import app.aios.android.ui.components.ButtonKind
+import app.aios.android.ui.components.SkeletonList
 import app.aios.android.ui.theme.AiosTheme
 import app.aios.ui.tokens.Tokens
 
@@ -41,18 +42,24 @@ fun SettingsScreen(
 
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Section(R.string.settings_device_section)
-        AiosListItem(
-            title = stringResource(R.string.settings_device_name),
-            trailing = session?.deviceName.orEmpty()
-        )
-        AiosListItem(
-            title = stringResource(R.string.settings_device_id),
-            trailing = session?.deviceId?.take(DEVICE_ID_PREVIEW).orEmpty()
-        )
-        AiosListItem(
-            title = stringResource(R.string.settings_server),
-            trailing = session?.serverUrl.orEmpty()
-        )
+        val current = session
+        if (current == null) {
+            // Sesi belum terbaca dari penyimpanan: kerangka berkilau, bukan baris kosong.
+            SkeletonList(rows = DEVICE_SKELETON_ROWS)
+        } else {
+            AiosListItem(
+                title = stringResource(R.string.settings_device_name),
+                trailing = current.deviceName
+            )
+            AiosListItem(
+                title = stringResource(R.string.settings_device_id),
+                trailing = current.deviceId.take(DEVICE_ID_PREVIEW)
+            )
+            AiosListItem(
+                title = stringResource(R.string.settings_server),
+                trailing = current.serverUrl
+            )
+        }
         AiosListItem(
             title = stringResource(R.string.settings_app_version),
             trailing = BuildConfig.VERSION_NAME
@@ -108,6 +115,7 @@ fun SettingsScreen(
 }
 
 private const val DEVICE_ID_PREVIEW = 8
+private const val DEVICE_SKELETON_ROWS = 3
 
 @Composable
 private fun Section(titleRes: Int) {

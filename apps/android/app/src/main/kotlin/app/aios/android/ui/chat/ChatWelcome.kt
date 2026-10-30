@@ -3,12 +3,7 @@ package app.aios.android.ui.chat
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -48,6 +43,7 @@ import app.aios.android.ui.components.Hairline
 import app.aios.android.ui.components.accentGlow
 import app.aios.android.ui.components.accentGradient
 import app.aios.android.ui.theme.AiosTheme
+import app.aios.android.ui.theme.rememberLoopFloat
 import app.aios.ui.tokens.Tokens
 import kotlinx.coroutines.delay
 
@@ -142,19 +138,8 @@ fun ChatWelcome(onPick: (String) -> Unit, modifier: Modifier = Modifier) {
 @Composable
 private fun WelcomeOrb() {
     val accent = AiosTheme.colors.accent
-    val transition = rememberInfiniteTransition(label = "orb")
-    val scale by transition.animateFloat(
-        ORB_MIN_SCALE,
-        ORB_MAX_SCALE,
-        infiniteRepeatable(tween(ORB_CYCLE_MS, easing = Tokens.Motion.Easing), RepeatMode.Reverse),
-        label = "orbScale"
-    )
-    val alpha by transition.animateFloat(
-        ORB_MIN_ALPHA,
-        1f,
-        infiniteRepeatable(tween(ORB_CYCLE_MS, easing = Tokens.Motion.Easing), RepeatMode.Reverse),
-        label = "orbAlpha"
-    )
+    val scale = rememberLoopFloat(ORB_MIN_SCALE, ORB_MAX_SCALE, ORB_CYCLE_MS, rest = 1f, label = "orbScale")
+    val alpha = rememberLoopFloat(ORB_MIN_ALPHA, 1f, ORB_CYCLE_MS, rest = 1f, label = "orbAlpha")
     Box(modifier = Modifier.size(Tokens.Space.s48 * 2), contentAlignment = Alignment.Center) {
         Canvas(
             Modifier
@@ -185,10 +170,11 @@ private fun WelcomeOrb() {
 /** Muncul naik dengan pegas ringan, tertunda sesuai urutan (stagger pendek). */
 @Composable
 private fun Rise(index: Int, content: @Composable () -> Unit) {
+    val motion = AiosTheme.motion
     val progress = remember { Animatable(0f) }
     LaunchedEffect(Unit) {
         delay((index * STAGGER_MS).toLong())
-        progress.animateTo(1f, tween(Tokens.Motion.EmphasisMs, easing = Tokens.Motion.Spring))
+        progress.animateTo(1f, motion.overshoot())
     }
     Box(
         Modifier.graphicsLayer {
@@ -206,7 +192,7 @@ private fun SuggestionCard(card: WelcomeCard, onClick: () -> Unit) {
     val pressed by source.collectIsPressedAsState()
     val scale by animateFloatAsState(
         if (pressed) PRESSED_SCALE else 1f,
-        tween(Tokens.Motion.FastMs, easing = Tokens.Motion.Spring),
+        AiosTheme.motion.overshoot(Tokens.Motion.FastMs),
         label = "cardScale"
     )
     Row(

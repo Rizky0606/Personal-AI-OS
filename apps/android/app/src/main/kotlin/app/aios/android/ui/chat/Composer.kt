@@ -2,7 +2,6 @@ package app.aios.android.ui.chat
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -87,7 +86,7 @@ fun Composer(
     val composerLabel = stringResource(R.string.chat_composer_label)
     val borderColor by animateColorAsState(
         if (focused) colors.borderStrong else colors.border,
-        tween(Tokens.Motion.BaseMs, easing = Tokens.Motion.Easing),
+        AiosTheme.motion.base(),
         label = "composerBorder"
     )
 
@@ -253,7 +252,7 @@ private fun ActionButton(icon: Int, description: String, primary: Boolean, enabl
     val focused by source.collectIsFocusedAsState()
     val alpha by animateFloatAsState(
         if (enabled) 1f else DISABLED_ALPHA,
-        tween(Tokens.Motion.FastMs, easing = Tokens.Motion.Easing),
+        AiosTheme.motion.fast(),
         label = "actionAlpha"
     )
     Box(

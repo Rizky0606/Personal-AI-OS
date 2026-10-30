@@ -35,8 +35,9 @@ fun isDarkSurface(): Boolean = AiosTheme.colors.bg.luminance() < DARK_LUMINANCE
 @Composable
 @ReadOnlyComposable
 fun accentGradient(): Brush {
-    val accent = AiosTheme.colors.accent
-    val end = lerp(accent, if (isDarkSurface()) Color.White else Color.Black, ACCENT_SHIFT)
+    val colors = AiosTheme.colors
+    val accent = colors.accent
+    val end = lerp(accent, colors.text, ACCENT_SHIFT)
     return Brush.linearGradient(listOf(accent, end))
 }
 

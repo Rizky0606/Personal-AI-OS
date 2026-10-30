@@ -61,7 +61,7 @@ import app.aios.android.ui.components.SkeletonBlock
 import app.aios.android.ui.components.Hairline
 import app.aios.android.ui.components.accentGlow
 import app.aios.android.ui.theme.AiosTheme
-import app.aios.android.ui.theme.PlexMono
+import app.aios.android.ui.theme.GeistMono
 import app.aios.ui.tokens.Tokens
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -125,17 +125,19 @@ fun PendingUserRow(item: ChatItem.PendingUser) {
     }
 }
 
-private const val DOT_CYCLE_MS = 1200
+private const val DOT_CYCLE_MS = Tokens.Motion.LoopMinMs
 private const val DOT_STEP_MS = 150
 private const val DOT_LOW_ALPHA = 0.25f
 
 /** Tiga titik yang memudar bergiliran selama jawaban masih ditulis. */
 @Composable
 private fun TypingDots() {
-    val transition = rememberInfiniteTransition(label = "typing")
+    val decorative = AiosTheme.motion.decorative
+    val transition = if (decorative) rememberInfiniteTransition(label = "typing") else null
     Row(horizontalArrangement = Arrangement.spacedBy(Tokens.Space.s4)) {
         repeat(3) { index ->
-            val alpha by transition.animateFloat(
+            // Animasi dimatikan sistem: titik diam dengan opasitas penuh.
+            val alpha = transition?.animateFloat(
                 initialValue = DOT_LOW_ALPHA,
                 targetValue = DOT_LOW_ALPHA,
                 animationSpec = infiniteRepeatable(
@@ -148,7 +150,7 @@ private fun TypingDots() {
                     initialStartOffset = StartOffset(index * DOT_STEP_MS)
                 ),
                 label = "dot$index"
-            )
+            )?.value ?: 1f
             Box(
                 Modifier
                     .size(Tokens.Space.s8 * 3 / 4)
@@ -269,7 +271,7 @@ private fun UserBubble(text: String, dimmed: Boolean = false, sentAt: String? = 
                 horizontalArrangement = Arrangement.spacedBy(Tokens.Space.s4),
                 modifier = Modifier.padding(top = Tokens.Space.s4)
             ) {
-                Text(time, style = AiosTheme.type.caption.copy(fontFamily = PlexMono), color = colors.text3)
+                Text(time, style = AiosTheme.type.caption.copy(fontFamily = GeistMono), color = colors.text3)
                 AiosIcon(
                     R.drawable.ic_check,
                     contentDescription = sent,
@@ -348,7 +350,7 @@ fun AssistantMessageRow(
                 item.model?.let {
                     Text(
                         text = it,
-                        style = AiosTheme.type.caption.copy(fontFamily = PlexMono),
+                        style = AiosTheme.type.caption.copy(fontFamily = GeistMono),
                         color = colors.text3,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,

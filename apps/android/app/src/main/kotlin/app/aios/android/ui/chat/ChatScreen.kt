@@ -3,7 +3,6 @@ package app.aios.android.ui.chat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import app.aios.android.ui.memory.RememberDialog
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -203,6 +202,7 @@ private fun MessageList(
     copiedText: String,
     snackbar: SnackbarHostState
 ) {
+    val motion = AiosTheme.motion
     var copiedTick by remember { mutableStateOf(0) }
     LaunchedEffect(copiedTick) {
         if (copiedTick > 0) snackbar.showSnackbar(copiedText)
@@ -218,9 +218,9 @@ private fun MessageList(
             // Pesan baru memudar masuk dan pesan lain bergeser halus (bukan melompat) saat daftar berubah.
             Box(
                 Modifier.animateItem(
-                    fadeInSpec = tween(Tokens.Motion.EmphasisMs, easing = Tokens.Motion.Easing),
-                    placementSpec = tween(Tokens.Motion.EmphasisMs, easing = Tokens.Motion.Spring),
-                    fadeOutSpec = tween(Tokens.Motion.FastMs, easing = Tokens.Motion.Easing)
+                    fadeInSpec = motion.emphasis(),
+                    placementSpec = motion.overshoot(),
+                    fadeOutSpec = motion.fast()
                 )
             ) {
                 ChatRow(

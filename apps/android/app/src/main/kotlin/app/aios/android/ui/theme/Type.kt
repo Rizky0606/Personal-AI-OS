@@ -9,19 +9,20 @@ import app.aios.android.R
 import app.aios.ui.tokens.AiosTextStyle
 import app.aios.ui.tokens.Tokens
 
-/** IBM Plex dibundel di res/font (lisensi OFL ada di apps/android/licenses). */
-val PlexSans = FontFamily(
-    Font(R.font.ibm_plex_sans_regular, FontWeight.Normal),
-    Font(R.font.ibm_plex_sans_medium, FontWeight.Medium),
-    Font(R.font.ibm_plex_sans_semibold, FontWeight.SemiBold)
+/** Geist (Tokens.FontFamilyName.Sans) dibundel di res/font; lisensi OFL ada di apps/android/licenses. */
+val GeistSans = FontFamily(
+    Font(R.font.geist_regular, FontWeight.Normal),
+    Font(R.font.geist_medium, FontWeight.Medium),
+    Font(R.font.geist_semibold, FontWeight.SemiBold)
 )
 
-val PlexMono = FontFamily(
-    Font(R.font.ibm_plex_mono_regular, FontWeight.Normal),
-    Font(R.font.ibm_plex_mono_medium, FontWeight.Medium)
+/** Geist Mono (Tokens.FontFamilyName.Mono) untuk kode, path, dan angka teknis. */
+val GeistMono = FontFamily(
+    Font(R.font.geist_mono_regular, FontWeight.Normal),
+    Font(R.font.geist_mono_medium, FontWeight.Medium)
 )
 
-private fun AiosTextStyle.toTextStyle(family: FontFamily = PlexSans) = TextStyle(
+internal fun AiosTextStyle.toTextStyle(family: FontFamily = GeistSans) = TextStyle(
     fontFamily = family,
     fontSize = fontSize,
     lineHeight = lineHeight,
@@ -56,7 +57,7 @@ data class AiosTypography(
             chat = Tokens.Type.chat.toTextStyle(),
             section = Tokens.Type.section.toTextStyle(),
             page = Tokens.Type.page.toTextStyle(),
-            mono = Tokens.Type.meta.toTextStyle(PlexMono)
+            mono = Tokens.Type.meta.toTextStyle(GeistMono)
         )
     }
 }

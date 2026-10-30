@@ -1,7 +1,6 @@
 package app.aios.android.ui.components
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -65,7 +64,7 @@ fun AiosButton(
     }
     val container by animateColorAsState(
         targetValue = if (pressed && enabled) pressedColor else base,
-        animationSpec = tween(Tokens.Motion.FastMs, easing = Tokens.Motion.Easing),
+        animationSpec = AiosTheme.motion.fast(),
         label = "buttonContainer"
     )
     val content = when (kind) {

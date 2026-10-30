@@ -645,3 +645,13 @@ Disusun 2026-10-26 dari perbandingan dengan Orca, Pi, Cline, Amp, Goose, dan Vib
 - [ ] **Ringkasan aktivitas proyek** memakai `GET /runs?kind=coding&limit=100`; project yang run-nya di luar 100 terbaru tampil "Belum ada aktivitas".
 - [ ] **`schedule.spec.ts` gagal di suite penuh** (dua kali, juga sebelum perubahan Sesi 6) tetapi lulus bila dijalankan sendiri: tombol "Jalankan sekarang" belum muncul. Perlu diselidiki urutannya (kemungkinan data bersama antar tes).
 - [ ] **Screenshot 06-screens** diambil dari stack e2e (data seadanya); layar Jadwal/Riset/Ruang tampil kosong, keadaan memuat dan error hanya teruji di RTL. Rekaman gerak tidak dibuat di sesi ini.
+
+## Temuan Sesi 7 (Android fondasi)
+
+- [ ] **JDK 25 tidak bisa membangun Android** (Kotlin 2.0.21 gagal membaca "25.0.3"); gunakan JDK 17 sampai 21. Menaikkan Kotlin (≥ 2.1.x) akan membuka JDK 25 tetapi butuh izin (larangan mengubah versi).
+- [ ] **Geist di Android** memakai ttf statis resmi (Regular/Medium/SemiBold dan Mono Regular/Medium) dari repo `vercel/geist-font`; desktop memakai woff2 variabel. Dua berkas sumber berbeda untuk keluarga yang sama.
+- [ ] **Layar Pengaturan Android** hanya punya state memuat (kerangka daftar perangkat sebelum sesi terbaca) dan sukses: tidak ada data jaringan, jadi state kosong dan error tidak berlaku (`logout` tidak melempar galat).
+- [ ] **Animasi di file chat** (`ChatScreen`, `ChatWelcome`, `ChatMessages`, `Composer`) kini membaca `MotionSpec`; hanya pergantian spec, tanpa perubahan logika. Sesi 8 perlu memakai `AgentOrb`/`StatusDot`/`ShimmerText` di chat; belum dipasang di layar mana pun.
+- [ ] **Preview** (`FoundationPreviews.kt`) belum dilihat di Android Studio; hanya dipastikan terkompilasi. Tampilan bilah navigasi di perangkat belum diperiksa mata (tes instrumentasi memeriksa semantik, ukuran, dan klik).
+- [ ] **Tes UI Compose** hanya dijalankan di emulator lokal (`FloatingNavBarTest`, 3 tes); belum ada di CI.
+- [ ] **Bilah navigasi** kini 4 tujuan (Chat, Riset, Jadwal, Ruang) seperti sebelumnya; `DESIGN_SYSTEM.md` sebelumnya menulis 3 tab.

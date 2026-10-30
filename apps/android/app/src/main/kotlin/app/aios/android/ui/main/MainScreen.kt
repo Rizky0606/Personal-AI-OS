@@ -4,7 +4,6 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -16,7 +15,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
@@ -40,8 +38,6 @@ import app.aios.android.ui.chat.ChatViewModel
 import app.aios.android.ui.chat.ConversationDrawer
 import app.aios.android.ui.chat.ConversationsViewModel
 import kotlinx.coroutines.launch
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -52,7 +48,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.Role
 import androidx.compose.material3.SnackbarHostState
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -66,7 +61,9 @@ import app.aios.android.debug.DebugFeatures
 import app.aios.android.debug.debugRoutes
 import app.aios.android.ui.components.AiosIcon
 import app.aios.android.ui.components.AiosSnackbarHost
+import app.aios.android.ui.components.FloatingNavBar
 import app.aios.android.ui.components.Hairline
+import app.aios.android.ui.components.NavBarItem
 import app.aios.android.ui.memory.MemoryScreen
 import app.aios.android.ui.spaces.SpaceDetailScreen
 import app.aios.android.ui.spaces.SpaceListScreen
@@ -110,7 +107,7 @@ fun MainScreen(online: Boolean, sessionKey: String, link: AppLink?, onLinkConsum
     val route = entry?.destination?.route ?: Routes.CHAT
     val isTab = tabs.any { it.route == route }
     val snackbar = remember { SnackbarHostState() }
-    val transition = tween<Float>(Tokens.Motion.BaseMs, easing = Tokens.Motion.Easing)
+    val transition = AiosTheme.motion.base<Float>()
     val chatVm: ChatViewModel = hiltViewModel(key = "chat-$sessionKey")
     val conversationsVm: ConversationsViewModel = hiltViewModel(key = "conversations-$sessionKey")
     val chatUi by chatVm.ui.collectAsStateWithLifecycle()
@@ -382,37 +379,16 @@ private fun IconButton(@DrawableRes icon: Int, description: String, onClick: () 
 
 @Composable
 private fun BottomBar(currentRoute: String, nav: NavHostController) {
-    val colors = AiosTheme.colors
-    NavigationBar(
-        containerColor = colors.surface,
-        tonalElevation = 0.dp,
-        modifier = Modifier.drawBehind {
-            drawLine(
-                colors.border,
-                Offset(0f, Hairline.toPx() / 2),
-                Offset(size.width, Hairline.toPx() / 2),
-                Hairline.toPx()
-            )
+    val items = tabs.map { NavBarItem(it.route, it.icon, stringResource(it.label)) }
+    FloatingNavBar(
+        items = items,
+        selectedKey = currentRoute,
+        onSelect = { route ->
+            nav.navigate(route) {
+                popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+                launchSingleTop = true
+                restoreState = true
+            }
         }
-    ) {
-        tabs.forEach { tab ->
-            NavigationBarItem(
-                selected = currentRoute == tab.route,
-                onClick = {
-                    nav.navigate(tab.route) {
-                        popUpTo(nav.graph.findStartDestination().id) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                },
-                icon = { AiosIcon(tab.icon, contentDescription = null, tint = colors.text) },
-                label = { Text(stringResource(tab.label), style = AiosTheme.type.caption) },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedTextColor = colors.text,
-                    unselectedTextColor = colors.text2,
-                    indicatorColor = colors.accentSoft
-                )
-            )
-        }
-    }
+    )
 }

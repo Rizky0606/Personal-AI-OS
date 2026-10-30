@@ -6,7 +6,7 @@ Proyek Gradle ini berada di luar workspace pnpm. Desain mengikuti `docs/DESIGN_S
 
 ## Prasyarat
 
-- JDK 17 atau lebih baru (JBR bawaan Android Studio cukup; bytecode tetap Java 17) dan Android SDK dengan platform 36 + build-tools. Android Studio memasang keduanya.
+- JDK 17 sampai 21 (mis. JBR 21 di `~/.jdks`; bytecode tetap Java 17). **JDK 25 gagal**: Kotlin 2.0.21 tidak bisa membaca versi "25.0.3" (build berhenti dengan pesan `25.0.3`), jadi JBR 25 bawaan Android Studio terbaru tidak boleh dipakai sebagai `JAVA_HOME`. Android SDK dengan platform 36 + build-tools. Android Studio memasang keduanya.
 - `local.properties` berisi `sdk.dir=...` (dibuat Android Studio; tidak di-commit).
 
 ## Perintah
@@ -28,7 +28,7 @@ Proyek Gradle ini berada di luar workspace pnpm. Desain mengikuti `docs/DESIGN_S
 | --- | --- |
 | `data/api` | DTO, antarmuka Retrofit, interceptor (alamat server, token, refresh), pemetaan error |
 | `data/auth` | `TokenStore` terenkripsi, `TokenRefresher` (satu refresh untuk semua request), `AuthRepository` |
-| `ui/theme`, `ui/components` | Tema dari token, komponen dasar, `StateHost` (memuat, kosong, error, offline) |
+| `ui/theme`, `ui/components` | Tema dari token, `MotionSpec` (semua animasi; mengikuti "hapus animasi" sistem), komponen dasar (`AgentOrb`, `StatusDot`, `ShimmerText`, `FloatingNavBar`), `StateHost` (memuat, kosong, error, offline) |
 | `data/realtime` | WebSocket bersama: backoff, replay `lastSeq`, dedupe seq (`RealtimeClient`) |
 | `data/chat`, `data/db` | Repositori chat + cache Room |
 | `data/research`, `ui/research` | Daftar, form, progres live, laporan bersitasi, ekspor/bagikan |

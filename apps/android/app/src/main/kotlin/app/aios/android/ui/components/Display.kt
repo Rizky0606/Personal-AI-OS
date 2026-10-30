@@ -1,11 +1,6 @@
 package app.aios.android.ui.components
 
 import androidx.annotation.DrawableRes
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -28,7 +23,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
@@ -122,24 +116,14 @@ fun AiosListItem(
     }
 }
 
-private const val SKELETON_LOW_ALPHA = 0.5f
-private const val SKELETON_PULSE_MS = 900
-
-/** Blok placeholder untuk konten yang sedang dimuat; bentuknya meniru konten, bukan spinner. */
+/** Blok placeholder untuk konten yang sedang dimuat; berkilau pelan, bentuknya meniru konten, bukan spinner. */
 @Composable
 fun SkeletonBlock(modifier: Modifier = Modifier, width: Dp? = null, height: Dp = Tokens.Space.s16) {
-    val alpha by rememberInfiniteTransition(label = "skeleton").animateFloat(
-        initialValue = 1f,
-        targetValue = SKELETON_LOW_ALPHA,
-        animationSpec = infiniteRepeatable(tween(SKELETON_PULSE_MS, easing = Tokens.Motion.Easing), RepeatMode.Reverse),
-        label = "skeletonAlpha"
-    )
     Box(
         modifier = modifier
             .let { if (width != null) it.width(width) else it.fillMaxWidth() }
             .height(height)
-            .alpha(alpha)
-            .background(AiosTheme.colors.surface2, RoundedCornerShape(Tokens.Radius.sm))
+            .shimmerBackground(RoundedCornerShape(Tokens.Radius.sm))
     )
 }
 

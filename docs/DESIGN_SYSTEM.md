@@ -60,7 +60,7 @@ Tema mengikuti sistem secara default, dengan pilihan manual terang atau gelap. A
 ## Tipografi
 
 - **UI:** Geist, berat 400, 500, 600 saja (woff2 variabel, di-self-host di `apps/desktop/src/fonts`, lisensi OFL disertakan). Cadangan: IBM Plex Sans.
-- **Kode, path, angka teknis:** Geist Mono. Cadangan: IBM Plex Mono. Android memakai IBM Plex sampai Geist (ttf) dibundel di modul Android.
+- **Kode, path, angka teknis:** Geist Mono. Cadangan: IBM Plex Mono. Android memakai Geist dan Geist Mono statis (ttf di `apps/android/app/src/main/res/font`, lisensi OFL di `apps/android/licenses`); IBM Plex tidak lagi dibundel di Android.
 - Angka di tabel, diff stat, dan kuota memakai `font-variant-numeric: tabular-nums`.
 - Lebar baca teks chat maksimal 72 karakter.
 
@@ -99,7 +99,8 @@ Shell berupa **pulau** di atas kanvas gelap berlapis: kanvas `bg`, tiap pulau `s
 
 ## Layout Android
 
-- Bottom navigation 3 tab: Chat, Riset, Jadwal. Pengaturan lewat ikon di top bar.
+- Bottom navigation: bilah **pil melayang** (`FloatingNavBar`) dengan 4 tujuan: Chat, Riset, Jadwal, Ruang. Penanda aktif meluncur dengan spring `MotionSpec`; ikon + label, tinggi item 56 dp (target sentuh ≥ 48 dp), peran Tab untuk TalkBack, memberi ruang untuk insets sistem. Pengaturan lewat ikon di top bar.
+- Semua animasi Android membaca `MotionSpec` (`AiosTheme.motion`): bila animasi dimatikan di sistem (`ANIMATOR_DURATION_SCALE` = 0) animasi berhingga menjadi `snap()` dan animasi dekoratif tak berhingga (kilau, denyut, putar) tidak dijalankan.
 - Composer menempel di bawah, naik bersama keyboard. Tombol suara di kiri, kirim di kanan.
 - Daftar percakapan lewat drawer dari kiri.
 

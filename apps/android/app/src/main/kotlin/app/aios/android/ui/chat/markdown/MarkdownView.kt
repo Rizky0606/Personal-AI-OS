@@ -47,7 +47,7 @@ import app.aios.android.R
 import app.aios.android.ui.components.AiosIcon
 import app.aios.android.ui.components.Hairline
 import app.aios.android.ui.theme.AiosTheme
-import app.aios.android.ui.theme.PlexMono
+import app.aios.android.ui.theme.GeistMono
 import app.aios.ui.tokens.Tokens
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -164,7 +164,7 @@ private fun CodeBlock(block: Block.Code, onCopied: () -> Unit) {
         ) {
             Text(
                 text = block.language.ifBlank { "teks" },
-                style = AiosTheme.type.caption.copy(fontFamily = PlexMono),
+                style = AiosTheme.type.caption.copy(fontFamily = GeistMono),
                 color = colors.text2,
                 modifier = Modifier.weight(1f)
             )
@@ -251,7 +251,7 @@ private fun buildInline(
             when (node) {
                 is Inline.Text -> appendWithCitations(node.text, citations, linkColor)
                 is Inline.Code -> withStyle(
-                    SpanStyle(fontFamily = PlexMono, background = codeBackground)
+                    SpanStyle(fontFamily = GeistMono, background = codeBackground)
                 ) { append(node.code) }
                 is Inline.Bold -> withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) { walk(node.children) }
                 is Inline.Italic -> withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { walk(node.children) }

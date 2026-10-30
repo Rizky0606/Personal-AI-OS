@@ -39,7 +39,7 @@ import app.aios.android.ui.components.Hairline
 import app.aios.android.ui.components.OfflineBanner
 import app.aios.android.ui.components.SkeletonList
 import app.aios.android.ui.theme.AiosTheme
-import app.aios.android.ui.theme.PlexMono
+import app.aios.android.ui.theme.GeistMono
 import app.aios.ui.tokens.Tokens
 import kotlinx.coroutines.launch
 
@@ -135,7 +135,7 @@ private fun TypographyBlock() = Block("Tipografi") {
     Text("UI default 14 sp", style = t.ui, color = c)
     Text("Meta 13 sp", style = t.meta, color = c)
     Text("Caption 12 sp", style = t.caption, color = c)
-    Text("mono: app/src/main.kt +12 -3", style = t.mono.copy(fontFamily = PlexMono), color = c)
+    Text("mono: app/src/main.kt +12 -3", style = t.mono.copy(fontFamily = GeistMono), color = c)
 }
 
 @Composable
