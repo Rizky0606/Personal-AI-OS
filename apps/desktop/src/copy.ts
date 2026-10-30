@@ -536,6 +536,22 @@ export const copy = {
       separator: ' · ',
     },
     units: { second: 'dtk', minute: 'mnt', hour: 'j' },
+    ui: {
+      toggle: 'Buka aktivitas run',
+      toolOutput: 'Output alat',
+      openApproval: 'Buka approval',
+      moreSteps: (n: number) => `+${n} langkah lainnya`,
+      phase: {
+        idle: 'Siap',
+        thinking: 'Menyiapkan',
+        tool: 'Bekerja',
+        writing: 'Menulis',
+        waiting_approval: 'Menunggu izin',
+        done: 'Selesai',
+        error: 'Gagal',
+        cancelled: 'Dibatalkan',
+      },
+    },
   },
   quick: {
     title: 'Tanya cepat',

@@ -1,3 +1,4 @@
+import type { OrbState } from './AgentOrb';
 import type { ModelInfo } from '../api/gateway';
 import { ArrowUp, ChevronDown, Paperclip, Pencil, Square, X } from 'lucide-react';
 import type { PromptTemplate } from '@aios/contracts';
@@ -22,6 +23,8 @@ export interface ComposerProps {
   onStop: () => void;
   /** Jawaban sedang mengalir: tombol kirim berubah menjadi hentikan. */
   streaming: boolean;
+  /** Fase run untuk warna bingkai (sama dengan Orb). */
+  phase?: OrbState;
   /** Mengirim sedang berlangsung (belum dikonfirmasi server). */
   sending: boolean;
   models: ModelInfo[];
@@ -66,6 +69,7 @@ export function Composer({
   onSend,
   onStop,
   streaming,
+  phase,
   sending,
   models,
   model,
@@ -164,7 +168,10 @@ export function Composer({
             ))}
           </div>
         ) : null}
-        <div className="flex flex-col gap-2 rounded-panel border border-border bg-surface p-2 transition duration-[180ms] ease-aios focus-within:border-border-strong focus-within:shadow-glow has-[[data-composer-field]:focus-visible]:border-accent">
+        <div
+          data-phase={phase}
+          className="aios-composer-frame flex flex-col gap-2 rounded-panel border border-border bg-surface p-2 transition duration-[180ms] ease-aios focus-within:border-border-strong focus-within:shadow-glow has-[[data-composer-field]:focus-visible]:border-accent"
+        >
           {attachments.length > 0 ? (
             <ul aria-label={copy.preview.attachment.group} className="flex flex-wrap gap-2">
               {attachments.map((a) => (
@@ -349,17 +356,18 @@ export function Composer({
                   <Pencil size={16} strokeWidth={1.5} aria-hidden="true" />
                 </IconButton>
               ) : null}
-              {streaming ? (
-                <Button variant="secondary" onClick={onStop}>
+              <Button
+                variant={streaming ? 'secondary' : 'primary'}
+                disabled={!streaming && !canSend}
+                onClick={streaming ? onStop : onSend}
+              >
+                {streaming ? (
                   <Square size={14} strokeWidth={1.5} aria-hidden="true" />
-                  {copy.chat.stop}
-                </Button>
-              ) : (
-                <Button variant="primary" disabled={!canSend} onClick={onSend}>
+                ) : (
                   <ArrowUp size={14} strokeWidth={1.5} aria-hidden="true" />
-                  {copy.chat.send}
-                </Button>
-              )}
+                )}
+                {streaming ? copy.chat.stop : copy.chat.send}
+              </Button>
             </span>
           </div>
         </div>

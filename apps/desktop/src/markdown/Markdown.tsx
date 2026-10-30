@@ -1,9 +1,10 @@
-import { Fragment, type ReactNode } from 'react';
+import { Fragment, useState, type ReactNode } from 'react';
 import { cn } from '../lib/cn';
 import { openExternal } from '../lib/external';
 import { CodeBlock } from './CodeBlock';
 import type { Inline } from './inline';
-import { parseMarkdown, type Block, type ListItem } from './parse';
+import type { Block, ListItem } from './parse';
+import { createIncrementalParser } from './incremental';
 
 export interface MarkdownProps {
   source: string;
@@ -220,7 +221,8 @@ function BlockView({
 
 /** Menampilkan Markdown sebagai elemen React (tanpa HTML mentah). Lebar baca maksimal 72 karakter. */
 export function Markdown({ source, citations, className }: MarkdownProps) {
-  const blocks = parseMarkdown(source);
+  const [parse] = useState(createIncrementalParser);
+  const blocks = parse(source);
   return (
     <div className={cn('flex max-w-[72ch] flex-col gap-3 text-chat text-text', className)}>
       {blocks.map((block, i) => (

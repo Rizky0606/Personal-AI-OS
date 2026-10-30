@@ -17,6 +17,7 @@ import { MessageList } from './MessageList';
 import { RunActivity } from './RunActivity';
 import { PlanBanner } from './PlanBanner';
 import { ReviewBanner } from './ReviewBanner';
+import { orbStateOf } from './AgentOrb';
 import { useChatController } from './useChatController';
 
 function ChatView({ conversationId }: { conversationId: string | undefined }) {
@@ -123,7 +124,11 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
                 activity={buildActivity(chat.live, now)}
                 now={now}
                 output={chat.live.tools.at(-1)?.output}
-                onApproval={() => undefined}
+                onApproval={() =>
+                  document
+                    .querySelector('[data-approval-panel]')
+                    ?.scrollIntoView({ block: 'center' })
+                }
               />
             ) : null}
           </StateView>
@@ -139,6 +144,7 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
         onSend={chat.send}
         onStop={chat.stop}
         streaming={chat.streaming}
+        phase={chat.live ? orbStateOf(buildActivity(chat.live, now).phase) : undefined}
         sending={chat.sending}
         models={chat.models}
         model={chat.model}

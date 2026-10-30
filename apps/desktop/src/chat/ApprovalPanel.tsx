@@ -19,6 +19,7 @@ export function ApprovalPanel({ approval, busy, onResolve }: ApprovalPanelProps)
   return (
     <section
       role="group"
+      data-approval-panel=""
       aria-label={title}
       className="flex max-w-[72ch] flex-col gap-3 rounded-panel border border-warning bg-surface p-3"
     >

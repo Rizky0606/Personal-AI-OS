@@ -12,6 +12,10 @@
   .aios-agent-orb-thinking circle:first-child { animation: aios-orb-spin 1400ms linear infinite; transform-origin: center; }
 }
 @keyframes aios-orb-spin { to { transform: rotate(360deg); } }
+.aios-composer-frame[data-phase='thinking'] { border-color: var(--status-thinking); }
+.aios-composer-frame[data-phase='tool'] { border-color: var(--status-tool); }
+.aios-composer-frame[data-phase='writing'] { border-color: var(--status-writing); }
+.aios-composer-frame[data-phase='error'] { border-color: var(--status-error); }
 
 /* IBM Plex dibundel lokal (lisensi OFL di src/fonts); tanpa CDN. */
 @font-face {
