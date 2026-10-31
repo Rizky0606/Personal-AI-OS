@@ -1,4 +1,5 @@
 @file:Suppress("MaxLineLength")
+
 package app.aios.android.ui.chat.markdown
 
 import kotlinx.serialization.json.Json
@@ -19,7 +20,10 @@ sealed interface RichAnswerParse {
     data object Unsupported : RichAnswerParse
 }
 
-private val richAnswerJson = Json { isLenient = false; allowTrailingComma = false }
+private val richAnswerJson = Json {
+    isLenient = false
+    allowTrailingComma = false
+}
 private const val MAX_JSON_BYTES = 20 * 1024
 private const val MAX_COMPONENTS = 12
 private const val MAX_ITEMS = 20
@@ -80,16 +84,23 @@ private fun validateComponent(type: String, item: JsonObject) {
             }
         }
         "table" -> {
-            val columns = array("columns"); val rows = array("rows")
+            val columns = array("columns")
+            val rows = array("rows")
             require(columns.isNotEmpty() && columns.size <= 20 && rows.size <= MAX_ROWS)
             columns.forEach { bounded(it, MAX_LABEL) }
-            rows.forEach { row -> row.jsonArray.let { cells -> require(cells.size == columns.size); cells.forEach { bounded(it, MAX_TEXT) } } }
+            rows.forEach { row ->
+                row.jsonArray.let { cells ->
+                    require(cells.size == columns.size)
+                    cells.forEach { bounded(it, MAX_TEXT) }
+                }
+            }
         }
         "checklist" -> {
             optionalLabel()
             entries("items").forEach { element ->
                 val entry = element.jsonObject
-                require(entry.keys == setOf("id", "label", "checked")); requireId(entry)
+                require(entry.keys == setOf("id", "label", "checked"))
+                requireId(entry)
                 bounded(entry.getValue("label"), MAX_LABEL)
                 require(entry["checked"]?.jsonPrimitive?.booleanOrNull != null)
             }
@@ -97,23 +108,35 @@ private fun validateComponent(type: String, item: JsonObject) {
         "choices" -> {
             optionalLabel()
             require(str("mode") in setOf("single", "multiple"))
-            val options = entries("options"); require(options.isNotEmpty())
+            val options = entries("options")
+            require(options.isNotEmpty())
             options.forEach { element ->
                 val entry = element.jsonObject
-                require(entry.keys.all(setOf("id", "label", "description")::contains) && setOf("id", "label").all(entry::containsKey))
-                requireId(entry); bounded(entry.getValue("label"), MAX_LABEL); entry["description"]?.let { bounded(it, MAX_TEXT) }
+                require(
+                    entry.keys.all(setOf("id", "label", "description")::contains) &&
+                        setOf("id", "label").all(entry::containsKey)
+                )
+                requireId(entry)
+                bounded(entry.getValue("label"), MAX_LABEL)
+                entry["description"]?.let { bounded(it, MAX_TEXT) }
             }
         }
         "callout" -> {
             require(str("tone") in setOf("info", "success", "warning", "danger"))
-            str("title", false); str("text")
+            str("title", false)
+            str("text")
         }
         "steps" -> {
             optionalLabel()
             entries("items").forEach { element ->
                 val entry = element.jsonObject
-                require(entry.keys.all(setOf("id", "title", "text", "done")::contains) && setOf("id", "title", "text").all(entry::containsKey))
-                requireId(entry); bounded(entry.getValue("title"), MAX_LABEL); bounded(entry.getValue("text"), MAX_TEXT)
+                require(
+                    entry.keys.all(setOf("id", "title", "text", "done")::contains) &&
+                        setOf("id", "title", "text").all(entry::containsKey)
+                )
+                requireId(entry)
+                bounded(entry.getValue("title"), MAX_LABEL)
+                bounded(entry.getValue("text"), MAX_TEXT)
                 entry["done"]?.let { require(it.jsonPrimitive.booleanOrNull != null) }
             }
         }

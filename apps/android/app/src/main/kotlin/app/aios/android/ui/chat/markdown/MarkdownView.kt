@@ -151,7 +151,9 @@ private fun RenderBlock(block: Block, onCopied: () -> Unit, fade: StreamTail? = 
                     is RichAnswerParse.Valid -> RichAnswerView(answer.components)
                     RichAnswerParse.Unsupported -> CodeBlock(block, onCopied)
                 }
-            } else CodeBlock(block, onCopied)
+            } else {
+                CodeBlock(block, onCopied)
+            }
         }
         is Block.Quote -> Row(modifier = Modifier.height(IntrinsicSize.Min)) {
             Box(

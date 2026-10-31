@@ -1,4 +1,5 @@
 @file:Suppress("MaxLineLength")
+
 package app.aios.android.ui.chat.activity
 
 import app.aios.android.data.api.TERMINAL_RUN_STATUSES
@@ -70,7 +71,11 @@ data class RunTrace(
         is ServerEvent.ApprovalRequested -> copy(
             approvals = approvals.filterNot { it == event.approvalId } + event.approvalId
         )
-        is ServerEvent.ArtifactCreated -> copy(artifacts = artifacts.filterNot { it.fileId == event.fileId } + Artifact(event.fileId, event.name, event.mime, event.size, event.sha256, event.source))
+        is ServerEvent.ArtifactCreated -> copy(
+            artifacts = artifacts.filterNot {
+                it.fileId == event.fileId
+            } + Artifact(event.fileId, event.name, event.mime, event.size, event.sha256, event.source)
+        )
         else -> this
     }
 

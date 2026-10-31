@@ -326,7 +326,7 @@ fun AssistantMessageRow(
     roleName: (String) -> String,
     onCopied: () -> Unit,
     onDelete: (String) -> Unit = {},
-    onDownload: FileDownload = { _, _ -> },
+    onDownload: FileDownload = { _, _ -> }
 ) {
     val colors = AiosTheme.colors
     var menuOpen by remember { mutableStateOf(false) }

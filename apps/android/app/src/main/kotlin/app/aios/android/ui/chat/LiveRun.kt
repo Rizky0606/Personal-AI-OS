@@ -1,11 +1,19 @@
 @file:Suppress("MaxLineLength")
+
 package app.aios.android.ui.chat
 
 import app.aios.android.data.api.RunError
 import app.aios.android.data.api.TERMINAL_RUN_STATUSES
 import app.aios.android.data.realtime.ServerEvent
 
-data class Artifact(val fileId: String, val name: String, val mime: String, val size: Long, val sha256: String, val source: String) {
+data class Artifact(
+    val fileId: String,
+    val name: String,
+    val mime: String,
+    val size: Long,
+    val sha256: String,
+    val source: String
+) {
     val inline: Boolean get() = mime.lowercase() in setOf("image/png", "image/jpeg", "image/webp", "image/gif")
 }
 data class ToolStep(
@@ -48,7 +56,11 @@ data class LiveRun(
                 if (it.id == event.toolCallId) it.copy(status = event.status, durationMs = event.durationMs) else it
             }
         )
-        is ServerEvent.ArtifactCreated -> copy(artifacts = artifacts.filterNot { it.fileId == event.fileId } + Artifact(event.fileId, event.name, event.mime, event.size, event.sha256, event.source))
+        is ServerEvent.ArtifactCreated -> copy(
+            artifacts = artifacts.filterNot {
+                it.fileId == event.fileId
+            } + Artifact(event.fileId, event.name, event.mime, event.size, event.sha256, event.source)
+        )
         is ServerEvent.MessageCompleted,
         is ServerEvent.ReasoningSummary,
         is ServerEvent.ApprovalRequested,
