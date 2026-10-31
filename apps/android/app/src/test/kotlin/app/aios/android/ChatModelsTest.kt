@@ -13,6 +13,7 @@ import app.aios.android.ui.chat.ChatItem
 import app.aios.android.ui.chat.ChatUiState
 import app.aios.android.ui.chat.Artifact
 import app.aios.android.ui.chat.LiveRun
+import app.aios.android.ui.chat.PendingMessage
 import app.aios.android.ui.chat.buildChatItems
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.encodeToString
