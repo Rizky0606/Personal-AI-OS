@@ -1,3 +1,4 @@
+@file:Suppress("MaxLineLength")
 package app.aios.android.data.realtime
 
 import kotlinx.serialization.Serializable

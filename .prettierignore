@@ -7,6 +7,7 @@ playwright-report
 coverage
 pnpm-lock.yaml
 apps/android
+e2e/.stack.json
 **/src-tauri/target
 docs
 AGENTS.md
