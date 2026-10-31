@@ -1,3 +1,4 @@
+@file:Suppress("MaxLineLength")
 package app.aios.android.ui.chat.markdown
 
 import kotlinx.serialization.json.Json

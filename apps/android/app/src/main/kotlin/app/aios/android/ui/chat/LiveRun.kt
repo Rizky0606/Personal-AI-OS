@@ -1,3 +1,4 @@
+@file:Suppress("MaxLineLength")
 package app.aios.android.ui.chat
 
 import app.aios.android.data.api.RunError

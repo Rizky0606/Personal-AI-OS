@@ -127,7 +127,7 @@ fun ChatScreen(viewModel: ChatViewModel, snackbar: SnackbarHostState) {
                     modifier = Modifier.padding(Tokens.Space.s16)
                 )
                 items.isEmpty() -> ChatWelcome(onPick = viewModel::onDraft)
-                else -> MessageList(
+                else -> messageList(
                     items = items,
                     loadingOlder = ui.loadingOlder,
                     listState = listState,
@@ -188,7 +188,8 @@ fun ChatScreen(viewModel: ChatViewModel, snackbar: SnackbarHostState) {
     }
 }
 
-private fun MessageList(
+@Suppress("LongParameterList")
+private fun messageList(
     items: List<ChatItem>,
     loadingOlder: Boolean,
     listState: androidx.compose.foundation.lazy.LazyListState,
@@ -228,6 +229,7 @@ private fun MessageList(
                     item = item,
                     roleName = roleName,
                     onEdit = onEdit,
+                    onStartEdit = onStartEdit,
                     onResend = onResend,
                     onDelete = onDelete,
                     onRemember = onRemember,

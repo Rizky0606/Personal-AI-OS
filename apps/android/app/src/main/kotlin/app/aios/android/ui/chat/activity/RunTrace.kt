@@ -1,3 +1,4 @@
+@file:Suppress("MaxLineLength")
 package app.aios.android.ui.chat.activity
 
 import app.aios.android.data.api.TERMINAL_RUN_STATUSES
