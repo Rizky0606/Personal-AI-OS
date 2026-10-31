@@ -57,7 +57,6 @@ import { spaceRoutes } from './modules/spaces/routes.js';
 import type { SpacesService } from './modules/spaces/service.js';
 import type { RolesService } from './modules/roles/service.js';
 import type { RunsService } from './modules/runs/service.js';
-import type { Runner } from './modules/runs/runner.js';
 import type { EventStore } from './modules/runs/store.js';
 import { MAX_MESSAGE_BYTES, wsRoutes, type WsDeps } from './modules/ws/routes.js';
 
@@ -92,7 +91,6 @@ export interface AppDeps {
   chat: ChatService;
   files: FilesService;
   runs: RunsService;
-  runner?: Pick<Runner, 'isActive'>;
   store?: EventStore;
   roles: RolesService;
   research: ResearchService;
@@ -128,7 +126,6 @@ export function buildApp({
   chat,
   files,
   runs,
-  runner,
   store,
   roles,
   research,
@@ -247,11 +244,10 @@ export function buildApp({
           ...(ws.heartbeatMs ? { heartbeatMs: ws.heartbeatMs } : {}),
           ...(ws.now ? { now: ws.now } : {}),
         });
-        if (runner && store)
+        if (store)
           await protectedScope.register(workerArtifactRoutes, {
             files,
             runs,
-            runner,
             projects,
             store,
           });

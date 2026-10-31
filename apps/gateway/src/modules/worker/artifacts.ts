@@ -3,9 +3,6 @@ import { IdSchema, ArtifactCreatedEventSchema } from '@aios/contracts';
 import type { FastifyPluginCallback } from 'fastify';
 import { AppError } from '../../errors.js';
 import { requireAuth, requireScope } from '../auth/guard.js';
-import type { EventStore } from '../runs/store.js';
-import type { Runner } from '../runs/runner.js';
-import type { RunsService } from '../runs/service.js';
 import type { ProjectsService } from '../projects/service.js';
 import type { FilesService } from '../files/service.js';
 
@@ -40,7 +37,6 @@ export function parseScreenshotUpload(
 export interface WorkerArtifactDeps {
   files: FilesService;
   runs: RunsService;
-  runner: Pick<Runner, 'isActive'>;
   projects: Pick<ProjectsService, 'workerOf'>;
   store: EventStore;
 }
@@ -71,8 +67,6 @@ export const workerArtifactRoutes: FastifyPluginCallback<WorkerArtifactDeps> = (
       const projectId = await deps.runs.projectId(runId);
       if (!projectId || (await deps.projects.workerOf(projectId)) !== auth.deviceId)
         throw new AppError(403, 'run_not_owned', 'Run ini bukan milik worker ini.');
-      if (!deps.runner.isActive(runId))
-        throw new AppError(409, 'run_not_active', 'Run ini tidak sedang berjalan di gateway.');
       const record = await deps.files.saveGenerated({
         name: `screenshot-${randomUUID()}.png`,
         bytes: body,

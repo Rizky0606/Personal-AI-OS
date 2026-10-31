@@ -28,7 +28,7 @@ function expectedScope(method: string, url: string): Expected {
   if (PUBLIC.has(key)) return 'public';
   if (ANY_SCOPE.has(key)) return 'any';
   if (url.startsWith('/llm/v1')) return 'llm';
-  if (url === '/v1/worker/ws') return 'worker';
+  if (url === '/v1/worker/ws' || url === '/v1/worker/artifacts/screenshot') return 'worker';
   return 'app';
 }
 

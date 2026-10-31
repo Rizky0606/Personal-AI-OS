@@ -40,11 +40,19 @@ class MarkdownTest {
 
     @Test
     fun `aios-ui fenced JSON validasi dan unsupported tetap code biasa`() {
-        val valid = """{"version":1,"components":[{"id":"m","type":"metric","label":"Nilai","value":42}]}"""
+        val valid =
+            """{"version":1,"components":[{"id":"m","type":"metric","label":"Nilai","value":42}]}"""
         val result = app.aios.android.ui.chat.markdown.parseRichAnswer(valid)
         assertTrue(result is app.aios.android.ui.chat.markdown.RichAnswerParse.Valid)
-        assertTrue(app.aios.android.ui.chat.markdown.parseRichAnswer("""{"version":1,"components":[{"id":"x","type":"chart"}]}""") is app.aios.android.ui.chat.markdown.RichAnswerParse.Unsupported)
-        assertTrue(app.aios.android.ui.chat.markdown.parseRichAnswer("{".repeat(20_000)) is app.aios.android.ui.chat.markdown.RichAnswerParse.Unsupported)
+        assertTrue(
+            app.aios.android.ui.chat.markdown.parseRichAnswer(
+                """{"version":1,"components":[{"id":"x","type":"chart"}]}"""
+            ) is app.aios.android.ui.chat.markdown.RichAnswerParse.Unsupported
+        )
+        assertTrue(
+            app.aios.android.ui.chat.markdown.parseRichAnswer("{".repeat(20_000)) is
+                app.aios.android.ui.chat.markdown.RichAnswerParse.Unsupported
+        )
     }
 
     @Test

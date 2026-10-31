@@ -19,6 +19,7 @@ import {
   ScheduleRunSchema,
   ScheduleSchema,
   TaskSchema,
+  FileRecordSchema,
 } from '../entities.js';
 import { PageQuerySchema, pageOf } from '../common.js';
 import { json, noContent, type Endpoint } from '../endpoint.js';
@@ -211,5 +212,15 @@ export const workEndpoints: readonly Endpoint[] = [
       json(200, 'Halaman riwayat', pageOf(ScheduleRunSchema).meta({ id: 'ScheduleRunPage' })),
     ],
     errors: [400, 401, 404],
+  },
+  {
+    operationId: 'uploadWorkerScreenshot',
+    method: 'post',
+    path: '/worker/artifacts/screenshot',
+    tag: 'Worker',
+    summary: 'Unggah screenshot PNG dari worker untuk run milik worker',
+    auth: true,
+    responses: [json(201, 'Artifact screenshot', FileRecordSchema)],
+    errors: [400, 401, 403, 413],
   },
 ];
