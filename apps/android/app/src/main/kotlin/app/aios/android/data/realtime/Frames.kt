@@ -129,6 +129,7 @@ object Frames {
         )
         "message.delta" -> ServerEvent.MessageDelta(e.str("messageId"), e.str("text"))
         "message.completed" -> ServerEvent.MessageCompleted(e.str("messageId"))
+        "run.completed" -> ServerEvent.RunCompleted(e.str("summary"))
         "reasoning.delta" -> ServerEvent.ReasoningDelta(e.str("messageId"), e.str("text"))
         "reasoning.summary" -> ServerEvent.ReasoningSummary(e.str("messageId"), e.str("text"))
         "approval.requested" -> ServerEvent.ApprovalRequested(e.str("approvalId"))

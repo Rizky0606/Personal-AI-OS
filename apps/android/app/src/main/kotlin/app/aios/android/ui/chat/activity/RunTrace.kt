@@ -71,6 +71,7 @@ data class RunTrace(
         is ServerEvent.ApprovalRequested -> copy(
             approvals = approvals.filterNot { it == event.approvalId } + event.approvalId
         )
+        is ServerEvent.ApprovalResolved -> copy(approvals = approvals.filterNot { it == event.approvalId })
         is ServerEvent.ArtifactCreated -> copy(
             artifacts = artifacts.filterNot {
                 it.fileId == event.fileId
