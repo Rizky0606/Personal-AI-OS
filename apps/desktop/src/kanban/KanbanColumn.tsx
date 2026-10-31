@@ -72,7 +72,10 @@ export function KanbanColumn({
           />
           {name}
         </span>
-        <span aria-hidden="true" className="rounded-full bg-surface px-2 font-mono text-meta tabular-nums text-text-2">
+        <span
+          aria-hidden="true"
+          className="rounded-full bg-surface px-2 font-mono text-meta tabular-nums text-text-2"
+        >
           {count}
         </span>
       </h3>
@@ -85,7 +88,11 @@ export function KanbanColumn({
           children
         )}
         {endMarker ? (
-          <li aria-hidden="true" data-testid="drop-marker" className="h-0.5 rounded-badge bg-accent" />
+          <li
+            aria-hidden="true"
+            data-testid="drop-marker"
+            className="h-0.5 rounded-badge bg-accent"
+          />
         ) : null}
       </ul>
     </section>

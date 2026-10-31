@@ -28,7 +28,14 @@ export function AgentOrb({ state, size = 28 }: AgentOrbProps) {
       <circle cx="14" cy="14" r="10" fill="none" stroke="currentColor" strokeWidth="2" />
       <circle cx="14" cy="14" r="4" fill="currentColor" opacity="0.8" />
       {state === 'done' ? (
-        <path data-orb-check="true" pathLength="1" d="m8 14 4 4 8-9" fill="none" stroke="currentColor" strokeWidth="2" />
+        <path
+          data-orb-check="true"
+          pathLength="1"
+          d="m8 14 4 4 8-9"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        />
       ) : null}
     </svg>
   );

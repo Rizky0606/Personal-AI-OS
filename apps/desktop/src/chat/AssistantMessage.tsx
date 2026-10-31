@@ -136,7 +136,7 @@ export function AssistantMessage({
   onFork,
   onSuggest,
   onRichFollowUp,
- }: AssistantMessageProps) {
+}: AssistantMessageProps) {
   // Blok kode di jawaban yang sudah selesai bisa diunduh sekaligus sebagai satu zip (struktur folder ikut path).
   const files = useMemo(
     () =>

@@ -24,8 +24,12 @@ describe('Header: role dan model', () => {
     await renderScreen(<Header title={copy.nav.chat} />);
 
     expect(screen.getByRole('heading', { level: 1, name: copy.nav.chat })).toBeInTheDocument();
-    expect(screen.getByText(copy.status.role, { selector: '[data-status-role]' })).toBeInTheDocument();
-    expect(screen.getByText(copy.status.model, { selector: '[data-status-model]' })).toBeInTheDocument();
+    expect(
+      screen.getByText(copy.status.role, { selector: '[data-status-role]' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(copy.status.model, { selector: '[data-status-model]' }),
+    ).toBeInTheDocument();
     expect(screen.queryByText(copy.shell.runActive)).not.toBeInTheDocument();
   });
 

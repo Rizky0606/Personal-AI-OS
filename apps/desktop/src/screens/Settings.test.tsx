@@ -77,7 +77,9 @@ describe('SettingsScreen: pemilih model (memuat, kosong, error, sukses)', () => 
     expect(within(region).getByText(copy.settings.modelHint.model('openai'))).toBeInTheDocument();
     await user.click(within(region).getByRole('radio', { name: /GPT X/ }));
     expect(useUiStore.getState().model).toBe('gpt-x');
-    await user.click(within(region).getByRole('radio', { name: new RegExp(copy.settings.modelAuto) }));
+    await user.click(
+      within(region).getByRole('radio', { name: new RegExp(copy.settings.modelAuto) }),
+    );
     expect(useUiStore.getState().model).toBeNull();
   });
 
@@ -85,7 +87,9 @@ describe('SettingsScreen: pemilih model (memuat, kosong, error, sukses)', () => 
     api.listModels.mockReturnValue(new Promise(() => undefined));
     await renderScreen(<SettingsScreen />, '/settings');
     const region = await group();
-    expect(within(region).getByRole('status', { name: copy.settings.modelLoading })).toBeInTheDocument();
+    expect(
+      within(region).getByRole('status', { name: copy.settings.modelLoading }),
+    ).toBeInTheDocument();
   });
 
   it('kosong: satu kalimat dan satu tombol muat ulang', async () => {

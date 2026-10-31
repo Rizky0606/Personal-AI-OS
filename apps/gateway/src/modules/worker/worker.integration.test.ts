@@ -102,7 +102,6 @@ const delta = (text: string): AgentEvent => ({
   text,
 });
 
-
 describe('artifact upload', () => {
   it('stores an authenticated screenshot and persists metadata event', async () => {
     const { worker, runId } = await setup('Artifact');
@@ -121,7 +120,11 @@ describe('artifact upload', () => {
     expect(record).toMatchObject({ mime: 'image/png', size: 9 });
     const events = await env.store.list(runId, 0, 10);
     expect(events.map(({ event }) => event)).toContainEqual(
-      expect.objectContaining({ type: 'artifact.created', fileId: record.id, source: 'screenshot' }),
+      expect.objectContaining({
+        type: 'artifact.created',
+        fileId: record.id,
+        source: 'screenshot',
+      }),
     );
   });
 

@@ -4,7 +4,8 @@ import { AgentOrb, orbStateOf } from './AgentOrb';
 
 describe('AgentOrb', () => {
   it.each(['idle', 'thinking', 'tool', 'writing', 'done', 'error'] as const)(
-    '%s tetap ornamen tersembunyi dari pembaca layar', (state) => {
+    '%s tetap ornamen tersembunyi dari pembaca layar',
+    (state) => {
       render(<AgentOrb state={state} />);
       expect(screen.getByTestId('agent-orb')).toHaveAttribute('aria-hidden', 'true');
       expect(screen.getByTestId('agent-orb')).toHaveAttribute('data-state', state);
@@ -28,8 +29,14 @@ describe('AgentOrb', () => {
   });
 
   it.each([
-    ['idle', 'idle'], ['thinking', 'thinking'], ['tool', 'tool'], ['writing', 'writing'],
-    ['waiting_approval', 'tool'], ['done', 'done'], ['error', 'error'], ['cancelled', 'idle'],
+    ['idle', 'idle'],
+    ['thinking', 'thinking'],
+    ['tool', 'tool'],
+    ['writing', 'writing'],
+    ['waiting_approval', 'tool'],
+    ['done', 'done'],
+    ['error', 'error'],
+    ['cancelled', 'idle'],
   ] as const)('memetakan fase %s ke orb %s', (phase, state) => {
     expect(orbStateOf(phase)).toBe(state);
   });

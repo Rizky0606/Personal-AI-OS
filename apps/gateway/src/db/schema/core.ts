@@ -1,4 +1,12 @@
-import type { AgentEvent, DiffStat, MessagePart, RunError, Stack, TeamEvent, Usage } from '@aios/contracts';
+import type {
+  AgentEvent,
+  DiffStat,
+  MessagePart,
+  RunError,
+  Stack,
+  TeamEvent,
+  Usage,
+} from '@aios/contracts';
 import { sql } from 'drizzle-orm';
 import {
   type AnyPgColumn,
@@ -210,8 +218,12 @@ export const teams = pgTable(
   'teams',
   {
     id: id(),
-    projectId: uuid('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
-    parentRunId: uuid('parent_run_id').references(() => runs.id, { onDelete: 'set null' }).unique(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    parentRunId: uuid('parent_run_id')
+      .references(() => runs.id, { onDelete: 'set null' })
+      .unique(),
     status: teamStatus('status').notNull().default('queued'),
     prompt: text('prompt').notNull(),
     limits: jsonb('limits').$type<Record<string, number>>().notNull(),
@@ -228,8 +240,13 @@ export const teamMembers = pgTable(
   'team_members',
   {
     id: id(),
-    teamId: uuid('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
-    runId: uuid('run_id').notNull().references(() => runs.id, { onDelete: 'cascade' }).unique(),
+    teamId: uuid('team_id')
+      .notNull()
+      .references(() => teams.id, { onDelete: 'cascade' }),
+    runId: uuid('run_id')
+      .notNull()
+      .references(() => runs.id, { onDelete: 'cascade' })
+      .unique(),
     role: teamMemberRole('role').notNull(),
     status: teamMemberStatus('status').notNull().default('queued'),
     task: text('task').notNull(),
@@ -248,7 +265,9 @@ export const teamMembers = pgTable(
 export const teamEvents = pgTable(
   'team_events',
   {
-    teamId: uuid('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+    teamId: uuid('team_id')
+      .notNull()
+      .references(() => teams.id, { onDelete: 'cascade' }),
     seq: integer('seq').notNull(),
     type: text('type').notNull(),
     payload: jsonb('payload').$type<TeamEvent>().notNull(),

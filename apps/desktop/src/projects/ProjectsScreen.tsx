@@ -134,52 +134,67 @@ export function ProjectsScreen() {
           retryLabel={copy.states.retry}
           onRetry={() => void projects.refetch()}
         >
-        <div role="list" aria-label={copy.projects.listLabel}>
-          <table aria-label={copy.projects.listLabel} className="w-full border-collapse rounded-panel border border-border bg-surface">
-            <tbody>
-              {rows.map(({ project, binding, mine }, index) => (
-                <ProjectRow
-                  key={project.id} project={project} binding={binding} mine={mine} workerReady={workerReady} index={index}
-                  onBind={() => void bind(project.id)}
-                  onChangeBranch={() => setBranchOf({ project, path: binding?.available ? binding.path : null })}
-                  onEditSetup={() => setSetupOf(project)} onEditRules={() => setRulesOf(project)}
-                  onUnbind={() => binding && setUnbindOf({ projectId: project.id, path: binding.path })}
-                  onRemove={() => setRemoveOf({ project, bound: !!binding })} onOpenChat={() => openChat(project.id)} latest={latest[project.id]}
-                />
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </StateView>
-      <AddProjectDialog open={dialogOpen} onOpenChange={setDialogOpen} />
-      <ProjectRulesDialog project={rulesOf} onClose={() => setRulesOf(null)} />
-      <ProjectSetupDialog project={setupOf} onClose={() => setSetupOf(null)} />
-      <BranchDialog
-        project={branchOf?.project ?? null}
-        path={branchOf?.path ?? null}
-        onClose={() => setBranchOf(null)}
-      />
-      <ConfirmDialog
-        open={unbindOf !== null}
-        onOpenChange={(open) => !open && setUnbindOf(null)}
-        title={copy.projects.unbind.title}
-        body={unbindOf ? copy.projects.unbind.body(unbindOf.path) : ''}
-        confirmLabel={copy.projects.unbind.action}
-        cancelLabel={copy.chat.cancel}
-        busy={busy}
-        onConfirm={() => unbindOf && void unbind(unbindOf.projectId)}
-      />
-      <ConfirmDialog
-        open={removeOf !== null}
-        onOpenChange={(open) => !open && setRemoveOf(null)}
-        title={copy.projects.remove.title}
-        body={removeOf ? copy.projects.remove.body(removeOf.project.name) : ''}
-        confirmLabel={copy.projects.remove.action}
-        cancelLabel={copy.chat.cancel}
-        destructive
-        busy={busy}
-        onConfirm={() => removeOf && void remove(removeOf.project, removeOf.bound)}
-      />
+          <div role="list" aria-label={copy.projects.listLabel}>
+            <table
+              aria-label={copy.projects.listLabel}
+              className="w-full border-collapse rounded-panel border border-border bg-surface"
+            >
+              <tbody>
+                {rows.map(({ project, binding, mine }, index) => (
+                  <ProjectRow
+                    key={project.id}
+                    project={project}
+                    binding={binding}
+                    mine={mine}
+                    workerReady={workerReady}
+                    index={index}
+                    onBind={() => void bind(project.id)}
+                    onChangeBranch={() =>
+                      setBranchOf({ project, path: binding?.available ? binding.path : null })
+                    }
+                    onEditSetup={() => setSetupOf(project)}
+                    onEditRules={() => setRulesOf(project)}
+                    onUnbind={() =>
+                      binding && setUnbindOf({ projectId: project.id, path: binding.path })
+                    }
+                    onRemove={() => setRemoveOf({ project, bound: !!binding })}
+                    onOpenChat={() => openChat(project.id)}
+                    latest={latest[project.id]}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </StateView>
+        <AddProjectDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+        <ProjectRulesDialog project={rulesOf} onClose={() => setRulesOf(null)} />
+        <ProjectSetupDialog project={setupOf} onClose={() => setSetupOf(null)} />
+        <BranchDialog
+          project={branchOf?.project ?? null}
+          path={branchOf?.path ?? null}
+          onClose={() => setBranchOf(null)}
+        />
+        <ConfirmDialog
+          open={unbindOf !== null}
+          onOpenChange={(open) => !open && setUnbindOf(null)}
+          title={copy.projects.unbind.title}
+          body={unbindOf ? copy.projects.unbind.body(unbindOf.path) : ''}
+          confirmLabel={copy.projects.unbind.action}
+          cancelLabel={copy.chat.cancel}
+          busy={busy}
+          onConfirm={() => unbindOf && void unbind(unbindOf.projectId)}
+        />
+        <ConfirmDialog
+          open={removeOf !== null}
+          onOpenChange={(open) => !open && setRemoveOf(null)}
+          title={copy.projects.remove.title}
+          body={removeOf ? copy.projects.remove.body(removeOf.project.name) : ''}
+          confirmLabel={copy.projects.remove.action}
+          cancelLabel={copy.chat.cancel}
+          destructive
+          busy={busy}
+          onConfirm={() => removeOf && void remove(removeOf.project, removeOf.bound)}
+        />
       </PageContainer>
     </Page>
   );

@@ -44,7 +44,11 @@ const TableSchema = z
   .superRefine((value, ctx) => {
     for (const [index, row] of value.rows.entries()) {
       if (row.length !== value.columns.length) {
-        ctx.addIssue({ code: 'custom', path: ['rows', index], message: 'jumlah sel tidak sama dengan kolom' });
+        ctx.addIssue({
+          code: 'custom',
+          path: ['rows', index],
+          message: 'jumlah sel tidak sama dengan kolom',
+        });
       }
     }
   });
@@ -62,7 +66,11 @@ const ChartSchema = z
   .strict()
   .superRefine((value, ctx) => {
     if (value.labels.length !== value.values.length) {
-      ctx.addIssue({ code: 'custom', path: ['values'], message: 'jumlah nilai tidak sama dengan label' });
+      ctx.addIssue({
+        code: 'custom',
+        path: ['values'],
+        message: 'jumlah nilai tidak sama dengan label',
+      });
     }
   });
 
@@ -103,7 +111,8 @@ const SliderSchema = z
   })
   .strict()
   .superRefine((value, ctx) => {
-    if (value.max <= value.min) ctx.addIssue({ code: 'custom', path: ['max'], message: 'max harus lebih besar dari min' });
+    if (value.max <= value.min)
+      ctx.addIssue({ code: 'custom', path: ['max'], message: 'max harus lebih besar dari min' });
     if (value.value < value.min || value.value > value.max) {
       ctx.addIssue({ code: 'custom', path: ['value'], message: 'value di luar rentang' });
     }
@@ -155,7 +164,10 @@ export const RichComponentSchema = z.discriminatedUnion('type', [
 export type RichComponent = z.infer<typeof RichComponentSchema>;
 
 export const RichAnswerSchema = z
-  .strictObject({ version: z.literal(1), components: z.array(RichComponentSchema).min(1).max(RICH_ANSWER_LIMITS.maxComponents) })
+  .strictObject({
+    version: z.literal(1),
+    components: z.array(RichComponentSchema).min(1).max(RICH_ANSWER_LIMITS.maxComponents),
+  })
   .meta({ id: 'RichAnswer' });
 export type RichAnswer = z.infer<typeof RichAnswerSchema>;
 
@@ -164,7 +176,12 @@ export const RichAnswerFollowUpSchema = z
     blockId: id,
     componentId: id,
     action: z.enum(['choice', 'slider', 'checklist']),
-    value: z.union([text, z.array(id).max(RICH_ANSWER_LIMITS.maxItems), z.number().finite(), z.boolean()]),
+    value: z.union([
+      text,
+      z.array(id).max(RICH_ANSWER_LIMITS.maxItems),
+      z.number().finite(),
+      z.boolean(),
+    ]),
   })
   .meta({ id: 'RichAnswerFollowUp' });
 export type RichAnswerFollowUp = z.infer<typeof RichAnswerFollowUpSchema>;

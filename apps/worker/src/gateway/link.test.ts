@@ -85,7 +85,12 @@ describe('GatewayLink: sambung dan kirim', () => {
 describe('GatewayLink: artifact upload', () => {
   it('mengunggah PNG lewat HTTP terautentikasi dengan metadata run', async () => {
     const body = Buffer.from('89504e470d0a1a0a', 'hex');
-    let request: { authorization?: string; contentType?: string; metadata?: string; body?: Buffer } = {};
+    let request: {
+      authorization?: string;
+      contentType?: string;
+      metadata?: string;
+      body?: Buffer;
+    } = {};
     gateway.httpHandler = (req, res) => {
       const chunks: Buffer[] = [];
       req.on('data', (chunk: Buffer) => chunks.push(chunk));

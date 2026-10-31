@@ -167,11 +167,18 @@ export class GatewayLink {
     if (!session) return false;
     const token = await this.freshAccessToken();
     if (!token) return false;
-    const response = await (this.deps.fetch ?? fetch)(`${session.serverUrl.replace(/\/$/, '')}/v1/worker/artifacts/screenshot`, {
-      method: 'POST',
-      headers: { authorization: `Bearer ${token}`, 'content-type': 'image/png', 'x-aios-metadata': JSON.stringify({ runId }) },
-      body: bytes,
-    });
+    const response = await (this.deps.fetch ?? fetch)(
+      `${session.serverUrl.replace(/\/$/, '')}/v1/worker/artifacts/screenshot`,
+      {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${token}`,
+          'content-type': 'image/png',
+          'x-aios-metadata': JSON.stringify({ runId }),
+        },
+        body: bytes,
+      },
+    );
     return response.ok;
   }
 

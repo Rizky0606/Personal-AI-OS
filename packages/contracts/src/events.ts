@@ -375,7 +375,6 @@ export const TeamEventSchema = z
   .meta({ id: 'TeamEvent' });
 export type TeamEvent = z.infer<typeof TeamEventSchema>;
 
-
 /** Semua event yang bisa ada di envelope WebSocket. */
 export const ServerEventSchema = z
   .union([AgentEventSchema, UserEventSchema, TeamEventSchema])

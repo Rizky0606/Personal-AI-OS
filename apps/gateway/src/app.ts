@@ -247,7 +247,14 @@ export function buildApp({
           ...(ws.heartbeatMs ? { heartbeatMs: ws.heartbeatMs } : {}),
           ...(ws.now ? { now: ws.now } : {}),
         });
-        if (runner && store) await protectedScope.register(workerArtifactRoutes, { files, runs, runner, projects, store });
+        if (runner && store)
+          await protectedScope.register(workerArtifactRoutes, {
+            files,
+            runs,
+            runner,
+            projects,
+            store,
+          });
       });
     },
     { prefix: API_PREFIX },

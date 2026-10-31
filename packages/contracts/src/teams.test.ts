@@ -31,7 +31,13 @@ describe('team event contract', () => {
       TeamEventSchema.safeParse({
         type: 'team.member.updated',
         teamId: ID_A,
-        member: { id: ID_B, role: 'worker', status: 'running', updatedAt: TS, worktreePath: 'C:/secret' },
+        member: {
+          id: ID_B,
+          role: 'worker',
+          status: 'running',
+          updatedAt: TS,
+          worktreePath: 'C:/secret',
+        },
       }).success,
     ).toBe(false);
   });
