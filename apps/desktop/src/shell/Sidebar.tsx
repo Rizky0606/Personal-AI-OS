@@ -24,6 +24,7 @@ function NavLink({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
     <Link
       to={item.to}
       data-plate-key={item.to}
+      aria-label={item.label}
       aria-current={active ? 'page' : undefined}
       className={cn(
         'relative flex h-9 items-center rounded-control text-ui text-text-2 transition-colors duration-[120ms] ease-aios hover:bg-surface-2 hover:text-text',

@@ -50,7 +50,7 @@ describe('SidebarStatus: kuota', () => {
     api.getQuota.mockRejectedValue(new Error('x'));
     await renderScreen(<SidebarStatus />);
 
-    expect(screen.getByRole('link', { name: copy.status.quotaLabel })).toHaveTextContent(
+    expect(screen.getByRole('link', { name: copy.status.quotaTokens('0') })).toHaveTextContent(
       copy.status.quotaTokens('0'),
     );
   });
