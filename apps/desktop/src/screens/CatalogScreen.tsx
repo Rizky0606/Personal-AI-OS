@@ -25,7 +25,16 @@ const phaseActivity = (phase: Activity['phase'], patch: Partial<Activity> = {}):
   stepCount: 1,
   hiddenCount: 0,
   elapsedMs: 12_000,
-  steps: [{ id: 's1', label: 'Berkas dibaca', target: 'package.json', status: 'ok', durationMs: 340, startedAt: 0 }],
+  steps: [
+    {
+      id: 's1',
+      label: 'Berkas dibaca',
+      target: 'package.json',
+      status: 'ok',
+      durationMs: 340,
+      startedAt: 0,
+    },
+  ],
   summary: null,
   needsAttention: false,
   ...patch,
@@ -33,7 +42,9 @@ const phaseActivity = (phase: Activity['phase'], patch: Partial<Activity> = {}):
 
 const RUN_PHASES: Activity[] = [
   phaseActivity('thinking', { stepCount: 0, steps: [] }),
-  phaseActivity('tool', { current: { label: 'Menjalankan perintah', target: 'pnpm test', parallel: 1 } }),
+  phaseActivity('tool', {
+    current: { label: 'Menjalankan perintah', target: 'pnpm test', parallel: 1 },
+  }),
   phaseActivity('writing'),
   phaseActivity('waiting_approval', { needsAttention: true }),
   phaseActivity('done', { summary: 'Selesai · 12 dtk · 1 langkah' }),

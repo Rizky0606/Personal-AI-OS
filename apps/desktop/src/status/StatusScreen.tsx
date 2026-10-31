@@ -111,159 +111,159 @@ export function StatusScreen() {
       >
         {status ? (
           <PageContainer>
-          <div className="flex animate-aios-enter flex-col gap-6">
-            <p role="status" className="text-ui text-text-2">
-              {p.overall[status.readiness.status]}
-            </p>
+            <div className="flex animate-aios-enter flex-col gap-6">
+              <p role="status" className="text-ui text-text-2">
+                {p.overall[status.readiness.status]}
+              </p>
 
-            <Section id="st-gateway" title={p.gateway}>
-              <Rows
-                rows={[
-                  [p.version, status.gateway.version],
-                  [p.adapters, status.gateway.adaptersVersion],
-                  [p.node, status.gateway.node],
-                  [p.uptime, uptime(status.gateway.uptimeSec)],
-                  [p.activeRuns, String(status.activeRuns)],
-                ]}
-              />
-            </Section>
+              <Section id="st-gateway" title={p.gateway}>
+                <Rows
+                  rows={[
+                    [p.version, status.gateway.version],
+                    [p.adapters, status.gateway.adaptersVersion],
+                    [p.node, status.gateway.node],
+                    [p.uptime, uptime(status.gateway.uptimeSec)],
+                    [p.activeRuns, String(status.activeRuns)],
+                  ]}
+                />
+              </Section>
 
-            <Section id="st-deps" title={p.dependencies}>
-              <div className={panelClass}>
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr>
-                      <th scope="col" className={headerClass}>
-                        {p.dependencies}
-                      </th>
-                      <th scope="col" className={headerClass}>
-                        {copy.status.statusColumn}
-                      </th>
-                      <th scope="col" className={`${headerClass} text-right`}>
-                        {p.latency}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(Object.keys(status.readiness.checks) as (keyof typeof p.deps)[]).map(
-                      (name) => {
-                        const check = status.readiness.checks[name];
-                        return (
-                          <tr key={name} className={rowClass}>
-                            <th scope="row" className={`${cellClass} text-left font-normal`}>
-                              {p.deps[name]}
-                            </th>
-                            <td className={cellClass}>
-                              <Dot
-                                ok={check.ok}
-                                label={
-                                  check.ok
-                                    ? p.ok
-                                    : `${p.down}${check.error ? ` (${check.error})` : ''}`
-                                }
-                              />
-                            </td>
-                            <td className={`${cellClass} text-right font-mono tabular-nums`}>
-                              {check.latencyMs === undefined ? '-' : `${check.latencyMs} ms`}
-                            </td>
-                          </tr>
-                        );
-                      },
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </Section>
-
-            <Section id="st-workers" title={p.workers}>
-              <Rows
-                rows={[
-                  [
-                    `${p.thisPc} · ${p.local}`,
-                    <Dot
-                      key="local"
-                      ok={worker.local === 'connected'}
-                      label={worker.local === 'connected' ? p.localOn : p.localOff}
-                    />,
-                  ],
-                  [p.workerVersion, worker.status?.version ?? '-'],
-                  [p.ompVersion, worker.status?.ompVersion ?? p.notInstalled],
-                  [p.browser, worker.status?.browserAvailable ? p.browserYes : p.browserNo],
-                ]}
-              />
-              {status.workers.length === 0 ? (
-                <p className="text-ui text-text-2">{p.noWorkers}</p>
-              ) : (
-                <ul className={cn(panelClass, 'divide-y divide-border')}>
-                  {status.workers.map((w, index) => (
-                    <li
-                      key={w.deviceId}
-                      style={enterDelay(index)}
-                      className="flex animate-aios-enter items-center justify-between gap-3 px-4 py-3 text-ui transition-colors duration-[120ms] ease-aios hover:bg-surface-2"
-                    >
-                      <span className="min-w-0 truncate text-text">{w.name}</span>
-                      <span className="flex shrink-0 items-center gap-4 text-text-2">
-                        <Dot ok={w.online} label={w.online ? p.online : p.offline} />
-                        <span className="text-meta">
-                          {p.lastSeen}: {w.lastSeenAt ? formatDateTime(w.lastSeenAt) : p.never}
-                        </span>
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Section>
-
-            <Section id="st-jobs" title={p.jobs}>
-              {status.jobs.length === 0 ? (
-                <p className="text-ui text-text-2">{p.noJobs}</p>
-              ) : (
+              <Section id="st-deps" title={p.dependencies}>
                 <div className={panelClass}>
                   <table className="w-full border-collapse">
                     <thead>
                       <tr>
                         <th scope="col" className={headerClass}>
-                          {p.queue}
+                          {p.dependencies}
+                        </th>
+                        <th scope="col" className={headerClass}>
+                          {copy.status.statusColumn}
                         </th>
                         <th scope="col" className={`${headerClass} text-right`}>
-                          {p.queued}
-                        </th>
-                        <th scope="col" className={`${headerClass} text-right`}>
-                          {p.active}
-                        </th>
-                        <th scope="col" className={`${headerClass} text-right`}>
-                          {p.failed}
+                          {p.latency}
                         </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {status.jobs.map((q) => (
-                        <tr key={q.queue} className={rowClass}>
-                          <th
-                            scope="row"
-                            className={`${cellClass} text-left font-mono font-normal`}
-                          >
-                            {q.queue}
-                          </th>
-                          <td className={`${cellClass} text-right tabular-nums`}>{q.queued}</td>
-                          <td className={`${cellClass} text-right tabular-nums`}>{q.active}</td>
-                          <td
-                            className={cn(
-                              cellClass,
-                              'text-right tabular-nums',
-                              q.failed > 0 && 'text-danger',
-                            )}
-                          >
-                            {q.failed}
-                          </td>
-                        </tr>
-                      ))}
+                      {(Object.keys(status.readiness.checks) as (keyof typeof p.deps)[]).map(
+                        (name) => {
+                          const check = status.readiness.checks[name];
+                          return (
+                            <tr key={name} className={rowClass}>
+                              <th scope="row" className={`${cellClass} text-left font-normal`}>
+                                {p.deps[name]}
+                              </th>
+                              <td className={cellClass}>
+                                <Dot
+                                  ok={check.ok}
+                                  label={
+                                    check.ok
+                                      ? p.ok
+                                      : `${p.down}${check.error ? ` (${check.error})` : ''}`
+                                  }
+                                />
+                              </td>
+                              <td className={`${cellClass} text-right font-mono tabular-nums`}>
+                                {check.latencyMs === undefined ? '-' : `${check.latencyMs} ms`}
+                              </td>
+                            </tr>
+                          );
+                        },
+                      )}
                     </tbody>
                   </table>
                 </div>
-              )}
-            </Section>
-          </div>
+              </Section>
+
+              <Section id="st-workers" title={p.workers}>
+                <Rows
+                  rows={[
+                    [
+                      `${p.thisPc} · ${p.local}`,
+                      <Dot
+                        key="local"
+                        ok={worker.local === 'connected'}
+                        label={worker.local === 'connected' ? p.localOn : p.localOff}
+                      />,
+                    ],
+                    [p.workerVersion, worker.status?.version ?? '-'],
+                    [p.ompVersion, worker.status?.ompVersion ?? p.notInstalled],
+                    [p.browser, worker.status?.browserAvailable ? p.browserYes : p.browserNo],
+                  ]}
+                />
+                {status.workers.length === 0 ? (
+                  <p className="text-ui text-text-2">{p.noWorkers}</p>
+                ) : (
+                  <ul className={cn(panelClass, 'divide-y divide-border')}>
+                    {status.workers.map((w, index) => (
+                      <li
+                        key={w.deviceId}
+                        style={enterDelay(index)}
+                        className="flex animate-aios-enter items-center justify-between gap-3 px-4 py-3 text-ui transition-colors duration-[120ms] ease-aios hover:bg-surface-2"
+                      >
+                        <span className="min-w-0 truncate text-text">{w.name}</span>
+                        <span className="flex shrink-0 items-center gap-4 text-text-2">
+                          <Dot ok={w.online} label={w.online ? p.online : p.offline} />
+                          <span className="text-meta">
+                            {p.lastSeen}: {w.lastSeenAt ? formatDateTime(w.lastSeenAt) : p.never}
+                          </span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Section>
+
+              <Section id="st-jobs" title={p.jobs}>
+                {status.jobs.length === 0 ? (
+                  <p className="text-ui text-text-2">{p.noJobs}</p>
+                ) : (
+                  <div className={panelClass}>
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr>
+                          <th scope="col" className={headerClass}>
+                            {p.queue}
+                          </th>
+                          <th scope="col" className={`${headerClass} text-right`}>
+                            {p.queued}
+                          </th>
+                          <th scope="col" className={`${headerClass} text-right`}>
+                            {p.active}
+                          </th>
+                          <th scope="col" className={`${headerClass} text-right`}>
+                            {p.failed}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {status.jobs.map((q) => (
+                          <tr key={q.queue} className={rowClass}>
+                            <th
+                              scope="row"
+                              className={`${cellClass} text-left font-mono font-normal`}
+                            >
+                              {q.queue}
+                            </th>
+                            <td className={`${cellClass} text-right tabular-nums`}>{q.queued}</td>
+                            <td className={`${cellClass} text-right tabular-nums`}>{q.active}</td>
+                            <td
+                              className={cn(
+                                cellClass,
+                                'text-right tabular-nums',
+                                q.failed > 0 && 'text-danger',
+                              )}
+                            >
+                              {q.failed}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </Section>
+            </div>
           </PageContainer>
         ) : null}
       </StateView>

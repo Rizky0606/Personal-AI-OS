@@ -6,7 +6,11 @@ import type { EventHub } from '../runs/hub.js';
 
 export interface TeamEventStore {
   append(teamId: string, event: TeamEvent): Promise<void>;
-  list(teamId: string, afterSeq: number, limit: number): Promise<{ seq: number; ts: string; event: TeamEvent }[]>;
+  list(
+    teamId: string,
+    afterSeq: number,
+    limit: number,
+  ): Promise<{ seq: number; ts: string; event: TeamEvent }[]>;
   head(teamId: string): Promise<number>;
 }
 
@@ -22,22 +26,40 @@ export function createTeamEventStore(db: Database, hub: EventHub): TeamEventStor
       return result.rows[0];
     });
     if (!row) throw new Error('team_events: insert tidak mengembalikan baris');
-    hub.publishStored(`team:${teamId}`, { seq: Number(row.seq), ts: new Date(row.ts).toISOString(), event });
+    hub.publishStored(`team:${teamId}`, {
+      seq: Number(row.seq),
+      ts: new Date(row.ts).toISOString(),
+      event,
+    });
   }
   return {
     append(teamId, event) {
       const previous = tails.get(teamId) ?? Promise.resolve();
       const next = previous.catch(() => undefined).then(() => insert(teamId, event));
       tails.set(teamId, next);
-      void next.finally(() => { if (tails.get(teamId) === next) tails.delete(teamId); }).catch(() => undefined);
+      void next
+        .finally(() => {
+          if (tails.get(teamId) === next) tails.delete(teamId);
+        })
+        .catch(() => undefined);
       return next;
     },
     async list(teamId, afterSeq, limit) {
-      return (await db.select().from(teamEvents).where(and(eq(teamEvents.teamId, teamId), gt(teamEvents.seq, afterSeq))).orderBy(asc(teamEvents.seq)).limit(limit))
-        .map((row) => ({ seq: row.seq, ts: row.ts.toISOString(), event: row.payload }));
+      return (
+        await db
+          .select()
+          .from(teamEvents)
+          .where(and(eq(teamEvents.teamId, teamId), gt(teamEvents.seq, afterSeq)))
+          .orderBy(asc(teamEvents.seq))
+          .limit(limit)
+      ).map((row) => ({ seq: row.seq, ts: row.ts.toISOString(), event: row.payload }));
     },
     async head(teamId) {
-      const rows = await db.select({ seq: teamEvents.seq }).from(teamEvents).where(eq(teamEvents.teamId, teamId)).orderBy(asc(teamEvents.seq));
+      const rows = await db
+        .select({ seq: teamEvents.seq })
+        .from(teamEvents)
+        .where(eq(teamEvents.teamId, teamId))
+        .orderBy(asc(teamEvents.seq));
       return rows.at(-1)?.seq ?? 0;
     },
   };

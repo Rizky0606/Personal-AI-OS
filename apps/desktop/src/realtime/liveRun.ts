@@ -250,9 +250,7 @@ function reduceEvent(run: LiveRun, event: ServerEvent, ts: number | undefined): 
       return {
         ...run,
         lastActivity: 'tool',
-        tools: run.tools.map((tool) =>
-          tool.id === event.toolCallId ? { ...tool, output } : tool,
-        ),
+        tools: run.tools.map((tool) => (tool.id === event.toolCallId ? { ...tool, output } : tool)),
       };
     }
     case 'tool.finished': {

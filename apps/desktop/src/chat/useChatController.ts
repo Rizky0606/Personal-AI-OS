@@ -1,5 +1,10 @@
 import { withAttachments } from '../preview/attachment';
-import { workerBranchFor, type QueueName, type QuestionAnswer, type RichAnswerFollowUp } from '@aios/contracts';
+import {
+  workerBranchFor,
+  type QueueName,
+  type QuestionAnswer,
+  type RichAnswerFollowUp,
+} from '@aios/contracts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -142,7 +147,13 @@ export function useChatController(conversationId: string | undefined) {
       const text = (override ?? draft).trim();
       // Kirim ulang hanya teks; lampiran di composer ikut pada kiriman biasa.
       const files = override === undefined ? attach.parts : [];
-      if ((!text && files.length === 0 && !options?.followUp) || sending || streaming || attach.uploading) return;
+      if (
+        (!text && files.length === 0 && !options?.followUp) ||
+        sending ||
+        streaming ||
+        attach.uploading
+      )
+        return;
       if (!online) {
         push(copy.chat.offlineSend, 'danger');
         return;

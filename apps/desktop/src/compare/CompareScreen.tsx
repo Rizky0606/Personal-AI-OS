@@ -108,98 +108,98 @@ export function CompareScreen() {
     <div className="flex flex-col" onKeyDown={onKeyDown}>
       <PageHeader title={c.title} />
       <PageContainer>
-      <div className="flex flex-col gap-5">
-        <p className="max-w-[72ch] text-ui text-text-2">{c.intro}</p>
-        <TextArea
-          label={c.prompt}
-          hint={c.promptHint}
-          rows={4}
-          value={prompt}
-          error={promptError}
-          onChange={(e) => setPrompt(e.target.value)}
-        />
+        <div className="flex flex-col gap-5">
+          <p className="max-w-[72ch] text-ui text-text-2">{c.intro}</p>
+          <TextArea
+            label={c.prompt}
+            hint={c.promptHint}
+            rows={4}
+            value={prompt}
+            error={promptError}
+            onChange={(e) => setPrompt(e.target.value)}
+          />
 
-        {modelsQuery.isPending ? (
-          <SkeletonList rows={1} label={c.modelsLoading} />
-        ) : models.length === 0 ? (
-          <p className="text-ui text-text-2">{c.noModels}</p>
-        ) : (
-          <div className="flex flex-wrap items-center gap-2">
-            {chosen.map((id, index) => (
-              <span key={index} className="flex items-center gap-1">
-                <RadioMenu
-                  label={c.pick}
-                  value={id}
-                  onValueChange={(value) =>
-                    setSlots((s) => s.map((x, i) => (i === index ? value : x)))
-                  }
-                  options={models.map((m) => ({ value: m.id, label: m.label, hint: m.kind }))}
-                  trigger={
-                    <button
-                      type="button"
-                      aria-label={`${c.modelSlot(index + 1)}: ${id === NONE ? c.none : labelOf(id)}`}
-                      className="flex h-9 max-w-56 items-center gap-2 rounded-control border border-border bg-surface px-3 text-ui text-text transition-colors duration-[120ms] ease-aios hover:border-border-strong hover:bg-surface-2"
+          {modelsQuery.isPending ? (
+            <SkeletonList rows={1} label={c.modelsLoading} />
+          ) : models.length === 0 ? (
+            <p className="text-ui text-text-2">{c.noModels}</p>
+          ) : (
+            <div className="flex flex-wrap items-center gap-2">
+              {chosen.map((id, index) => (
+                <span key={index} className="flex items-center gap-1">
+                  <RadioMenu
+                    label={c.pick}
+                    value={id}
+                    onValueChange={(value) =>
+                      setSlots((s) => s.map((x, i) => (i === index ? value : x)))
+                    }
+                    options={models.map((m) => ({ value: m.id, label: m.label, hint: m.kind }))}
+                    trigger={
+                      <button
+                        type="button"
+                        aria-label={`${c.modelSlot(index + 1)}: ${id === NONE ? c.none : labelOf(id)}`}
+                        className="flex h-9 max-w-56 items-center gap-2 rounded-control border border-border bg-surface px-3 text-ui text-text transition-colors duration-[120ms] ease-aios hover:border-border-strong hover:bg-surface-2"
+                      >
+                        <span className="truncate">{id === NONE ? c.none : labelOf(id)}</span>
+                        <ChevronDown
+                          size={14}
+                          strokeWidth={1.5}
+                          aria-hidden="true"
+                          className="shrink-0 text-text-2"
+                        />
+                      </button>
+                    }
+                  />
+                  {chosen.length > MIN_SLOTS ? (
+                    <IconButton
+                      label={c.remove(index + 1)}
+                      onClick={() => setSlots((s) => s.filter((_, i) => i !== index))}
                     >
-                      <span className="truncate">{id === NONE ? c.none : labelOf(id)}</span>
-                      <ChevronDown
-                        size={14}
-                        strokeWidth={1.5}
-                        aria-hidden="true"
-                        className="shrink-0 text-text-2"
-                      />
-                    </button>
-                  }
-                />
-                {chosen.length > MIN_SLOTS ? (
-                  <IconButton
-                    label={c.remove(index + 1)}
-                    onClick={() => setSlots((s) => s.filter((_, i) => i !== index))}
-                  >
-                    <X size={14} strokeWidth={1.5} aria-hidden="true" />
-                  </IconButton>
-                ) : null}
-              </span>
-            ))}
-            {chosen.length < MAX_SLOTS ? (
-              <Button variant="ghost" onClick={() => setSlots((s) => [...s, null])}>
-                <Plus size={14} strokeWidth={1.5} aria-hidden="true" />
-                {c.add}
-              </Button>
-            ) : null}
-            <Button
-              variant="primary"
-              disabled={running}
-              onClick={() => void run()}
-              className="ml-auto"
-            >
-              {running ? c.running : c.run}
-            </Button>
-          </div>
-        )}
-
-        {error ? <ErrorBanner message={error} /> : null}
-        {running ? (
-          <div role="status" aria-label={c.running} className="flex gap-3">
-            {chosen.map((id, i) => (
-              <div
-                key={i}
-                className="flex flex-1 flex-col gap-2 rounded-panel border border-border p-4"
+                      <X size={14} strokeWidth={1.5} aria-hidden="true" />
+                    </IconButton>
+                  ) : null}
+                </span>
+              ))}
+              {chosen.length < MAX_SLOTS ? (
+                <Button variant="ghost" onClick={() => setSlots((s) => [...s, null])}>
+                  <Plus size={14} strokeWidth={1.5} aria-hidden="true" />
+                  {c.add}
+                </Button>
+              ) : null}
+              <Button
+                variant="primary"
+                disabled={running}
+                onClick={() => void run()}
+                className="ml-auto"
               >
-                <span className="sr-only">{labelOf(id)}</span>
-                <Skeleton className="w-full" />
-                <Skeleton className="w-full" />
-                <Skeleton className="w-1/3" />
-              </div>
-            ))}
-          </div>
-        ) : null}
-        {results ? (
-          <div role="group" aria-label={c.results} className="flex flex-col gap-3 lg:flex-row">
-            {results.map((r) => (
-              <ResultColumn key={r.model} result={r} label={labelOf(r.model)} />
-            ))}
-          </div>
-        ) : null}
+                {running ? c.running : c.run}
+              </Button>
+            </div>
+          )}
+
+          {error ? <ErrorBanner message={error} /> : null}
+          {running ? (
+            <div role="status" aria-label={c.running} className="flex gap-3">
+              {chosen.map((id, i) => (
+                <div
+                  key={i}
+                  className="flex flex-1 flex-col gap-2 rounded-panel border border-border p-4"
+                >
+                  <span className="sr-only">{labelOf(id)}</span>
+                  <Skeleton className="w-full" />
+                  <Skeleton className="w-full" />
+                  <Skeleton className="w-1/3" />
+                </div>
+              ))}
+            </div>
+          ) : null}
+          {results ? (
+            <div role="group" aria-label={c.results} className="flex flex-col gap-3 lg:flex-row">
+              {results.map((r) => (
+                <ResultColumn key={r.model} result={r} label={labelOf(r.model)} />
+              ))}
+            </div>
+          ) : null}
         </div>
       </PageContainer>
     </div>

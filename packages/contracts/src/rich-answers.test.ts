@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  RichAnswerFollowUpSchema,
-  RichAnswerSchema,
-  RICH_ANSWER_LIMITS,
-} from './rich-answers.js';
+import { RichAnswerFollowUpSchema, RichAnswerSchema, RICH_ANSWER_LIMITS } from './rich-answers.js';
 
 const metric = {
   id: 'm1',
@@ -34,7 +30,8 @@ describe('RichAnswerSchema', () => {
 
   it('rejects unknown properties and unsupported types', () => {
     expect(
-      RichAnswerSchema.safeParse({ version: 1, components: [{ ...metric, color: '#fff' }] }).success,
+      RichAnswerSchema.safeParse({ version: 1, components: [{ ...metric, color: '#fff' }] })
+        .success,
     ).toBe(false);
     expect(
       RichAnswerSchema.safeParse({ version: 1, components: [{ id: 'x', type: 'html' }] }).success,

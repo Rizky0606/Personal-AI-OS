@@ -184,8 +184,14 @@ describe('team lifecycle', () => {
     }>();
     expect(team).toMatchObject({ projectId, status: 'running' });
     expect(team.members).toHaveLength(1);
-    expect(team.members[0]).toMatchObject({ role: 'lead', runId: team.parentRunId, status: 'running' });
+    expect(team.members[0]).toMatchObject({
+      role: 'lead',
+      runId: team.parentRunId,
+      status: 'running',
+    });
     const listed = await env.get('/teams', desktop);
-    expect(listed.json<{ items: { id: string }[] }>().items.map((item) => item.id)).toContain(team.id);
+    expect(listed.json<{ items: { id: string }[] }>().items.map((item) => item.id)).toContain(
+      team.id,
+    );
   });
 });

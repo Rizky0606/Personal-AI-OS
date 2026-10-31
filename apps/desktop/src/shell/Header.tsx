@@ -66,9 +66,15 @@ export function Header({ title }: { title: string }) {
             )}
           />
           {running ? <span className="truncate">{copy.shell.runActive}</span> : null}
-          <span className="truncate" data-status-role>{roleLabel}</span>
-          <span aria-hidden="true" className="text-text-3">·</span>
-          <span className="truncate font-mono text-caption" data-status-model>{modelLabel}</span>
+          <span className="truncate" data-status-role>
+            {roleLabel}
+          </span>
+          <span aria-hidden="true" className="text-text-3">
+            ·
+          </span>
+          <span className="truncate font-mono text-caption" data-status-model>
+            {modelLabel}
+          </span>
         </div>
         <IconButton
           label={copy.shell.toggleRightPanel}

@@ -67,12 +67,21 @@ export function Sidebar({ title, action, children, showExpand = true }: SidebarP
       >
         {collapsed ? (
           <>
-            <IconButton label={copy.shell.search} tabIndex={-1} onClick={() => setPaletteOpen(true)}>
+            <IconButton
+              label={copy.shell.search}
+              tabIndex={-1}
+              onClick={() => setPaletteOpen(true)}
+            >
               <Search size={16} strokeWidth={1.5} aria-hidden="true" />
             </IconButton>
             {showExpand ? (
               <IconButton label={copy.shell.expandSidebar} onClick={toggle}>
-                <PanelLeftClose size={16} strokeWidth={1.5} aria-hidden="true" className="rotate-180" />
+                <PanelLeftClose
+                  size={16}
+                  strokeWidth={1.5}
+                  aria-hidden="true"
+                  className="rotate-180"
+                />
               </IconButton>
             ) : null}
           </>
@@ -87,7 +96,9 @@ export function Sidebar({ title, action, children, showExpand = true }: SidebarP
             >
               <Search size={14} strokeWidth={1.5} aria-hidden="true" className="shrink-0" />
               <span className="min-w-0 flex-1 truncate text-left">{copy.shell.search}</span>
-              <kbd className="shrink-0 font-mono text-caption text-text-3">{copy.shell.searchHint}</kbd>
+              <kbd className="shrink-0 font-mono text-caption text-text-3">
+                {copy.shell.searchHint}
+              </kbd>
             </button>
             <IconButton label={copy.shell.collapseSidebar} tabIndex={-1} onClick={toggle}>
               <PanelLeftClose size={16} strokeWidth={1.5} aria-hidden="true" />
@@ -103,9 +114,12 @@ export function Sidebar({ title, action, children, showExpand = true }: SidebarP
           const current = links.indexOf(document.activeElement as HTMLAnchorElement);
           if (current < 0) return;
           event.preventDefault();
-          const index = event.key === 'Home' ? 0 : event.key === 'End'
-            ? links.length - 1
-            : (current + (event.key === 'ArrowDown' ? 1 : -1) + links.length) % links.length;
+          const index =
+            event.key === 'Home'
+              ? 0
+              : event.key === 'End'
+                ? links.length - 1
+                : (current + (event.key === 'ArrowDown' ? 1 : -1) + links.length) % links.length;
           links[index]?.focus();
         }}
         className={cn('flex shrink-0 flex-col gap-0.5 px-2 pb-2', collapsed && 'items-center')}
@@ -118,7 +132,6 @@ export function Sidebar({ title, action, children, showExpand = true }: SidebarP
             <NavLink key={item.to} item={item} collapsed={collapsed} />
           ))}
         </PlateGroup>
-
       </nav>
       {collapsed ? (
         <div className="flex-1" />

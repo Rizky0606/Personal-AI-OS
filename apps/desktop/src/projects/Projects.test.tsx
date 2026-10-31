@@ -351,7 +351,10 @@ describe('ProjectsScreen: ringkasan dan akses cepat (sesi 6)', () => {
     const { router, container } = await renderScreen(<ProjectList />, '/projects');
 
     await screen.findByText('Aplikasi saya');
-    expect(container.querySelector('[data-plate="active"]')).toHaveAttribute('data-visible', 'true');
+    expect(container.querySelector('[data-plate="active"]')).toHaveAttribute(
+      'data-visible',
+      'true',
+    );
     await user.click(screen.getByRole('button', { name: /Aplikasi saya/ }));
     expect(useUiStore.getState().activeProjectId).toBe(P1);
     expect(router.state.location.pathname).toBe(`/workspace/${P1}`);

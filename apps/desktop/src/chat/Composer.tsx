@@ -386,18 +386,47 @@ export function Composer({
                   <Pencil size={16} strokeWidth={1.5} aria-hidden="true" />
                 </IconButton>
               ) : null}
-                <div className={cn('flex animate-aios-pop items-center gap-1', onSteer && 'rounded-control bg-surface-2 p-0.5')}>
-                  <Button variant={streaming ? 'secondary' : 'primary'} onClick={streaming ? onStop : onSend} disabled={!streaming && !canSend} className="animate-aios-pop">
-                    {streaming ? <Square size={14} strokeWidth={1.5} aria-hidden="true" /> : <ArrowUp size={14} strokeWidth={1.5} aria-hidden="true" />}
-                    {streaming ? copy.chat.stop : copy.chat.send}
-                  </Button>
-                  {streaming && onSteer ? (
-                    <>
-                      <Button variant="secondary" disabled={draft.trim().length === 0} title={copy.chat.steer.queueHint} onClick={() => onSteer('followUp')}>{copy.chat.steer.queue}</Button>
-                      <Button variant="primary" disabled={draft.trim().length === 0} title={copy.chat.steer.nowHint} onClick={() => onSteer('steer')}><ArrowUp size={14} strokeWidth={1.5} aria-hidden="true" />{copy.chat.steer.now}</Button>
-                    </>
-                  ) : null}
-                </div>
+              <div
+                className={cn(
+                  'flex animate-aios-pop items-center gap-1',
+                  onSteer && 'rounded-control bg-surface-2 p-0.5',
+                )}
+              >
+                <Button
+                  variant={streaming ? 'secondary' : 'primary'}
+                  onClick={streaming ? onStop : onSend}
+                  disabled={!streaming && !canSend}
+                  className="animate-aios-pop"
+                >
+                  {streaming ? (
+                    <Square size={14} strokeWidth={1.5} aria-hidden="true" />
+                  ) : (
+                    <ArrowUp size={14} strokeWidth={1.5} aria-hidden="true" />
+                  )}
+                  {streaming ? copy.chat.stop : copy.chat.send}
+                </Button>
+                {streaming && onSteer ? (
+                  <>
+                    <Button
+                      variant="secondary"
+                      disabled={draft.trim().length === 0}
+                      title={copy.chat.steer.queueHint}
+                      onClick={() => onSteer('followUp')}
+                    >
+                      {copy.chat.steer.queue}
+                    </Button>
+                    <Button
+                      variant="primary"
+                      disabled={draft.trim().length === 0}
+                      title={copy.chat.steer.nowHint}
+                      onClick={() => onSteer('steer')}
+                    >
+                      <ArrowUp size={14} strokeWidth={1.5} aria-hidden="true" />
+                      {copy.chat.steer.now}
+                    </Button>
+                  </>
+                ) : null}
+              </div>
             </span>
           </div>
         </div>

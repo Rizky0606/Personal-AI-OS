@@ -129,8 +129,12 @@ describe('POST /files', () => {
   it('berkas agent kosong atau melebihi 25 MB ditolak', async () => {
     const { db } = env.database.handle;
     const filesService = (await import('./service.js')).createFilesService({ db });
-    await expect(filesService.saveGenerated({ name: 'empty.txt', bytes: Buffer.alloc(0) })).rejects.toMatchObject({ code: 'file_empty' });
-    await expect(filesService.saveGenerated({ name: 'large.txt', bytes: Buffer.alloc(25 * 1024 * 1024 + 1) })).rejects.toMatchObject({ code: 'file_too_large' });
+    await expect(
+      filesService.saveGenerated({ name: 'empty.txt', bytes: Buffer.alloc(0) }),
+    ).rejects.toMatchObject({ code: 'file_empty' });
+    await expect(
+      filesService.saveGenerated({ name: 'large.txt', bytes: Buffer.alloc(25 * 1024 * 1024 + 1) }),
+    ).rejects.toMatchObject({ code: 'file_too_large' });
   });
   it('lebih dari 25 MB ditolak 413', async () => {
     const big = await upload('besar.txt', Buffer.alloc(25 * 1024 * 1024 + 10, 0x61), 'text/plain');

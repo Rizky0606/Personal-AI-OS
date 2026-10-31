@@ -38,7 +38,9 @@ export function AppearanceSettings() {
         <div className="flex flex-col">
           <span className="text-ui text-text">{copy.settings.reduceMotion}</span>
           <span className="text-meta text-text-2">
-            {reduceMotion === null ? copy.settings.reduceMotionSystem : copy.settings.reduceMotionHint}
+            {reduceMotion === null
+              ? copy.settings.reduceMotionSystem
+              : copy.settings.reduceMotionHint}
           </span>
         </div>
         <div className="flex items-center gap-2">

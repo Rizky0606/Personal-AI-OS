@@ -119,7 +119,9 @@ export function QuotaScreen() {
                         {c.output}
                       </th>
                       {showCost ? (
-                        <th scope="col" className={`${headerClass} text-right`}>{c.cost}</th>
+                        <th scope="col" className={`${headerClass} text-right`}>
+                          {c.cost}
+                        </th>
                       ) : null}
                     </tr>
                   </thead>
@@ -160,7 +162,11 @@ export function QuotaScreen() {
                       <th scope="col" className={`${headerClass} text-right`}>
                         {c.output}
                       </th>
-                        {showCost ? <th scope="col" className={`${headerClass} text-right`}>{c.cost}</th> : null}
+                      {showCost ? (
+                        <th scope="col" className={`${headerClass} text-right`}>
+                          {c.cost}
+                        </th>
+                      ) : null}
                       <th scope="col" className={headerClass}>
                         <span className="sr-only">Porsi token</span>
                       </th>
@@ -180,7 +186,9 @@ export function QuotaScreen() {
                           <td className={numberCell}>{formatCount(d.requests)}</td>
                           <td className={numberCell}>{formatCount(d.inputTokens)}</td>
                           <td className={numberCell}>{formatCount(d.outputTokens)}</td>
-                          {showCost ? <td className={numberCell}>{formatCost(d.costUsd)}</td> : null}
+                          {showCost ? (
+                            <td className={numberCell}>{formatCost(d.costUsd)}</td>
+                          ) : null}
                           <td className={`${cellClass} w-32`} aria-hidden="true">
                             <div className="h-1 rounded-badge bg-surface-2">
                               <div

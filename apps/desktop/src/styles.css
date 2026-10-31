@@ -2,29 +2,91 @@
 @import '@aios/ui-tokens/tokens.css';
 @import './shell/shell.css';
 
-.aios-agent-orb { color: var(--accent); transition: color 320ms ease, transform 320ms ease; }
-.aios-agent-orb-thinking { color: var(--status-thinking); }
-.aios-agent-orb-tool { color: var(--status-tool); }
-.aios-agent-orb-writing { color: var(--status-writing); }
-.aios-agent-orb-done { color: var(--status-done); }
-.aios-agent-orb-error { color: var(--status-error); }
-@media (prefers-reduced-motion: no-preference) {
-  .aios-agent-orb-thinking circle:first-child { animation: aios-orb-spin 1400ms linear infinite; transform-origin: center; }
+.aios-agent-orb {
+  color: var(--accent);
+  transition:
+    color 320ms ease,
+    transform 320ms ease;
 }
-@keyframes aios-orb-spin { to { transform: rotate(360deg); } }
-.aios-agent-orb circle:last-of-type { transform-box: fill-box; transform-origin: center; transition: transform 320ms var(--aios-ease, ease); }
-.aios-agent-orb-idle circle:last-of-type { transform: scale(0.75); }
-.aios-agent-orb-tool circle:last-of-type { transform: scale(1.25); }
-.aios-agent-orb-writing circle:last-of-type { transform: scale(1.5); }
-.aios-agent-orb-done circle:last-of-type { transform: scale(0.4); }
-.aios-agent-orb [data-orb-check] { stroke-dasharray: 1; animation: aios-orb-draw 320ms ease-out both; }
-@keyframes aios-orb-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
-.aios-land { animation: aios-land 320ms var(--aios-easing-spring) both; }
-@keyframes aios-land { from { transform: scale(1.04); box-shadow: var(--aios-shadow-lift, none); } to { transform: scale(1); } }
-.aios-composer-frame[data-phase='thinking'] { border-color: var(--status-thinking); }
-.aios-composer-frame[data-phase='tool'] { border-color: var(--status-tool); }
-.aios-composer-frame[data-phase='writing'] { border-color: var(--status-writing); }
-.aios-composer-frame[data-phase='error'] { border-color: var(--status-error); }
+.aios-agent-orb-thinking {
+  color: var(--status-thinking);
+}
+.aios-agent-orb-tool {
+  color: var(--status-tool);
+}
+.aios-agent-orb-writing {
+  color: var(--status-writing);
+}
+.aios-agent-orb-done {
+  color: var(--status-done);
+}
+.aios-agent-orb-error {
+  color: var(--status-error);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .aios-agent-orb-thinking circle:first-child {
+    animation: aios-orb-spin 1400ms linear infinite;
+    transform-origin: center;
+  }
+}
+@keyframes aios-orb-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.aios-agent-orb circle:last-of-type {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 320ms var(--aios-ease, ease);
+}
+.aios-agent-orb-idle circle:last-of-type {
+  transform: scale(0.75);
+}
+.aios-agent-orb-tool circle:last-of-type {
+  transform: scale(1.25);
+}
+.aios-agent-orb-writing circle:last-of-type {
+  transform: scale(1.5);
+}
+.aios-agent-orb-done circle:last-of-type {
+  transform: scale(0.4);
+}
+.aios-agent-orb [data-orb-check] {
+  stroke-dasharray: 1;
+  animation: aios-orb-draw 320ms ease-out both;
+}
+@keyframes aios-orb-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.aios-land {
+  animation: aios-land 320ms var(--aios-easing-spring) both;
+}
+@keyframes aios-land {
+  from {
+    transform: scale(1.04);
+    box-shadow: var(--aios-shadow-lift, none);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+.aios-composer-frame[data-phase='thinking'] {
+  border-color: var(--status-thinking);
+}
+.aios-composer-frame[data-phase='tool'] {
+  border-color: var(--status-tool);
+}
+.aios-composer-frame[data-phase='writing'] {
+  border-color: var(--status-writing);
+}
+.aios-composer-frame[data-phase='error'] {
+  border-color: var(--status-error);
+}
 
 /* IBM Plex dibundel lokal (lisensi OFL di src/fonts); tanpa CDN. */
 @font-face {

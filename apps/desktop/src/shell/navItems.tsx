@@ -31,7 +31,8 @@ export const NAV_ITEMS: NavItem[] = [
 /** Chat active in root and chat routes; other sections match descendants. */
 export const isActive = (to: string, pathname: string): boolean => {
   if (to === '/') return pathname === '/' || pathname.startsWith('/chat');
-  if (to === '/workspace') return pathname.startsWith('/workspace') || pathname.startsWith('/projects');
+  if (to === '/workspace')
+    return pathname.startsWith('/workspace') || pathname.startsWith('/projects');
   return pathname === to || pathname.startsWith(`${to}/`);
 };
 
@@ -43,7 +44,6 @@ export const settingsItem: NavItem = {
   label: copy.nav.settings,
   icon: <Settings {...ICON} />,
 };
-
 
 /** Rute chat (percakapan umum atau di dalam project): topbar menampilkan project, model, dan koneksi. */
 export const isChatPath = (pathname: string): boolean =>

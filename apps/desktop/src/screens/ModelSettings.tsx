@@ -37,7 +37,10 @@ export function ModelSettings() {
     ...models.map((m) => ({
       value: m.id,
       label: m.label,
-      hint: m.kind === 'combo' ? copy.settings.modelHint.combo : copy.settings.modelHint.model(m.ownedBy),
+      hint:
+        m.kind === 'combo'
+          ? copy.settings.modelHint.combo
+          : copy.settings.modelHint.model(m.ownedBy),
     })),
   ];
 
@@ -70,7 +73,9 @@ export function ModelSettings() {
               style={enter.style}
               className={cn(
                 'flex min-h-11 flex-col items-start rounded-control border px-3 py-2 text-left transition-colors duration-[180ms] ease-aios',
-                checked ? 'border-accent bg-accent-soft' : 'border-border bg-surface hover:bg-surface-2',
+                checked
+                  ? 'border-accent bg-accent-soft'
+                  : 'border-border bg-surface hover:bg-surface-2',
                 enter.className,
               )}
             >

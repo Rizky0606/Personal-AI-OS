@@ -20,7 +20,15 @@ export interface MarkdownProps {
 
 const CITATION = /\[(\d{1,3})]/g;
 
-function ExternalLink({ url, children, label }: { url: string; children: ReactNode; label?: string }) {
+function ExternalLink({
+  url,
+  children,
+  label,
+}: {
+  url: string;
+  children: ReactNode;
+  label?: string;
+}) {
   return (
     <a
       href={url}
@@ -136,7 +144,14 @@ function ListView({
           {item.children.length > 0 ? (
             <div className="mt-1 flex flex-col gap-1">
               {item.children.map((child, j) => (
-                <BlockView key={j} block={child} citations={citations} richBlockId="nested" richReadOnly onRichFollowUp={undefined} />
+                <BlockView
+                  key={j}
+                  block={child}
+                  citations={citations}
+                  richBlockId="nested"
+                  richReadOnly
+                  onRichFollowUp={undefined}
+                />
               ))}
             </div>
           ) : null}
@@ -162,30 +177,110 @@ function BlockView({
   switch (block.type) {
     case 'heading': {
       const Tag = `h${Math.min(block.level + 1, 6)}` as 'h2';
-      return <Tag className={cn('mt-2 text-text', headingClass[block.level] ?? 'text-chat font-medium')}><Inlines nodes={block.inlines} citations={citations} /></Tag>;
+      return (
+        <Tag className={cn('mt-2 text-text', headingClass[block.level] ?? 'text-chat font-medium')}>
+          <Inlines nodes={block.inlines} citations={citations} />
+        </Tag>
+      );
     }
     case 'paragraph':
-      return <p className="whitespace-pre-wrap"><Inlines nodes={block.inlines} citations={citations} /></p>;
+      return (
+        <p className="whitespace-pre-wrap">
+          <Inlines nodes={block.inlines} citations={citations} />
+        </p>
+      );
     case 'code': {
       if (block.language.toLowerCase() === 'aios-ui') {
         if (!block.closed) return <RichAnswerSkeleton />;
         const parsed = parseRichAnswer(block.code);
-        if (parsed.kind === 'valid') return <RichAnswer value={parsed.value} blockId={richBlockId} readOnly={richReadOnly} onFollowUp={onRichFollowUp} />;
+        if (parsed.kind === 'valid')
+          return (
+            <RichAnswer
+              value={parsed.value}
+              blockId={richBlockId}
+              readOnly={richReadOnly}
+              onFollowUp={onRichFollowUp}
+            />
+          );
       }
       return <CodeBlock language={block.language} code={block.code} closed={block.closed} />;
     }
     case 'quote':
-      return <blockquote className="flex flex-col gap-2 border-l-2 border-border-strong pl-3 text-text-2">{block.blocks.map((child, i) => <BlockView key={i} block={child} citations={citations} richBlockId={richBlockId} richReadOnly={richReadOnly} onRichFollowUp={onRichFollowUp} />)}</blockquote>;
-    case 'list': return <ListView block={block} citations={citations} />;
+      return (
+        <blockquote className="flex flex-col gap-2 border-l-2 border-border-strong pl-3 text-text-2">
+          {block.blocks.map((child, i) => (
+            <BlockView
+              key={i}
+              block={child}
+              citations={citations}
+              richBlockId={richBlockId}
+              richReadOnly={richReadOnly}
+              onRichFollowUp={onRichFollowUp}
+            />
+          ))}
+        </blockquote>
+      );
+    case 'list':
+      return <ListView block={block} citations={citations} />;
     case 'table':
-      return <div className="overflow-x-auto"><table className="w-full border-collapse text-ui"><thead><tr>{block.header.map((cell, i) => <th key={i} scope="col" className="border-b border-border-strong px-2 py-1 text-left font-semibold"><Inlines nodes={cell} citations={citations} /></th>)}</tr></thead><tbody>{block.rows.map((row, i) => <tr key={i}>{row.map((cell, j) => <td key={j} className="border-b border-border px-2 py-1 align-top"><Inlines nodes={cell} citations={citations} /></td>)}</tr>)}</tbody></table></div>;
-    case 'rule': return <hr className="border-border" />;
+      return (
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-ui">
+            <thead>
+              <tr>
+                {block.header.map((cell, i) => (
+                  <th
+                    key={i}
+                    scope="col"
+                    className="border-b border-border-strong px-2 py-1 text-left font-semibold"
+                  >
+                    <Inlines nodes={cell} citations={citations} />
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {block.rows.map((row, i) => (
+                <tr key={i}>
+                  {row.map((cell, j) => (
+                    <td key={j} className="border-b border-border px-2 py-1 align-top">
+                      <Inlines nodes={cell} citations={citations} />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    case 'rule':
+      return <hr className="border-border" />;
   }
 }
 
 /** Menampilkan Markdown sebagai elemen React (tanpa HTML mentah). Lebar baca maksimal 72 karakter. */
-export function Markdown({ source, citations, className, richBlockId = 'message', richReadOnly = true, onRichFollowUp }: MarkdownProps) {
+export function Markdown({
+  source,
+  citations,
+  className,
+  richBlockId = 'message',
+  richReadOnly = true,
+  onRichFollowUp,
+}: MarkdownProps) {
   const [parse] = useState(createIncrementalParser);
   const blocks = parse(source);
-  return <div className={cn('flex max-w-[72ch] flex-col gap-3 text-chat text-text', className)}>{blocks.map((block, i) => <BlockView key={i} block={block} citations={citations} richBlockId={`${richBlockId}-${i}`} richReadOnly={richReadOnly} onRichFollowUp={onRichFollowUp} />)}</div>;
+  return (
+    <div className={cn('flex max-w-[72ch] flex-col gap-3 text-chat text-text', className)}>
+      {blocks.map((block, i) => (
+        <BlockView
+          key={i}
+          block={block}
+          citations={citations}
+          richBlockId={`${richBlockId}-${i}`}
+          richReadOnly={richReadOnly}
+          onRichFollowUp={onRichFollowUp}
+        />
+      ))}
+    </div>
+  );
 }

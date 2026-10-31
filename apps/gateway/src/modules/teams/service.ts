@@ -54,12 +54,21 @@ export function createTeamsService(deps: {
     if (!row) throw notFound();
     const members = await db.select().from(teamMembers).where(eq(teamMembers.teamId, id));
     const runIds = members.map((member) => member.runId);
-    const runRows = runIds.length ? await db.select().from(runs).where(inArray(runs.id, runIds)) : [];
+    const runRows = runIds.length
+      ? await db.select().from(runs).where(inArray(runs.id, runIds))
+      : [];
     const byRun = new Map(runRows.map((run) => [run.id, run]));
     const leadRun = row.parentRunId ? byRun.get(row.parentRunId) : undefined;
-    const status = row.cancelRequestedAt ? 'cancelled' : leadRun ? teamStatus(leadRun.status) : row.status;
+    const status = row.cancelRequestedAt
+      ? 'cancelled'
+      : leadRun
+        ? teamStatus(leadRun.status)
+        : row.status;
     const approvalsRows = runIds.length
-      ? await db.select().from(approvals).where(and(inArray(approvals.runId, runIds), eq(approvals.status, 'pending')))
+      ? await db
+          .select()
+          .from(approvals)
+          .where(and(inArray(approvals.runId, runIds), eq(approvals.status, 'pending')))
       : [];
     const summaries = members.map((member) => {
       const run = byRun.get(member.runId);
@@ -89,7 +98,11 @@ export function createTeamsService(deps: {
       members: summaries,
       cancelRequestedAt: row.cancelRequestedAt?.toISOString() ?? null,
       failureCode: row.failureCode,
-      finishedAt: row.finishedAt?.toISOString() ?? (leadRun && TERMINAL_RUN_STATUSES.includes(leadRun.status) ? leadRun.updatedAt.toISOString() : null),
+      finishedAt:
+        row.finishedAt?.toISOString() ??
+        (leadRun && TERMINAL_RUN_STATUSES.includes(leadRun.status)
+          ? leadRun.updatedAt.toISOString()
+          : null),
     };
   }
 
@@ -108,7 +121,10 @@ export function createTeamsService(deps: {
 
   return {
     async create(input) {
-      const [project] = await db.select({ id: projects.id }).from(projects).where(eq(projects.id, input.projectId));
+      const [project] = await db
+        .select({ id: projects.id })
+        .from(projects)
+        .where(eq(projects.id, input.projectId));
       if (!project) throw new AppError(404, 'project_not_found', 'Project tidak ditemukan.');
       const conversation = await chat.createConversation({
         surface: 'windows',
@@ -119,25 +135,43 @@ export function createTeamsService(deps: {
         parts: [{ type: 'text', text: input.prompt }],
         ...(input.model ? { model: input.model } : {}),
       });
-      const [team] = await db.insert(teams).values({
-        projectId: input.projectId,
-        parentRunId: run.id,
-        prompt: input.prompt,
-        limits: input.limits,
-        status: 'running',
-      }).returning();
-      const [member] = await db.insert(teamMembers).values({
+      const [team] = await db
+        .insert(teams)
+        .values({
+          projectId: input.projectId,
+          parentRunId: run.id,
+          prompt: input.prompt,
+          limits: input.limits,
+          status: 'running',
+        })
+        .returning();
+      const [member] = await db
+        .insert(teamMembers)
+        .values({
+          teamId: team!.id,
+          runId: run.id,
+          role: 'lead',
+          status: 'running',
+          task: input.prompt,
+        })
+        .returning();
+      const event = {
+        type: 'team.created' as const,
         teamId: team!.id,
-        runId: run.id,
-        role: 'lead',
-        status: 'running',
-        task: input.prompt,
-      }).returning();
-      const event = { type: 'team.created' as const, teamId: team!.id, status: 'queued' as const, createdAt: new Date(now()).toISOString() };
+        status: 'queued' as const,
+        createdAt: new Date(now()).toISOString(),
+      };
       await store.append(team!.id, event);
-      hub.publishLive(`team:${team!.id}`, { type: 'team.member.updated', teamId: team!.id, member: {
-        id: member!.id, role: 'lead', status: 'running', updatedAt: new Date(now()).toISOString(),
-      } });
+      hub.publishLive(`team:${team!.id}`, {
+        type: 'team.member.updated',
+        teamId: team!.id,
+        member: {
+          id: member!.id,
+          role: 'lead',
+          status: 'running',
+          updatedAt: new Date(now()).toISOString(),
+        },
+      });
       return detail(team!.id);
     },
     async list() {
@@ -147,10 +181,21 @@ export function createTeamsService(deps: {
     get: detail,
     async cancel(id) {
       const value = await detail(id);
-      if (value.status === 'completed' || value.status === 'failed' || value.status === 'cancelled') {
+      if (
+        value.status === 'completed' ||
+        value.status === 'failed' ||
+        value.status === 'cancelled'
+      ) {
         throw new AppError(409, 'team_not_active', `Tim sudah ${value.status}.`);
       }
-      await db.update(teams).set({ cancelRequestedAt: new Date(now()), status: 'cancelled', finishedAt: new Date(now()) }).where(eq(teams.id, id));
+      await db
+        .update(teams)
+        .set({
+          cancelRequestedAt: new Date(now()),
+          status: 'cancelled',
+          finishedAt: new Date(now()),
+        })
+        .where(eq(teams.id, id));
       if (value.parentRunId) {
         try {
           await runService.cancel(value.parentRunId);

@@ -35,7 +35,12 @@ import {
   TimestampSchema,
   UsageSchema,
 } from './common.js';
-import { QueueNameSchema, QuestionAnswerSchema, RunEventSchema, TeamStatusSchema } from './events.js';
+import {
+  QueueNameSchema,
+  QuestionAnswerSchema,
+  RunEventSchema,
+  TeamStatusSchema,
+} from './events.js';
 import { MergeSkippedSchema, ReviewCommentSchema } from './worker.js';
 import { RichAnswerFollowUpSchema } from './rich-answers.js';
 
@@ -372,7 +377,9 @@ export const TeamDetailSchema = z
   })
   .meta({ id: 'TeamDetail' });
 
-export const TeamListSchema = z.object({ items: z.array(TeamSummarySchema) }).meta({ id: 'TeamList' });
+export const TeamListSchema = z
+  .object({ items: z.array(TeamSummarySchema) })
+  .meta({ id: 'TeamList' });
 export const SendMessageResponseSchema = z
   .object({ message: MessageSchema, run: RunSchema })
   .meta({ id: 'SendMessageResponse' });

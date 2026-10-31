@@ -21,7 +21,17 @@ import { ModelSettings } from './ModelSettings';
 const linkClass = 'text-ui text-text underline underline-offset-2';
 
 /** Satu kelompok pengaturan: judul h2 dan isi; masuk bergantian menurut urutan. */
-function Group({ id, title, index, children }: { id: string; title: string; index: number; children: ReactNode }) {
+function Group({
+  id,
+  title,
+  index,
+  children,
+}: {
+  id: string;
+  title: string;
+  index: number;
+  children: ReactNode;
+}) {
   const enter = enterProps(index);
   return (
     <section

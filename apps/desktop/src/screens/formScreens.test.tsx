@@ -21,7 +21,9 @@ describe('layar formulir: keadaan memuat, kosong, error, dan offline', () => {
     api.listModels.mockReturnValue(new Promise(() => undefined));
     await renderScreen(<CompareScreen />, '/compare');
 
-    expect(await screen.findByRole('status', { name: copy.compare.modelsLoading })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('status', { name: copy.compare.modelsLoading }),
+    ).toBeInTheDocument();
     expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(1);
   });
 
@@ -38,7 +40,9 @@ describe('layar formulir: keadaan memuat, kosong, error, dan offline', () => {
 
     await user.type(screen.getByLabelText(copy.research.form.question), 'Bun atau Node?');
     await user.click(screen.getByRole('button', { name: copy.research.form.submit }));
-    expect(await screen.findByRole('button', { name: copy.research.form.submitting })).toBeDisabled();
+    expect(
+      await screen.findByRole('button', { name: copy.research.form.submitting }),
+    ).toBeDisabled();
 
     reject(new Error('gagal'));
     await waitFor(() =>

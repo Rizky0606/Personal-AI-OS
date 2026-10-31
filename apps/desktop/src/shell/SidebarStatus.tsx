@@ -98,10 +98,7 @@ export function SidebarStatus({ collapsed = false }: { collapsed?: boolean }) {
         {workerDot}
         <span className="min-w-0 truncate">{copy.workerStatus[worker]}</span>
       </span>
-      <Link
-        to="/quota"
-        aria-label={quotaLabel}
-      >
+      <Link to="/quota" aria-label={quotaLabel}>
         {quotaLabel}
       </Link>
       <span role="status" className="flex items-center gap-2">

@@ -19,9 +19,20 @@ export interface WsDeps {
   auth: AuthService;
   hub: EventHub;
   store: EventStore;
-  teamStore: { head(teamId: string): Promise<number>; list(teamId: string, afterSeq: number, limit: number): Promise<{ seq: number; ts: string; event: TeamEvent }[]> };
+  teamStore: {
+    head(teamId: string): Promise<number>;
+    list(
+      teamId: string,
+      afterSeq: number,
+      limit: number,
+    ): Promise<{ seq: number; ts: string; event: TeamEvent }[]>;
+  };
   /** Apakah sumber channel ada; dipakai sebelum berlangganan. */
-  exists: { run(id: string): Promise<boolean>; conversation(id: string): Promise<boolean>; team(id: string): Promise<boolean> };
+  exists: {
+    run(id: string): Promise<boolean>;
+    conversation(id: string): Promise<boolean>;
+    team(id: string): Promise<boolean>;
+  };
   heartbeatMs?: number;
   now?: () => number;
 }
@@ -133,7 +144,8 @@ function handleConnection(
       else {
         for (;;) {
           const batch = await deps.teamStore.list(id, sub.sentSeq, REPLAY_BATCH);
-          for (const row of batch) deliver(channel, sub, { seq: row.seq, ts: row.ts, event: row.event });
+          for (const row of batch)
+            deliver(channel, sub, { seq: row.seq, ts: row.ts, event: row.event });
           if (batch.length < REPLAY_BATCH) break;
         }
       }
