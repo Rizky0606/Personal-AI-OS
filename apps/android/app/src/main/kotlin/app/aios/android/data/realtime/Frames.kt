@@ -38,6 +38,8 @@ sealed interface ServerEvent {
 
     data class Failure(val code: String, val message: String, val retryable: Boolean) : ServerEvent
 
+    data class Other(val type: String) : ServerEvent
+
     data class RunCompleted(val summary: String) : ServerEvent
 
     /** Tahap riset: planning, searching, reading, writing. */

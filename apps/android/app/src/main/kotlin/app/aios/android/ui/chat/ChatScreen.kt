@@ -137,6 +137,7 @@ fun ChatScreen(viewModel: ChatViewModel, snackbar: SnackbarHostState) {
                     onStartEdit = viewModel::startEdit,
                     onDelete = { toDelete = it },
                     onRemember = { toRemember = it },
+                    onDownload = viewModel::downloadFile,
                     onCopied = { /* umpan balik lewat snackbar di bawah */ },
                     copiedText = copiedText,
                     snackbar = snackbar
@@ -189,6 +190,7 @@ fun ChatScreen(viewModel: ChatViewModel, snackbar: SnackbarHostState) {
 }
 
 @Suppress("LongParameterList")
+@Composable
 private fun messageList(
     items: List<ChatItem>,
     loadingOlder: Boolean,

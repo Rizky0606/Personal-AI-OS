@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -83,7 +82,7 @@ private fun RichComponentView(value: JsonObject) {
                 (listOf(columns) + value.getValue("rows").jsonArray.map { it.jsonArray })
                     .forEachIndexed { rowIndex, row ->
                         Row(horizontalArrangement = Arrangement.spacedBy(Tokens.Space.s12)) {
-                            row.forEachIndexed { index, cell ->
+                            row.forEach { cell ->
                                 Text(
                                     cell.jsonPrimitive.content,
                                     modifier = Modifier.weight(1f),

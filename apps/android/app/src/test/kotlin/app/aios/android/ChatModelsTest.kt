@@ -3,6 +3,7 @@ package app.aios.android
 import app.aios.android.data.api.Message
 import app.aios.android.data.api.MessagePart
 import app.aios.android.data.api.Page
+import app.aios.android.data.api.RunError
 import app.aios.android.data.api.SendMessageRequest
 import app.aios.android.data.api.InputPart
 import app.aios.android.data.realtime.Frame
@@ -111,6 +112,10 @@ class ChatModelsTest {
         assertEquals("ok", live.tools.single().status)
         assertEquals(false, live.finished)
         assertTrue(live.reduce(ServerEvent.RunStatus("failed")).finished)
+        assertEquals(
+            RunError("denied", "not allowed", true),
+            LiveRun("r").reduce(ServerEvent.Failure("denied", "not allowed", true)).error
+        )
     }
 
     @Test

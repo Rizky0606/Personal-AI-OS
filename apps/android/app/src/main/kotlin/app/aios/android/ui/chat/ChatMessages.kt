@@ -75,10 +75,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Locale
 
-/**
- * Pesan pengguna: gelembung `accent-soft` rata kanan tanpa garis. Tekan lama membuka menu Ubah dan Hapus
- * saat tidak ada jawaban yang berjalan.
- */
+typealias FileDownload = (MessagePart.File, suspend (ByteArray) -> Unit) -> Unit
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun UserMessageRow(

@@ -34,6 +34,7 @@ data class LiveRun(
     val messageId: String? = null,
     val text: String = "",
     val reasoning: String = "",
+    val tools: List<ToolStep> = emptyList(),
     val artifacts: List<Artifact> = emptyList(),
     val error: RunError? = null
 ) {
@@ -41,6 +42,7 @@ data class LiveRun(
 
     fun reduce(event: ServerEvent): LiveRun = when (event) {
         is ServerEvent.RunStatus -> copy(status = event.status)
+        is ServerEvent.Failure -> copy(error = RunError(event.code, event.message, event.retryable))
         is ServerEvent.RouteDecided -> copy(role = event.role)
         is ServerEvent.MessageDelta -> copy(messageId = event.messageId, text = text + event.text)
         is ServerEvent.ReasoningDelta -> copy(
@@ -57,9 +59,8 @@ data class LiveRun(
             }
         )
         is ServerEvent.ArtifactCreated -> copy(
-            artifacts = artifacts.filterNot {
-                it.fileId == event.fileId
-            } + Artifact(event.fileId, event.name, event.mime, event.size, event.sha256, event.source)
+            artifacts = artifacts.filterNot { it.fileId == event.fileId } +
+                Artifact(event.fileId, event.name, event.mime, event.size, event.sha256, event.source)
         )
         is ServerEvent.MessageCompleted,
         is ServerEvent.ReasoningSummary,
