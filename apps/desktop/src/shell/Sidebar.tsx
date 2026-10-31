@@ -5,6 +5,7 @@ import { copy } from '../copy';
 import { cn } from '../lib/cn';
 import { useUiStore } from '../state/uiStore';
 import { IconButton } from '../ui/IconButton';
+import { PlateGroup } from '../ui/PlateGroup';
 import { Tooltip } from '../ui/Tooltip';
 import { NAV_ITEMS, isActive, settingsItem, type NavItem } from './navItems';
 import { SidebarStatus } from './SidebarStatus';
@@ -22,7 +23,7 @@ function NavLink({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
   const link = (
     <Link
       to={item.to}
-      aria-label={item.label}
+      data-plate-key={item.to}
       aria-current={active ? 'page' : undefined}
       className={cn(
         'relative flex h-9 items-center rounded-control text-ui text-text-2 transition-colors duration-[120ms] ease-aios hover:bg-surface-2 hover:text-text',
@@ -44,6 +45,7 @@ function NavLink({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
  */
 export function Sidebar({ title, action, children, showExpand = true }: SidebarProps) {
   const open = useUiStore((s) => s.sidebarOpen);
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const toggle = useUiStore((s) => s.toggleSidebar);
   const setPaletteOpen = useUiStore((s) => s.setPaletteOpen);
   const collapsed = !open;
@@ -53,7 +55,7 @@ export function Sidebar({ title, action, children, showExpand = true }: SidebarP
       aria-label={copy.shell.sidebar}
       className={cn(
         'flex shrink-0 flex-col overflow-hidden border-r border-border bg-surface transition-[width] duration-[180ms] ease-aios',
-        collapsed ? 'w-(--aios-rail-width)' : 'w-(--aios-sidebar-width)',
+        collapsed ? 'w-(--aios-sidebar-compact-width)' : 'w-(--aios-sidebar-width)',
       )}
     >
       <div
@@ -107,11 +109,16 @@ export function Sidebar({ title, action, children, showExpand = true }: SidebarP
         }}
         className={cn('flex shrink-0 flex-col gap-0.5 px-2 pb-2', collapsed && 'items-center')}
       >
-        {NAV_ITEMS.map((item) => (
-          <NavLink key={item.to} item={item} collapsed={collapsed} />
-        ))}
-      </nav>
+        <PlateGroup
+          activeKey={NAV_ITEMS.find((item) => isActive(item.to, pathname))?.to ?? null}
+          className={cn('flex flex-col gap-0.5', collapsed && 'items-center')}
+        >
+          {NAV_ITEMS.map((item) => (
+            <NavLink key={item.to} item={item} collapsed={collapsed} />
+          ))}
+        </PlateGroup>
 
+      </nav>
       {collapsed ? (
         <div className="flex-1" />
       ) : (

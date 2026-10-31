@@ -20,7 +20,7 @@ test('jadwal: bahasa alami → hasil parse dikonfirmasi → tersimpan → jalank
 
   // Detail jadwal: jalankan sekarang menghasilkan riwayat.
   await expect(page.getByRole('heading', { name: 'Ringkasan berita AI' }).first()).toBeVisible();
-  await page.getByRole('button', { name: 'Jalankan sekarang' }).click();
+  await page.getByRole('button', { name: 'Jalankan sekarang' }).first().click();
   await expect(
     page
       .getByText('Jadwal dijalankan.')

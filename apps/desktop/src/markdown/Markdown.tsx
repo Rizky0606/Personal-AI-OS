@@ -20,19 +20,10 @@ export interface MarkdownProps {
 
 const CITATION = /\[(\d{1,3})]/g;
 
-function ExternalLink({
-  url,
-  children,
-  label,
-}: {
-  url: string;
-  children: ReactNode;
-  label?: string;
-}) {
+function ExternalLink({ url, children }: { url: string; children: ReactNode }) {
   return (
     <a
       href={url}
-      aria-label={label}
       rel="noopener noreferrer"
       onClick={(event) => {
         event.preventDefault();
@@ -59,7 +50,7 @@ function withCitations(
     const index = match.index ?? 0;
     if (index > last) parts.push(text.slice(last, index));
     parts.push(
-      <ExternalLink key={`${index}-${n}`} url={url} label={`Rujukan ${n}: buka sumber`}>
+      <ExternalLink key={`${index}-${n}`} url={url}>
         {match[0]}
       </ExternalLink>,
     );

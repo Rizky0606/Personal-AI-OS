@@ -100,7 +100,6 @@ export function SidebarStatus({ collapsed = false }: { collapsed?: boolean }) {
       </span>
       <Link
         to="/quota"
-        aria-label={copy.status.quotaLabel}
         className="truncate font-mono text-caption underline-offset-2 hover:text-text hover:underline"
       >
         {quotaLabel}
