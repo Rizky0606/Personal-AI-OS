@@ -125,7 +125,7 @@ export function CommandPalette() {
                     {heading ? (
                       <li
                         role="presentation"
-                        className="px-3 pt-2 pb-1 text-caption font-medium text-text-3"
+                        className="px-3 pt-2 pb-1 text-caption font-medium text-text-2"
                       >
                         {copy.palette.groups[item.group]}
                       </li>
@@ -147,7 +147,7 @@ export function CommandPalette() {
                           className={cn(
                             'shrink-0 font-mono text-caption',
                             // text-3 tidak cukup kontras di atas latar terpilih (accent-soft).
-                            selected ? 'text-text-2' : 'text-text-3',
+                            selected ? 'text-text-2' : 'text-text-2',
                           )}
                         >
                           {item.hint}
@@ -161,7 +161,7 @@ export function CommandPalette() {
           </ul>
           <p
             id={`${id}-hint`}
-            className="shrink-0 border-t border-border px-4 py-2 text-caption text-text-3"
+            className="shrink-0 border-t border-border px-4 py-2 text-caption text-text-2"
           >
             {copy.palette.hint}
           </p>
