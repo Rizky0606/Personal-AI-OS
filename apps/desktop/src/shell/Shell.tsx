@@ -15,6 +15,7 @@ import { CommandPalette } from './CommandPalette';
 import { Header } from './Header';
 import { RightPanel } from './RightPanel';
 import { Sidebar } from './Sidebar';
+import { ConnectionBanner } from './ConnectionBanner';
 import { routeForSlot } from './navRoutes';
 import { InfoNote } from '../ui/InfoNote';
 import { useShortcuts } from './useShortcuts';
@@ -135,6 +136,7 @@ export function Shell() {
       </Sidebar>
       <main aria-label={copy.shell.mainArea} className="flex min-w-0 flex-1 flex-col bg-bg">
         <Header title={section.title} />
+        <ConnectionBanner />
         <div key={sectionKey} className="min-h-0 flex-1 animate-aios-fade overflow-auto">
           <Outlet />
         </div>
