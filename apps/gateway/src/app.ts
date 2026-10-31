@@ -251,7 +251,6 @@ export function buildApp({
           await protectedScope.register(workerArtifactRoutes, {
             files,
             runs,
-            runner,
             projects,
             store,
           });

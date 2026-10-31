@@ -1,4 +1,5 @@
 @file:Suppress("MaxLineLength")
+
 package app.aios.android
 
 import app.aios.android.ui.chat.markdown.Block
@@ -43,8 +44,15 @@ class MarkdownTest {
         val valid = """{"version":1,"components":[{"id":"m","type":"metric","label":"Nilai","value":42}]}"""
         val result = app.aios.android.ui.chat.markdown.parseRichAnswer(valid)
         assertTrue(result is app.aios.android.ui.chat.markdown.RichAnswerParse.Valid)
-        assertTrue(app.aios.android.ui.chat.markdown.parseRichAnswer("""{"version":1,"components":[{"id":"x","type":"chart"}]}""") is app.aios.android.ui.chat.markdown.RichAnswerParse.Unsupported)
-        assertTrue(app.aios.android.ui.chat.markdown.parseRichAnswer("{".repeat(20_000)) is app.aios.android.ui.chat.markdown.RichAnswerParse.Unsupported)
+        assertTrue(
+            app.aios.android.ui.chat.markdown.parseRichAnswer(
+                """{"version":1,"components":[{"id":"x","type":"chart"}]}"""
+            ) is app.aios.android.ui.chat.markdown.RichAnswerParse.Unsupported
+        )
+        assertTrue(
+            app.aios.android.ui.chat.markdown.parseRichAnswer("{".repeat(20_000)) is
+                app.aios.android.ui.chat.markdown.RichAnswerParse.Unsupported
+        )
     }
 
     @Test

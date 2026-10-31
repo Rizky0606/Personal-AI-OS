@@ -112,6 +112,7 @@ class ChatModelsTest {
         assertEquals(false, live.finished)
         assertTrue(live.reduce(ServerEvent.RunStatus("failed")).finished)
     }
+
     @Test
     fun `artifact event is retained in live run and trace with source metadata`() {
         val event = ServerEvent.ArtifactCreated("f1", "shot.png", "image/png", 12L, "abc", "screenshot")

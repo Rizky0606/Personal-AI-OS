@@ -129,6 +129,16 @@ export const miscEndpoints: readonly Endpoint[] = [
     errors: [400, 401, 413],
   },
   {
+    operationId: 'uploadScreenshot',
+    method: 'post',
+    path: '/worker/artifacts/screenshot',
+    tag: 'Worker',
+    summary: 'Simpan screenshot hasil worker',
+    auth: true,
+    responses: [json(201, 'Screenshot tersimpan', FileRecordSchema)],
+    errors: [400, 401, 403, 409, 413],
+  },
+  {
     operationId: 'healthz',
     method: 'get',
     path: '/healthz',
