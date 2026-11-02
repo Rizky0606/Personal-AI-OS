@@ -18,13 +18,12 @@ test('jadwal: bahasa alami → hasil parse dikonfirmasi → tersimpan → jalank
   await expect(dialog.getByText('0 7 * * 1')).toBeVisible();
   await dialog.getByRole('button', { name: 'Simpan jadwal' }).click();
 
-  // Detail jadwal: jalankan sekarang menghasilkan riwayat.
-  await expect(page.getByRole('heading', { name: 'Ringkasan berita AI' }).first()).toBeVisible();
-  await page.getByRole('button', { name: 'Jalankan sekarang' }).first().click();
-  await expect(
-    page
-      .getByText('Jadwal dijalankan.')
-      .or(page.getByText(/dijalankan/i))
-      .first(),
-  ).toBeVisible();
+  // Detail jadwal: tunggu pindah ke halaman detail jadwal ini (bukan daftar atau elemen lain dengan nama sama),
+  // lalu bekerja hanya di area utama supaya tidak terkena tombol atau judul di sidebar dan layar lain.
+  await expect(page).toHaveURL(/#\/schedules\/[0-9a-f-]{36}$/);
+  const main = page.getByRole('main');
+  await expect(main.getByRole('heading', { level: 1, name: 'Ringkasan berita AI' })).toBeVisible();
+  // Dua tombol sah (kontrol dan keadaan riwayat kosong); yang pertama adalah kontrol di area utama.
+  await main.getByRole('button', { name: 'Jalankan sekarang', exact: true }).first().click();
+  await expect(page.getByText('Jadwal dijalankan.', { exact: true })).toBeVisible();
 });
