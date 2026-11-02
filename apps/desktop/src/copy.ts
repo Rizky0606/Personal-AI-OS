@@ -24,6 +24,7 @@ export const copy = {
     search: 'Cari perintah',
     searchHint: 'Ctrl K',
     runActive: 'Berjalan',
+    modelAuto: 'Model otomatis',
     palette: 'Palet perintah',
     panels: {
       preview: 'Preview',

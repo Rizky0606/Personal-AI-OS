@@ -27,35 +27,32 @@ export function ShellSkeleton() {
     <div
       role="status"
       aria-label={copy.shell.loading}
-      className="flex h-full flex-col bg-bg text-text"
+      className="flex h-full gap-(--aios-island-gap) bg-bg p-(--aios-island-gap) text-text"
     >
-      <div className="flex min-h-0 flex-1 gap-(--aios-island-gap) p-(--aios-island-gap)">
-        <Island className="flex w-(--aios-sidebar-width) shrink-0 flex-col gap-3 p-4">
-          <Bar className="size-9" />
-          <div className="mt-2 flex flex-col gap-2">
-            {Array.from({ length: 7 }, (_, i) => (
-              <Bar key={i} className="h-9 w-full" />
-            ))}
-          </div>
-          <div className="mt-4 flex flex-col gap-2">
-            <Bar className="h-4 w-2/3" />
-            <Bar className="h-4 w-1/2" />
-            <Bar className="h-4 w-3/4" />
-          </div>
-        </Island>
-        <Island className="flex min-w-0 flex-1 flex-col">
-          <div className="flex h-(--aios-topbar-height) items-center justify-between border-b border-border px-4">
-            <Bar className="h-5 w-28" />
-            <Bar className="h-7 w-32" />
-          </div>
-          <div className="flex flex-col gap-4 p-6">
-            <Bar className="h-4 w-1/3" />
-            <Bar className="h-4 w-2/3" />
-            <Bar className="h-4 w-1/2" />
-          </div>
-        </Island>
-      </div>
-      <div className="h-(--aios-statusbar-height) shrink-0" />
+      <Island className="flex w-(--aios-sidebar-width) shrink-0 flex-col gap-3 p-4">
+        <Bar className="size-9" />
+        <div className="mt-2 flex flex-col gap-2">
+          {Array.from({ length: 7 }, (_, i) => (
+            <Bar key={i} className="h-9 w-full" />
+          ))}
+        </div>
+        <div className="mt-4 flex flex-col gap-2">
+          <Bar className="h-4 w-2/3" />
+          <Bar className="h-4 w-1/2" />
+          <Bar className="h-4 w-3/4" />
+        </div>
+      </Island>
+      <Island className="flex min-w-0 flex-1 flex-col">
+        <div className="flex h-(--aios-topbar-height) items-center justify-between border-b border-border px-4">
+          <Bar className="h-5 w-28" />
+          <Bar className="h-7 w-32" />
+        </div>
+        <div className="flex flex-col gap-4 p-6">
+          <Bar className="h-4 w-1/3" />
+          <Bar className="h-4 w-2/3" />
+          <Bar className="h-4 w-1/2" />
+        </div>
+      </Island>
     </div>
   );
 }

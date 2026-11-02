@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { cn } from '../lib/cn';
+import { useScreenTitle } from '../ui/screenTitle';
 
 export interface PageHeaderProps {
   /** Judul halaman (20px/600). */
@@ -13,16 +14,26 @@ export interface PageHeaderProps {
   className?: string;
 }
 
-/** Header halaman Command Center: judul, deskripsi satu baris, aksi di kanan. */
+/**
+ * Header halaman Command Center: judul, deskripsi satu baris, aksi di kanan. Di dalam Shell judulnya
+ * ditampilkan Topbar (lihat `ui/screenTitle.tsx`), jadi di sini hanya deskripsi, aksi, dan tautan kembali.
+ */
 export function PageHeader({ title, description, actions, back, className }: PageHeaderProps) {
+  const delegated = useScreenTitle(title);
+  if (delegated && !description && !actions && !back) return null;
   return (
     <header className={cn('flex flex-col gap-3', className)}>
       {back}
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <h2 className="truncate text-page font-semibold text-text">{title}</h2>
+          {delegated ? null : (
+            <h2 className="truncate text-page font-semibold text-text">{title}</h2>
+          )}
           {description ? (
-            <p className="mt-1 truncate text-ui text-text-2" title={description}>
+            <p
+              className={cn('truncate text-ui text-text-2', !delegated && 'mt-1')}
+              title={description}
+            >
               {description}
             </p>
           ) : null}

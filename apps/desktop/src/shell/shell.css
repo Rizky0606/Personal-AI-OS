@@ -33,7 +33,7 @@
     opacity var(--aios-duration-fast) var(--aios-easing);
 }
 
-/* Panel kanan melebar dari 0 ke lebar tersimpan; menutup menyempit lagi. Lebar akhir dari gaya inline. */
+/* Slot panel kanan melebar dari 0 ke lebar tersimpan + jarak pulau; menutup menyempit lagi. Lebar akhir dari gaya inline. */
 @keyframes aios-panel-open {
   from {
     width: 0;

@@ -1,6 +1,6 @@
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { Plus } from 'lucide-react';
-import { useEffect, useMemo, useRef, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ConversationList } from '../chat/ConversationList';
 import { ProjectSwitcher } from '../chat/ProjectSwitcher';
 import { goHome } from '../chat/paths';
@@ -11,11 +11,15 @@ import { ScheduleList } from '../schedules/ScheduleList';
 import { SpaceList } from '../spaces/SpaceList';
 import { useUiStore } from '../state/uiStore';
 import { IconButton } from '../ui/IconButton';
+import { ScreenTitleContext } from '../ui/screenTitle';
 import { CommandPalette } from './CommandPalette';
-import { Header } from './Header';
+import { ISLAND } from './island';
 import { RightPanel } from './RightPanel';
 import { Sidebar } from './Sidebar';
 import { ConnectionBanner } from './ConnectionBanner';
+import { Topbar } from './Topbar';
+import { isChatPath } from './navItems';
+import { cn } from '../lib/cn';
 import { routeForSlot } from './navRoutes';
 import { InfoNote } from '../ui/InfoNote';
 import { useShortcuts } from './useShortcuts';
@@ -74,13 +78,16 @@ function sectionFor(pathname: string): Section {
 }
 
 /**
- * Kerangka: satu sidebar (232px, ciut 64px), area utama dengan header 48px, dan panel kanan bertab
- * (lebar bisa diubah) yang mengambang sebagai kartu.
+ * Kerangka pulau: kanvas `bg` berisi tiga pulau (sidebar 232 px / ringkas 64 px, area utama dengan topbar 48 px
+ * di dalamnya, dan panel kanan bertab yang lebarnya bisa diubah), berjarak `--aios-island-gap` ke tepi jendela dan
+ * antar pulau. Topbar adalah satu-satunya pemilik judul layar (h1); PageHeader layar mendaftarkan judulnya ke sini.
  */
 export function Shell() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
   const rightPanelOpen = useUiStore((s) => s.rightPanelOpen);
+  // Judul dari PageHeader layar aktif; null = pakai nama bagian.
+  const [screenTitle, setScreenTitle] = useState<string | null>(null);
   const toggleSidebar = useUiStore((s) => s.toggleSidebar);
   const toggleRightPanel = useUiStore((s) => s.toggleRightPanel);
   const setPaletteOpen = useUiStore((s) => s.setPaletteOpen);
@@ -114,35 +121,47 @@ export function Shell() {
   const section = sectionFor(pathname);
   const sectionKey = pathname;
   return (
-    <div className="flex h-full bg-bg text-text">
-      <Sidebar
-        showExpand={false}
-        title={section.title}
-        action={
-          section.action ? (
-            <IconButton
-              label={section.action.label}
-              onClick={() => {
-                if (section.action?.to === '/') requestNewChat();
-                else void navigate({ to: '/research' });
-              }}
-            >
-              <Plus size={16} strokeWidth={1.5} aria-hidden="true" />
-            </IconButton>
-          ) : undefined
-        }
+    <ScreenTitleContext.Provider value={setScreenTitle}>
+      <div
+        data-shell-canvas
+        className="flex h-full gap-(--aios-island-gap) bg-bg p-(--aios-island-gap) text-text"
       >
-        {section.list}
-      </Sidebar>
-      <main aria-label={copy.shell.mainArea} className="flex min-w-0 flex-1 flex-col bg-bg">
-        <Header title={section.title} />
-        <ConnectionBanner />
-        <div key={sectionKey} className="min-h-0 flex-1 animate-aios-fade overflow-auto">
-          <Outlet />
-        </div>
-      </main>
-      <RightPanel open={rightPanelOpen} />
-      <CommandPalette />
-    </div>
+        <Sidebar
+          title={section.title}
+          action={
+            section.action ? (
+              <IconButton
+                label={section.action.label}
+                onClick={() => {
+                  if (section.action?.to === '/') requestNewChat();
+                  else void navigate({ to: '/research' });
+                }}
+              >
+                <Plus size={16} strokeWidth={1.5} aria-hidden="true" />
+              </IconButton>
+            ) : undefined
+          }
+        >
+          {section.list}
+        </Sidebar>
+        <main
+          aria-label={copy.shell.mainArea}
+          className={cn(ISLAND, 'flex min-w-0 flex-1 flex-col overflow-hidden')}
+        >
+          <Topbar
+            title={screenTitle ?? section.title}
+            chat={isChatPath(pathname)}
+            rightPanelOpen={rightPanelOpen}
+            onToggleRightPanel={toggleRightPanel}
+          />
+          <ConnectionBanner />
+          <div key={sectionKey} className="min-h-0 flex-1 animate-aios-fade overflow-auto">
+            <Outlet />
+          </div>
+        </main>
+        <RightPanel open={rightPanelOpen} />
+        <CommandPalette />
+      </div>
+    </ScreenTitleContext.Provider>
   );
 }

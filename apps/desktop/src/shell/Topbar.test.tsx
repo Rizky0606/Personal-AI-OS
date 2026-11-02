@@ -1,6 +1,6 @@
 import type { Project } from '@aios/contracts';
 import type { ConnectionState } from '../realtime/client';
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { copy } from '../copy';
@@ -77,10 +77,12 @@ describe('Topbar', () => {
     );
   });
 
-  it('layar chat: project aktif dan model terlihat; tanpa pilihan memakai teks bawaan', async () => {
+  it('layar chat: project aktif dan model terlihat; teks bawaan keduanya berbeda (tanpa "Otomatis · Otomatis")', async () => {
     await renderTopbar();
     expect(await screen.findByText(copy.status.project)).toBeInTheDocument();
-    expect(screen.getByText(copy.status.model)).toBeInTheDocument();
+    expect(screen.getByText(copy.shell.modelAuto)).toBeInTheDocument();
+    expect(screen.queryByText(copy.status.model)).not.toBeInTheDocument();
+    expect(copy.status.project).not.toBe(copy.shell.modelAuto);
   });
 
   it('layar chat dengan project dan model terpilih menampilkan namanya', async () => {
@@ -94,7 +96,34 @@ describe('Topbar', () => {
   it('layar lain: tidak ada project dan model', async () => {
     await renderTopbar({ title: 'Kanban', chat: false });
     expect(screen.queryByText(copy.status.project)).not.toBeInTheDocument();
-    expect(screen.queryByText(copy.status.model)).not.toBeInTheDocument();
+    expect(screen.queryByText(copy.shell.modelAuto)).not.toBeInTheDocument();
+  });
+
+  it('judul, project, dan model berada dalam satu grup "Lokasi saat ini"', async () => {
+    useUiStore.setState({ activeProjectId: project.id });
+    await renderTopbar();
+    const group = screen.getByRole('group', { name: copy.shell.location });
+    expect(within(group).getByRole('heading', { level: 1, name: 'Chat' })).toBeInTheDocument();
+    expect(await within(group).findByText('Toko Online')).toBeInTheDocument();
+  });
+
+  it('project aktif menampilkan branch bawaan; saat run coding berjalan, branch kerja agent dan penanda Berjalan', async () => {
+    useUiStore.setState({ activeProjectId: project.id });
+    await renderTopbar();
+    const group = screen.getByRole('group', { name: copy.shell.location });
+    expect(await within(group).findByText('main')).toBeInTheDocument();
+    expect(within(group).queryByText(copy.shell.runActive)).not.toBeInTheDocument();
+
+    act(() => useUiStore.getState().setActiveRunBranch('aios/abcd1234'));
+    expect(await within(group).findByText('aios/abcd1234')).toBeInTheDocument();
+    expect(within(group).getByText(copy.shell.runActive)).toBeInTheDocument();
+    expect(within(group).queryByText('main')).not.toBeInTheDocument();
+  });
+
+  it('tanpa project aktif tidak ada branch', async () => {
+    await renderTopbar();
+    const group = screen.getByRole('group', { name: copy.shell.location });
+    expect(within(group).queryByText('main')).not.toBeInTheDocument();
   });
 
   it.each([

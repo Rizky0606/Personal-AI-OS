@@ -7,6 +7,7 @@ import { useUiStore } from '../state/uiStore';
 import { IconButton } from '../ui/IconButton';
 import { PlateGroup } from '../ui/PlateGroup';
 import { Tooltip } from '../ui/Tooltip';
+import { ISLAND } from './island';
 import { NAV_ITEMS, isActive, settingsItem, type NavItem } from './navItems';
 import { SidebarStatus } from './SidebarStatus';
 
@@ -17,7 +18,16 @@ export interface SidebarProps {
   showExpand?: boolean;
 }
 
-function NavLink({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
+/** `plated`: latar aktif dan hover digambar pelat PlateGroup yang meluncur, jadi tautan sendiri tanpa latar. */
+function NavLink({
+  item,
+  collapsed,
+  plated = false,
+}: {
+  item: NavItem;
+  collapsed: boolean;
+  plated?: boolean;
+}) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const active = isActive(item.to, pathname);
   const link = (
@@ -27,10 +37,13 @@ function NavLink({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
       aria-label={item.label}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'relative flex h-9 items-center rounded-control text-ui text-text-2 transition-colors duration-[120ms] ease-aios hover:bg-surface-2 hover:text-text',
+        'relative flex h-9 items-center rounded-control text-ui text-text-2 transition-colors duration-[120ms] ease-aios hover:text-text',
+        !plated && 'hover:bg-surface-2',
         collapsed ? 'w-10 justify-center' : 'w-full gap-3 px-2.5',
         'before:absolute before:top-2 before:bottom-2 before:-left-2 before:w-0.5 before:rounded-full before:bg-accent before:shadow-glow before:transition-transform before:duration-[180ms] before:ease-spring',
-        active ? 'bg-accent-soft font-medium text-text before:scale-y-100' : 'before:scale-y-0',
+        active
+          ? cn('font-medium text-text before:scale-y-100', !plated && 'bg-accent-soft')
+          : 'before:scale-y-0',
       )}
     >
       {item.icon}
@@ -55,13 +68,14 @@ export function Sidebar({ title, action, children, showExpand = true }: SidebarP
       data-compact={collapsed ? 'true' : 'false'}
       aria-label={copy.shell.sidebar}
       className={cn(
-        'flex shrink-0 flex-col overflow-hidden border-r border-border bg-surface transition-[width] duration-[180ms] ease-aios',
+        ISLAND,
+        'flex shrink-0 flex-col overflow-hidden transition-[width] duration-[180ms] ease-aios',
         collapsed ? 'w-(--aios-sidebar-compact-width)' : 'w-(--aios-sidebar-width)',
       )}
     >
       <div
         className={cn(
-          'flex h-(--aios-header-height) shrink-0 items-center gap-1 px-2',
+          'flex h-(--aios-topbar-height) shrink-0 items-center gap-1 px-2',
           collapsed && 'justify-center',
         )}
       >
@@ -129,7 +143,7 @@ export function Sidebar({ title, action, children, showExpand = true }: SidebarP
           className={cn('flex flex-col gap-0.5', collapsed && 'items-center')}
         >
           {NAV_ITEMS.map((item) => (
-            <NavLink key={item.to} item={item} collapsed={collapsed} />
+            <NavLink key={item.to} item={item} collapsed={collapsed} plated />
           ))}
         </PlateGroup>
       </nav>

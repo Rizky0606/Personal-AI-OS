@@ -48,7 +48,10 @@ export function ConnectionBadge() {
 
 function Chip({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <span className="inline-flex h-7 max-w-56 items-center gap-2 rounded-badge bg-surface-2 px-2 text-meta text-text-2">
+    <span
+      data-chip
+      className="inline-flex h-7 min-w-0 max-w-56 items-center gap-2 rounded-badge bg-surface-2 px-2 text-meta text-text-2"
+    >
       {icon}
       <span className="truncate">{children}</span>
     </span>
@@ -57,7 +60,7 @@ function Chip({ icon, children }: { icon: React.ReactNode; children: React.React
 
 export interface TopbarProps {
   title: string;
-  /** Layar chat: tampilkan project aktif dan model. */
+  /** Layar chat: tampilkan project aktif, branch, dan model. */
   chat: boolean;
   /** Aksi utama bagian ini (Chat baru, Riset baru). */
   action?: { label: string; onSelect: () => void } | undefined;
@@ -66,28 +69,56 @@ export interface TopbarProps {
 }
 
 /**
- * Topbar 48 px di dalam pulau utama: judul layar (h1), di layar chat project aktif dan model, lalu di kanan
- * indikator koneksi, aksi konteks bagian ini, dan tombol panel kanan.
+ * Topbar 48 px di dalam pulau utama: judul layar (h1), di layar chat project aktif dengan branch (branch kerja
+ * agent selama run berjalan) dan model, lalu di kanan indikator koneksi, aksi konteks bagian ini, dan tombol panel
+ * kanan. Judul, project, dan model satu grup "Lokasi saat ini".
  */
 export function Topbar({ title, chat, action, rightPanelOpen, onToggleRightPanel }: TopbarProps) {
   const activeProjectId = useUiStore((s) => s.activeProjectId);
+  const runBranch = useUiStore((s) => s.activeRunBranch);
   const modelId = useUiStore((s) => s.model);
   const project = useProjects().data?.find((p) => p.id === activeProjectId);
   const models = useModels().data;
   const modelLabel = modelId
     ? (models?.find((m) => m.id === modelId)?.label ?? modelId)
-    : copy.status.model;
+    : copy.shell.modelAuto;
+  // Selama run coding berjalan: branch kerja agent; selain itu branch bawaan project.
+  const branch = project ? (runBranch ?? project.defaultBranch) : null;
 
   return (
     <header className="flex h-(--aios-topbar-height) shrink-0 items-center justify-between gap-3 border-b border-border px-4">
-      <div className="flex min-w-0 items-center gap-3">
-        <h1 className="shrink-0 text-section font-semibold text-text">{title}</h1>
+      <div
+        role="group"
+        aria-label={copy.shell.location}
+        className="flex min-w-0 items-center gap-3"
+      >
+        <h1 className="min-w-0 shrink truncate text-section font-semibold text-text">{title}</h1>
         {chat ? (
           <div className="flex min-w-0 items-center gap-2">
-            <Chip icon={<FolderGit2 size={14} strokeWidth={1.5} aria-hidden="true" />}>
+            <Chip
+              icon={
+                <FolderGit2 size={14} strokeWidth={1.5} aria-hidden="true" className="shrink-0" />
+              }
+            >
               {project?.name ?? copy.status.project}
+              {branch ? (
+                <span className="ml-2 font-mono text-caption text-text-3">{branch}</span>
+              ) : null}
             </Chip>
-            <Chip icon={<Cpu size={14} strokeWidth={1.5} aria-hidden="true" />}>{modelLabel}</Chip>
+            {runBranch !== null ? (
+              <span className="inline-flex h-7 shrink-0 items-center gap-2 rounded-badge bg-accent-soft px-2 text-meta text-text">
+                <span
+                  aria-hidden="true"
+                  className="size-2 animate-aios-breathe rounded-full bg-accent"
+                />
+                {copy.shell.runActive}
+              </span>
+            ) : null}
+            <Chip
+              icon={<Cpu size={14} strokeWidth={1.5} aria-hidden="true" className="shrink-0" />}
+            >
+              {modelLabel}
+            </Chip>
           </div>
         ) : null}
       </div>

@@ -12,7 +12,11 @@ import { renderScreen } from '../test/render';
 vi.mock('../app/services', async () => (await import('../test/fakeServices')).fakeServices);
 
 const { ChatScreen } = await import('./ChatScreen');
-const { Header } = await import('../shell/Header');
+const { Topbar } = await import('../shell/Topbar');
+
+const TopbarUnderTest = () => (
+  <Topbar title={copy.nav.chat} chat rightPanelOpen={false} onToggleRightPanel={() => undefined} />
+);
 
 const PROJECT = '0192f0c4-7a1b-7c2d-a001-4a5b6c7d8e91';
 const APPROVAL = '0192f0c4-7a1b-7c2d-a003-4a5b6c7d8e93';
@@ -409,7 +413,7 @@ describe('panel izin inline', () => {
   });
 });
 
-describe('header: project dan branch', () => {
+describe('topbar: project dan branch', () => {
   const crumb = () => screen.getByRole('group', { name: copy.shell.location });
 
   it('menampilkan project dan branch bawaan; saat run coding berjalan, branch kerja agent', async () => {
@@ -421,7 +425,7 @@ describe('header: project dan branch', () => {
     await renderScreen(
       <>
         <ChatScreen conversationId={CONV} />
-        <Header title={copy.nav.chat} />
+        <TopbarUnderTest />
       </>,
     );
     expect(await within(crumb()).findByText('Toko Online')).toBeInTheDocument();
@@ -444,7 +448,7 @@ describe('header: project dan branch', () => {
     expect(await within(crumb()).findByText('main')).toBeInTheDocument();
   });
 
-  it('role Umum di dalam project tidak mengubah branch di header', async () => {
+  it('role Umum di dalam project tidak mengubah branch di topbar', async () => {
     useUiStore.getState().setActiveProject(PROJECT);
     api.listMessages.mockResolvedValue(
       page(message({ author: 'user', text: 'tulis catatan', runId: RUN_X })),
@@ -453,7 +457,7 @@ describe('header: project dan branch', () => {
     await renderScreen(
       <>
         <ChatScreen conversationId={CONV} />
-        <Header title={copy.nav.chat} />
+        <TopbarUnderTest />
       </>,
     );
     await waitFor(() => expect(runs.get(RUN_X)).toBeDefined());
@@ -467,8 +471,8 @@ describe('header: project dan branch', () => {
     expect(within(crumb()).queryByText(/^aios\//)).not.toBeInTheDocument();
   });
 
-  it('tanpa project aktif: breadcrumb hanya judul bagian', async () => {
-    await renderScreen(<Header title={copy.nav.chat} />);
+  it('tanpa project aktif: tidak ada project atau branch di breadcrumb', async () => {
+    await renderScreen(<TopbarUnderTest />);
 
     expect(
       within(crumb()).getByRole('heading', { level: 1, name: copy.nav.chat }),

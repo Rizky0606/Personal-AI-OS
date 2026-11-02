@@ -7,8 +7,11 @@ import {
   createRoute,
   createRouter,
 } from '@tanstack/react-router';
+import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { copy } from '../copy';
+import { PageHeader } from '../screens/PageLayout';
+import { PageHeader as UiPageHeader } from '../ui/PageHeader';
 import { RIGHT_PANEL_DEFAULT, useUiStore } from '../state/uiStore';
 import { resetApi } from '../test/fakeServices';
 import { TooltipProvider } from '../ui/Tooltip';
@@ -17,13 +20,17 @@ vi.mock('../app/services', async () => (await import('../test/fakeServices')).fa
 
 const { Shell } = await import('./Shell');
 
-async function renderShell(path = '/') {
+async function renderShell(path = '/', screens: Record<string, () => ReactNode> = {}) {
   const root = createRootRoute({ component: Shell });
   const paths = ['/', '/projects', '/kanban', '/schedules', '/research', '/settings'];
   const router = createRouter({
     routeTree: root.addChildren(
       paths.map((p) =>
-        createRoute({ getParentRoute: () => root, path: p, component: () => <p>isi {p}</p> }),
+        createRoute({
+          getParentRoute: () => root,
+          path: p,
+          component: screens[p] ?? (() => <p>isi {p}</p>),
+        }),
       ),
     ),
     history: createMemoryHistory({ initialEntries: [path] }),
@@ -48,7 +55,7 @@ beforeEach(() => {
 });
 
 describe('Shell', () => {
-  it('kerangka: satu sidebar, header, area utama; Pengaturan terpisah dan panel kanan tertutup', async () => {
+  it('kerangka: satu sidebar, topbar di area utama; Pengaturan terpisah dan panel kanan tertutup', async () => {
     await renderShell();
 
     const sidebar = screen.getByRole('complementary', { name: copy.shell.sidebar });
@@ -64,7 +71,118 @@ describe('Shell', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('Ctrl+B menciutkan sidebar jadi ikon dan membukanya lagi; tombol di header membukanya', async () => {
+  it('tiga pulau di atas kanvas bg: sidebar dan area utama berupa pulau, jarak ke tepi dan antar pulau dari token', async () => {
+    const { container } = await renderShell();
+    ctrl('j');
+    const sidebar = screen.getByRole('complementary', { name: copy.shell.sidebar });
+    const main = screen.getByRole('main', { name: copy.shell.mainArea });
+    const panel = screen.getByRole('complementary', { name: copy.shell.toggleRightPanel });
+
+    for (const island of [sidebar, main, panel]) {
+      expect(island).toHaveClass('rounded-panel', 'border', 'bg-surface-1', 'shadow-layer-1');
+    }
+    // Kanvas: warna bg, padding dan gap dari --aios-island-gap, dan tidak ada pulau yang menempel tepi.
+    const canvas = container.querySelector('[data-shell-canvas]');
+    expect(canvas).toHaveClass('bg-bg', 'p-(--aios-island-gap)', 'gap-(--aios-island-gap)');
+    expect(canvas).toContainElement(sidebar);
+    expect(canvas).toContainElement(main);
+    expect(canvas).toContainElement(panel);
+  });
+
+  it('Topbar dipakai Shell di DALAM pulau utama: judul h1, koneksi, dan tombol panel kanan', async () => {
+    await renderShell();
+    const main = screen.getByRole('main', { name: copy.shell.mainArea });
+
+    expect(within(main).getByRole('heading', { level: 1, name: copy.nav.chat })).toBeVisible();
+    expect(within(main).getByRole('status')).toHaveAttribute('data-connection');
+    const toggle = within(main).getByRole('button', { name: copy.shell.toggleRightPanel });
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(toggle);
+    expect(useUiStore.getState().rightPanelOpen).toBe(true);
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
+    // Header lama tidak ada: hanya satu h1 dan satu banner/pita judul di halaman.
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+  });
+
+  it('urutan fokus mengikuti urutan visual: sidebar, area utama, lalu panel kanan', async () => {
+    await renderShell();
+    ctrl('j');
+    const sidebar = screen.getByRole('complementary', { name: copy.shell.sidebar });
+    const main = screen.getByRole('main', { name: copy.shell.mainArea });
+    const panel = screen.getByRole('complementary', { name: copy.shell.toggleRightPanel });
+    const follows = (a: Element, b: Element) =>
+      Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+
+    expect(follows(sidebar, main)).toBe(true);
+    expect(follows(main, panel)).toBe(true);
+    // Di dalam sidebar: navigasi dulu, lalu daftar konteks; Pengaturan di kaki.
+    const nav = within(sidebar).getByRole('navigation', { name: copy.shell.navigation });
+    const settings = within(sidebar).getByRole('link', { name: copy.nav.settings });
+    expect(follows(nav, settings)).toBe(true);
+  });
+
+  it('aria-current="page" hanya pada item navigasi yang aktif dan berpindah mengikuti rute', async () => {
+    const { router } = await renderShell('/research');
+    const nav = screen.getByRole('navigation', { name: copy.shell.navigation });
+
+    expect(within(nav).getByRole('link', { name: copy.nav.research })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(within(nav).getByRole('link', { name: copy.nav.chat })).not.toHaveAttribute(
+      'aria-current',
+    );
+    expect(nav.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
+
+    ctrl('3');
+    await waitFor(() => expect(router.state.location.pathname).toBe('/kanban'));
+    expect(within(nav).getByRole('link', { name: copy.nav.kanban })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(within(nav).getByRole('link', { name: copy.nav.research })).not.toHaveAttribute(
+      'aria-current',
+    );
+  });
+
+  it('satu judul per layar: PageHeader layar mengisi h1 Topbar, tidak ada h2 kembar', async () => {
+    await renderShell('/kanban', {
+      '/kanban': () => <PageHeader title="Toko Online" description="Papan tugas project." />,
+    });
+    const main = screen.getByRole('main', { name: copy.shell.mainArea });
+
+    expect(
+      await within(main).findByRole('heading', { level: 1, name: 'Toko Online' }),
+    ).toBeInTheDocument();
+    expect(within(main).getAllByRole('heading')).toHaveLength(1);
+    expect(within(main).queryByRole('heading', { name: copy.nav.kanban })).not.toBeInTheDocument();
+    expect(within(main).getByText('Papan tugas project.')).toBeInTheDocument();
+  });
+
+  it('satu judul per layar: Pengaturan (ui/PageHeader) tidak menampilkan "Pengaturan" dua kali', async () => {
+    await renderShell('/settings', {
+      '/settings': () => <UiPageHeader title={copy.nav.settings} />,
+    });
+    const main = screen.getByRole('main', { name: copy.shell.mainArea });
+
+    await within(main).findByRole('heading', { level: 1, name: copy.nav.settings });
+    expect(within(main).getAllByText(copy.nav.settings)).toHaveLength(1);
+  });
+
+  it('judul kembali ke nama bagian saat pindah ke layar yang tidak punya PageHeader', async () => {
+    const { router } = await renderShell('/kanban', {
+      '/kanban': () => <PageHeader title="Toko Online" />,
+    });
+    await screen.findByRole('heading', { level: 1, name: 'Toko Online' });
+
+    ctrl('4');
+    await waitFor(() => expect(router.state.location.pathname).toBe('/schedules'));
+    expect(
+      await screen.findByRole('heading', { level: 1, name: copy.nav.schedules }),
+    ).toBeInTheDocument();
+  });
+
+  it('Ctrl+B menciutkan sidebar jadi ikon dan membukanya lagi; tombol buka ada di sidebar ringkas', async () => {
     await renderShell();
     const sidebar = screen.getByRole('complementary', { name: copy.shell.sidebar });
     expect(screen.getByRole('button', { name: copy.shell.collapseSidebar })).toBeInTheDocument();
@@ -79,7 +197,7 @@ describe('Shell', () => {
       screen.queryByRole('button', { name: copy.shell.collapseSidebar }),
     ).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: copy.shell.expandSidebar }));
+    fireEvent.click(within(sidebar).getByRole('button', { name: copy.shell.expandSidebar }));
     expect(useUiStore.getState().sidebarOpen).toBe(true);
     expect(within(sidebar).getByText(copy.shell.search)).toBeInTheDocument();
   });
@@ -222,7 +340,8 @@ describe('Shell', () => {
     const panel = () => screen.queryByRole('complementary', { name: copy.shell.toggleRightPanel });
 
     ctrl('j');
-    expect(panel()).toHaveClass('aios-panel-open');
+    // Animasi lebar ada di slot pemotong (bersama jarak pulau), bukan di isi panel.
+    expect(panel()?.parentElement).toHaveClass('aios-panel-open');
     expect(panel()).not.toHaveAttribute('inert');
     // Isi sidebar dan area utama tidak dipasang ulang saat panel membuka.
     expect(screen.getByRole('main', { name: copy.shell.mainArea })).toBeInTheDocument();
@@ -230,7 +349,7 @@ describe('Shell', () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     try {
       ctrl('j');
-      expect(panel()).toHaveClass('aios-panel-close');
+      expect(panel()?.parentElement).toHaveClass('aios-panel-close');
       expect(panel()).toHaveAttribute('inert');
       // Pegangan ubah-lebar hilang selama menutup; panel masih ada sampai animasinya selesai.
       expect(
@@ -255,7 +374,7 @@ describe('Shell', () => {
       ctrl('j');
       act(() => void vi.advanceTimersByTime(500));
       const panel = screen.getByRole('complementary', { name: copy.shell.toggleRightPanel });
-      expect(panel).toHaveClass('aios-panel-open');
+      expect(panel.parentElement).toHaveClass('aios-panel-open');
     } finally {
       vi.useRealTimers();
     }
