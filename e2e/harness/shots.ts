@@ -179,6 +179,7 @@ async function main() {
         await page
           .getByRole('list', { name: 'Daftar project' })
           .getByRole('link', { name: path.basename(repo) })
+          .first()
           .click();
         await field.fill('[skenario:izin] Tolong tambahkan file catatan.');
         await page.getByRole('button', { name: 'Kirim', exact: true }).click();
