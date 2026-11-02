@@ -9,11 +9,15 @@ import { comparePixels } from './in-page.js';
  * karena isinya selalu berubah. Menulis tabel markdown ke stdout dan gambar A | B | selisih per layar ke
  * <induk folderB>/_compare/<A>__<B>/.
  */
-const [dirA, dirB] = process.argv.slice(2);
-if (!dirA || !dirB) {
+const [argA, argB] = process.argv.slice(2);
+if (!argA || !argB) {
   console.error('Pemakaian: pnpm shots:compare <folderA> <folderB>');
   process.exit(2);
 }
+// pnpm --filter menjalankan skrip dari e2e/; path relatif dihitung dari folder tempat perintah diketik.
+const cwd = process.env.INIT_CWD ?? process.cwd();
+const dirA = path.resolve(cwd, argA);
+const dirB = path.resolve(cwd, argB);
 const CHANNEL_THRESHOLD = 24;
 const STAMP_MASK = { width: 280, height: 32 };
 
@@ -22,7 +26,7 @@ const a = pngs(dirA);
 const b = pngs(dirB);
 const names = [...new Set([...a, ...b])].sort();
 const outDir = path.join(
-  path.dirname(path.resolve(dirB)),
+  path.dirname(dirB),
   '_compare',
   `${path.basename(dirA)}__${path.basename(dirB)}`,
 );

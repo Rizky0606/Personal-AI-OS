@@ -46,3 +46,26 @@ Berkas desktop yang disentuh Sesi 4 (`git diff --name-only 31dd08b eeff719 -- ap
 | --- | --- | --- |
 | `docs/BASELINE.md` (add/add) | Versi `main` dipertahankan; versi Sesi 0 disimpan sebagai `docs/BASELINE_SESI0.md` | Kedua dokumen berisi informasi berbeda; keduanya dipertahankan |
 | `docs/BACKLOG.md` | Versi `main` + bagian "Temuan Sesi 0" disisipkan sebelum "Temuan Sesi 1"; rujukan diarahkan ke `BASELINE_SESI0.md` | Cabang lama hanya menambah satu bagian; sisanya basi |
+
+### C. Alat bukti visual
+
+- **Cap build.** `e2e/vite.e2e.config.ts` menanam `__BUILD_COMMIT__` (`git rev-parse --short HEAD`), `__BUILD_TIME__`, dan `__BUILD_DIRTY__` (ada perubahan belum di-commit, tanpa menghitung `docs/screenshots`, `e2e/.stack.json`, `e2e/test-results`). `apps/desktop/src/buildStamp.ts` (dipanggil dari `main.tsx`) memasang atribut `data-build-commit` dan `data-build-dirty` di `#root` serta label kecil kanan-bawah (`hash[*] waktu`). Di build rilis konstanta tidak ada, jadi tidak ada atribut dan label (dibuktikan tes `buildStamp.test.ts`).
+- **`pnpm shots <kode-sesi>`** (`e2e/harness/shots.ts`): membangun ulang app e2e, menyalakan `startStack`, login lewat UI, memotret 14 layar x 2 tema (gelap, terang) 1440x900 ke `docs/screenshots/<kode>/<tema>-<layar>.png`: login, chat-kosong, chat-berjalan (500 ms setelah kirim), chat-selesai, panel-kanan, lebar-1024, palet, project, kanban, jadwal, riset, ruang, pengaturan-atas, pengaturan-gulir (area isi di `<main>`, bukan sidebar). Memakai `prefers-reduced-motion: reduce` agar hasil stabil. Sebelum memotret membandingkan `data-build-commit` dengan `git rev-parse --short HEAD`; beda = gagal "build basi". `SHOTS_SKIP_BUILD=1` hanya untuk menguji penjaga itu.
+- **`pnpm shots:compare <A> <B>`** (`e2e/harness/shots-compare.ts`, fungsi di halaman: `in-page.js`): persentase piksel berbeda (beda > 24 pada kanal mana pun) lewat canvas `getImageData` di Playwright, tanpa pustaka gambar baru. Persegi 280x32 px kanan-bawah (label cap) tidak dihitung. Keluaran tabel markdown dan gambar `A | B | selisih` di `docs/screenshots/_compare/<A>__<B>/` (diabaikan git). Path relatif dihitung dari folder tempat perintah diketik (`INIT_CWD`).
+- **Baseline.** `docs/screenshots/baseline-p0/` (28 gambar) diambil dari commit `a67ef46`, working tree bersih, semua gambar bercap `a67ef46`.
+
+Bukti:
+
+- Penjaga basi: setelah commit baru, `SHOTS_SKIP_BUILD=1 pnpm shots tmp-basi` gagal dengan `build basi: halaman a67ef46 != HEAD f19c62b. Bangun ulang app e2e.` dan tidak menghasilkan gambar.
+- Kestabilan: `shots p0-ulang` (commit `f19c62b`) vs `baseline-p0`: 0,00% sampai 0,13% per layar, kecuali `terang-ruang` 0,62% (jam dan data dinamis). Itulah batas derau untuk membaca perbandingan sesi berikutnya.
+
+### D. Pemeriksaan
+
+| Pemeriksaan | Hasil |
+| --- | --- |
+| `pnpm typecheck` | lulus (exit 0) |
+| `pnpm lint` (eslint + prettier) | lulus (exit 0) |
+| test ui-tokens / contracts / roles / adapters | 28 / 138 / 36 / 102 lulus (+2 dilewati sejak awal) |
+| test desktop | 87 file, 780 tes lulus (termasuk 3 tes `buildStamp`) |
+| test gateway (Postgres tertanam) | 611 lulus, 13 dilewati sejak awal, **2 gagal**: `dsh.integration` "izin diminta..." dan "izin ditolak..." (flaky, lihat BACKLOG "Temuan P0"); gateway tidak berbeda dari `main`; gagal 1 dari 3 run terisolasi |
+| e2e desktop (`pnpm --filter @aios/e2e e2e`) | 23 lulus |
