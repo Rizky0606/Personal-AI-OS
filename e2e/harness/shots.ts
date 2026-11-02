@@ -43,13 +43,16 @@ interface Config {
 }
 
 async function main() {
-  console.log(`[shots] membangun ulang app e2e (HEAD ${head()})`);
-  const build = spawnSync('pnpm', ['--filter', '@aios/e2e', 'run', 'build:app'], {
-    cwd: root,
-    stdio: 'inherit',
-    shell: true,
-  });
-  if (build.status !== 0) throw new Error('Build app e2e gagal.');
+  // SHOTS_SKIP_BUILD=1 hanya untuk menguji penjaga "build basi"; jalan normal selalu membangun ulang.
+  if (process.env.SHOTS_SKIP_BUILD !== '1') {
+    console.log();
+    const build = spawnSync('pnpm', ['--filter', '@aios/e2e', 'run', 'build:app'], {
+      cwd: root,
+      stdio: 'inherit',
+      shell: true,
+    });
+    if (build.status !== 0) throw new Error('Build app e2e gagal.');
+  }
 
   mkdirSync(outDir, { recursive: true });
   const port = await freePort();
