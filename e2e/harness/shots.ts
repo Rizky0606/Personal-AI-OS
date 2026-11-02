@@ -45,7 +45,7 @@ interface Config {
 async function main() {
   // SHOTS_SKIP_BUILD=1 hanya untuk menguji penjaga "build basi"; jalan normal selalu membangun ulang.
   if (process.env.SHOTS_SKIP_BUILD !== '1') {
-    console.log();
+    console.log(`[shots] membangun ulang app e2e (HEAD ${head()})`);
     const build = spawnSync('pnpm', ['--filter', '@aios/e2e', 'run', 'build:app'], {
       cwd: root,
       stdio: 'inherit',
