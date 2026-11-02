@@ -241,13 +241,13 @@ describe('engine dsh di gateway', () => {
     expect(done.error).toMatchObject({ code: 'engine_unavailable', retryable: false });
   });
 
-  it('engine selain dsh ditolak oleh skema', async () => {
+  it('engine yang tidak dikenal ditolak oleh skema (hermes, omp, dsh dikenal; validasi konteksnya di engine-force)', async () => {
     const conv = ConversationSchema.parse(
       (await env.post('/conversations', { surface: 'windows' }, token)).json(),
     );
     const res = await env.post(
       `/conversations/${conv.id}/messages`,
-      { parts: [{ type: 'text', text: 'x' }], engine: 'omp' },
+      { parts: [{ type: 'text', text: 'x' }], engine: 'pi' },
       token,
     );
     expect(res.statusCode).toBe(400);
