@@ -283,28 +283,38 @@ test('sidebar: pelat aktif MELUNCUR antar item (bukan melompat) dan pelat hover 
     'true',
   );
 
-  // Sampel posisi pelat tiap frame selama perpindahan Chat -> Jadwal.
-  await page.evaluate(() => {
-    const plate = document.querySelector('[data-plate="active"]')!;
-    const w = window as unknown as { __plateY: number[] };
-    w.__plateY = [];
-    const tick = () => {
-      w.__plateY.push(new DOMMatrixReadOnly(getComputedStyle(plate).transform).m42);
-      requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-  });
   await page.mouse.move(700, 450);
   await page.keyboard.press('Control+4');
-  await page.waitForTimeout(900);
-  const samples = await page.evaluate(() => (window as unknown as { __plateY: number[] }).__plateY);
-  const start = samples[0]!;
-  const end = samples[samples.length - 1]!;
-  const between = new Set(
-    samples.filter((y) => y > Math.min(start, end) + 1 && y < Math.max(start, end) - 1),
+  // Pelat bergerak lewat transisi CSS (transform). Dibuktikan lewat Web Animations API, bukan lewat sampel frame:
+  // animasi dijeda lalu waktunya digeser, jadi hasilnya tidak bergantung pada beban mesin.
+  await page.waitForFunction(() =>
+    document
+      .querySelector('[data-plate="active"]')
+      ?.getAnimations()
+      .some((a) => (a as CSSTransition).transitionProperty === 'transform'),
   );
-  expect(end).toBeGreaterThan(start);
-  expect(between.size, 'pelat harus melewati posisi antara').toBeGreaterThanOrEqual(3);
+  const slide = await page.evaluate(() => {
+    const plate = document.querySelector('[data-plate="active"]')!;
+    const anim = plate
+      .getAnimations()
+      .find((a) => (a as CSSTransition).transitionProperty === 'transform')!;
+    anim.pause();
+    const total = Number(anim.effect!.getComputedTiming().endTime);
+    const y = (time: number) => {
+      anim.currentTime = time;
+      return new DOMMatrixReadOnly(getComputedStyle(plate).transform).m42;
+    };
+    // Kurva pegas melampaui nilai akhir sebelum menetap, jadi titik tengah tidak dipakai; 20% waktu masih di jalan.
+    return { total, start: y(0), early: y(total * 0.2), end: y(total) };
+  });
+  expect(slide.total).toBeGreaterThan(100);
+  expect(slide.end).toBeGreaterThan(slide.start);
+  // Di awal animasi pelat berada di antara posisi awal dan akhir (meluncur), bukan melompat ke salah satu ujung.
+  expect(slide.early).toBeGreaterThan(slide.start + 1);
+  expect(slide.early).toBeLessThan(slide.end - 1);
+  await page.evaluate(() => {
+    for (const a of document.querySelector('[data-plate="active"]')!.getAnimations()) a.finish();
+  });
 
   // Link aktif tidak punya latar sendiri: yang terlihat hanya pelat.
   const bg = await page
@@ -331,38 +341,64 @@ test('panel kanan: buka dan tutup menggeser area utama bertahap, tidak melompat'
 }) => {
   await prepare(page);
   await login(page);
-  const track = () =>
-    page.evaluate(() => {
-      const main = document.querySelector('main')!;
-      const w = window as unknown as { __mainW: number[] };
-      w.__mainW = [];
-      const tick = () => {
-        w.__mainW.push(main.getBoundingClientRect().width);
-        requestAnimationFrame(tick);
+  const mainWidth = () =>
+    page.evaluate(() => document.querySelector('main')!.getBoundingClientRect().width);
+
+  // Animasi slot panel dijeda lalu digeser waktunya (Web Animations API): bukti bertahap yang tidak bergantung
+  // pada frame rate atau beban mesin. Lebar area utama harus turun mulus dari lebar awal ke lebar akhir.
+  const sweep = async (name: 'aios-panel-open' | 'aios-panel-close') => {
+    await page.waitForFunction(
+      (animation) =>
+        document
+          .querySelector('[data-panel-slot]')
+          ?.getAnimations()
+          .some((a) => (a as CSSAnimation).animationName === animation),
+      name,
+    );
+    return page.evaluate((animation) => {
+      const slot = document.querySelector('[data-panel-slot]')!;
+      const anim = slot
+        .getAnimations()
+        .find((a) => (a as CSSAnimation).animationName === animation)!;
+      anim.pause();
+      const total = Number(anim.effect!.getComputedTiming().endTime);
+      const width = (time: number) => {
+        anim.currentTime = time;
+        return document.querySelector('main')!.getBoundingClientRect().width;
       };
-      requestAnimationFrame(tick);
-    });
-  const read = () => page.evaluate(() => (window as unknown as { __mainW: number[] }).__mainW);
-  const assertSmooth = (samples: number[]) => {
-    const total = Math.abs(samples[samples.length - 1]! - samples[0]!);
-    expect(total).toBeGreaterThan(300);
-    let maxStep = 0;
-    for (let i = 1; i < samples.length; i++)
-      maxStep = Math.max(maxStep, Math.abs(samples[i]! - samples[i - 1]!));
-    // Satu loncatan akan setara seluruh perubahan; animasi 240 ms terbagi ke banyak frame.
-    expect(maxStep).toBeLessThan(total / 3);
-    expect(new Set(samples.map((x) => Math.round(x))).size).toBeGreaterThanOrEqual(4);
+      return {
+        total,
+        at0: width(0),
+        quarter: width(total / 4),
+        half: width(total / 2),
+        end: width(total),
+      };
+    }, name);
   };
 
-  await track();
+  const closed = await mainWidth();
   await page.keyboard.press('Control+j');
-  await page.waitForTimeout(700);
-  assertSmooth(await read());
+  const open = await sweep('aios-panel-open');
+  expect(open.total).toBe(240);
+  // Mulai dari lebar semula (tanpa lompatan di frame pertama), lalu menyempit bertahap sampai lebar akhir.
+  expect(Math.abs(open.at0 - closed)).toBeLessThanOrEqual(1);
+  expect(open.quarter).toBeLessThan(open.at0 - 5);
+  expect(open.half).toBeLessThan(open.quarter - 5);
+  expect(open.end).toBeLessThan(open.half - 5);
+  expect(closed - open.end).toBeGreaterThan(300);
+  await page.evaluate(() => {
+    for (const a of document.querySelector('[data-panel-slot]')!.getAnimations()) a.finish();
+  });
+  await expect.poll(mainWidth).toBeCloseTo(open.end, 0);
 
-  await track();
   await page.keyboard.press('Control+j');
-  await page.waitForTimeout(700);
-  assertSmooth(await read());
+  const close = await sweep('aios-panel-close');
+  expect(close.total).toBe(240);
+  expect(Math.abs(close.at0 - open.end)).toBeLessThanOrEqual(1);
+  expect(close.quarter).toBeGreaterThan(close.at0 + 5);
+  expect(close.half).toBeGreaterThan(close.quarter + 5);
+  expect(close.end).toBeGreaterThan(close.half + 5);
+  expect(Math.abs(close.end - closed)).toBeLessThanOrEqual(1);
 });
 
 test('lebar 1024: tanpa gulir mendatar, pulau tidak saling menimpa, judul tidak terpotong; sidebar bisa diringkas', async ({
