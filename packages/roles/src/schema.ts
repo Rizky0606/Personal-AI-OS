@@ -1,13 +1,17 @@
 import { RoleIdSchema } from '@aios/contracts';
 import { z } from 'zod';
 
-/** Skill inti anti-melenceng: dimuat untuk semua role (ROLES_AND_SKILLS.md). */
+/**
+ * Skill inti: dimuat untuk semua role (ROLES_AND_SKILLS.md). Lima pertama anti-melenceng; `rich-answers` mengatur
+ * kapan jawaban memakai komponen aios-ui, berlaku di semua mesin yang jawabannya dirender klien.
+ */
 export const CORE_SKILLS = [
   'scope-guard',
   'read-context-first',
   'plan-before-edit',
   'verify-before-done',
   'minimal-diff',
+  'rich-answers',
 ] as const;
 
 export const SkillIdSchema = z

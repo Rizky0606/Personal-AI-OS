@@ -42,7 +42,7 @@ engine: omp # omp | hermes | research
 model: coding-main # nama combo di 9Router
 fallback_model: coding-cheap
 approval: ask # ask | auto-safe (baca saja otomatis)
-skills: [scope-guard, read-context-first, plan-before-edit, verify-before-done, minimal-diff]
+skills: [scope-guard, read-context-first, plan-before-edit, verify-before-done, minimal-diff, rich-answers]
 ---
 
 # Peran

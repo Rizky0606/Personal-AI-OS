@@ -40,7 +40,7 @@ export const SKILL_PACKS: readonly SkillPack[] = [
   },
   {
     id: 'frontend',
-    skills: ['ui-baseline', 'a11y-check', 'ui-states', 'react-practices', 'rich-answers'],
+    skills: ['ui-baseline', 'a11y-check', 'ui-states', 'react-practices'],
     projectOnly: true,
     pattern:
       /\b(ui|ux|tampilan|layout|komponen|component|tombol|button|halaman|page|form|css|tailwind|style|styling|warna|responsif|responsive|navbar|modal|dialog|dark ?mode|mode gelap|react|jsx|tsx|frontend)\b/i,

@@ -50,6 +50,65 @@ export const ARTIFACT_PARTS = [
   '<script>document.getElementById("judul").textContent += " berjalan";</script>\n```\n',
 ];
 /**
+ * "[skenario:kaya]": jawaban dengan blok aios-ui, seperti yang diajarkan skill inti rich-answers. Tiga blok valid
+ * (tabel, grafik, checklist) dan satu blok rusak (kolom dan sel tidak sama) yang harus tampil sebagai kode.
+ */
+export const SCENARIO_RICH = '[skenario:kaya]';
+const richBlock = (value: unknown) => '```aios-ui\n' + JSON.stringify(value) + '\n```\n\n';
+export const RICH_PARTS = [
+  'Ini perbandingannya.\n\n',
+  richBlock({
+    version: 1,
+    components: [
+      {
+        id: 'bandingan',
+        type: 'table',
+        columns: ['Opsi', 'Cocok untuk'],
+        rows: [
+          ['SQLite', 'aplikasi kecil'],
+          ['Postgres', 'data bersama'],
+          ['MySQL', 'hosting murah'],
+        ],
+      },
+    ],
+  }),
+  'Biaya per bulan:\n\n',
+  richBlock({
+    version: 1,
+    components: [
+      {
+        id: 'biaya',
+        type: 'chart',
+        chart: 'bar',
+        label: 'Biaya per bulan',
+        labels: ['SQLite', 'Postgres', 'MySQL'],
+        values: [0, 15, 10],
+      },
+    ],
+  }),
+  'Yang perlu disiapkan:\n\n',
+  richBlock({
+    version: 1,
+    components: [
+      {
+        id: 'siap',
+        type: 'checklist',
+        label: 'Persiapan',
+        items: [
+          { id: 'cadangan', label: 'Atur cadangan harian', checked: true },
+          { id: 'indeks', label: 'Tambah indeks kolom pencarian', checked: false },
+        ],
+      },
+    ],
+  }),
+  'Satu blok ini rusak:\n\n',
+  richBlock({
+    version: 1,
+    components: [{ id: 'rusak', type: 'table', columns: ['A', 'B'], rows: [['satu']] }],
+  }),
+  'Selesai.',
+];
+/**
  * Skenario run berjalan untuk bukti visual dan tes chat. Pesan yang memuat penandanya membuat Hermes palsu
  * mengirim urutan event nyata (reasoning_content dan event SSE hermes.tool.progress) yang dipetakan adapter
  * Hermes sungguhan dan mengalir lewat gateway: 5 tool berurutan dengan durasi 400-900 ms, satu output per
@@ -223,6 +282,16 @@ export async function startFakes(): Promise<Fakes> {
         console.error('[e2e] skenario rencana gagal:', error);
         stream.end();
       }
+      return;
+    }
+    if (typeof last === 'string' && last.includes(SCENARIO_RICH)) {
+      for (const part of RICH_PARTS) {
+        stream.delta(part);
+        await sleep(120);
+      }
+      stream.usage(30, 40);
+      stream.finish();
+      stream.done();
       return;
     }
     const toolScenario =

@@ -89,6 +89,8 @@ describe('bundel sebagai pesan sistem Hermes', () => {
     for (const skill of [
       'scope-guard',
       'verify-before-done',
+      // Skill inti: jawaban kaya sampai ke Hermes di chat umum tanpa kata kunci tampilan.
+      'rich-answers',
       'answer-first',
       'clarify-once',
       'find-skills',

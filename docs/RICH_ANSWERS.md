@@ -87,7 +87,7 @@ Skill `rich-answers` mengajarkan kapan memakai komponen:
 - angka penting → `metric`;
 - jawaban pendek → teks biasa.
 
-Rich answers aktif hanya pada engine yang terbukti mendukungnya. OMP dan dsh diuji; Hermes tetap memakai Markdown biasa sampai ada bukti.
+`rich-answers` adalah skill inti: dimuat untuk semua role, di chat umum dan chat project, pada semua mesin yang jawabannya dirender klien (omp, Hermes, dsh). Skill ini tidak lagi bagian paket `frontend` dan tidak dipicu kata kunci. Batas: maksimal 3 komponen per jawaban, dan tidak dipakai untuk jawaban singkat atau percakapan biasa. Blok rusak tidak pernah menggagalkan jawaban: ditampilkan sebagai kode.
 
 ## Android
 

@@ -13,6 +13,7 @@ import {
   SKILLS_TOKEN_BUDGET,
   UnknownRoleError,
   buildBundle,
+  selectSkills,
   estimateTokens,
   loadRegistry,
   splitFrontmatter,
@@ -103,6 +104,68 @@ describe('isi agent dan skill di repo', () => {
   });
 });
 
+describe('skill inti rich-answers (jawaban kaya untuk semua role)', () => {
+  const body = registry.skills.get('rich-answers')!.body;
+
+  it('skill inti: dimuat untuk setiap agent, chat umum dan project, tanpa kata kunci', () => {
+    expect(CORE_SKILLS).toContain('rich-answers');
+    for (const id of registry.roles.keys()) {
+      const bundle = buildBundle(registry, id);
+      expect(bundle.skills, id).toContain('rich-answers');
+      expect(bundle.systemPrompt, id).toContain(body);
+    }
+  });
+
+  it('bukan lagi bagian paket frontend (projectOnly) atau paket mana pun', () => {
+    for (const pack of SKILL_PACKS) expect(pack.skills, pack.id).not.toContain('rich-answers');
+    const frontend = SKILL_PACKS.find((p) => p.id === 'frontend')!;
+    // Pesan tanpa kata kunci tampilan tetap memuatnya lewat skill inti; paket frontend tidak lagi menjadi pintunya.
+    expect(frontend.skills).not.toContain('rich-answers');
+    // Pemilihan kata kunci tidak pernah mengembalikan rich-answers (skill inti tidak termasuk hasil pemilihan).
+    for (const agent of ['general', 'project']) {
+      const picked = selectSkills('Bandingkan 3 opsi database dalam tabel dan tombol UI css', {
+        agent,
+      });
+      expect(picked.skills).not.toContain('rich-answers');
+    }
+    expect(buildBundle(registry, 'general').skills).toContain('rich-answers');
+  });
+
+  it('memandu pemilihan komponen: perbandingan, deret angka, pilihan, langkah, angka penting', () => {
+    for (const pair of [
+      ['table', 'perbandingan'],
+      ['chart', 'deret angka'],
+      ['choices', 'pilihan'],
+      ['steps', 'langkah'],
+      ['metric', 'angka penting'],
+    ] as const) {
+      expect(body.toLowerCase(), pair[0]).toContain(pair[0]);
+      expect(body.toLowerCase(), pair[1]).toContain(pair[1]);
+    }
+  });
+
+  it('menyebut kapan TIDAK dipakai, batas 3 komponen, dan contoh benar dan salah', () => {
+    expect(body).toContain('JANGAN pakai');
+    expect(body).toMatch(/jawaban singkat/);
+    expect(body).toMatch(/percakapan biasa/);
+    expect(body).toContain('Maksimal 3 komponen');
+    expect(body).toContain('Benar:');
+    expect(body).toContain('Salah:');
+    // Tidak lagi bergantung pada capability engine tertentu.
+    expect(body).not.toContain('capability');
+  });
+
+  it('contoh blok di skill adalah JSON valid menurut skema komponen', () => {
+    const start = body.indexOf('```aios-ui\n') + '```aios-ui\n'.length;
+    const block = body.slice(start, body.indexOf('\n```', start));
+    expect(block).toBeDefined();
+    const parsed = JSON.parse(block!) as { version: number; components: { type: string }[] };
+    expect(parsed.version).toBe(1);
+    expect(parsed.components.length).toBeLessThanOrEqual(3);
+    expect(parsed.components[0]!.type).toBe('table');
+  });
+});
+
 describe('skill plan-progress (rencana untuk panel Progres)', () => {
   const body = registry.skills.get('plan-progress')!.body;
 
@@ -137,7 +200,7 @@ describe('skill plan-progress (rencana untuk panel Progres)', () => {
 
   it('muat bersama paket skill terbanyak tanpa melewati anggaran token', () => {
     const bundle = buildBundle(registry, 'project', {
-      extraSkills: ['ui-baseline', 'a11y-check', 'ui-states', 'react-practices', 'rich-answers'],
+      extraSkills: ['ui-baseline', 'a11y-check', 'ui-states', 'react-practices'],
     });
     expect(bundle.omittedSkills).toEqual([]);
     expect(bundle.skills).toContain('plan-progress');
@@ -201,13 +264,16 @@ describe('bundel system prompt', () => {
 
   it('anggaran sempit: skill inti tetap masuk, skill khusus yang tidak muat dilewati utuh', () => {
     const extraSkills = ['ui-baseline', 'a11y-check', 'ui-states', 'react-practices'];
-    const tight = buildBundle(registry, 'project', { skillsBudget: 900, extraSkills });
-    expect(tight.skills.slice(0, 5)).toEqual([...CORE_SKILLS]);
+    // Anggaran sempit = hanya muat skill inti ditambah sedikit; ikut ukuran skill inti saat ini.
+    const coreTokens = buildBundle(registry, 'project', { skillsBudget: 1 }).tokens.skills;
+    const budget = coreTokens + 300;
+    const tight = buildBundle(registry, 'project', { skillsBudget: budget, extraSkills });
+    expect(tight.skills.slice(0, CORE_SKILLS.length)).toEqual([...CORE_SKILLS]);
     expect(tight.omittedSkills.length).toBeGreaterThan(0);
     for (const id of tight.omittedSkills) {
       expect(tight.systemPrompt).not.toContain(`## ${id}\n`);
     }
-    expect(tight.tokens.skills).toBeLessThanOrEqual(900);
+    expect(tight.tokens.skills).toBeLessThanOrEqual(budget);
     expect(tight.overBudget).toBe(false);
     const tiny = buildBundle(registry, 'project', { skillsBudget: 100, extraSkills });
     expect(tiny.skills).toEqual([...CORE_SKILLS]);

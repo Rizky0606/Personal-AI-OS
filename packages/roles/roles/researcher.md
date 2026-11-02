@@ -13,6 +13,7 @@ skills:
     plan-before-edit,
     verify-before-done,
     minimal-diff,
+    rich-answers,
     source-verification,
     citation,
     fact-vs-opinion,
