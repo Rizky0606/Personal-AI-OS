@@ -69,8 +69,6 @@ async function main() {
     const get = async <T>(route: string) =>
       (await (await fetch(`${stack.controlUrl}${route}`)).json()) as T;
     const config = await get<Config>('/config');
-    const repo = (await get<{ path: string }>('/repo')).path;
-    let projectRegistered = false;
 
     for (const theme of THEMES) {
       const context = await browser.newContext({
@@ -80,6 +78,8 @@ async function main() {
         baseURL: `http://127.0.0.1:${port}`,
       });
       const page = await context.newPage();
+      // Tiap tema memakai repo (project) baru: run tema pertama bisa masih menunggu tinjauan.
+      const repo = (await get<{ path: string }>('/repo')).path;
       await page.addInitScript(installE2eGlobals, { controlUrl: stack.controlUrl, pick: repo });
       const shot = async (name: string) => {
         await page.waitForTimeout(250);
@@ -145,22 +145,19 @@ async function main() {
       await shot('chat-error');
 
       await page.keyboard.press('Control+2');
-      if (!projectRegistered) {
-        await page.getByRole('link', { name: 'Kelola project' }).click();
-        await page.getByRole('button', { name: 'Tambah project' }).first().click();
-        const add = page.getByRole('dialog', { name: 'Tambah project' });
-        await add.getByRole('button', { name: 'Pilih folder' }).click();
-        await add.getByRole('button', { name: 'Izinkan folder ini' }).click();
-        await add.getByRole('button', { name: 'Daftarkan project' }).click();
-        await page.getByText('Project terdaftar.').first().waitFor();
-        projectRegistered = true;
-        await page.keyboard.press('Control+2');
-      }
+      await page.getByRole('link', { name: 'Kelola project' }).click();
+      await page.getByRole('button', { name: 'Tambah project' }).first().click();
+      const add = page.getByRole('dialog', { name: 'Tambah project' });
+      await add.getByRole('button', { name: 'Pilih folder' }).click();
+      await add.getByRole('button', { name: 'Izinkan folder ini' }).click();
+      await add.getByRole('button', { name: 'Daftarkan project' }).click();
+      await page.getByText('Project terdaftar.').first().waitFor();
+      await page.keyboard.press('Control+2');
       await shot('project');
 
       await page.keyboard.press('Control+3');
       await page.getByRole('button', { name: /^Project:/ }).click();
-      await page.getByRole('menuitemradio').first().click();
+      await page.getByRole('menuitemradio', { name: path.basename(repo) }).click();
       await shot('kanban');
 
       await page.keyboard.press('Control+4');
@@ -179,7 +176,10 @@ async function main() {
       // Menunggu izin: run omp di project berhenti di approval.requested (butuh omp di mesin ini).
       if ((await get<{ omp: boolean }>('/capabilities')).omp) {
         await page.keyboard.press('Control+2');
-        await page.getByRole('list', { name: 'Daftar project' }).getByRole('link').first().click();
+        await page
+          .getByRole('list', { name: 'Daftar project' })
+          .getByRole('link', { name: path.basename(repo) })
+          .click();
         await field.fill('[skenario:izin] Tolong tambahkan file catatan.');
         await page.getByRole('button', { name: 'Kirim', exact: true }).click();
         await page.getByText('Agent meminta izin menulis file').waitFor({ timeout: 30_000 });
