@@ -743,3 +743,5 @@ Catatan steer/follow-up: pesan yang diarahkan tidak disimpan sebagai pesan chat 
 - [ ] **Langkah turunan setelah muat ulang** untuk mesin tanpa rencana hanya dari bagian tool di pesan asisten terakhir; run lama tidak ikut.
 - [ ] **Konektor MCP** dikenali dari awalan nama tool `mcp__`; belum diverifikasi dengan konektor nyata.
 - [ ] Tes dan layar Android untuk panel Progres: P6 (fixture emas sudah ada).
+- [ ] Tes e2e `shell.spec.ts` yang mengambil sampel frame (pelat meluncur, panel tidak melompat) flaky saat mesin berbeban (gagal di run penuh, lulus sendirian); pertimbangkan toleransi frame yang hilang.
+- [ ] Tes gateway `fleets` ("creates a team...") dan `dsh` flaky saat beban (lulus sendirian).

@@ -133,3 +133,58 @@ Persentase piksel berbeda (`pnpm shots:compare baseline-p0 p1`): kolom A ambang 
 | gateway | 59 file, 613 lulus, 13 dilewati sejak awal |
 | worker | 281 lulus, 1 gagal pada run penuh: `preview.test.ts` "lampiran composer..." (timeout hook `afterEach` Playwright); lulus 8/8 saat dijalankan sendirian; worker tidak berubah dari P0 |
 | e2e desktop | 28 lulus (23 lama + 5 baru) |
+
+## P2 — Chat (2026-11-02)
+
+Cabang `fix/p2-chat` (dari ujung P1). Hasil: avatar `AgentOrb` 28 px; baris aktivitas (judul abu berkilau, baris terlipat, linimasa) di dalam jawaban, bilah lama di `ChatScreen` dihapus; ringkasan "Selesai · durasi · N langkah" untuk jawaban lama dari data run tersimpan (durasi hanya untuk status completed/failed/cancelled, tidak dikarang); fake e2e `[skenario:tool]`, `[skenario:error]`, `[skenario:izin]`. Detail: `docs/RUN_ACTIVITY.md` ("Tampilan di chat (P2)").
+
+Catatan jujur:
+- Ambang selesai "chat selesai berubah minimal 10% dibanding p1" **tidak tercapai**: 0,55% (ambang kanal 24) atau 4,4% (ambang 4). Layar itu pesan teks biasa tanpa tool, jadi hanya Orb dan satu baris ringkasan yang berubah. Perubahan besar ada di layar skenario baru yang tidak punya padanan di p1. Syarat visual lain terpenuhi: pada gambar "saat berjalan" baris aktivitas berada di kolom jawaban dengan Orb di avatar.
+- Rencana (todo) tetap tampil di AgentHud sepanjang P2 karena panel Progres belum ada; dipindah di P2B.
+- Gambar P2 di `docs/screenshots/p2/` diambil sebelum perbaikan durasi langkah "0 ms" dan sebelum PNG uji yang valid; gambar P2 terbaru ada di `p2b/` (layar skenario yang sama).
+
+## P2B — Panel Progres (2026-11-02)
+
+Cabang `fix/p2b-progres` (dari ujung P2). Tidak digabung ke `main`.
+
+### Perubahan
+
+- Kontrak (tambahan saja): event `context.used` (skill, memori: jumlah dan judul ≤ 40 karakter, lampiran: nama berkas, engine, model); `GET /conversations/:id/progress` (`plan`, `outputs` maks. 50, `used`); `openapi.json` dan `API_CONTRACT.md` diperbarui.
+- Gateway: runner mengirim `context.used` setelah role dan skill dipilih dan memori dibaca; ringkasan memori `MemoryService.summary()` (judul singkat, bukan isi); agregat progres dari event run tersimpan (`modules/chat/progress.ts`, tanpa tabel baru); `LaunchInput.attachments`.
+- Roles: skill `plan-progress` untuk agent project (omp); AgentHud tidak lagi menampilkan rencana.
+- Desktop: `buildProgress` (`realtime/progress.ts`) + fixture emas `packages/contracts/fixtures/progress/` (4 skenario); `LiveRun.contextUsed`; tab Progres (pertama) dengan linimasa, kartu Output, Digunakan, empat state; chip "Langkah N dari M" di Topbar (angka bergulir 180 ms); pintasan `Ctrl+.`; `ArtifactLightbox` dipisah dari `RunActivity`.
+- e2e: `[skenario:rencana]` (Hermes palsu menyisipkan context.used, 9 langkah tiap 600 ms, 2 artifact, diff ke event store gateway); `AuthEnv.files` dan `activeRunId`; shim HTTP e2e memakai base64 untuk respons (unduhan biner sebelumnya rusak).
+- Bug yang ditangkap tes: regex `memoryTitle` kehilangan backslash (mengganti huruf "s" dengan spasi); tes integrasi progres menangkapnya.
+
+### Bukti tersambung
+
+```
+ProgressPanel:  panes/PaneArea.tsx (PaneContent 'progress'), tab pertama PANE_TABS
+ProgressChip:   shell/Topbar.tsx (layar chat), klik -> openPanel('progress')
+buildProgress:  chat/useProgressView.ts -> ProgressPanel dan ProgressChip
+context.used:   gateway runs/runner.ts (emitContextUsed) -> liveRun.ts -> progress.ts
+getConversationProgress: api/gateway.ts -> api/queries.ts -> useProgressView
+TodoPanel:      dihapus; rencana hanya di panel Progres
+```
+
+### Bukti visual
+
+`docs/screenshots/p2b/` (44 gambar, cap `3c399d2`): `<tema>-progres-langkah7`, `-progres-selesai`, `-progres-sebelumnya-dibuka`, serta layar skenario chat (`chat-tool3`, `chat-tool3-dibuka`, `chat-tool-selesai`, `chat-error`, `chat-izin`). Perbandingan p2b vs p1 (ambang kanal 24 | 4): chat-kosong 0,00% | 0,00%, chat-selesai 0,55% | 4,38%, panel-kanan 0,57% | 3,10%; tiga layar progres per tema dan layar skenario tidak punya padanan di p1 (hanya di B).
+
+### Pemeriksaan
+
+| Pemeriksaan | Hasil |
+| --- | --- |
+| typecheck, eslint + prettier | lulus |
+| contracts / roles / adapters / ui-tokens | 149 / 41 / 102 (+2 dilewati) / 28 lulus |
+| desktop | 93 file, 879 tes lulus |
+| gateway | run penuh terakhir: 625 lulus, 3 gagal. Dua diperbarui karena perilaku baru (urutan event memuat `context.used`; skill `plan-progress` di daftar role) dan lulus 27/27 setelahnya. `fleets` ("status failed") flaky: lulus 6/6 sendirian. Gateway penuh belum dijalankan ulang setelah dua perbaikan itu |
+| tes integrasi progres (Postgres) | 11 lulus |
+| e2e desktop | run penuh terakhir 31 lulus, 2 gagal (`shell.spec`: sampel frame pelat dan panel) yang lulus 12/12 saat `shell.spec.ts` dijalankan sendirian (flaky saat mesin berbeban). Run penuh sebelumnya 33/33 |
+
+### Tidak diverifikasi
+
+- Perilaku agent omp sungguhan mengikuti skill `plan-progress` (butuh omp dan model nyata); tes hanya memeriksa isi skill dan pemuatannya.
+- Konektor MCP (dikenali dari awalan nama tool `mcp__`).
+- Panel Progres di Android (P6).
+- Judul fakta memori berasal dari 40 karakter pertama teks fakta (lihat BACKLOG "Temuan P2B").
