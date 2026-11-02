@@ -251,7 +251,8 @@ export async function startStack(): Promise<Stack> {
             headers: [...upstream.headers.entries()].filter(
               ([k]) => k !== 'content-encoding' && k !== 'content-length',
             ),
-            body: await upstream.text(),
+            // Base64 supaya respons biner (unduh gambar) tidak rusak oleh dekode teks.
+            body: Buffer.from(await upstream.arrayBuffer()).toString('base64'),
           });
         }
         res.writeHead(404).end();
