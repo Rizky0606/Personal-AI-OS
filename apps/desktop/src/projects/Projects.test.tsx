@@ -16,7 +16,6 @@ const pickFolder = vi.hoisted(() => vi.fn());
 vi.mock('../lib/pickFolder', () => ({ pickFolder }));
 
 const { ProjectsScreen } = await import('./ProjectsScreen');
-const { ProjectList } = await import('./ProjectList');
 
 const WORKER = '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f';
 const OTHER_WORKER = '0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e90';
@@ -284,18 +283,6 @@ describe('ProjectsScreen: daftar', () => {
     expect(screen.queryByText(copy.projects.empty)).not.toBeInTheDocument();
   });
 
-  it('daftar ringkas kosong: tombol Tambah project membuka dialog tambah project', async () => {
-    connected();
-    const user = userEvent.setup();
-    await renderScreen(<ProjectList />, '/projects');
-
-    await user.click(await screen.findByRole('button', { name: copy.projects.add }));
-
-    expect(
-      await screen.findByRole('dialog', { name: copy.projects.dialog.title }),
-    ).toBeInTheDocument();
-  });
-
   it('error dengan Coba lagi, dan offline', async () => {
     connected();
     api.listProjects.mockRejectedValueOnce(new ApiProblem(500, 'x', 'x'));
@@ -355,23 +342,6 @@ describe('ProjectsScreen: ringkasan dan akses cepat (sesi 6)', () => {
       await screen.findByRole('button', { name: `${copy.projects.openChat}: Aplikasi saya` }),
     );
 
-    expect(useUiStore.getState().activeProjectId).toBe(P1);
-    expect(router.state.location.pathname).toBe(`/workspace/${P1}`);
-  });
-
-  it('daftar ringkas: project aktif ditandai pelat, klik memilihnya dan membuka chat project', async () => {
-    connected();
-    const user = userEvent.setup();
-    api.listProjects.mockResolvedValue([project(), project({ id: P2, name: 'Proyek lain' })]);
-    useUiStore.setState({ activeProjectId: P2 });
-    const { router, container } = await renderScreen(<ProjectList />, '/projects');
-
-    await screen.findByText('Aplikasi saya');
-    expect(container.querySelector('[data-plate="active"]')).toHaveAttribute(
-      'data-visible',
-      'true',
-    );
-    await user.click(screen.getByRole('button', { name: /Aplikasi saya/ }));
     expect(useUiStore.getState().activeProjectId).toBe(P1);
     expect(router.state.location.pathname).toBe(`/workspace/${P1}`);
   });

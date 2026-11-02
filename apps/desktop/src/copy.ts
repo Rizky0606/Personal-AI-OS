@@ -25,6 +25,7 @@ export const copy = {
     searchHint: 'Ctrl K',
     runActive: 'Berjalan',
     modelAuto: 'Model otomatis',
+    roleHint: 'Agent yang menjawab pesan terakhir di percakapan ini.',
     palette: 'Palet perintah',
     panels: {
       progress: 'Progres',
@@ -386,6 +387,8 @@ export const copy = {
     modelAutoHint: 'Gateway memilih model untuk setiap pesan.',
     modelKind: { model: 'Model', combo: 'Kombinasi' },
     modelLabel: 'Model untuk pesan berikutnya',
+    modelScope:
+      'Berlaku untuk agent project (omp) dan dsh. Chat umum lewat Hermes memakai model yang diatur di server Hermes.',
     modelLoading: 'Memuat daftar model',
     modelEmpty: 'Belum ada model dari server. Muat ulang daftar model.',
     reduceMotion: 'Kurangi gerakan',

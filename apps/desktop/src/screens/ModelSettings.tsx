@@ -64,6 +64,7 @@ export function ModelSettings() {
         </Button>
       }
     >
+      <p className="mb-2 text-ui text-text-2">{copy.settings.modelScope}</p>
       <div role="radiogroup" aria-label={copy.settings.modelLabel} className="flex flex-col gap-2">
         {options.map((option, i) => {
           const checked = option.value === model;

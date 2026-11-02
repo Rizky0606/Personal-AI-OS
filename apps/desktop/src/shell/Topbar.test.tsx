@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { copy } from '../copy';
 import { useUiStore } from '../state/uiStore';
 import { api, fakeRealtime, resetApi } from '../test/fakeServices';
-import { models } from '../test/fixtures';
+import { models, roles } from '../test/fixtures';
 import { renderScreen } from '../test/render';
 
 vi.mock('../app/services', async () => (await import('../test/fakeServices')).fakeServices);
@@ -35,6 +35,7 @@ beforeEach(() => {
   useUiStore.setState(useUiStore.getInitialState(), true);
   api.listProjects.mockResolvedValue([project]);
   api.listModels.mockResolvedValue(models);
+  api.listRoles.mockResolvedValue(roles);
   setOnline(true);
 });
 afterEach(() => vi.restoreAllMocks());
@@ -74,6 +75,18 @@ describe('Topbar', () => {
     expect(screen.getByRole('button', { name: copy.shell.toggleRightPanel })).toHaveAttribute(
       'aria-pressed',
       'true',
+    );
+  });
+
+  it('chip agent: tidak ada sebelum run, lalu menampilkan agent terakhir dengan penjelasan', async () => {
+    await renderTopbar();
+    expect(screen.queryByText('Umum', { exact: true })).not.toBeInTheDocument();
+    act(() => useUiStore.getState().setActiveRole('general'));
+    const chip = await screen.findByText('Umum', { exact: true });
+    expect(chip.closest('[data-chip]')).toHaveAttribute('title', copy.shell.roleHint);
+    act(() => useUiStore.getState().setActiveRole(null));
+    await waitFor(() =>
+      expect(screen.queryByText('Umum', { exact: true })).not.toBeInTheDocument(),
     );
   });
 

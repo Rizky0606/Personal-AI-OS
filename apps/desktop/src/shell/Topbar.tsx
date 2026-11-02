@@ -1,5 +1,5 @@
-import { Cpu, FolderGit2, PanelRight, Plus } from 'lucide-react';
-import { useModels } from '../api/queries';
+import { Bot, Cpu, FolderGit2, PanelRight, Plus } from 'lucide-react';
+import { useModels, useRoles } from '../api/queries';
 import { useConnection, useOnline } from '../app/hooks';
 import { copy } from '../copy';
 import { cn } from '../lib/cn';
@@ -90,6 +90,9 @@ export function Topbar({ title, chat, action, rightPanelOpen, onToggleRightPanel
   const modelId = useUiStore((s) => s.model);
   const project = useProjects().data?.find((p) => p.id === activeProjectId);
   const models = useModels().data;
+  // Agent terakhir yang menjawab; baru ada setelah sebuah run, jadi tidak ada chip kosong sebelum itu.
+  const activeRole = useUiStore((s) => s.activeRole);
+  const roleName = useRoles().data?.find((r) => r.id === activeRole)?.name ?? activeRole;
   const modelLabel = modelId
     ? (models?.find((m) => m.id === modelId)?.label ?? modelId)
     : copy.shell.modelAuto;
@@ -124,6 +127,14 @@ export function Topbar({ title, chat, action, rightPanelOpen, onToggleRightPanel
                 />
                 {copy.shell.runActive}
               </span>
+            ) : null}
+            {roleName ? (
+              <Chip
+                icon={<Bot size={14} strokeWidth={1.5} aria-hidden="true" className="shrink-0" />}
+                hint={copy.shell.roleHint}
+              >
+                {roleName}
+              </Chip>
             ) : null}
             <Chip
               icon={<Cpu size={14} strokeWidth={1.5} aria-hidden="true" className="shrink-0" />}

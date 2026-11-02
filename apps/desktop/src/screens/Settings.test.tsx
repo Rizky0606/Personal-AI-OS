@@ -73,6 +73,8 @@ describe('SettingsScreen: pemilih model (memuat, kosong, error, sukses)', () => 
     await renderScreen(<SettingsScreen />, '/settings');
     const region = await group();
     await within(region).findByText('GPT X');
+    // Cakupan pilihan dijelaskan: tidak berlaku untuk chat umum (Hermes).
+    expect(within(region).getByText(copy.settings.modelScope)).toBeInTheDocument();
     // Keterangan hanya dari data server (jenis, penyedia, id): berbeda untuk tiap model, tanpa kalimat karangan.
     expect(within(region).getByText('Kombinasi · router · auto')).toBeInTheDocument();
     expect(within(region).getByText('Model · openai · gpt-x')).toBeInTheDocument();
