@@ -273,8 +273,12 @@ export const SendMessageRequestSchema = z
     planOnly: z.boolean().optional(),
     /** Cari di web untuk pesan ini: hasil pencarian bernomor ditempel ke prompt agent (chat umum dan project). */
     webSearch: z.boolean().optional(),
-    /** Pilih mesin untuk pesan ini: dsh = DeepSeek Harness di server. */
-    engine: z.literal('dsh').optional(),
+    /**
+     * Memaksa mesin untuk pesan ini; tanpa ini gateway memilih menurut konteks. `omp` hanya di percakapan project
+     * (ditolak 422 `project_required` di chat umum); `hermes` di dalam project merutekan ke agent umum lewat Hermes
+     * (obrolan tanpa folder project); `dsh` hanya di chat umum (ditolak 422 `engine_not_for_project` di project).
+     */
+    engine: z.enum(['hermes', 'omp', 'dsh']).optional(),
     /** Aksi komponen rich answer; dikirim sebagai pesan user baru, bukan efek samping lokal. */
     followUp: RichAnswerFollowUpSchema.optional(),
   })

@@ -34,12 +34,19 @@ describe('engineView: ketersediaan menurut gateway dan konteks', () => {
     expect(view.engineId).toBe('hermes');
   });
 
-  it('di dalam project: omp bisa dipilih; Hermes dan dsh nonaktif karena hanya untuk chat umum', () => {
+  it('di dalam project: omp dan Hermes bisa dipilih; dsh nonaktif karena hanya untuk chat umum', () => {
     const view = engineView('auto', REPORT, true);
     expect(option(view, 'omp').disabled).toBe(false);
-    expect(option(view, 'hermes').reason).toBe(copy.chat.engine.generalOnly);
+    expect(option(view, 'hermes').disabled).toBe(false);
     expect(option(view, 'dsh').reason).toBe(copy.chat.engine.generalOnly);
     expect(view.engineId).toBe('omp');
+    // Hermes dipaksa di project: mesin yang menjawab Hermes, jadi model dikunci dan tanpa rencana.
+    expect(engineView('hermes', REPORT, true)).toMatchObject({
+      effective: 'hermes',
+      engineId: 'hermes',
+      supportsModelPick: false,
+      supportsTodo: false,
+    });
   });
 
   it('mesin yang dilaporkan tidak tersedia tampil nonaktif dengan alasan dari gateway apa adanya', () => {
@@ -70,15 +77,15 @@ describe('engineView: ketersediaan menurut gateway dan konteks', () => {
     expect(option(view, 'dsh').disabled).toBe(true);
   });
 
-  it('dsh dipilih dan tersedia: dikirim sebagai engine "dsh", ditandai pratinjau', () => {
+  it('pilihan eksplisit dikirim apa adanya, ditandai pratinjau untuk dsh', () => {
     const view = engineView('dsh', REPORT, false);
     expect(view.effective).toBe('dsh');
     expect(option(view, 'dsh').preview).toBe(true);
     expect(wireEngine(view.effective)).toBe('dsh');
-    // Otomatis, omp, dan Hermes tidak mengirim apa pun: konteks yang memilih.
+    // Hermes dan omp ikut dikirim bila dipilih sendiri; hanya Otomatis yang tidak mengirim apa pun.
     expect(wireEngine('auto')).toBeUndefined();
-    expect(wireEngine('hermes')).toBeUndefined();
-    expect(wireEngine('omp')).toBeUndefined();
+    expect(wireEngine('hermes')).toBe('hermes');
+    expect(wireEngine('omp')).toBe('omp');
   });
 
   it('kemampuan mengikuti mesin yang menjawab: Hermes kunci model, dsh dan omp membuka; todo hanya omp', () => {

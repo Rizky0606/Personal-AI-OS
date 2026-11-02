@@ -4529,6 +4529,8 @@
           "engine": {
             "type": "string",
             "enum": [
+              "hermes",
+              "omp",
               "dsh"
             ]
           },

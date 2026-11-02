@@ -34,7 +34,8 @@ const LABELS: Record<EngineChoice, string> = {
 };
 
 /**
- * Menghitung pemilih mesin dari laporan gateway dan konteks. omp butuh project; Hermes dan dsh berjalan di chat umum.
+ * Menghitung pemilih mesin dari laporan gateway dan konteks. omp butuh project; dsh hanya di chat umum; Hermes bisa
+ * dipakai di keduanya (di dalam project, jawabannya lewat agent umum tanpa folder project).
  * Mesin yang tidak bisa dipakai tetap tampil, nonaktif dengan alasannya. Sebelum laporan gateway tiba (atau gagal),
  * hanya Otomatis yang bisa dipilih.
  */
@@ -49,7 +50,7 @@ export function engineView(
     const contextReason =
       value === 'omp' && !inProject
         ? copy.chat.engine.needsProject
-        : value !== 'omp' && inProject
+        : value === 'dsh' && inProject
           ? copy.chat.engine.generalOnly
           : undefined;
     const reason =
@@ -83,9 +84,9 @@ export function engineView(
   };
 }
 
-/** Nilai `engine` di permintaan kirim pesan: hanya dsh yang perlu dikirim; yang lain dipilih otomatis oleh konteks. */
-export const wireEngine = (effective: EngineChoice): 'dsh' | undefined =>
-  effective === 'dsh' ? 'dsh' : undefined;
+/** Nilai `engine` di permintaan kirim pesan: pilihan eksplisit dikirim apa adanya; Otomatis tidak mengirim apa pun. */
+export const wireEngine = (effective: EngineChoice): 'hermes' | 'omp' | 'dsh' | undefined =>
+  effective === 'auto' ? undefined : effective;
 
 /** Kunci pilihan untuk chat yang belum punya id percakapan; dipindah ke id sungguhan saat percakapan dibuat. */
 export const NEW_CHAT_ENGINE_KEY = 'baru';

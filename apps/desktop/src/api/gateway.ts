@@ -123,8 +123,8 @@ export interface MessageInput {
   webSearch?: boolean | undefined;
   /** Skill tambahan untuk pesan ini (menang atas pemilihan otomatis). */
   skills?: readonly string[] | undefined;
-  /** Mesin pilihan; hanya `dsh` yang perlu dikirim (yang lain mengikuti konteks). */
-  engine?: 'dsh' | undefined;
+  /** Mesin yang dipaksa untuk pesan ini; tanpa ini gateway memilih menurut konteks. */
+  engine?: 'hermes' | 'omp' | 'dsh' | undefined;
   followUp?: RichAnswerFollowUp | undefined;
 }
 

@@ -119,6 +119,24 @@ describe('pemilih mesin di composer', () => {
     );
   });
 
+  it('Hermes dipilih sendiri di project: terkirim sebagai engine "hermes", model dikunci', async () => {
+    useUiStore.getState().setActiveProject(PROJECT);
+    const user = userEvent.setup();
+    await renderScreen(<ChatScreen conversationId={CONV} />);
+    await user.click(await enginePill());
+    await user.click(await screen.findByRole('menuitemradio', { name: /^Hermes/ }));
+    expect(
+      await screen.findByRole('button', {
+        name: `${copy.chat.model.label}: ${copy.chat.model.hermesFixed}`,
+      }),
+    ).toBeDisabled();
+    await user.type(field(), 'tanya{Enter}');
+    expect(api.sendMessage).toHaveBeenCalledWith(
+      CONV,
+      expect.objectContaining({ text: 'tanya', engine: 'hermes' }),
+    );
+  });
+
   it('Otomatis tidak mengirim field engine', async () => {
     const user = userEvent.setup();
     await renderScreen(<ChatScreen conversationId={CONV} />);
@@ -171,7 +189,7 @@ describe('pemilih mesin di composer', () => {
     expect(useUiStore.getState().engineByConversation).toEqual({ [CONV]: 'dsh' });
   });
 
-  it('di project: omp bisa dipilih; Hermes dan dsh nonaktif karena hanya untuk chat umum', async () => {
+  it('di project: omp dan Hermes bisa dipilih; dsh nonaktif karena hanya untuk chat umum', async () => {
     useUiStore.getState().setActiveProject(PROJECT);
     const user = userEvent.setup();
     await renderScreen(<ChatScreen conversationId={CONV} />);
@@ -181,11 +199,13 @@ describe('pemilih mesin di composer', () => {
       'aria-disabled',
       'true',
     );
-    for (const name of [/^Hermes/, /^dsh/]) {
-      const item = screen.getByRole('menuitemradio', { name });
-      expect(item).toHaveAttribute('aria-disabled', 'true');
-      expect(item).toHaveTextContent(copy.chat.engine.generalOnly);
-    }
+    expect(screen.getByRole('menuitemradio', { name: /^Hermes/ })).not.toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+    const dsh = screen.getByRole('menuitemradio', { name: /^dsh/ });
+    expect(dsh).toHaveAttribute('aria-disabled', 'true');
+    expect(dsh).toHaveTextContent(copy.chat.engine.generalOnly);
   });
 
   it('di project dengan worker mati: omp nonaktif dengan alasan dari gateway', async () => {

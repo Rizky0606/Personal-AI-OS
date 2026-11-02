@@ -361,13 +361,14 @@ export function createChatService(deps: {
     prompt: string;
     skills?: readonly string[] | undefined;
     skillsOff?: readonly string[] | undefined;
-    engine?: 'dsh';
+    engine?: 'hermes' | 'omp' | 'dsh';
   }): LaunchInput['resolveRole'] {
     return async () => {
       const result = routing.route({
         message: args.prompt,
         surface: args.conversation.surface,
-        projectId: args.conversation.projectId,
+        // Hermes dipaksa di dalam project: obrolan lewat agent umum, tanpa folder project.
+        projectId: args.engine === 'hermes' ? null : args.conversation.projectId,
         ...(args.skills ? { skills: args.skills } : {}),
         ...(args.skillsOff ? { skillsOff: args.skillsOff } : {}),
       });
@@ -510,6 +511,13 @@ export function createChatService(deps: {
           422,
           'engine_not_for_project',
           'Engine dsh berjalan di server tanpa folder project. Pakai chat umum, atau agent project untuk kode.',
+        );
+      }
+      if (input.engine === 'omp' && !conversation.projectId) {
+        throw new AppError(
+          422,
+          'project_required',
+          'Agent omp hanya bisa dipakai di percakapan project. Pilih project lalu mulai chat dari sana.',
         );
       }
 
