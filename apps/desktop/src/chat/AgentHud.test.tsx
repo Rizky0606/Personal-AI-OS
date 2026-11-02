@@ -41,28 +41,25 @@ beforeEach(() => {
 });
 
 describe('Agent HUD', () => {
-  it('tersembunyi total bila tidak ada rencana, antrean, maupun subagent', () => {
+  it('tersembunyi total bila tidak ada antrean maupun subagent', () => {
     const { container, rerender } = render(<AgentHud live={undefined} />);
     expect(container).toBeEmptyDOMElement();
     rerender(<AgentHud live={run({})} />);
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('terbuka secara bawaan: rencana dengan kemajuan, antrean, dan ringkasan di header', () => {
+  it('terbuka secara bawaan: antrean dan ringkasan di header (tanpa rencana)', () => {
     render(
       <AgentHud
         live={run({
-          todos: phases,
           queue: { steering: ['fokus ke tes'], followUp: ['lalu lint'] },
           subagents: [subagent],
         })}
       />,
     );
     const toggle = screen.getByRole('button', { expanded: true, name: /Agent bekerja/ });
-    expect(toggle).toHaveTextContent('1/3 tugas · 2 antre · 1 subagent');
-
-    const plan = screen.getByRole('region', { name: copy.chat.todo.title });
-    expect(within(plan).getByRole('progressbar')).toHaveAttribute('aria-valuenow', '1');
+    expect(toggle).toHaveTextContent('2 antre · 1 subagent');
+    expect(toggle).not.toHaveTextContent('tugas');
     const queue = screen.getByRole('list', { name: copy.chat.queue.title });
     expect(within(queue).getByText('fokus ke tes')).toBeInTheDocument();
     expect(within(queue).getByText('lalu lint')).toBeInTheDocument();
@@ -70,7 +67,7 @@ describe('Agent HUD', () => {
 
   it('tombol lipat menyembunyikan isi tetapi header tetap tampil', async () => {
     const user = userEvent.setup();
-    render(<AgentHud live={run({ todos: phases })} />);
+    render(<AgentHud live={run({ queue: { steering: ['fokus ke tes'], followUp: [] } })} />);
 
     await user.click(screen.getByRole('button', { name: /Agent bekerja/ }));
 
@@ -78,7 +75,12 @@ describe('Agent HUD', () => {
       'aria-expanded',
       'false',
     );
-    expect(screen.queryByRole('region', { name: copy.chat.todo.title })).not.toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: copy.chat.queue.title })).not.toBeInTheDocument();
+  });
+
+  it('rencana agent tidak ditampilkan di HUD (ada di panel Progres): hanya rencana berarti HUD tersembunyi', () => {
+    const { container } = render(<AgentHud live={run({ todos: phases })} />);
+    expect(container).toBeEmptyDOMElement();
   });
 
   it('tombol tarik mengirim antrean dan teks persis', async () => {

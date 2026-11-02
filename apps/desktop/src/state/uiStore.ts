@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { ActivityStep } from '../activity/activity';
+import type { SavedTool } from '../realtime/activity';
 import type { SubagentView } from '../realtime/liveRun';
 import { persist } from 'zustand/middleware';
 import {
@@ -17,6 +18,13 @@ import {
 
 export type ThemeMode = 'system' | 'light' | 'dark';
 export type RightPanelTab = PaneTab;
+
+/** Chat yang terbuka bagi panel Progres: percakapan, run terbaru, dan langkah tool tersimpan (mesin tanpa rencana). */
+export interface ProgressSource {
+  conversationId: string;
+  runId: string | null;
+  savedTools: SavedTool[];
+}
 
 const newPaneId = () => Math.random().toString(36).slice(2, 10);
 
@@ -65,6 +73,9 @@ interface UiState {
   /** Langkah tool run terbaru di chat yang terbuka, untuk panel Aktivitas dan penanda di Berkas; tidak disimpan. */
   agentSteps: ActivityStep[];
   setAgentSteps: (steps: ActivityStep[]) => void;
+  /** Sumber data panel Progres dan chip topbar: percakapan chat yang terbuka dan run terbarunya; tidak disimpan. */
+  progressSource: ProgressSource | null;
+  setProgressSource: (source: ProgressSource | null) => void;
   /** Subagent run terbaru di chat yang terbuka, untuk panel Aktivitas; tidak disimpan. */
   agentSubagents: SubagentView[];
   setAgentSubagents: (subagents: SubagentView[]) => void;
@@ -134,6 +145,8 @@ export const useUiStore = create<UiState>()(
       setSkillPacks: (skillPacks) => set({ skillPacks }),
       agentSteps: [],
       setAgentSteps: (agentSteps) => set({ agentSteps }),
+      progressSource: null,
+      setProgressSource: (progressSource) => set({ progressSource }),
       agentSubagents: [],
       setAgentSubagents: (agentSubagents) => set({ agentSubagents }),
       fileRequest: null,

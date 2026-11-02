@@ -110,6 +110,7 @@ export function Shell() {
       newChat: requestNewChat,
       toggleSidebar,
       toggleRightPanel,
+      openProgress: () => useUiStore.getState().openPanel('progress'),
       navigate: (slot: number) => {
         const target = routeForSlot(slot);
         if (target) void navigate({ to: target });

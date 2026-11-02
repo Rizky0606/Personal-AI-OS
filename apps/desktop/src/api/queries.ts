@@ -31,6 +31,15 @@ export const useConversation = (id: string | undefined) =>
     enabled: id !== undefined,
   });
 
+/** Agregat panel Progres satu percakapan; diambil ulang saat run selesai (lihat `useProgressView`). */
+export const useConversationProgress = (conversationId: string | undefined) =>
+  useQuery({
+    queryKey: ['progress', conversationId],
+    queryFn: () => api.getConversationProgress(conversationId!),
+    enabled: conversationId !== undefined,
+    staleTime: 30_000,
+  });
+
 export const useMessages = (conversationId: string | undefined) =>
   useInfiniteQuery({
     queryKey: ['messages', conversationId],

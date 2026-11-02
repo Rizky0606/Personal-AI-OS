@@ -6,6 +6,8 @@ export interface ShortcutActions {
   newChat(): void;
   toggleSidebar(): void;
   toggleRightPanel(): void;
+  /** Ctrl+.: membuka panel kanan di tab Progres. */
+  openProgress(): void;
   /** Ctrl+1..6: Chat, Project, Kanban, Jadwal, Riset, Pengaturan (urutan sidebar). */
   navigate(slot: number): void;
 }
@@ -24,12 +26,14 @@ export function shortcutFor(
       return 'toggleSidebar';
     case 'j':
       return 'toggleRightPanel';
+    case '.':
+      return 'openProgress';
     default:
       return /^\d$/.test(event.key) && routeForSlot(Number(event.key)) ? 'navigate' : null;
   }
 }
 
-/** Shortcut global: Ctrl+K palette, Ctrl+N chat baru, Ctrl+B sidebar, Ctrl+J panel kanan, Ctrl+1..6 pindah layar. */
+/** Shortcut global: Ctrl+K palette, Ctrl+N chat baru, Ctrl+B sidebar, Ctrl+J panel kanan, Ctrl+. panel Progres, Ctrl+1..6 pindah layar. */
 export function useShortcuts(actions: ShortcutActions): void {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {

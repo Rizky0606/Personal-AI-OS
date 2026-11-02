@@ -1,6 +1,14 @@
-export type PaneTab = 'preview' | 'diff' | 'terminal' | 'files' | 'git' | 'activity';
+export type PaneTab = 'progress' | 'preview' | 'diff' | 'terminal' | 'files' | 'git' | 'activity';
 
-export const PANE_TABS: PaneTab[] = ['preview', 'diff', 'terminal', 'files', 'git', 'activity'];
+export const PANE_TABS: PaneTab[] = [
+  'progress',
+  'preview',
+  'diff',
+  'terminal',
+  'files',
+  'git',
+  'activity',
+];
 
 export type SplitDirection = 'row' | 'column';
 
@@ -37,10 +45,13 @@ export function leaves(node: PaneNode): PaneLeaf[] {
 
 export const countPanes = (node: PaneNode): number => leaves(node).length;
 
+/** Urutan pilihan untuk pane baru: Progres (tab pertama di daftar) paling akhir agar membagi panel tetap memilih tab kerja. */
+const SPLIT_ORDER: PaneTab[] = [...PANE_TABS.filter((t) => t !== 'progress'), 'progress'];
+
 /** Tab untuk pane baru: yang belum tampil di pane lain; bila semuanya sudah tampil, sama dengan sumbernya. */
 export function nextTab(node: PaneNode, source: PaneTab): PaneTab {
   const used = new Set(leaves(node).map((l) => l.tab));
-  return PANE_TABS.find((t) => !used.has(t)) ?? source;
+  return SPLIT_ORDER.find((t) => !used.has(t)) ?? source;
 }
 
 /** Membagi pane menjadi dua; pane baru ada di sisi kedua. Tidak berubah bila sudah mencapai batas. */

@@ -59,6 +59,7 @@ export const api: FakeApi = {
   uploadFile: fn<'uploadFile'>(),
   forkConversation: fn<'forkConversation'>(),
   getConversation: fn<'getConversation'>(),
+  getConversationProgress: fn<'getConversationProgress'>(),
   editMessage: fn<'editMessage'>(),
   deleteMessage: fn<'deleteMessage'>(),
   getRun: fn<'getRun'>(),
@@ -204,6 +205,20 @@ export function emit(channel: string, event: ServerEvent, seq = 1): void {
 }
 
 /** Mengosongkan semua tiruan dan memberi jawaban kosong yang masuk akal untuk daftar. */
+/** Agregat progres kosong (percakapan tanpa run). */
+export const emptyProgress = () => ({
+  plan: null,
+  outputs: [],
+  used: {
+    skills: [],
+    engine: null,
+    model: null,
+    memory: { read: 0, items: [] },
+    attachments: [],
+    tools: [],
+  },
+});
+
 export function resetApi(): void {
   for (const mock of Object.values(api)) mock.mockReset();
   fakeRealtime.subscribe.mockClear();
@@ -221,6 +236,8 @@ export function resetApi(): void {
   api.listSpaceDocuments.mockResolvedValue([]);
   api.listSpaceConversations.mockResolvedValue({ items: [], nextBefore: null });
   api.listProjects.mockResolvedValue([]);
+  api.getConversationProgress.mockResolvedValue(emptyProgress());
+  api.downloadFile.mockResolvedValue(new Blob(['x'], { type: 'image/png' }));
   for (const mock of Object.values(workerApi)) mock.mockReset();
   workerApi.folders.mockResolvedValue([]);
   workerApi.bindings.mockResolvedValue([]);

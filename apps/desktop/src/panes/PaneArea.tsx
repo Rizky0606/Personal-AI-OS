@@ -6,6 +6,7 @@ import {
   FolderTree,
   GitBranch,
   GitCompare,
+  ListChecks,
   Rows2,
   SquareTerminal,
   X,
@@ -17,6 +18,7 @@ import { ActivityPanel } from '../activity/ActivityPanel';
 import { FilesPanel } from '../files/FilesPanel';
 import { GitPanel } from '../git/GitPanel';
 import { PreviewPanel } from '../preview/PreviewPanel';
+import { ProgressPanel } from '../progress/ProgressPanel';
 import { DiffPanel } from '../review/DiffPanel';
 import { useUiStore } from '../state/uiStore';
 import { TerminalPanel } from '../terminal/TerminalPanel';
@@ -28,6 +30,7 @@ const KEY_STEP = 0.05;
 /** Ikon tiap tab; label tetap teks asli (hanya disembunyikan visual di pane sempit). */
 
 function PaneContent({ tab }: { tab: PaneTab }) {
+  if (tab === 'progress') return <ProgressPanel />;
   if (tab === 'diff') return <DiffPanel />;
   if (tab === 'preview') return <PreviewPanel />;
   if (tab === 'terminal') return <TerminalPanel />;
@@ -37,6 +40,7 @@ function PaneContent({ tab }: { tab: PaneTab }) {
 }
 
 const TAB_ICONS: Record<PaneTab, typeof Eye> = {
+  progress: ListChecks,
   preview: Eye,
   diff: GitCompare,
   terminal: SquareTerminal,

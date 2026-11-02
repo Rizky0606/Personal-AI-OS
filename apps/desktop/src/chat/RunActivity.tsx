@@ -1,10 +1,11 @@
-import { ChevronDown, ExternalLink, X } from 'lucide-react';
+import { ChevronDown, ExternalLink } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { copy } from '../copy';
 import { api } from '../app/services';
 import { cn } from '../lib/cn';
 import { formatElapsed, type Activity } from '../realtime/activity';
 import type { LiveArtifact } from '../realtime/liveRun';
+import { ArtifactLightbox, isPreviewableImage } from './ArtifactLightbox';
 import { ToolStepRow } from './ToolStepRow';
 
 export interface RunActivityProps {
@@ -17,7 +18,6 @@ export interface RunActivityProps {
 
 function ArtifactPreviews({ artifacts }: { artifacts: LiveArtifact[] }) {
   const [selected, setSelected] = useState<LiveArtifact | null>(null);
-  const [url, setUrl] = useState<string | null>(null);
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
   useEffect(() => {
     let alive = true;
@@ -25,14 +25,14 @@ function ArtifactPreviews({ artifacts }: { artifacts: LiveArtifact[] }) {
     void Promise.all(
       artifacts
         .slice(0, 4)
-        .filter((file) => /^image\/(png|jpeg|webp|gif)$/i.test(file.mime))
+        .filter((file) => isPreviewableImage(file.mime))
         .map(async (file) => {
           try {
             const next = URL.createObjectURL(await api.downloadFile(file.fileId));
             urls.push(next);
             if (alive) setThumbs((current) => ({ ...current, [file.fileId]: next }));
           } catch {
-            /* full preview reports the actionable error */
+            /* pratinjau penuh melaporkan galatnya */
           }
         }),
     );
@@ -41,18 +41,6 @@ function ArtifactPreviews({ artifacts }: { artifacts: LiveArtifact[] }) {
       urls.forEach((next) => URL.revokeObjectURL(next));
     };
   }, [artifacts]);
-  const [failed, setFailed] = useState(false);
-  async function open(file: LiveArtifact) {
-    setSelected(file);
-    setUrl(null);
-    setFailed(false);
-    try {
-      const blob = await api.downloadFile(file.fileId);
-      setUrl(URL.createObjectURL(blob));
-    } catch {
-      setFailed(true);
-    }
-  }
   return (
     <>
       <div className="flex gap-2">
@@ -61,7 +49,7 @@ function ArtifactPreviews({ artifacts }: { artifacts: LiveArtifact[] }) {
             key={file.fileId}
             type="button"
             aria-label={`Preview: ${file.name}`}
-            onClick={() => void open(file)}
+            onClick={() => setSelected(file)}
             className="size-14 overflow-hidden rounded-control border border-border"
           >
             {thumbs[file.fileId] ? (
@@ -74,32 +62,7 @@ function ArtifactPreviews({ artifacts }: { artifacts: LiveArtifact[] }) {
         ))}
         {artifacts.length > 4 ? <span>{`+${artifacts.length - 4}`}</span> : null}
       </div>
-      {selected ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={selected.name}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-bg/90 p-6"
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') setSelected(null);
-          }}
-        >
-          <button autoFocus aria-label="Close preview" onClick={() => setSelected(null)}>
-            <X />
-          </button>
-          {failed ? (
-            <p role="alert">Preview unavailable</p>
-          ) : url ? (
-            /^image\/(png|jpeg|webp|gif)$/i.test(selected.mime) ? (
-              <img src={url} alt={selected.name} className="max-h-[80vh] max-w-full" />
-            ) : (
-              <p>Text preview available for {selected.name}</p>
-            )
-          ) : (
-            <p role="status">Loading preview…</p>
-          )}
-        </div>
-      ) : null}
+      {selected ? <ArtifactLightbox file={selected} onClose={() => setSelected(null)} /> : null}
     </>
   );
 }

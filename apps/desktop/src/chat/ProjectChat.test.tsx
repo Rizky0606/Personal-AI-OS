@@ -13,6 +13,7 @@ vi.mock('../app/services', async () => (await import('../test/fakeServices')).fa
 
 const { ChatScreen } = await import('./ChatScreen');
 const { Topbar } = await import('../shell/Topbar');
+const { ProgressPanel } = await import('../progress/ProgressPanel');
 
 const TopbarUnderTest = () => (
   <Topbar title={copy.nav.chat} chat rightPanelOpen={false} onToggleRightPanel={() => undefined} />
@@ -662,13 +663,18 @@ describe('mode rencana', () => {
 });
 
 describe('rencana agent langsung', () => {
-  it('event todo.updated menampilkan daftar tugas dengan kemajuan; pembaruan berikutnya mengganti daftar', async () => {
+  it('event todo.updated menampilkan langkah di panel Progres (bukan di HUD); pembaruan berikutnya mengganti daftar', async () => {
     useUiStore.getState().setActiveProject(PROJECT);
     api.listMessages.mockResolvedValue(
       page(message({ author: 'user', text: 'tambahkan tes', runId: RUN_X })),
     );
     api.getRun.mockResolvedValue(run({ id: RUN_X, status: 'running' }));
-    await renderScreen(<ChatScreen conversationId={CONV} />);
+    await renderScreen(
+      <>
+        <ChatScreen conversationId={CONV} />
+        <ProgressPanel />
+      </>,
+    );
     await waitFor(() => expect(runs.get(RUN_X)).toBeDefined());
 
     act(() => {
@@ -688,11 +694,16 @@ describe('rencana agent langsung', () => {
       });
     });
 
-    const panel = await screen.findByRole('region', { name: copy.chat.todo.title });
-    expect(within(panel).getByText('Tulis tes')).toBeInTheDocument();
-    expect(within(panel).getByText('menunggu izin')).toBeInTheDocument();
-    expect(within(panel).getByRole('progressbar')).toHaveAttribute('aria-valuenow', '1');
-    expect(within(panel).getByText('1/3')).toBeInTheDocument();
+    const timeline = await screen.findByRole('list', { name: copy.progress.timeline });
+    expect(within(timeline).getByText('Tulis tes')).toBeInTheDocument();
+    expect(within(timeline).getByText('menunggu izin')).toBeInTheDocument();
+    expect(within(timeline).getAllByRole('listitem')).toHaveLength(3);
+    expect(within(timeline).getByText('Tulis tes').closest('li')).toHaveAttribute(
+      'aria-current',
+      'step',
+    );
+    // Rencana tidak lagi muncul di HUD di atas composer.
+    expect(screen.queryByRole('region', { name: copy.chat.hud.title })).not.toBeInTheDocument();
 
     act(() => {
       emit(`run:${RUN_X}`, {
@@ -700,8 +711,8 @@ describe('rencana agent langsung', () => {
         phases: [{ name: 'Tahap', tasks: [{ content: 'Tulis tes', status: 'completed' }] }],
       });
     });
-    expect(await screen.findByText('1/1')).toBeInTheDocument();
-    expect(screen.queryByText('Baca kode')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText('Baca kode')).not.toBeInTheDocument());
+    expect(screen.getByText('Tulis tes')).toBeInTheDocument();
   });
 
   it('arahan yang diantre di agent tampil sebagai daftar Menunggu giliran dan hilang saat antrean kosong', async () => {

@@ -8,6 +8,7 @@ import type {
 } from '@aios/contracts';
 import {
   ApprovalSchema,
+  ConversationProgressSchema,
   ConversationSchema,
   FileRecordSchema,
   IdSchema,
@@ -201,6 +202,9 @@ export function createGatewayApi(call: Call) {
         ConversationPageSchema,
       ),
     getConversation: (id: string) => get(`/conversations/${id}`, ConversationSchema),
+    /** Agregat panel Progres: rencana, hasil kerja, dan konteks yang dipakai (dari event run tersimpan). */
+    getConversationProgress: (id: string) =>
+      get(`/conversations/${id}/progress`, ConversationProgressSchema),
     createConversation: (surface: Surface = 'windows', projectId?: string, spaceId?: string) =>
       get('/conversations', ConversationSchema, {
         method: 'POST',

@@ -202,7 +202,7 @@ describe('Shell', () => {
     expect(within(sidebar).getByText(copy.shell.search)).toBeInTheDocument();
   });
 
-  it('Ctrl+J membuka panel kanan dengan 6 tab dan lebar yang diingat', async () => {
+  it('Ctrl+J membuka panel kanan dengan 7 tab (Progres pertama) dan lebar yang diingat', async () => {
     await renderShell();
 
     ctrl('j');
@@ -210,6 +210,7 @@ describe('Shell', () => {
     expect(panel).toHaveStyle({ width: `${RIGHT_PANEL_DEFAULT}px` });
     const tabs = screen.getAllByRole('tab').map((t) => t.textContent);
     expect(tabs).toEqual([
+      copy.shell.panels.progress,
       copy.shell.panels.preview,
       copy.shell.panels.diff,
       copy.shell.panels.terminal,
@@ -385,7 +386,7 @@ describe('Shell', () => {
     ctrl('j');
 
     const tabs = screen.getAllByRole('tab');
-    expect(tabs).toHaveLength(6);
+    expect(tabs).toHaveLength(7);
     for (const tab of tabs) expect(tab.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
     const active = screen.getByRole('tab', { selected: true });
     expect(within(active).getByText(copy.shell.panels.preview)).not.toHaveClass('sr-only');

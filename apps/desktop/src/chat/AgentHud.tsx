@@ -6,10 +6,9 @@ import { cn } from '../lib/cn';
 import { isSettled, type LiveRun } from '../realtime/liveRun';
 import { useUiStore } from '../state/uiStore';
 import { IconButton } from '../ui/IconButton';
-import { TodoPanel, todoProgress } from './TodoPanel';
 
 export interface AgentHudProps {
-  /** Run yang sedang (atau baru) berjalan; tanpa rencana, antrean, dan subagent HUD tidak tampil. */
+  /** Run yang sedang (atau baru) berjalan; tanpa antrean dan subagent HUD tidak tampil. */
   live: LiveRun | undefined;
   /** Menarik arahan dari antrean agent; tanpa ini tombol tarik tidak tampil. */
   onRemoveQueued?: ((queue: QueueName, text: string) => void) | undefined;
@@ -18,8 +17,8 @@ export interface AgentHudProps {
 const badgeClass = 'rounded-badge px-1.5 py-0.5 font-mono text-caption text-text';
 
 /**
- * Satu bilah yang bisa dilipat tepat di atas composer: rencana agent, arahan yang menunggu giliran, dan jumlah
- * subagent (membuka tab Aktivitas). Terbuka secara bawaan; hilang bila ketiganya kosong.
+ * Satu bilah yang bisa dilipat tepat di atas composer: arahan yang menunggu giliran dan jumlah subagent (membuka tab
+ * Aktivitas). Rencana agent ada di panel Progres, bukan di sini. Terbuka secara bawaan; hilang bila keduanya kosong.
  */
 export function AgentHud({ live, onRemoveQueued }: AgentHudProps) {
   const [open, setOpen] = useState(true);
@@ -27,15 +26,13 @@ export function AgentHud({ live, onRemoveQueued }: AgentHudProps) {
   const openPanel = useUiStore((s) => s.openPanel);
   const h = copy.chat.hud;
 
-  const { done, total } = todoProgress(live?.todos ?? []);
   const steering = live?.queue.steering ?? [];
   const followUp = live?.queue.followUp ?? [];
   const queued = steering.length + followUp.length;
   const subagents = live?.subagents.length ?? 0;
-  if (!live || (total === 0 && queued === 0 && subagents === 0)) return null;
+  if (!live || (queued === 0 && subagents === 0)) return null;
 
   const summary = [
-    total > 0 ? h.tasks(done, total) : null,
     queued > 0 ? h.queued(queued) : null,
     subagents > 0 ? h.subagents(subagents) : null,
   ]
@@ -91,7 +88,6 @@ export function AgentHud({ live, onRemoveQueued }: AgentHudProps) {
           id={bodyId}
           className="flex animate-aios-enter flex-col gap-3 border-t border-border px-3 py-3"
         >
-          <TodoPanel phases={live.todos} />
           {queued > 0 ? (
             <div className="flex flex-col gap-1">
               <h3 className="text-meta font-medium text-text-2">{copy.chat.queue.title}</h3>

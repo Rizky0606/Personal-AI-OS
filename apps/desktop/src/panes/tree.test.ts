@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   MAX_PANES,
+  PANE_TABS,
   ROOT_ID,
   clampRatio,
   closePane,
@@ -53,10 +54,28 @@ describe('pohon pane', () => {
     expect(countPanes(tree)).toBe(MAX_PANES);
   });
 
-  it('tab pane baru jatuh ke tab sumber bila semua tab sudah tampil', () => {
+  it('Progres adalah tab pertama di daftar tetapi tab terakhir yang dipilih untuk pane baru', () => {
+    expect(PANE_TABS[0]).toBe('progress');
     let tree: PaneNode = root;
     for (let i = 0; i < 5; i++) tree = splitPane(tree, leaves(tree).at(-1)!.id, 'row', ids());
-    expect(nextTab(tree, 'files')).toBe('files');
+    // Enam pane sudah memakai semua tab kerja; Progres baru dipilih setelah itu.
+    expect(leaves(tree).map((l) => l.tab)).not.toContain('progress');
+    expect(nextTab(tree, 'files')).toBe('progress');
+  });
+
+  it('tab pane baru jatuh ke tab sumber bila semua tab sudah tampil', () => {
+    // Pohon buatan tangan berisi ketujuh tab (lebih dari batas pembagian lewat antarmuka).
+    let full: PaneNode = { type: 'leaf', id: 'progress', tab: 'progress' };
+    for (const tab of ['preview', 'diff', 'terminal', 'files', 'git', 'activity'] as const)
+      full = {
+        type: 'split',
+        id: `s-${tab}`,
+        direction: 'row',
+        ratio: 0.5,
+        first: full,
+        second: { type: 'leaf', id: tab, tab },
+      };
+    expect(nextTab(full, 'files')).toBe('files');
   });
 
   it('mengganti tab, mengubah rasio (dibatasi), dan menampilkan tab', () => {

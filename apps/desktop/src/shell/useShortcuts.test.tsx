@@ -19,6 +19,13 @@ describe('shortcutFor', () => {
     expect(shortcutFor(key('j'))).toBe('toggleRightPanel');
   });
 
+  it('Ctrl+. membuka panel Progres; tanpa Ctrl atau dengan Shift/Alt diabaikan', () => {
+    expect(shortcutFor(key('.'))).toBe('openProgress');
+    expect(shortcutFor(key('.', { ctrlKey: false }))).toBeNull();
+    expect(shortcutFor(key('.', { shiftKey: true }))).toBeNull();
+    expect(shortcutFor(key('.', { altKey: true }))).toBeNull();
+  });
+
   it('Ctrl+1..6 berpindah layar; 0 dan 7 bukan shortcut', () => {
     for (const digit of ['1', '2', '3', '4', '5', '6']) {
       expect(shortcutFor(key(digit))).toBe('navigate');
@@ -46,6 +53,7 @@ describe('useShortcuts', () => {
     newChat: vi.fn(),
     toggleSidebar: vi.fn(),
     toggleRightPanel: vi.fn(),
+    openProgress: vi.fn(),
     navigate: vi.fn(),
   });
 

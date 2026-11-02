@@ -78,6 +78,13 @@ export function usePaletteItems(open: boolean, close: () => void): PaletteItem[]
         run: done(() => useUiStore.getState().toggleRightPanel()),
       },
       {
+        id: 'open-progress',
+        group: 'action',
+        label: copy.palette.openProgress,
+        hint: 'Ctrl+.',
+        run: done(() => useUiStore.getState().openPanel('progress')),
+      },
+      {
         id: 'toggle-sidebar',
         group: 'action',
         label: copy.palette.toggleSidebar,

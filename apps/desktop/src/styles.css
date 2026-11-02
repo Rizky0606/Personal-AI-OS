@@ -545,6 +545,37 @@ body {
   animation: aios-shimmer 1800ms linear infinite;
 }
 
+/* Kartu Output baru masuk: naik 8 px + fade 240 ms (berhenti saat gerak dikurangi lewat aturan universal). */
+@keyframes aios-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+.aios-card-in {
+  animation: aios-card-in var(--aios-duration-slow) var(--aios-easing) both;
+}
+
+/* Angka chip Progres berganti dengan gulir 180 ms (lama keluar ke atas, baru naik dari bawah). */
+@keyframes aios-roll-in {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+}
+@keyframes aios-roll-out {
+  to {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+}
+.aios-roll-in {
+  animation: aios-roll-in var(--aios-duration-base) var(--aios-easing) both;
+}
+.aios-roll-out {
+  animation: aios-roll-out var(--aios-duration-base) var(--aios-easing) both;
+}
+
 /* Kilau judul aktivitas run: teks tetap abu (text-3); sapuan aksen transparan lewat di atasnya. */
 .aios-headline-shimmer {
   position: relative;

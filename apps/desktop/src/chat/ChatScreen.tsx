@@ -3,7 +3,8 @@ import { apiErrorMessage } from '../api/errors';
 import { usePromptTemplates } from '../api/queries';
 import { useTemplateInsert } from '../templates/useTemplateInsert';
 import { activitySteps } from '../activity/steps';
-import { buildActivity } from '../realtime/activity';
+import type { Message } from '@aios/contracts';
+import { buildActivity, type SavedTool } from '../realtime/activity';
 import { useNow } from '../app/useNow';
 import { copy } from '../copy';
 import { packOptions } from './skillPacks';
@@ -20,6 +21,24 @@ import { ReviewBanner } from './ReviewBanner';
 import { orbStateOf } from './AgentOrb';
 import { useChatController } from './useChatController';
 
+/** Langkah tool jawaban asisten terakhir (bagian `tool` tersimpan), untuk langkah turunan setelah muat ulang. */
+function latestAssistantTools(messages: Message[]): SavedTool[] {
+  const last = messages.findLast((m) => m.author === 'assistant');
+  return (last?.parts ?? []).flatMap((part) =>
+    part.type === 'tool'
+      ? [
+          {
+            id: part.toolCallId,
+            name: part.name,
+            target: part.target,
+            status: part.status,
+            durationMs: part.durationMs,
+          },
+        ]
+      : [],
+  );
+}
+
 function ChatView({ conversationId }: { conversationId: string | undefined }) {
   const chat = useChatController(conversationId);
   const templates = usePromptTemplates();
@@ -34,6 +53,15 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
     setAgentSteps(steps);
     return () => setAgentSteps([]);
   }, [steps, setAgentSteps]);
+  // Panel Progres dan chip topbar membaca percakapan dan run terbaru dari sini.
+  const setProgressSource = useUiStore((s) => s.setProgressSource);
+  const savedTools = useMemo(() => latestAssistantTools(chat.messages), [chat.messages]);
+  const progressRunId = (chat.live ?? chat.finished)?.runId ?? null;
+  useEffect(() => {
+    if (!conversationId) return;
+    setProgressSource({ conversationId, runId: progressRunId, savedTools });
+    return () => setProgressSource(null);
+  }, [conversationId, progressRunId, savedTools, setProgressSource]);
   const setAgentSubagents = useUiStore((s) => s.setAgentSubagents);
   const subagents = chat.live?.subagents;
   useEffect(() => {

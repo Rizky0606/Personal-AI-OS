@@ -9,6 +9,7 @@ import { Button } from '../ui/Button';
 import { IconButton } from '../ui/IconButton';
 import { useProjects } from '../worker/hooks';
 import { connectionView } from './connectionView';
+import { ProgressChip } from './ProgressChip';
 
 export type ConnectionTone = 'connected' | 'pending' | 'lost';
 
@@ -123,6 +124,7 @@ export function Topbar({ title, chat, action, rightPanelOpen, onToggleRightPanel
         ) : null}
       </div>
       <div className="flex shrink-0 items-center gap-2">
+        {chat ? <ProgressChip /> : null}
         <ConnectionBadge />
         {action ? (
           <Button variant="secondary" onClick={action.onSelect}>
