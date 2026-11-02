@@ -25,6 +25,7 @@ import {
   WorkspaceRunListSchema,
   SpaceSchema,
   MessageSchema,
+  EngineListSchema,
   ModelListSchema,
   ProjectSchema,
   ResearchJobDetailSchema,
@@ -122,6 +123,8 @@ export interface MessageInput {
   webSearch?: boolean | undefined;
   /** Skill tambahan untuk pesan ini (menang atas pemilihan otomatis). */
   skills?: readonly string[] | undefined;
+  /** Mesin pilihan; hanya `dsh` yang perlu dikirim (yang lain mengikuti konteks). */
+  engine?: 'dsh' | undefined;
   followUp?: RichAnswerFollowUp | undefined;
 }
 
@@ -137,6 +140,7 @@ function messageBody(input: MessageInput) {
     ...(input.planOnly ? { planOnly: true } : {}),
     ...(input.webSearch ? { webSearch: true } : {}),
     ...(input.skills?.length ? { skills: [...input.skills] } : {}),
+    ...(input.engine ? { engine: input.engine } : {}),
     ...(input.followUp ? { followUp: input.followUp } : {}),
   };
 }
@@ -194,6 +198,8 @@ export function createGatewayApi(call: Call) {
       get('/teams', TeamDetailSchema, { method: 'POST', body: input }),
     cancelTeam: (id: string) => get(`/teams/${id}/cancel`, TeamDetailSchema, { method: 'POST' }),
     listModels: async () => (await get('/models', ModelListSchema)).items,
+    /** Mesin yang dikenal gateway beserta ketersediaan dan kemampuannya. */
+    listEngines: async () => (await get('/engines', EngineListSchema)).items,
     listRoles: async () => (await get('/roles', RoleListSchema)).items,
 
     listConversations: (before?: string, projectId?: string) =>

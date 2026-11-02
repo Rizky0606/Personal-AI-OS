@@ -11,6 +11,10 @@ function cursor<P extends { nextBefore: string | null }>(page: P): string | unde
 export const useModels = () =>
   useQuery({ queryKey: ['models'], queryFn: api.listModels, staleTime: 5 * MINUTES });
 
+/** Mesin tidak berubah sering; setelah 1 menit dicek ulang supaya dsh yang baru hidup ikut terlihat. */
+export const useEngines = () =>
+  useQuery({ queryKey: ['engines'], queryFn: api.listEngines, staleTime: 60 * 1000 });
+
 export const useRoles = () =>
   useQuery({ queryKey: ['roles'], queryFn: api.listRoles, staleTime: 5 * MINUTES });
 

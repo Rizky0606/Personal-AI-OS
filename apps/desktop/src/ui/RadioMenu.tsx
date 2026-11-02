@@ -8,6 +8,10 @@ export interface RadioOption {
   value: string;
   label: string;
   hint?: string;
+  /** Tidak bisa dipilih; `description` menjelaskan alasannya. */
+  disabled?: boolean;
+  /** Keterangan di bawah label (mis. alasan nonaktif). */
+  description?: string;
 }
 
 export interface RadioMenuProps {
@@ -41,13 +45,28 @@ export function RadioMenu({
         >
           <Dropdown.RadioGroup value={value} onValueChange={onValueChange}>
             {options.map((option) => (
-              <Dropdown.RadioItem key={option.value} value={option.value} className={menuItemClass}>
+              <Dropdown.RadioItem
+                key={option.value}
+                value={option.value}
+                disabled={option.disabled ?? false}
+                title={option.description}
+                className={
+                  option.description
+                    ? menuItemClass.replace('h-8', 'min-h-8 py-1.5')
+                    : menuItemClass
+                }
+              >
                 <span className="size-4 shrink-0">
                   <Dropdown.ItemIndicator>
                     <Check size={16} strokeWidth={1.5} aria-hidden="true" />
                   </Dropdown.ItemIndicator>
                 </span>
-                <span className="min-w-0 flex-1 truncate">{option.label}</span>
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate">{option.label}</span>
+                  {option.description ? (
+                    <span className="text-caption text-text-3">{option.description}</span>
+                  ) : null}
+                </span>
                 {option.hint ? (
                   <span className="shrink-0 font-mono text-caption text-text-3">{option.hint}</span>
                 ) : null}

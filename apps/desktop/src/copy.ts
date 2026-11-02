@@ -1086,6 +1086,17 @@ export const copy = {
       pick: 'Pilih model',
       hermesFixed: 'Model diatur di server Hermes',
     },
+    engine: {
+      auto: 'Mesin otomatis',
+      label: 'Mesin',
+      pick: 'Pilih mesin',
+      preview: 'Pratinjau',
+      previewHint:
+        'Pratinjau: dsh belum diaudit. Jalankan hanya untuk tugas yang aman dilakukan di server.',
+      needsProject: 'Butuh project: buka chat dari sebuah project.',
+      generalOnly: 'Hanya di chat umum, bukan di dalam project.',
+      unknown: 'Belum ada laporan dari server.',
+    },
     reasoning: 'Penalaran',
     copy: 'Salin',
     copied: 'Tersalin',

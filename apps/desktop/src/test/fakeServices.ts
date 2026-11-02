@@ -49,6 +49,7 @@ export const api: FakeApi = {
   createTeam: fn<'createTeam'>(),
   cancelTeam: fn<'cancelTeam'>(),
   listModels: fn<'listModels'>(),
+  listEngines: fn<'listEngines'>(),
   listRoles: fn<'listRoles'>(),
   listConversations: fn<'listConversations'>(),
   createConversation: fn<'createConversation'>(),
@@ -224,6 +225,7 @@ export function resetApi(): void {
   fakeRealtime.subscribe.mockClear();
   handlers.clear();
   api.listModels.mockResolvedValue([]);
+  api.listEngines.mockResolvedValue([]);
   api.listRoles.mockResolvedValue([]);
   api.listConversations.mockResolvedValue({ items: [], nextBefore: null });
   api.listResearch.mockResolvedValue({ items: [], nextBefore: null });

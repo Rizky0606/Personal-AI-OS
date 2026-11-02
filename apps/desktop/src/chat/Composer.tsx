@@ -13,6 +13,7 @@ import { IconButton } from '../ui/IconButton';
 import { CheckboxMenu, type CheckboxOption } from '../ui/CheckboxMenu';
 import { RadioMenu } from '../ui/RadioMenu';
 import { slashMatches } from '../templates/vars';
+import type { EngineChoice, EngineOption } from './engineChoice';
 
 export const AUTO = '__auto__';
 
@@ -34,6 +35,10 @@ export interface ComposerProps {
   onModel: (model: string | null) => void;
   /** Mesin aktif tidak mendukung pilihan model (Hermes): pemilih dinonaktifkan dengan keterangan ini. */
   modelLockedReason?: string | undefined;
+  /** Pemilih mesin; tanpa `onEngine` tidak tampil. Mesin yang tidak bisa dipakai tampil nonaktif dengan alasannya. */
+  engine?: EngineChoice;
+  engineOptions?: readonly EngineOption[];
+  onEngine?: ((engine: EngineChoice) => void) | undefined;
   canEditLast: boolean;
   onEditLast: () => void;
   /** Naik tiap fokus perlu dipindah ke kolom pesan (chat baru, ubah pesan terakhir). */
@@ -100,6 +105,9 @@ export function Composer({
   model,
   onModel,
   modelLockedReason,
+  engine = 'auto',
+  engineOptions = [],
+  onEngine,
   canEditLast,
   onEditLast,
   focusNonce,
@@ -175,6 +183,7 @@ export function Composer({
     if (canSend) onSend();
   }
 
+  const engineName = engineOptions.find((o) => o.value === engine)?.label ?? copy.chat.engine.auto;
   const modelName =
     modelLockedReason ??
     (model ? (models.find((m) => m.id === model)?.label ?? model) : copy.chat.model.auto);
@@ -304,6 +313,35 @@ export function Composer({
             className="max-h-48 w-full resize-none bg-transparent px-1 py-1 text-chat text-text outline-none placeholder:text-text-3"
           />
           <div className="flex flex-wrap items-center gap-2">
+            {onEngine ? (
+              <RadioMenu
+                label={copy.chat.engine.pick}
+                value={engine}
+                onValueChange={(value) => onEngine(value as EngineChoice)}
+                options={engineOptions.map((o) => ({
+                  value: o.value,
+                  label: o.label,
+                  ...(o.preview ? { hint: copy.chat.engine.preview } : {}),
+                  disabled: o.disabled,
+                  ...((o.reason ?? (o.preview ? copy.chat.engine.previewHint : undefined))
+                    ? { description: o.reason ?? copy.chat.engine.previewHint }
+                    : {}),
+                }))}
+                trigger={
+                  <Pill
+                    aria-label={`${copy.chat.engine.label}: ${engineName}`}
+                    title={engine === 'dsh' ? copy.chat.engine.previewHint : undefined}
+                    selected={engine !== 'auto'}
+                  >
+                    <span className="max-w-40 truncate">{engineName}</span>
+                    {engine === 'dsh' ? (
+                      <span className="text-caption text-text-3">{copy.chat.engine.preview}</span>
+                    ) : null}
+                    <ChevronDown size={12} strokeWidth={1.5} aria-hidden="true" />
+                  </Pill>
+                }
+              />
+            ) : null}
             {modelLockedReason ? (
               <Pill
                 disabled

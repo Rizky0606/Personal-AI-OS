@@ -178,7 +178,10 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
         model={chat.model}
         onModel={chat.setModel}
         // Chat umum berjalan di Hermes, yang mengabaikan pilihan model (BACKLOG Sesi 2).
-        modelLockedReason={chat.inProject ? undefined : copy.chat.model.hermesFixed}
+        modelLockedReason={chat.supportsModelPick ? undefined : copy.chat.model.hermesFixed}
+        engine={chat.engine}
+        engineOptions={chat.engineOptions}
+        onEngine={chat.setEngine}
         canEditLast={chat.canEditLast}
         onEditLast={chat.editLast}
         focusNonce={chat.focusNonce}

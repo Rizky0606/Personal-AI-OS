@@ -10,13 +10,14 @@ import { useNavigate } from '@tanstack/react-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { apiErrorMessage } from '../api/errors';
 import { skillsOfPacks } from './skillPacks';
-import { useMessages, useModels, useRoles } from '../api/queries';
+import { useEngines, useMessages, useModels, useRoles } from '../api/queries';
 import { useFinishedRun, useLiveRun, useOnline, useRunFailure } from '../app/hooks';
 import { api, runs } from '../app/services';
 import { copy } from '../copy';
 import { isSettled } from '../realtime/liveRun';
 import { useUiStore } from '../state/uiStore';
 import { useToastStore } from '../ui/Toaster';
+import { NEW_CHAT_ENGINE_KEY, engineView, wireEngine, type EngineChoice } from './engineChoice';
 import { goConversation } from './paths';
 import { useFileAttachments } from './useFileAttachments';
 import { useReviewTarget } from './useReviewTarget';
@@ -49,6 +50,7 @@ export function useChatController(conversationId: string | undefined) {
 
   const messagesQuery = useMessages(conversationId);
   const modelsQuery = useModels();
+  const enginesQuery = useEngines();
   const rolesQuery = useRoles();
 
   const [draft, setDraft] = useState('');
@@ -58,6 +60,15 @@ export function useChatController(conversationId: string | undefined) {
   const skillPacks = useUiStore((s) => s.skillPacks);
   const setSkillPacks = useUiStore((s) => s.setSkillPacks);
   const setModel = useUiStore((s) => s.setModel);
+  // Mesin dipilih per percakapan; chat yang belum punya id memakai kunci sementara yang dipindah saat dibuat.
+  const engineKey = conversationId ?? NEW_CHAT_ENGINE_KEY;
+  const engineChoice = useUiStore((s) => s.engineByConversation[engineKey] ?? 'auto');
+  const setEngineChoice = useUiStore((s) => s.setEngine);
+  const engine = useMemo(
+    () => engineView(engineChoice, enginesQuery.data, activeProjectId !== null),
+    [engineChoice, enginesQuery.data, activeProjectId],
+  );
+  const engineWire = wireEngine(engine.effective);
   const setActiveRole = useUiStore((s) => s.setActiveRole);
   const [pending, setPending] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -171,11 +182,15 @@ export function useChatController(conversationId: string | undefined) {
           // Sudah diketahui: rute tujuan tidak perlu memuatnya lagi (jawaban yang sedang tampil tidak berkedip).
           queryClient.setQueryData(['conversation', created.id], created);
           id = created.id;
+          // Pilihan mesin chat baru ikut ke percakapan yang baru dibuat.
+          if (engine.effective !== 'auto') setEngineChoice(id, engine.effective);
+          setEngineChoice(NEW_CHAT_ENGINE_KEY, 'auto');
         }
         const response = await api.sendMessage(id, {
           text: body || (options?.followUp ? `Rich answer ${options.followUp.action}` : ''),
           files: files.length ? files : undefined,
           model: model ?? undefined,
+          engine: engineWire,
           planOnly: (options?.plan ?? planFirst) && activeProjectId !== null ? true : undefined,
           webSearch: webSearch ? true : undefined,
           skills: skillsOfPacks(skillPacks),
@@ -209,6 +224,9 @@ export function useChatController(conversationId: string | undefined) {
       conversationId,
       activeProjectId,
       model,
+      engine.effective,
+      engineWire,
+      setEngineChoice,
       planFirst,
       webSearch,
       skillPacks,
@@ -349,6 +367,7 @@ export function useChatController(conversationId: string | undefined) {
           text: body,
           files: original?.parts.flatMap((part) => (part.type === 'file' ? [part] : [])),
           model: model ?? undefined,
+          engine: engineWire,
         });
         dropFrom(conversationId, messageId);
         addMessageToCache(queryClient, conversationId, response.message);
@@ -370,6 +389,7 @@ export function useChatController(conversationId: string | undefined) {
       online,
       push,
       model,
+      engineWire,
       dropFrom,
       queryClient,
       fail,
@@ -421,6 +441,11 @@ export function useChatController(conversationId: string | undefined) {
     model,
     setModel,
     models: modelsQuery.data ?? [],
+    engine: engine.effective,
+    engineOptions: engine.options,
+    /** Mesin yang menjawab pesan berikutnya mendukung pilihan model (Hermes tidak). */
+    supportsModelPick: engine.supportsModelPick,
+    setEngine: (choice: EngineChoice) => setEngineChoice(engineKey, choice),
     roles,
     approvals: live?.approvals ?? [],
     reviewRunId,

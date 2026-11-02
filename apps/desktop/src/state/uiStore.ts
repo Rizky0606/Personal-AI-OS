@@ -3,6 +3,7 @@ import type { ActivityStep } from '../activity/activity';
 import type { SavedTool } from '../realtime/activity';
 import type { SubagentView } from '../realtime/liveRun';
 import { persist } from 'zustand/middleware';
+import { parseEngines, withEngine, type EngineChoice } from '../chat/engineChoice';
 import {
   ROOT_ID,
   closePane,
@@ -91,6 +92,9 @@ interface UiState {
   /** Model pilihan untuk pesan berikutnya; null = otomatis (router/combo). Diingat antar sesi. */
   model: string | null;
   setModel: (model: string | null) => void;
+  /** Mesin pilihan per percakapan (kunci `NEW_CHAT_ENGINE_KEY` untuk chat yang belum punya id). Diingat antar sesi. */
+  engineByConversation: Record<string, EngineChoice>;
+  setEngine: (key: string, choice: EngineChoice) => void;
   /** Role yang sedang dipakai chat (pilihan manual atau keputusan router) untuk header; tidak disimpan. */
   activeRole: string | null;
   setActiveRole: (role: string | null) => void;
@@ -154,6 +158,9 @@ export const useUiStore = create<UiState>()(
         set((s) => ({ fileRequest: { path, nonce: (s.fileRequest?.nonce ?? 0) + 1 } })),
       model: null,
       setModel: (model) => set({ model }),
+      engineByConversation: {},
+      setEngine: (key, choice) =>
+        set((s) => ({ engineByConversation: withEngine(s.engineByConversation, key, choice) })),
       activeRole: null,
       setActiveRole: (activeRole) => set({ activeRole }),
       attachments: [],
@@ -228,6 +235,7 @@ export const useUiStore = create<UiState>()(
         paneTree: s.paneTree,
         activeProjectId: s.activeProjectId,
         model: s.model,
+        engineByConversation: s.engineByConversation,
         webSearch: s.webSearch,
         theme: s.theme,
         reduceMotion: s.reduceMotion,
@@ -241,6 +249,7 @@ export const useUiStore = create<UiState>()(
           ...p,
           rightPanelWidth: clampPanelWidth(p.rightPanelWidth ?? RIGHT_PANEL_DEFAULT),
           paneTree: parsePaneTree(p.paneTree),
+          engineByConversation: parseEngines(p.engineByConversation),
         };
       },
     },
