@@ -1,0 +1,253 @@
+{
+  "name": "reload-complete",
+  "description": "Setelah muat ulang aplikasi: tanpa run live, semuanya dari agregat tersimpan. Rencana 9 dari 9 selesai, tiga jenis hasil, konteks, dan alat.",
+  "now": "2025-01-01T01:00:00Z",
+  "response": {
+    "plan": {
+      "runId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e01",
+      "phases": [
+        {
+          "name": "Rencana",
+          "tasks": [
+            {
+              "content": "Baca login.ts",
+              "status": "completed"
+            },
+            {
+              "content": "Cari pemakai handleLogin",
+              "status": "completed"
+            },
+            {
+              "content": "Tulis tes yang gagal",
+              "status": "completed"
+            },
+            {
+              "content": "Ubah login.ts",
+              "status": "completed"
+            },
+            {
+              "content": "Perbarui tes login",
+              "status": "completed"
+            },
+            {
+              "content": "Jalankan typecheck",
+              "status": "completed"
+            },
+            {
+              "content": "Jalankan tes",
+              "status": "completed"
+            },
+            {
+              "content": "Perbaiki galat tes",
+              "status": "completed"
+            },
+            {
+              "content": "Periksa hasil",
+              "status": "completed"
+            }
+          ]
+        }
+      ]
+    },
+    "outputs": [
+      {
+        "kind": "file",
+        "runId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e01",
+        "at": "2025-01-01T00:00:30Z",
+        "fileId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e12",
+        "name": "hasil.md",
+        "mime": "text/markdown",
+        "size": 64
+      },
+      {
+        "kind": "image",
+        "runId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e01",
+        "at": "2025-01-01T00:00:20Z",
+        "fileId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e11",
+        "name": "login-form.png",
+        "mime": "image/png",
+        "size": 2048
+      },
+      {
+        "kind": "diff",
+        "runId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e01",
+        "at": "2025-01-01T00:00:10Z",
+        "files": [
+          {
+            "path": "src/auth/login.ts",
+            "additions": 4,
+            "deletions": 1
+          },
+          {
+            "path": "src/auth/login.test.ts",
+            "additions": 12,
+            "deletions": 0
+          }
+        ]
+      }
+    ],
+    "used": {
+      "skills": ["plan-progress", "scope-guard"],
+      "engine": "omp",
+      "model": "coding-main",
+      "memory": {
+        "read": 3,
+        "items": [
+          {
+            "id": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e21",
+            "title": "Suka jawaban singkat"
+          },
+          {
+            "id": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e22",
+            "title": "Pakai bahasa Indonesia."
+          },
+          {
+            "id": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e23",
+            "title": "Zona waktu Asia/Jakarta."
+          }
+        ]
+      },
+      "attachments": [
+        {
+          "fileId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e19",
+          "name": "desain.png",
+          "mime": "image/png"
+        },
+        {
+          "fileId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e13",
+          "name": "spek.pdf",
+          "mime": "application/pdf"
+        }
+      ],
+      "tools": ["read_file", "terminal", "web_search", "mcp__github__list_prs"]
+    }
+  },
+  "runId": null,
+  "events": [],
+  "view": {
+    "hasPlan": true,
+    "steps": [
+      {
+        "id": "p0-0",
+        "label": "Baca login.ts",
+        "state": "done"
+      },
+      {
+        "id": "p0-1",
+        "label": "Cari pemakai handleLogin",
+        "state": "done"
+      },
+      {
+        "id": "p0-2",
+        "label": "Tulis tes yang gagal",
+        "state": "done"
+      },
+      {
+        "id": "p0-3",
+        "label": "Ubah login.ts",
+        "state": "done"
+      },
+      {
+        "id": "p0-4",
+        "label": "Perbarui tes login",
+        "state": "done"
+      },
+      {
+        "id": "p0-5",
+        "label": "Jalankan typecheck",
+        "state": "done"
+      },
+      {
+        "id": "p0-6",
+        "label": "Jalankan tes",
+        "state": "done"
+      },
+      {
+        "id": "p0-7",
+        "label": "Perbaiki galat tes",
+        "state": "done"
+      },
+      {
+        "id": "p0-8",
+        "label": "Periksa hasil",
+        "state": "done"
+      }
+    ],
+    "chip": {
+      "current": 9,
+      "total": 9,
+      "label": "Periksa hasil"
+    },
+    "outputs": [
+      {
+        "kind": "file",
+        "runId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e01",
+        "at": "2025-01-01T00:00:30Z",
+        "fileId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e12",
+        "name": "hasil.md",
+        "mime": "text/markdown",
+        "size": 64
+      },
+      {
+        "kind": "image",
+        "runId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e01",
+        "at": "2025-01-01T00:00:20Z",
+        "fileId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e11",
+        "name": "login-form.png",
+        "mime": "image/png",
+        "size": 2048
+      },
+      {
+        "kind": "diff",
+        "runId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e01",
+        "at": "2025-01-01T00:00:10Z",
+        "files": [
+          {
+            "path": "src/auth/login.ts",
+            "additions": 4,
+            "deletions": 1
+          },
+          {
+            "path": "src/auth/login.test.ts",
+            "additions": 12,
+            "deletions": 0
+          }
+        ]
+      }
+    ],
+    "used": {
+      "uploads": [
+        {
+          "fileId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e19",
+          "name": "desain.png"
+        },
+        {
+          "fileId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e13",
+          "name": "spek.pdf"
+        }
+      ],
+      "skills": ["plan-progress", "scope-guard"],
+      "memory": {
+        "read": 3,
+        "items": [
+          {
+            "id": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e21",
+            "title": "Suka jawaban singkat"
+          },
+          {
+            "id": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e22",
+            "title": "Pakai bahasa Indonesia."
+          },
+          {
+            "id": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e23",
+            "title": "Zona waktu Asia/Jakarta."
+          }
+        ]
+      },
+      "engine": "omp",
+      "model": "coding-main",
+      "tools": ["web", "terminal", "files"],
+      "connectors": ["github"]
+    }
+  }
+}

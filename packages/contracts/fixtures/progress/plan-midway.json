@@ -1,0 +1,388 @@
+{
+  "name": "plan-midway",
+  "description": "Agen omp di langkah 7 dari 9. Agregat tersimpan memuat rencana lama (3 selesai); event live membawa rencana terbaru (6 selesai), konteks, artifact baru, dan alat. Artifact yang sudah ada di agregat tidak ganda.",
+  "now": "2025-01-01T00:00:12Z",
+  "response": {
+    "plan": {
+      "runId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e01",
+      "phases": [
+        {
+          "name": "Persiapan",
+          "tasks": [
+            {
+              "content": "Baca login.ts",
+              "status": "completed"
+            },
+            {
+              "content": "Cari pemakai handleLogin",
+              "status": "completed"
+            },
+            {
+              "content": "Tulis tes yang gagal",
+              "status": "completed"
+            }
+          ]
+        },
+        {
+          "name": "Pengerjaan",
+          "tasks": [
+            {
+              "content": "Ubah login.ts",
+              "status": "in_progress"
+            },
+            {
+              "content": "Perbarui tes login",
+              "status": "pending"
+            },
+            {
+              "content": "Jalankan typecheck",
+              "status": "pending"
+            },
+            {
+              "content": "Jalankan tes",
+              "status": "pending"
+            },
+            {
+              "content": "Perbaiki galat tes",
+              "status": "pending"
+            },
+            {
+              "content": "Periksa hasil",
+              "status": "pending"
+            }
+          ]
+        }
+      ]
+    },
+    "outputs": [
+      {
+        "kind": "image",
+        "runId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e01",
+        "at": "2025-01-01T00:00:05Z",
+        "fileId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e11",
+        "name": "login-form.png",
+        "mime": "image/png",
+        "size": 2048
+      },
+      {
+        "kind": "diff",
+        "runId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e01",
+        "at": "2025-01-01T00:00:04Z",
+        "files": [
+          {
+            "path": "src/auth/login.ts",
+            "additions": 4,
+            "deletions": 1
+          }
+        ]
+      }
+    ],
+    "used": {
+      "skills": ["plan-progress"],
+      "engine": "omp",
+      "model": "coding-main",
+      "memory": {
+        "read": 3,
+        "items": [
+          {
+            "id": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e21",
+            "title": "Suka jawaban singkat"
+          },
+          {
+            "id": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e22",
+            "title": "Pakai bahasa Indonesia."
+          },
+          {
+            "id": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e23",
+            "title": "Zona waktu Asia/Jakarta."
+          }
+        ]
+      },
+      "attachments": [
+        {
+          "fileId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e19",
+          "name": "desain.png",
+          "mime": "image/png"
+        }
+      ],
+      "tools": ["read_file"]
+    }
+  },
+  "runId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e01",
+  "events": [
+    {
+      "seq": 1,
+      "ts": "2025-01-01T00:00:00Z",
+      "event": {
+        "type": "run.status",
+        "status": "running"
+      }
+    },
+    {
+      "seq": 2,
+      "ts": "2025-01-01T00:00:01Z",
+      "event": {
+        "type": "context.used",
+        "runId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e01",
+        "role": "project",
+        "engine": "omp",
+        "model": "coding-main",
+        "skills": ["plan-progress", "scope-guard"],
+        "memory": {
+          "read": 3,
+          "items": [
+            {
+              "id": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e21",
+              "title": "Suka jawaban singkat"
+            },
+            {
+              "id": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e22",
+              "title": "Pakai bahasa Indonesia."
+            },
+            {
+              "id": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e23",
+              "title": "Zona waktu Asia/Jakarta."
+            }
+          ]
+        },
+        "attachments": [
+          {
+            "fileId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e19",
+            "name": "desain.png",
+            "mime": "image/png"
+          }
+        ]
+      }
+    },
+    {
+      "seq": 3,
+      "ts": "2025-01-01T00:00:02Z",
+      "event": {
+        "type": "todo.updated",
+        "phases": [
+          {
+            "name": "Persiapan",
+            "tasks": [
+              {
+                "content": "Baca login.ts",
+                "status": "completed"
+              },
+              {
+                "content": "Cari pemakai handleLogin",
+                "status": "completed"
+              },
+              {
+                "content": "Tulis tes yang gagal",
+                "status": "completed"
+              }
+            ]
+          },
+          {
+            "name": "Pengerjaan",
+            "tasks": [
+              {
+                "content": "Ubah login.ts",
+                "status": "completed"
+              },
+              {
+                "content": "Perbarui tes login",
+                "status": "completed"
+              },
+              {
+                "content": "Jalankan typecheck",
+                "status": "completed"
+              },
+              {
+                "content": "Jalankan tes",
+                "status": "in_progress"
+              },
+              {
+                "content": "Perbaiki galat tes",
+                "status": "pending"
+              },
+              {
+                "content": "Periksa hasil",
+                "status": "pending"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "seq": 4,
+      "ts": "2025-01-01T00:00:05Z",
+      "event": {
+        "type": "artifact.created",
+        "fileId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e11",
+        "name": "login-form.png",
+        "mime": "image/png",
+        "size": 2048,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "source": "screenshot"
+      }
+    },
+    {
+      "seq": 5,
+      "ts": "2025-01-01T00:00:08Z",
+      "event": {
+        "type": "artifact.created",
+        "fileId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e12",
+        "name": "hasil.md",
+        "mime": "text/markdown",
+        "size": 64,
+        "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "source": "file"
+      }
+    },
+    {
+      "seq": 6,
+      "ts": "2025-01-01T00:00:09Z",
+      "event": {
+        "type": "tool.started",
+        "toolCallId": "t1",
+        "name": "read_file",
+        "target": "src/auth/login.ts"
+      }
+    },
+    {
+      "seq": 7,
+      "ts": "2025-01-01T00:00:10Z",
+      "event": {
+        "type": "tool.started",
+        "toolCallId": "t2",
+        "name": "terminal",
+        "target": "pnpm test"
+      }
+    },
+    {
+      "seq": 8,
+      "ts": "2025-01-01T00:00:11Z",
+      "event": {
+        "type": "tool.started",
+        "toolCallId": "t3",
+        "name": "browser_navigate",
+        "target": "http://localhost:3000"
+      }
+    }
+  ],
+  "view": {
+    "hasPlan": true,
+    "steps": [
+      {
+        "id": "p0-0",
+        "label": "Baca login.ts",
+        "state": "done",
+        "phase": "Persiapan"
+      },
+      {
+        "id": "p0-1",
+        "label": "Cari pemakai handleLogin",
+        "state": "done"
+      },
+      {
+        "id": "p0-2",
+        "label": "Tulis tes yang gagal",
+        "state": "done"
+      },
+      {
+        "id": "p1-0",
+        "label": "Ubah login.ts",
+        "state": "done",
+        "phase": "Pengerjaan"
+      },
+      {
+        "id": "p1-1",
+        "label": "Perbarui tes login",
+        "state": "done"
+      },
+      {
+        "id": "p1-2",
+        "label": "Jalankan typecheck",
+        "state": "done"
+      },
+      {
+        "id": "p1-3",
+        "label": "Jalankan tes",
+        "state": "active"
+      },
+      {
+        "id": "p1-4",
+        "label": "Perbaiki galat tes",
+        "state": "pending"
+      },
+      {
+        "id": "p1-5",
+        "label": "Periksa hasil",
+        "state": "pending"
+      }
+    ],
+    "chip": {
+      "current": 7,
+      "total": 9,
+      "label": "Jalankan tes"
+    },
+    "outputs": [
+      {
+        "kind": "file",
+        "runId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e01",
+        "at": "2025-01-01T00:00:12.000Z",
+        "fileId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e12",
+        "name": "hasil.md",
+        "mime": "text/markdown",
+        "size": 64
+      },
+      {
+        "kind": "image",
+        "runId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e01",
+        "at": "2025-01-01T00:00:05Z",
+        "fileId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e11",
+        "name": "login-form.png",
+        "mime": "image/png",
+        "size": 2048
+      },
+      {
+        "kind": "diff",
+        "runId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e01",
+        "at": "2025-01-01T00:00:04Z",
+        "files": [
+          {
+            "path": "src/auth/login.ts",
+            "additions": 4,
+            "deletions": 1
+          }
+        ]
+      }
+    ],
+    "used": {
+      "uploads": [
+        {
+          "fileId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e19",
+          "name": "desain.png"
+        }
+      ],
+      "skills": ["plan-progress", "scope-guard"],
+      "memory": {
+        "read": 3,
+        "items": [
+          {
+            "id": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e21",
+            "title": "Suka jawaban singkat"
+          },
+          {
+            "id": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e22",
+            "title": "Pakai bahasa Indonesia."
+          },
+          {
+            "id": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e23",
+            "title": "Zona waktu Asia/Jakarta."
+          }
+        ]
+      },
+      "engine": "omp",
+      "model": "coding-main",
+      "tools": ["browser", "terminal", "files"],
+      "connectors": []
+    }
+  }
+}

@@ -59,6 +59,9 @@ export interface LiveArtifact {
   source: 'screenshot' | 'file';
 }
 
+/** Konteks yang dipakai run (event `context.used`), tanpa `type`: skill, memori (jumlah dan judul), lampiran. */
+export type ContextUsed = Omit<Extract<ServerEvent, { type: 'context.used' }>, 'type'>;
+
 export interface LiveRun {
   runId: string;
   role: string | null;
@@ -90,6 +93,8 @@ export interface LiveRun {
   questions: { questionId: string; questions: Question[] }[];
   /** Subagent omp (tool `task`) run ini, urutan kemunculan. */
   subagents: SubagentView[];
+  /** Konteks yang dipakai run; null sampai event `context.used` tiba. */
+  contextUsed: ContextUsed | null;
 }
 
 export const isTerminal = (status: RunStatus): boolean => TERMINAL_RUN_STATUSES.includes(status);
@@ -123,6 +128,7 @@ export const newLiveRun = (runId: string): LiveRun => ({
   queue: { steering: [], followUp: [] },
   questions: [],
   subagents: [],
+  contextUsed: null,
 });
 
 /** Memajukan waktu mulai ke waktu run dibuat di server bila lebih awal (reload di tengah run). */
@@ -305,6 +311,13 @@ function reduceEvent(run: LiveRun, event: ServerEvent, ts: number | undefined): 
             ...run,
             sources: [...run.sources, { id: event.sourceId, title: event.title, url: event.url }],
           };
+    case 'context.used':
+      return {
+        ...run,
+        contextUsed: Object.fromEntries(
+          Object.entries(event).filter(([key]) => key !== 'type'),
+        ) as ContextUsed,
+      };
     case 'artifact.created':
       return run.artifacts.some((artifact) => artifact.fileId === event.fileId)
         ? run

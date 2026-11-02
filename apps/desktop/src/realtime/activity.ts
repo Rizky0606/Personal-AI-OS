@@ -51,7 +51,7 @@ export const DEFAULT_VISIBLE_STEPS = 3;
 export const HEADLINE_MAX = 80;
 export const TARGET_MAX = 60;
 
-type ToolKind = keyof typeof copy.runActivity.tools;
+export type ToolKind = keyof typeof copy.runActivity.tools;
 
 /** Nama tool (huruf kecil) → jenis. omp: bash, write, todo, task terverifikasi rekaman; sisanya dari daftar tool omp/Hermes. */
 const TOOL_KINDS: Record<string, ToolKind> = {
@@ -105,7 +105,8 @@ const TOOL_KINDS: Record<string, ToolKind> = {
   todo_write: 'plan',
 };
 
-function kindOf(name: string): ToolKind | null {
+/** Jenis tool menurut namanya (null bila tidak dikenal); dipakai juga panel Progres untuk daftar alat. */
+export function toolKindOf(name: string): ToolKind | null {
   const key = name.trim().toLowerCase();
   if (Object.hasOwn(TOOL_KINDS, key)) return TOOL_KINDS[key] ?? null;
   if (key.startsWith('browser_')) return 'browser';
@@ -115,7 +116,7 @@ function kindOf(name: string): ToolKind | null {
 /** Kalimat langkah menurut jenis tool dan status. */
 export function stepLabel(name: string, status: ToolStep['status']): string {
   const t = copy.runActivity;
-  const kind = kindOf(name);
+  const kind = toolKindOf(name);
   if (status === 'running')
     return kind ? t.tools[kind].running : t.unknownTool.running(name.trim());
   if (status === 'ok') return kind ? t.tools[kind].done : t.unknownTool.done(name.trim());

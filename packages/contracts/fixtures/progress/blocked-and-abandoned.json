@@ -1,0 +1,92 @@
+{
+  "name": "blocked-and-abandoned",
+  "description": "Rencana dengan langkah terhambat (alasan tampil) dan langkah dibatalkan, tanpa langkah aktif: chip menunjuk langkah terhambat.",
+  "now": "2025-01-01T00:05:00Z",
+  "response": {
+    "plan": {
+      "runId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e01",
+      "phases": [
+        {
+          "name": "Rencana",
+          "tasks": [
+            {
+              "content": "Baca konfigurasi",
+              "status": "completed"
+            },
+            {
+              "content": "Ubah skema database",
+              "status": "blocked",
+              "blocker": "Butuh izin akses ke database"
+            },
+            {
+              "content": "Tulis migrasi",
+              "status": "abandoned"
+            },
+            {
+              "content": "Periksa hasil",
+              "status": "pending"
+            }
+          ]
+        }
+      ]
+    },
+    "outputs": [],
+    "used": {
+      "skills": [],
+      "engine": "omp",
+      "model": "coding-main",
+      "memory": {
+        "read": 0,
+        "items": []
+      },
+      "attachments": [],
+      "tools": []
+    }
+  },
+  "runId": null,
+  "events": [],
+  "view": {
+    "hasPlan": true,
+    "steps": [
+      {
+        "id": "p0-0",
+        "label": "Baca konfigurasi",
+        "state": "done"
+      },
+      {
+        "id": "p0-1",
+        "label": "Ubah skema database",
+        "state": "blocked",
+        "blocker": "Butuh izin akses ke database"
+      },
+      {
+        "id": "p0-2",
+        "label": "Tulis migrasi",
+        "state": "abandoned"
+      },
+      {
+        "id": "p0-3",
+        "label": "Periksa hasil",
+        "state": "pending"
+      }
+    ],
+    "chip": {
+      "current": 2,
+      "total": 4,
+      "label": "Ubah skema database"
+    },
+    "outputs": [],
+    "used": {
+      "uploads": [],
+      "skills": [],
+      "memory": {
+        "read": 0,
+        "items": []
+      },
+      "engine": "omp",
+      "model": "coding-main",
+      "tools": [],
+      "connectors": []
+    }
+  }
+}

@@ -1,0 +1,106 @@
+{
+  "name": "hermes-no-plan",
+  "description": "Mesin tanpa tool todo (Hermes): tidak ada rencana. Langkah turunan dari tool, chip \"Langkah N\" tanpa total (tidak dikarang). Tool galat menjadi langkah terhambat.",
+  "now": "2025-01-01T00:00:10Z",
+  "response": null,
+  "runId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e02",
+  "events": [
+    {
+      "seq": 1,
+      "ts": "2025-01-01T00:00:00Z",
+      "event": {
+        "type": "run.status",
+        "status": "running"
+      }
+    },
+    {
+      "seq": 2,
+      "ts": "2025-01-01T00:00:01Z",
+      "event": {
+        "type": "tool.started",
+        "toolCallId": "a",
+        "name": "web_search",
+        "target": "harga bensin hari ini"
+      }
+    },
+    {
+      "seq": 3,
+      "ts": "2025-01-01T00:00:03Z",
+      "event": {
+        "type": "tool.finished",
+        "toolCallId": "a",
+        "status": "ok",
+        "durationMs": 2000
+      }
+    },
+    {
+      "seq": 4,
+      "ts": "2025-01-01T00:00:04Z",
+      "event": {
+        "type": "tool.started",
+        "toolCallId": "b",
+        "name": "read_file",
+        "target": "README.md"
+      }
+    },
+    {
+      "seq": 5,
+      "ts": "2025-01-01T00:00:05Z",
+      "event": {
+        "type": "tool.finished",
+        "toolCallId": "b",
+        "status": "error",
+        "durationMs": 900
+      }
+    },
+    {
+      "seq": 6,
+      "ts": "2025-01-01T00:00:06Z",
+      "event": {
+        "type": "tool.started",
+        "toolCallId": "c",
+        "name": "terminal",
+        "target": "pnpm test"
+      }
+    }
+  ],
+  "view": {
+    "hasPlan": false,
+    "steps": [
+      {
+        "id": "a",
+        "label": "Pencarian web selesai harga bensin hari ini",
+        "state": "done"
+      },
+      {
+        "id": "b",
+        "label": "Pembacaan berkas gagal README.md",
+        "state": "blocked",
+        "blocker": "Pembacaan berkas gagal"
+      },
+      {
+        "id": "c",
+        "label": "Menjalankan perintah pnpm test",
+        "state": "active"
+      }
+    ],
+    "chip": {
+      "current": 3,
+      "total": null,
+      "label": "Menjalankan perintah pnpm test"
+    },
+    "outputs": [],
+    "used": {
+      "uploads": [],
+      "skills": [],
+      "memory": {
+        "read": 0,
+        "items": []
+      },
+      "engine": null,
+      "model": null,
+      "tools": ["web", "terminal", "files"],
+      "connectors": []
+    }
+  }
+}
