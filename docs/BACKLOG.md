@@ -733,3 +733,13 @@ Catatan steer/follow-up: pesan yang diarahkan tidak disimpan sebagai pesan chat 
 - [ ] Durasi jawaban lama memakai `Run.updatedAt`; run `needs_review` tanpa durasi karena berubah saat peninjauan. Server belum menyimpan waktu selesai run terpisah.
 - [ ] **ReasoningBlock** masih tampil terpisah di bawah baris aktivitas dan mengulang kalimat judul; pertimbangkan menggabungkannya ke linimasa.
 - [ ] `[skenario:izin]` butuh omp di mesin e2e (dilewati bila tidak ada); Hermes tidak punya izin sehingga tidak bisa dipakai untuk skenario ini.
+
+## Temuan P2B (panel Progres)
+
+- [ ] **Judul fakta memori** diambil dari 40 karakter pertama teksnya karena memori belum punya judul. Fakta pendek tampil utuh di event `context.used` yang tersimpan. Pertimbangkan kolom judul di tabel memori bila ini dianggap bocor.
+- [ ] **Hermes tidak mengirim rencana, artifact, atau diff**; skenario e2e menyisipkannya ke event store. Mesin nyata (omp) belum diuji di panel dengan skill `plan-progress` (butuh omp dan model sungguhan); perilaku agent mengikuti skill belum terverifikasi.
+- [ ] **Output "Laporan riset"** hanya muncul bila run riset terikat ke percakapan; saat ini riset berjalan terpisah, jadi jenis itu belum pernah terisi di praktik.
+- [ ] **Diff live** tidak ikut digabung di klien (hanya dari agregat tersimpan); kartu Perubahan kode muncul setelah run selesai dan agregat diambil ulang.
+- [ ] **Langkah turunan setelah muat ulang** untuk mesin tanpa rencana hanya dari bagian tool di pesan asisten terakhir; run lama tidak ikut.
+- [ ] **Konektor MCP** dikenali dari awalan nama tool `mcp__`; belum diverifikasi dengan konektor nyata.
+- [ ] Tes dan layar Android untuk panel Progres: P6 (fixture emas sudah ada).
