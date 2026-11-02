@@ -144,6 +144,22 @@ async function main() {
         .waitFor({ timeout: 30_000 });
       await shot('chat-error');
 
+      // Panel Progres: rencana 9 langkah yang maju sendiri (skenario rencana), saat langkah 7 dan setelah selesai.
+      await runScenario('[skenario:rencana]');
+      const stepChip = page.getByRole('button', { name: /^Langkah \d+ dari 9/ });
+      await stepChip.filter({ hasText: 'Langkah 7 dari 9' }).waitFor({ timeout: 30_000 });
+      await stepChip.click();
+      await page.getByRole('region', { name: 'Progres percakapan' }).waitFor();
+      await shot('progres-langkah7');
+      await stepChip.filter({ hasText: 'Langkah 9 dari 9' }).waitFor({ timeout: 30_000 });
+      await page.getByRole('button', { name: 'Kirim', exact: true }).waitFor({ timeout: 30_000 });
+      await shot('progres-selesai');
+      await page.getByRole('button', { name: '7 langkah sebelumnya' }).click();
+      await shot('progres-sebelumnya-dibuka');
+      // Panel ditutup lagi supaya layar berikutnya sama seperti sebelumnya.
+      await page.keyboard.press('Control+J');
+      await page.getByRole('complementary', { name: 'Panel kanan' }).waitFor({ state: 'hidden' });
+
       await page.keyboard.press('Control+2');
       await page.getByRole('link', { name: 'Kelola project' }).click();
       await page.getByRole('button', { name: 'Tambah project' }).first().click();

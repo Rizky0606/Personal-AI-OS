@@ -307,3 +307,31 @@ describe('GET /conversations/:id/progress', () => {
     expect((await progress(b.id)).used.tools).toEqual([]);
   });
 });
+
+describe('AuthEnv.activeRunId (pembantu skenario e2e)', () => {
+  it('mengembalikan run chat yang sedang berjalan selagi Hermes menahan aliran, dan null sesudahnya', async () => {
+    let release!: () => void;
+    const held = new Promise<void>((r) => (release = r));
+    let arrived!: () => void;
+    const requestSeen = new Promise<void>((r) => (arrived = r));
+    hermes.onRequest(async (s) => {
+      arrived();
+      await held;
+      s.delta('oke');
+      s.finish();
+      s.done();
+    });
+    const conv = await newConversation();
+    const res = await env.post(
+      `/conversations/${conv.id}/messages`,
+      { parts: [{ type: 'text', text: 'Tahan' }] },
+      token,
+    );
+    const sent = SendMessageResponseSchema.parse(res.json());
+    await requestSeen;
+    expect(await env.activeRunId()).toBe(sent.run.id);
+    release();
+    await env.runner.idle();
+    expect(await env.activeRunId()).toBeNull();
+  });
+});

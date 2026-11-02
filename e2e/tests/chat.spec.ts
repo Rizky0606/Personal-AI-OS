@@ -184,13 +184,31 @@ test('[skenario:rencana]: chip maju "Langkah 1 dari 9" sampai "9 dari 9", panel 
 }) => {
   await prepare(page);
   await login(page);
+  // Perekam: mencatat tiap nilai chip yang pernah tampil (polling bisa melewatkan langkah 600 ms).
+  await page.evaluate(() => {
+    const seen: string[] = [];
+    (window as unknown as { __chips: string[] }).__chips = seen;
+    const read = () => {
+      const label = document
+        .querySelector('button[aria-keyshortcuts="Control+."]')
+        ?.getAttribute('aria-label');
+      if (label && seen.at(-1) !== label) seen.push(label);
+    };
+    new MutationObserver(read).observe(document.body, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ['aria-label'],
+    });
+  });
   await send(page, '[skenario:rencana] Perbaiki alur masuk.');
 
   // Chip di topbar berganti satu per satu mengikuti rencana (tiap langkah 600 ms).
   const chip = page.getByRole('button', { name: /^Langkah \d+ dari 9/ });
-  for (let n = 1; n <= 9; n++) {
-    await expect(chip).toContainText(`Langkah ${n} dari 9`, { timeout: 20_000 });
-  }
+  await expect(chip).toContainText('Langkah 9 dari 9', { timeout: 30_000 });
+  const seen = await page.evaluate(() => (window as unknown as { __chips: string[] }).__chips);
+  const numbers = seen.map((label) => Number(/^Langkah (\d+) dari 9/.exec(label)?.[1]));
+  expect(numbers).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
   await expect(chip).toHaveAttribute('aria-label', /^Langkah 9 dari 9: Periksa hasil$/);
 
   // Klik chip membuka panel kanan di tab Progres (tab pertama).

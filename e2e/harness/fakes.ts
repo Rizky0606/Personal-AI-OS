@@ -162,51 +162,66 @@ export async function startFakes(): Promise<Fakes> {
     if (typeof last === 'string' && last.includes(SCENARIO_PLAN)) {
       if (!scenario) throw new Error('skenario rencana belum disambungkan (attachScenario)');
       const hooks = scenario;
-      await sleep(300);
-      await hooks.inject((runId) => ({
-        type: 'context.used',
-        runId,
-        role: 'general',
-        engine: 'hermes',
-        model: 'combo/general',
-        skills: ['plan-progress', 'answer-first'],
-        memory: { read: PLAN_MEMORY.length, items: PLAN_MEMORY },
-        attachments: [
-          { fileId: hooks.upload.fileId, name: hooks.upload.name, mime: hooks.upload.mime },
-        ],
-      }));
-      const artifact = (file: ScenarioFile, source: 'screenshot' | 'file') =>
-        hooks.inject(() => ({
-          type: 'artifact.created',
-          fileId: file.fileId,
-          name: file.name,
-          mime: file.mime,
-          size: file.size,
-          sha256: file.sha256,
-          source,
+      // Aliran dibuka segera dan diberi detak jantung (event bernama yang diabaikan adapter) supaya tidak dianggap macet.
+      stream.reasoning('');
+      const beat = () => res.write('event: hermes.heartbeat\ndata: {}\n\n');
+      const wait = async (ms: number) => {
+        for (let left = ms; left > 0; left -= 200) {
+          beat();
+          await sleep(Math.min(200, left));
+        }
+      };
+      try {
+        await wait(300);
+        await hooks.inject((runId) => ({
+          type: 'context.used',
+          runId,
+          role: 'general',
+          engine: 'hermes',
+          model: 'combo/general',
+          skills: ['plan-progress', 'answer-first'],
+          memory: { read: PLAN_MEMORY.length, items: PLAN_MEMORY },
+          attachments: [
+            { fileId: hooks.upload.fileId, name: hooks.upload.name, mime: hooks.upload.mime },
+          ],
         }));
-      for (let step = 0; step < PLAN_TOTAL; step++) {
-        await hooks.inject(() => ({ type: 'todo.updated', phases: planAt(step) }));
-        await sleep(PLAN_STEP_MS);
-        if (step === 2) await artifact(hooks.image, 'screenshot');
-        if (step === 5) await artifact(hooks.file, 'file');
-        if (step === 7)
-          await hooks.inject(() => ({
-            type: 'diff.updated',
-            files: [
-              { path: 'src/auth/login.ts', additions: 4, deletions: 1 },
-              { path: 'src/auth/login.test.ts', additions: 12, deletions: 0 },
-            ],
+        const artifact = (file: ScenarioFile, source: 'screenshot' | 'file') =>
+          hooks.inject(() => ({
+            type: 'artifact.created',
+            fileId: file.fileId,
+            name: file.name,
+            mime: file.mime,
+            size: file.size,
+            sha256: file.sha256,
+            source,
           }));
+        for (let step = 0; step < PLAN_TOTAL; step++) {
+          await hooks.inject(() => ({ type: 'todo.updated', phases: planAt(step) }));
+          await wait(PLAN_STEP_MS);
+          if (step === 2) await artifact(hooks.image, 'screenshot');
+          if (step === 5) await artifact(hooks.file, 'file');
+          if (step === 7)
+            await hooks.inject(() => ({
+              type: 'diff.updated',
+              files: [
+                { path: 'src/auth/login.ts', additions: 4, deletions: 1 },
+                { path: 'src/auth/login.test.ts', additions: 12, deletions: 0 },
+              ],
+            }));
+        }
+        await hooks.inject(() => ({ type: 'todo.updated', phases: planAt(PLAN_TOTAL) }));
+        for (const part of PLAN_ANSWER) {
+          stream.delta(part);
+          await sleep(180);
+        }
+        stream.usage(30, 18);
+        stream.finish();
+        stream.done();
+      } catch (error) {
+        // Galat skenario tidak boleh mematikan proses e2e: akhiri aliran supaya run gagal dengan jelas.
+        console.error('[e2e] skenario rencana gagal:', error);
+        stream.end();
       }
-      await hooks.inject(() => ({ type: 'todo.updated', phases: planAt(PLAN_TOTAL) }));
-      for (const part of PLAN_ANSWER) {
-        stream.delta(part);
-        await sleep(180);
-      }
-      stream.usage(30, 18);
-      stream.finish();
-      stream.done();
       return;
     }
     const toolScenario =
