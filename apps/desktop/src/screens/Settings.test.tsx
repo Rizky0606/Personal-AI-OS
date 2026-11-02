@@ -73,14 +73,31 @@ describe('SettingsScreen: pemilih model (memuat, kosong, error, sukses)', () => 
     await renderScreen(<SettingsScreen />, '/settings');
     const region = await group();
     await within(region).findByText('GPT X');
-    expect(within(region).getByText(copy.settings.modelHint.combo)).toBeInTheDocument();
-    expect(within(region).getByText(copy.settings.modelHint.model('openai'))).toBeInTheDocument();
+    // Keterangan hanya dari data server (jenis, penyedia, id): berbeda untuk tiap model, tanpa kalimat karangan.
+    expect(within(region).getByText('Kombinasi · router · auto')).toBeInTheDocument();
+    expect(within(region).getByText('Model · openai · gpt-x')).toBeInTheDocument();
     await user.click(within(region).getByRole('radio', { name: /GPT X/ }));
     expect(useUiStore.getState().model).toBe('gpt-x');
     await user.click(
       within(region).getByRole('radio', { name: new RegExp(copy.settings.modelAuto) }),
     );
     expect(useUiStore.getState().model).toBeNull();
+  });
+
+  it('keterangan tidak diulang: kombinasi yang berbeda punya keterangan yang berbeda dan tanpa kalimat karangan', async () => {
+    api.listModels.mockResolvedValue([
+      { id: 'coding-main', label: 'Coding Main', kind: 'combo', ownedBy: 'combo' },
+      { id: 'general-cheap', label: 'General Cheap', kind: 'combo', ownedBy: 'combo' },
+      { id: 'router-fast', label: 'Router Fast', kind: 'combo', ownedBy: 'combo' },
+    ]);
+    await renderScreen(<SettingsScreen />, '/settings');
+    const region = await group();
+    await within(region).findByText('Coding Main');
+    const hints = ['coding-main', 'general-cheap', 'router-fast'].map((id) =>
+      within(region).getByText(`Kombinasi · ${id}`),
+    );
+    expect(new Set(hints.map((h) => h.textContent)).size).toBe(3);
+    expect(within(region).queryByText(/memilih model terbaik/)).not.toBeInTheDocument();
   });
 
   it('memuat: kerangka berlabel, bukan spinner', async () => {

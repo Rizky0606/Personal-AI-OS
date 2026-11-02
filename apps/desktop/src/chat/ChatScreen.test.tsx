@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiProblem } from '../auth/authSession';
 import { copy } from '../copy';
+import { useUiStore } from '../state/uiStore';
 import { CONV, RUN_1, RUN_2, message, models, roles, run } from '../test/fixtures';
 import { api, emit, resetApi, runs } from '../test/fakeServices';
 import { renderScreen } from '../test/render';
@@ -15,6 +16,7 @@ const page = (...items: ReturnType<typeof message>[]) => ({ items, nextBefore: n
 
 beforeEach(() => {
   resetApi();
+  useUiStore.setState(useUiStore.getInitialState(), true);
   api.listRoles.mockResolvedValue(roles);
   api.listModels.mockResolvedValue(models);
   Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
@@ -209,7 +211,8 @@ describe('ChatScreen: kirim dan alirkan jawaban', () => {
     expect(await screen.findByText(copy.chat.offlineSend)).toBeInTheDocument();
   });
 
-  it('tidak ada pemilih role (router yang memutuskan); model yang dipilih ikut terkirim', async () => {
+  it('tidak ada pemilih role (router yang memutuskan); di project (omp) model yang dipilih ikut terkirim', async () => {
+    useUiStore.getState().setActiveProject('0192f0c4-7a1b-7c2d-a001-4a5b6c7d8e91');
     api.listMessages.mockResolvedValue(page());
     api.sendMessage.mockResolvedValue({
       message: message({ author: 'user', text: 'x', runId: RUN_1 }),
@@ -227,7 +230,21 @@ describe('ChatScreen: kirim dan alirkan jawaban', () => {
     await user.click(await screen.findByRole('menuitemradio', { name: /^Cepat/ }));
     await user.type(field(), 'x{Enter}');
 
-    expect(api.sendMessage).toHaveBeenCalledWith(CONV, { text: 'x', model: 'combo/fast' });
+    expect(api.sendMessage).toHaveBeenCalledWith(
+      CONV,
+      expect.objectContaining({ text: 'x', model: 'combo/fast' }),
+    );
+  });
+
+  it('chat umum (Hermes mengabaikan pilihan model): pemilih nonaktif dengan keterangan "Model diatur di server Hermes"', async () => {
+    api.listMessages.mockResolvedValue(page());
+    await renderScreen(<ChatScreen conversationId={CONV} />);
+
+    const picker = await screen.findByRole('button', {
+      name: `${copy.chat.model.label}: ${copy.chat.model.hermesFixed}`,
+    });
+    expect(picker).toBeDisabled();
+    expect(picker).toHaveTextContent('Model diatur di server Hermes');
   });
 });
 

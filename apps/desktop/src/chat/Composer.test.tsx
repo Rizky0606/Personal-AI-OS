@@ -48,3 +48,36 @@ describe('Composer: kirim/hentikan', () => {
     expect(view.container.querySelector('[data-phase="tool"]')).not.toBeNull();
   });
 });
+
+describe('Composer: pemilih model', () => {
+  const models = [{ id: 'combo/fast', label: 'Cepat', kind: 'combo' as const, ownedBy: '9router' }];
+
+  it('mesin yang mendukung pilihan model: pemilih aktif dan bisa dibuka', async () => {
+    const user = userEvent.setup();
+    render(ui({ models }));
+    const picker = screen.getByRole('button', { name: new RegExp(`^${copy.chat.model.label}: `) });
+    expect(picker).toBeEnabled();
+    await user.click(picker);
+    expect(await screen.findByRole('menuitemradio', { name: /Cepat/ })).toBeInTheDocument();
+  });
+
+  it('Hermes (mesin tanpa pilihan model): pemilih nonaktif dengan keterangan, tidak bisa dibuka', async () => {
+    const user = userEvent.setup();
+    const onModel = vi.fn();
+    render(
+      ui({ models, onModel, model: 'combo/fast', modelLockedReason: copy.chat.model.hermesFixed }),
+    );
+    expect(copy.chat.model.hermesFixed).toBe('Model diatur di server Hermes');
+    const picker = screen.getByRole('button', {
+      name: `${copy.chat.model.label}: ${copy.chat.model.hermesFixed}`,
+    });
+    expect(picker).toBeDisabled();
+    expect(picker).toHaveTextContent(copy.chat.model.hermesFixed);
+    expect(picker).toHaveAttribute('title', copy.chat.model.hermesFixed);
+    // Pilihan lama tidak tampil seolah berlaku, dan menu tidak terbuka.
+    expect(screen.queryByText('Cepat')).not.toBeInTheDocument();
+    await user.click(picker);
+    expect(screen.queryByRole('menuitemradio')).not.toBeInTheDocument();
+    expect(onModel).not.toHaveBeenCalled();
+  });
+});

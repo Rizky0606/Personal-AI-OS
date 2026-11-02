@@ -32,6 +32,8 @@ export interface ComposerProps {
   models: ModelInfo[];
   model: string | null;
   onModel: (model: string | null) => void;
+  /** Mesin aktif tidak mendukung pilihan model (Hermes): pemilih dinonaktifkan dengan keterangan ini. */
+  modelLockedReason?: string | undefined;
   canEditLast: boolean;
   onEditLast: () => void;
   /** Naik tiap fokus perlu dipindah ke kolom pesan (chat baru, ubah pesan terakhir). */
@@ -97,6 +99,7 @@ export function Composer({
   models,
   model,
   onModel,
+  modelLockedReason,
   canEditLast,
   onEditLast,
   focusNonce,
@@ -172,9 +175,9 @@ export function Composer({
     if (canSend) onSend();
   }
 
-  const modelName = model
-    ? (models.find((m) => m.id === model)?.label ?? model)
-    : copy.chat.model.auto;
+  const modelName =
+    modelLockedReason ??
+    (model ? (models.find((m) => m.id === model)?.label ?? model) : copy.chat.model.auto);
   const uploading = files.some((f) => f.status === 'uploading');
   const hasFiles = files.some((f) => f.status === 'ready');
   const canSend = (draft.trim().length > 0 || hasFiles) && !sending && !uploading;
@@ -301,24 +304,35 @@ export function Composer({
             className="max-h-48 w-full resize-none bg-transparent px-1 py-1 text-chat text-text outline-none placeholder:text-text-3"
           />
           <div className="flex flex-wrap items-center gap-2">
-            <RadioMenu
-              label={copy.chat.model.pick}
-              value={model ?? AUTO}
-              onValueChange={(value) => onModel(value === AUTO ? null : value)}
-              options={[
-                { value: AUTO, label: copy.chat.model.auto },
-                ...models.map((m) => ({ value: m.id, label: m.label, hint: m.kind })),
-              ]}
-              trigger={
-                <Pill
-                  aria-label={`${copy.chat.model.label}: ${modelName}`}
-                  selected={model !== null}
-                >
-                  <span className="max-w-40 truncate">{modelName}</span>
-                  <ChevronDown size={12} strokeWidth={1.5} aria-hidden="true" />
-                </Pill>
-              }
-            />
+            {modelLockedReason ? (
+              <Pill
+                disabled
+                aria-label={`${copy.chat.model.label}: ${modelLockedReason}`}
+                title={modelLockedReason}
+                className="cursor-not-allowed opacity-70"
+              >
+                <span className="max-w-56 truncate">{modelName}</span>
+              </Pill>
+            ) : (
+              <RadioMenu
+                label={copy.chat.model.pick}
+                value={model ?? AUTO}
+                onValueChange={(value) => onModel(value === AUTO ? null : value)}
+                options={[
+                  { value: AUTO, label: copy.chat.model.auto },
+                  ...models.map((m) => ({ value: m.id, label: m.label, hint: m.kind })),
+                ]}
+                trigger={
+                  <Pill
+                    aria-label={`${copy.chat.model.label}: ${modelName}`}
+                    selected={model !== null}
+                  >
+                    <span className="max-w-40 truncate">{modelName}</span>
+                    <ChevronDown size={12} strokeWidth={1.5} aria-hidden="true" />
+                  </Pill>
+                }
+              />
+            )}
             {onPlanMode ? (
               <Pill
                 selected={planMode}

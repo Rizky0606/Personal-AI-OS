@@ -14,6 +14,18 @@ interface Option {
   hint: string;
 }
 
+/**
+ * Keterangan pembeda tiap model dari data yang memang diberikan server: jenis, penyedia, dan id. Server tidak memberi
+ * deskripsi, jadi tidak ada kalimat karangan (dan tidak ada kalimat yang sama untuk semua kombinasi).
+ */
+export function modelFacts(m: { id: string; kind: 'model' | 'combo'; ownedBy: string }): string {
+  const parts: string[] = [copy.settings.modelKind[m.kind]];
+  // Penyedia kombinasi hanya mengulang jenisnya ("combo"); tampilkan bila benar-benar menambah informasi.
+  if (m.ownedBy && m.ownedBy !== m.kind) parts.push(m.ownedBy);
+  parts.push(m.id);
+  return parts.join(' · ');
+}
+
 /** Pemilih model untuk pesan berikutnya: Otomatis (router/combo) atau satu model, dengan keterangan singkat. */
 export function ModelSettings() {
   const query = useModels();
@@ -34,14 +46,7 @@ export function ModelSettings() {
 
   const options: Option[] = [
     { value: null, label: copy.settings.modelAuto, hint: copy.settings.modelAutoHint },
-    ...models.map((m) => ({
-      value: m.id,
-      label: m.label,
-      hint:
-        m.kind === 'combo'
-          ? copy.settings.modelHint.combo
-          : copy.settings.modelHint.model(m.ownedBy),
-    })),
+    ...models.map((m) => ({ value: m.id, label: m.label, hint: modelFacts(m) })),
   ];
 
   return (
@@ -80,7 +85,7 @@ export function ModelSettings() {
               )}
             >
               <span className="text-ui font-medium text-text">{option.label}</span>
-              <span className="text-meta text-text-2">{option.hint}</span>
+              <span className="font-mono text-meta text-text-2">{option.hint}</span>
             </button>
           );
         })}
