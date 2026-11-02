@@ -73,3 +73,63 @@ Bukti:
 ### E. Keputusan alur cabang (2026-11-02)
 
 Bagian D prompt P0 diubah atas keputusan pemilik repo: P0 **tidak** digabung ke `main` dan tidak di-push ke `main`. Tiap sesi perbaikan memakai cabang terpisah yang dibuat dari ujung cabang sesi sebelumnya (P0 `fix/p0-satukan-cabang` -> P1 -> ... -> P8), sehingga kodenya tetap tersambung. Merge ke `main`, push, dan penghapusan cabang lama (daftar butuh persetujuan) dilakukan sekali, di sesi terakhir. Konsekuensi: `main` tetap `23d785b` sampai saat itu, jadi baseline `baseline-p0` dan perbandingan `pnpm shots:compare` memakai folder baseline dari cabang P0, bukan dari `main`.
+
+## P1 — Pasang shell baru (2026-11-02)
+
+Cabang: `fix/p1-pasang-shell` (dari ujung `fix/p0-satukan-cabang` = `d224b1f`; tidak digabung ke `main`, lihat bagian E di atas).
+
+Kerugian merge lama yang dipulihkan: `Shell.tsx` kembali memakai `Topbar` dan `island` (hilang sejak `fc5a84b`).
+
+### Perubahan
+
+- `Shell.tsx`: kanvas `[data-shell-canvas]` (`bg`, padding dan gap `--aios-island-gap`); `Sidebar`, `<main>`, dan `RightPanel` memakai `ISLAND`; `Topbar` di dalam `<main>`; `Header.tsx` dihapus (tidak ada pemakai lain; pencarian kosong).
+- Aturan judul tunggal: Topbar satu-satunya pemilik h1; `PageHeader` (`screens/PageLayout` dan `ui/PageHeader`) mendaftarkan judul lewat `ScreenTitleContext` (`ui/screenTitle.tsx`) dan tidak merender judul di dalam Shell. Tertulis di `DESIGN_SYSTEM.md`.
+- `Sidebar.tsx`: pulau; tombol buka saat ringkas di sidebar; tinggi kepala memakai `--aios-topbar-height` (`--aios-header-height` tidak pernah terdefinisi, sehingga kepala sidebar lama tak bertinggi tetap). Penyebab pelat tidak terlihat meluncur: tautan aktif/hover punya latar sendiri yang langsung berpindah dan menutupi pelat; sekarang tautan di dalam `PlateGroup` tanpa latar (`plated`).
+- `RightPanel.tsx`: slot pemotong yang lebarnya dianimasikan (lebar tersimpan + jarak 8 px), `-ml` meniadakan gap flex; pulau di dalamnya berlebar tetap, menempel kanan. Tes e2e menangkap jarak 16 px (bukan 8) sebelum diperbaiki.
+- `Topbar.tsx`: grup "Lokasi saat ini" (judul, chip project + branch, penanda Berjalan, chip model). Chip bawaan "Chat umum" dan "Model otomatis" (dulu "Otomatis · Otomatis" dari Header). Role tidak ditampilkan lagi.
+- `ShellSkeleton.tsx`: sesuai shell baru (tanpa penyangga bilah status 24 px yang sudah tidak ada).
+- Tes: `Shell.test.tsx` (pulau, Topbar di dalam main, urutan fokus, aria-current, judul tunggal), `Topbar.test.tsx` (kasus Header dipindah), `ui/screenTitle.test.tsx`, `ProjectChat.test.tsx` (breadcrumb lewat Topbar), `ShellInfo.test.tsx` (blok Header dihapus, sudah tercakup di Topbar), e2e `shell.spec.ts` (5 tes baru).
+- `pnpm shots:compare` menerima argumen ketiga (ambang kanal, bawaan 24).
+
+### Bukti tersambung
+
+```
+Topbar:      shell\Shell.tsx:20 import, :151 <Topbar
+ISLAND:      Sidebar.tsx:71, Shell.tsx:149, RightPanel.tsx:55, ShellSkeleton.tsx:11
+ScreenTitle: Shell.tsx:124 Provider; PageLayout.tsx:22 dan ui\PageHeader.tsx:17 useScreenTitle
+PlateGroup:  Sidebar.tsx:141, ProjectList.tsx:53
+Header lama: tidak ada pemakai (rg "shell/Header|from './Header'|<Header" kosong)
+```
+
+### Bukti visual
+
+Gambar: `docs/screenshots/p1/<tema>-<layar>.png`, bercap `e67dab0` (tanpa tanda kotor). Baseline: `docs/screenshots/baseline-p0/` (cap `a67ef46`).
+
+Persentase piksel berbeda (`pnpm shots:compare baseline-p0 p1`): kolom A ambang kanal 24 (bawaan, ambang selesai), kolom B ambang 4.
+
+| Layar | A (24) gelap | B (4) gelap | A (24) terang | B (4) terang |
+| --- | ---: | ---: | ---: | ---: |
+| chat-kosong | 6,66% | 72,28% | 6,29% | 71,88% |
+| chat-selesai | 6,29% | 75,43% | 6,32% | 75,34% |
+| kanban | 4,75% | 83,41% | 4,69% | 84,63% |
+| project | 4,44% | 83,50% | 4,20% | 84,55% |
+| pengaturan-atas | 8,91% | 75,48% | 8,52% | 76,33% |
+| chat-berjalan | 6,37% | 75,53% | 6,40% | 75,43% |
+| lebar-1024 | 8,26% | 71,82% | 8,26% | 71,69% |
+| panel-kanan | 7,01% | 53,10% | 6,95% | 53,00% |
+| jadwal / riset / ruang | 4,05 / 4,59 / 5,27% | 84,01 / 68,66 / 74,75% | 3,81 / 4,42 / 4,75% | 85,10 / 69,61 / 76,07% |
+| login / palet | 0,00 / 0,00% | 0,00 / 6,26% | 0,00 / 0,02% | 0,00 / 4,84% |
+
+**Ambang selesai (15% pada ambang 24) TIDAK tercapai** untuk kelima layar di kedua tema (4,2 sampai 8,9%). Penyebab yang diperiksa: build tidak basi (cap `e67dab0`, tanpa tanda kotor; penjaga "build basi" lolos), kelas terpakai (e2e mengukur jarak 8 px dan Topbar di dalam pulau), token terdefinisi (`--aios-island-gap`, `--aios-topbar-height`; `--aios-header-height` tidak pernah terdefinisi dan kini tidak dipakai). Penyebab sebenarnya: `bg` vs `surface-1` hanya berbeda sekitar 8/255 per kanal (gelap) dan 5/255 (terang), jauh di bawah ambang 24, sehingga latar pulau tidak terhitung; pada ambang 4 perubahan 72 sampai 85%. Token tidak diubah (di luar scope). Keputusan ada di laporan.
+
+### Pemeriksaan
+
+| Pemeriksaan | Hasil |
+| --- | --- |
+| typecheck | lulus |
+| eslint + prettier | lulus (setelah memperbaiki 2 cast di `shell.spec.ts`) |
+| desktop | 88 file, 794 tes lulus |
+| ui-tokens / contracts / roles / adapters | 28 / 138 / 36 / 102 lulus |
+| gateway | 59 file, 613 lulus, 13 dilewati sejak awal |
+| worker | 281 lulus, 1 gagal pada run penuh: `preview.test.ts` "lampiran composer..." (timeout hook `afterEach` Playwright); lulus 8/8 saat dijalankan sendirian; worker tidak berubah dari P0 |
+| e2e desktop | 28 lulus (23 lama + 5 baru) |
