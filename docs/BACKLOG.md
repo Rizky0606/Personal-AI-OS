@@ -656,7 +656,7 @@ Disusun 2026-10-26 dari perbandingan dengan Orca, Pi, Cline, Amp, Goose, dan Vib
 - [ ] **Notifikasi di aplikasi**: sakelar baru hanya menyembunyikan toast `info`; error selalu tampil. Belum ada notifikasi OS.
 - [ ] **Kartu kanban agent**: fase di kartu memakai run live bila ada; tanpa run live (mis. setelah muat ulang) menampilkan fase "Bekerja" generik, bukan fase sebenarnya.
 - [ ] **Ringkasan aktivitas proyek** memakai `GET /runs?kind=coding&limit=100`; project yang run-nya di luar 100 terbaru tampil "Belum ada aktivitas".
-- [ ] **`schedule.spec.ts` gagal di suite penuh** (dua kali, juga sebelum perubahan Sesi 6) tetapi lulus bila dijalankan sendiri: tombol "Jalankan sekarang" belum muncul. Perlu diselidiki urutannya (kemungkinan data bersama antar tes).
+- [x] (P3: tidak terulang di 7 run penuh; tes dipertegas) **`schedule.spec.ts` gagal di suite penuh** (dua kali, juga sebelum perubahan Sesi 6) tetapi lulus bila dijalankan sendiri: tombol "Jalankan sekarang" belum muncul. Perlu diselidiki urutannya (kemungkinan data bersama antar tes).
 - [ ] **Screenshot 06-screens** diambil dari stack e2e (data seadanya); layar Jadwal/Riset/Ruang tampil kosong, keadaan memuat dan error hanya teruji di RTL. Rekaman gerak tidak dibuat di sesi ini.
 
 ## Temuan Sesi 7 (Android fondasi)
@@ -743,5 +743,12 @@ Catatan steer/follow-up: pesan yang diarahkan tidak disimpan sebagai pesan chat 
 - [ ] **Langkah turunan setelah muat ulang** untuk mesin tanpa rencana hanya dari bagian tool di pesan asisten terakhir; run lama tidak ikut.
 - [ ] **Konektor MCP** dikenali dari awalan nama tool `mcp__`; belum diverifikasi dengan konektor nyata.
 - [ ] Tes dan layar Android untuk panel Progres: P6 (fixture emas sudah ada).
-- [ ] Tes e2e `shell.spec.ts` yang mengambil sampel frame (pelat meluncur, panel tidak melompat) flaky saat mesin berbeban (gagal di run penuh, lulus sendirian); pertimbangkan toleransi frame yang hilang.
+- [x] (P3: ditulis ulang lewat Web Animations API) Tes e2e `shell.spec.ts` yang mengambil sampel frame flaky saat mesin berbeban.
 - [ ] Tes gateway `fleets` ("creates a team...") dan `dsh` flaky saat beban (lulus sendirian).
+
+## Temuan P3 (bug kecil)
+
+- [ ] `projects/ProjectList.tsx` (daftar ringkas project dengan PlateGroup) tidak dipakai komponen produksi mana pun, hanya `Projects.test.tsx`. Kandidat dihapus bersama tesnya.
+- [ ] Pemilih model Pengaturan (`ModelSettings`) masih global dan aktif padahal chat umum (Hermes) mengabaikannya; hanya composer yang terkunci. Beri keterangan di Pengaturan atau nonaktifkan bila tidak ada project.
+- [ ] Peran terakhir yang dipakai (Umum) tidak lagi ditampilkan di Topbar (chip project sudah menandai agent: "Chat umum" atau nama project); butir 3 prompt P3 menyebut role terakhir, belum diterapkan karena akan menduplikasi chip project.
+- [ ] `prepareDshRoot` (chown/chmod root dsh) hanya teruji di Linux sebagai root; belum dijalankan di CI Docker.

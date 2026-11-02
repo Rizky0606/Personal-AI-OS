@@ -188,3 +188,43 @@ TodoPanel:      dihapus; rencana hanya di panel Progres
 - Konektor MCP (dikenali dari awalan nama tool `mcp__`).
 - Panel Progres di Android (P6).
 - Judul fakta memori berasal dari 40 karakter pertama teks fakta (lihat BACKLOG "Temuan P2B").
+
+## P3 — Bug kecil (2026-11-02)
+
+Cabang `fix/p3-bug-kecil` (dari ujung P2B). Tidak digabung ke `main`.
+
+### Butir
+
+| # | Perbaikan | Tes |
+| --- | --- | --- |
+| 1 | `TextField`: input selalu `w-full` (sebelumnya hanya bila ada `trailing`), sehingga alamat server dan kode TOTP tidak lagi setengah lebar | `ui/TextField.test.tsx`; e2e `login.spec` mengukur `boundingBox` ketiga input |
+| 2 | Kuota sidebar: `quotaLabel()` null bila tidak ada token (baris dan ikon disembunyikan), biaya hanya bila di atas 0 | `shell/ShellInfo.test.tsx` (5 kasus) |
+| 3 | Chip "Otomatis · Otomatis" sudah hilang sejak Topbar P1. Chip model otomatis kini bertooltip; label kanban "Otomatis" menjadi "Agent otomatis" dengan penjelasan; teks `status.role/model` yang mati dihapus | `Topbar.test.tsx`, `Kanban.test.tsx` |
+| 4 | Keterangan model hanya dari data server: "Kombinasi · coding-main", "Model · openai · gpt-x" (jenis, penyedia bila menambah informasi, id). Tidak ada kalimat karangan, tidak ada kalimat sama untuk semua kombinasi | `Settings.test.tsx`, `modelFacts.test.ts` |
+| 5 | Chat umum (Hermes): pemilih model di composer nonaktif dengan teks "Model diatur di server Hermes"; di project (omp) tetap aktif | `Composer.test.tsx`, `ChatScreen.test.tsx` |
+| 6 | `dshTestIdentity()` dan `prepareDshRoot()` mengisi `DSH_UID/GID` uji hanya saat `getuid() === 0`; `afterAll` aman bila `beforeAll` gagal. Pemeriksaan keamanan di `launch.ts` TIDAK diubah; tesnya ("menolak berjalan sebagai root tanpa DSH_UID") tetap ada. Balapan `waiting_approval` di tes dsh diperbaiki dengan menunggu status | `testing/dsh-identity.test.ts` (4 kasus), `dsh.integration.test.ts` 3 kali lulus |
+| 7 | `schedule.spec.ts`: kegagalan di BACKLOG Sesi 6 tidak terulang di 7 run suite penuh; tes dipertegas (tunggu URL detail jadwal, pemilih di `main`, toast tepat). Dua tes animasi `shell.spec` yang gagal berulang di suite penuh ditulis ulang lewat Web Animations API (jeda animasi dan geser `currentTime`), tidak bergantung frame rate | tiga run suite penuh berturut-turut: 34/34, 34/34, 34/34 |
+| 8 | `/projects`: sidebar (`WorkspaceSidebar addInMain`) hanya menawarkan muat ulang, area utama punya satu tombol (header hanya bila sudah ada project). `/spaces`: sidebar tidak menggandakan formulir buat ruang | `Projects.test.tsx`, `Spaces.test.tsx`, `WorkspaceSidebar.test.tsx` |
+| 9 | xterm memakai `--font-mono` (Geist Mono) dan dibuat SETELAH `document.fonts.load` dan `ready`; font gagal tetap membuka terminal; ditinggalkan sebelum font siap tidak membuat terminal | `terminal/Terminal.test.tsx` (4 kasus baru) |
+
+Butir 4 dan 5 ada di satu commit karena sama-sama mengubah `copy.ts`.
+
+### Bukti visual
+
+`docs/screenshots/p3/` (44 gambar, cap `3565db3`), dibandingkan dengan `p2b/` (sebelum). Login gelap: sebelumnya server dan TOTP selebar sekitar 210 px, sesudahnya ketiganya 334 px. Chat kosong: baris "Kuota 0 token · $0,00" hilang, pemilih model terkunci. Persentase piksel berbeda (ambang kanal 24 | 4): login 0,11 | 0,12; chat-kosong 0,34 | 1,17; pengaturan-atas 0,84 | 1,22; project 0,33 | 0,66; ruang 0,31 | 0,65 (tema gelap).
+
+### Pemeriksaan
+
+| Pemeriksaan | Hasil |
+| --- | --- |
+| typecheck, eslint + prettier | lulus |
+| contracts / roles / adapters / ui-tokens | 149 / 41 / 102 (+2 dilewati) / 28 |
+| desktop | 96 file, 900 tes lulus |
+| gateway | 62 file, 632 tes lulus (13 dilewati sejak awal) |
+| worker | 19 file, 282 tes lulus |
+| e2e desktop, 3 run penuh berturut-turut | 34/34, 34/34, 34/34 |
+
+### Tidak diverifikasi
+
+- Tes dsh sebagai root sungguhan (mesin ini Windows). Yang diuji: pembantu `dshTestIdentity` dan bahwa peluncur produksi menerima identitas itu serta tetap menolak root tanpa `DSH_UID`. Perilaku `chown` pada `prepareDshRoot` hanya berjalan di Linux sebagai root.
+- Kegagalan `schedule.spec` di suite penuh tidak bisa direproduksi, jadi perbaikannya defensif.
