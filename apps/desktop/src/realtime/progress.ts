@@ -1,4 +1,9 @@
-import type { ConversationProgress, ProgressOutput, TodoPhase } from '@aios/contracts';
+import {
+  isRasterImageMime,
+  type ConversationProgress,
+  type ProgressOutput,
+  type TodoPhase,
+} from '@aios/contracts';
 import {
   buildActivity,
   savedActivity,
@@ -159,7 +164,7 @@ export function buildProgress(
     .filter((a) => !storedFiles.has(a.fileId))
     .reverse()
     .map((a) => ({
-      kind: a.mime.startsWith('image/') ? ('image' as const) : ('file' as const),
+      kind: isRasterImageMime(a.mime) ? ('image' as const) : ('file' as const),
       runId: live!.runId,
       at: new Date(now).toISOString(),
       fileId: a.fileId,

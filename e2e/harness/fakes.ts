@@ -39,6 +39,8 @@ export interface ScenarioHooks {
   inject(make: (runId: string) => AgentEvent): Promise<void>;
   image: ScenarioFile;
   file: ScenarioFile;
+  /** Berkas SVG: bukan gambar di aplikasi (bisa memuat skrip), harus tampil sebagai berkas. */
+  svg: ScenarioFile;
   upload: ScenarioFile;
 }
 
@@ -54,6 +56,12 @@ export const ARTIFACT_PARTS = [
  * (tabel, grafik, checklist) dan satu blok rusak (kolom dan sel tidak sama) yang harus tampil sebagai kode.
  */
 export const SCENARIO_RICH = '[skenario:kaya]';
+/**
+ * "[skenario:screenshot]": mesin memancarkan artifact.created berupa PNG nyata (tangkapan layar) dan satu berkas SVG,
+ * keduanya tersimpan lewat modul files gateway, lalu menjawab. Hanya di stack e2e.
+ */
+export const SCENARIO_SHOT = '[skenario:screenshot]';
+export const SHOT_ANSWER = ['Tangkapan layar ', 'sudah kuambil, ', 'diagramnya terlampir.'];
 const richBlock = (value: unknown) => '```aios-ui\n' + JSON.stringify(value) + '\n```\n\n';
 export const RICH_PARTS = [
   'Ini perbandingannya.\n\n',
@@ -280,6 +288,39 @@ export async function startFakes(): Promise<Fakes> {
       } catch (error) {
         // Galat skenario tidak boleh mematikan proses e2e: akhiri aliran supaya run gagal dengan jelas.
         console.error('[e2e] skenario rencana gagal:', error);
+        stream.end();
+      }
+      return;
+    }
+    if (typeof last === 'string' && last.includes(SCENARIO_SHOT)) {
+      if (!scenario) throw new Error('skenario screenshot belum disambungkan (attachScenario)');
+      const hooks = scenario;
+      stream.reasoning('');
+      try {
+        await sleep(300);
+        for (const [file, source] of [
+          [hooks.image, 'screenshot'],
+          [hooks.svg, 'file'],
+        ] as const) {
+          await hooks.inject(() => ({
+            type: 'artifact.created',
+            fileId: file.fileId,
+            name: file.name,
+            mime: file.mime,
+            size: file.size,
+            sha256: file.sha256,
+            source,
+          }));
+        }
+        for (const part of SHOT_ANSWER) {
+          stream.delta(part);
+          await sleep(150);
+        }
+        stream.usage(20, 12);
+        stream.finish();
+        stream.done();
+      } catch (error) {
+        console.error('[e2e] skenario screenshot gagal:', error);
         stream.end();
       }
       return;

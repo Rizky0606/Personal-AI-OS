@@ -191,6 +191,12 @@ export async function startStack(): Promise<Stack> {
     },
     image: await scenarioFile('login-form.png', TEST_IMAGE),
     file: await scenarioFile('hasil.md', Buffer.from('# Hasil\n\nSemua langkah selesai.\n')),
+    svg: await scenarioFile(
+      'diagram.svg',
+      Buffer.from(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"><rect width="8" height="8"/></svg>',
+      ),
+    ),
     upload: await scenarioFile('desain.png', TEST_IMAGE),
   });
   await env.app.listen({ port: 0, host: '127.0.0.1' });

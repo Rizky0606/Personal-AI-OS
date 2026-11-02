@@ -245,6 +245,29 @@ describe('GET /conversations/:id/progress', () => {
     expect(result.used.tools).toEqual(['read_file', 'terminal']);
   });
 
+  it('artifact SVG masuk sebagai berkas, bukan gambar (SVG bisa memuat skrip); PNG tetap gambar', async () => {
+    const conv = await newConversation();
+    const run = await sendAndFinish(conv.id, [{ type: 'text', text: 'Buat diagram' }]);
+    const artifact = (fileId: string, name: string, mime: string, source: 'screenshot' | 'file') =>
+      env.store.append(run, {
+        type: 'artifact.created',
+        fileId,
+        name,
+        mime,
+        size: 9,
+        sha256: 'c'.repeat(64),
+        source,
+      });
+    const svg = await upload('diagram.svg', '<svg/>');
+    const png = await upload('layar.png', 'png');
+    await artifact(svg.id, 'diagram.svg', 'image/svg+xml', 'file');
+    await artifact(png.id, 'layar.png', 'image/png', 'screenshot');
+
+    const outputs = (await progress(conv.id)).outputs;
+    expect(outputs.find((o) => o.name === 'diagram.svg')).toMatchObject({ kind: 'file' });
+    expect(outputs.find((o) => o.name === 'layar.png')).toMatchObject({ kind: 'image' });
+  });
+
   it('berkas buatan agent di jawaban (bagian file) ikut sebagai output dengan ukurannya', async () => {
     const conv = await newConversation();
     const run = await sendAndFinish(conv.id, [{ type: 'text', text: 'Buat berkas' }]);

@@ -1,5 +1,6 @@
 import {
   PROGRESS_OUTPUTS_MAX,
+  isRasterImageMime,
   type ConversationProgress,
   type DiffFile,
   type ProgressOutput,
@@ -102,7 +103,7 @@ export async function conversationProgress(
     } else if (event.type === 'artifact.created') {
       seenFiles.add(event.fileId);
       outputs.push({
-        kind: event.mime.startsWith('image/') ? 'image' : 'file',
+        kind: isRasterImageMime(event.mime) ? 'image' : 'file',
         runId: row.runId,
         at: iso(row.ts),
         fileId: event.fileId,
@@ -157,7 +158,7 @@ export async function conversationProgress(
     );
     for (const g of generated) {
       outputs.push({
-        kind: g.mime.startsWith('image/') ? 'image' : 'file',
+        kind: isRasterImageMime(g.mime) ? 'image' : 'file',
         runId: g.runId,
         at: g.at,
         fileId: g.fileId,

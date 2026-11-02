@@ -8,3 +8,4 @@ export * from './worker-local.js';
 export * from './api.js';
 export * from './rich-answers.js';
 export * from './fixtures/rich-answers.js';
+export * from './mime.js';

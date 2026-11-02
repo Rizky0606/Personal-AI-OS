@@ -5,6 +5,9 @@ import { api } from '../app/services';
 import { cn } from '../lib/cn';
 import { formatElapsed, type Activity } from '../realtime/activity';
 import type { LiveArtifact } from '../realtime/liveRun';
+
+/** Yang dibutuhkan pratinjau: berkas run yang sedang mengalir maupun yang dibaca dari agregat tersimpan. */
+export type ArtifactRef = Pick<LiveArtifact, 'fileId' | 'name' | 'mime'>;
 import { ArtifactLightbox, isPreviewableImage } from './ArtifactLightbox';
 import { ToolStepRow } from './ToolStepRow';
 
@@ -13,11 +16,11 @@ export interface RunActivityProps {
   now: number;
   onApproval?: () => void;
   output?: string | undefined;
-  artifacts?: LiveArtifact[];
+  artifacts?: ArtifactRef[];
 }
 
-function ArtifactPreviews({ artifacts }: { artifacts: LiveArtifact[] }) {
-  const [selected, setSelected] = useState<LiveArtifact | null>(null);
+function ArtifactPreviews({ artifacts }: { artifacts: ArtifactRef[] }) {
+  const [selected, setSelected] = useState<ArtifactRef | null>(null);
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
   useEffect(() => {
     let alive = true;

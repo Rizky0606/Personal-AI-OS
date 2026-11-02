@@ -1,9 +1,9 @@
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { copy } from '../copy';
 import { newLiveRun, reduceLiveRun } from '../realtime/liveRun';
-import { api, resetApi } from '../test/fakeServices';
-import { message, run, RUN_1 } from '../test/fixtures';
+import { api, emptyProgress, resetApi } from '../test/fakeServices';
+import { message, run, RUN_1, RUN_2 } from '../test/fixtures';
 import { renderScreen } from '../test/render';
 
 vi.mock('../app/services', async () => (await import('../test/fakeServices')).fakeServices);
@@ -94,6 +94,45 @@ describe('MessageList: baris aktivitas jawaban', () => {
     expect(screen.queryByRole('button', { name: ui.toggle })).not.toBeInTheDocument();
     expect(api.getRun).not.toHaveBeenCalled();
     expect(screen.getByTestId('agent-orb')).toHaveAttribute('data-state', 'done');
+  });
+
+  it('jawaban lama tanpa langkah tool tetapi dengan berkas hasil: thumbnail gambar dari agregat progress, SVG sebagai berkas', async () => {
+    const file = (
+      kind: 'image' | 'file',
+      fileId: string,
+      name: string,
+      mime: string,
+      runId = RUN_1,
+    ) => ({
+      kind,
+      runId,
+      at: '2026-10-24T00:00:00.000Z',
+      fileId,
+      name,
+      mime,
+      size: 9,
+    });
+    api.getConversationProgress.mockResolvedValue({
+      ...emptyProgress(),
+      outputs: [
+        file('image', '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e31', 'layar.png', 'image/png'),
+        file('file', '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e32', 'diagram.svg', 'image/svg+xml'),
+        // Berkas dari run lain tidak ikut di jawaban ini.
+        file('image', '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e33', 'lain.png', 'image/png', RUN_2),
+      ],
+    });
+    await renderScreen(
+      list([message({ author: 'assistant', runId: RUN_1, text: 'Sudah kuambil.' })]),
+    );
+
+    const png = await screen.findByRole('button', { name: 'Preview: layar.png' });
+    await waitFor(() => expect(png.querySelector('img')).not.toBeNull());
+    const svg = screen.getByRole('button', { name: 'Preview: diagram.svg' });
+    expect(svg.querySelector('img')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Preview: lain.png' })).not.toBeInTheDocument();
+    // Hanya gambar raster yang diunduh untuk thumbnail; SVG tidak.
+    expect(api.downloadFile).toHaveBeenCalledWith('0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e31');
+    expect(api.downloadFile).not.toHaveBeenCalledWith('0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e32');
   });
 
   it('run yang baru selesai di sesi ini memakai jejak aslinya (waktu nyata, bukan perkiraan)', async () => {

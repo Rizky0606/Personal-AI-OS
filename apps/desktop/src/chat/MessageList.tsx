@@ -1,7 +1,8 @@
 import type { Message, QuestionAnswer } from '@aios/contracts';
 import type { RoleInfo } from '../api/gateway';
 import { useQuery } from '@tanstack/react-query';
-import { useLayoutEffect, useRef, useState, type ComponentProps } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
+import { useConversationProgress } from '../api/queries';
 import { api } from '../app/services';
 import { copy } from '../copy';
 import { buildActivity, savedActivity, type SavedTool } from '../realtime/activity';
@@ -16,6 +17,7 @@ import { orbStateOf } from './AgentOrb';
 import { AssistantMessage, type AssistantPart } from './AssistantMessage';
 import { HandoffNote, isHandoffNote } from './HandoffNote';
 import { messageText } from './messageData';
+import type { ArtifactRef } from './RunActivity';
 import { UserMessage } from './UserMessage';
 
 export interface MessageListProps {
@@ -93,25 +95,42 @@ const scrollToApproval = () =>
 
 type SavedAssistantProps = Omit<ComponentProps<typeof AssistantMessage>, 'run' | 'orb'> & {
   runId: string | null;
+  conversationId: string;
 };
 
 /**
  * Jawaban lama (setelah muat ulang atau buka percakapan): ringkasan terlipat dari bagian tool dan waktu run yang
  * tersimpan. Run diambil hanya bila jawaban punya langkah tool; jawaban teks biasa tidak mendapat baris.
  */
-function SavedAssistantMessage({ runId, ...props }: SavedAssistantProps) {
+function SavedAssistantMessage({ runId, conversationId, ...props }: SavedAssistantProps) {
   const tools = savedTools(props.parts);
+  // Berkas hasil kerja run ini dibaca dari agregat progress (cache yang sama dengan panel Progres), jadi
+  // thumbnail di baris aktivitas tetap ada setelah muat ulang.
+  const progress = useConversationProgress(runId !== null ? conversationId : undefined);
+  const artifacts = useMemo<ArtifactRef[]>(
+    () =>
+      (progress.data?.outputs ?? []).flatMap((o) =>
+        (o.kind === 'image' || o.kind === 'file') && o.runId === runId
+          ? [{ fileId: o.fileId, name: o.name, mime: o.mime }]
+          : [],
+      ),
+    [progress.data, runId],
+  );
   const run = useQuery({
     queryKey: ['run', runId],
     queryFn: () => api.getRun(runId!),
-    enabled: runId !== null && tools.length > 0,
+    enabled: runId !== null && (tools.length > 0 || artifacts.length > 0),
     retry: false,
     staleTime: 60_000,
   });
-  if (tools.length === 0) return <AssistantMessage {...props} />;
+  if (tools.length === 0 && artifacts.length === 0) return <AssistantMessage {...props} />;
   const activity = savedActivity(tools, run.data ?? null);
   return (
-    <AssistantMessage {...props} orb={orbStateOf(activity.phase)} run={{ activity, now: 0 }} />
+    <AssistantMessage
+      {...props}
+      orb={orbStateOf(activity.phase)}
+      run={{ activity, now: 0, artifacts }}
+    />
   );
 }
 
@@ -274,6 +293,7 @@ export function MessageList({
             <AssistantRow
               key={message.id}
               runId={message.runId}
+              conversationId={message.conversationId}
               finished={finished}
               now={now}
               parts={assistantParts(message)}

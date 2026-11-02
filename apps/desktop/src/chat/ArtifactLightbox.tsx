@@ -1,10 +1,11 @@
+import { isRasterImageMime } from '@aios/contracts';
 import { X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { api } from '../app/services';
 import { copy } from '../copy';
 
-const IMAGE = /^image\/(png|jpeg|webp|gif)$/i;
-export const isPreviewableImage = (mime: string) => IMAGE.test(mime);
+/** Hanya gambar raster; SVG diperlakukan sebagai berkas (lihat `isRasterImageMime`). */
+export const isPreviewableImage = isRasterImageMime;
 
 export interface LightboxFile {
   fileId: string;
