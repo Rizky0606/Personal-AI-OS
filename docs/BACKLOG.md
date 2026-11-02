@@ -748,14 +748,14 @@ Catatan steer/follow-up: pesan yang diarahkan tidak disimpan sebagai pesan chat 
 
 ## Temuan P3 (bug kecil)
 
-- [ ] `projects/ProjectList.tsx` (daftar ringkas project dengan PlateGroup) tidak dipakai komponen produksi mana pun, hanya `Projects.test.tsx`. Kandidat dihapus bersama tesnya.
-- [ ] Pemilih model Pengaturan (`ModelSettings`) masih global dan aktif padahal chat umum (Hermes) mengabaikannya; hanya composer yang terkunci. Beri keterangan di Pengaturan atau nonaktifkan bila tidak ada project.
-- [ ] Peran terakhir yang dipakai (Umum) tidak lagi ditampilkan di Topbar (chip project sudah menandai agent: "Chat umum" atau nama project); butir 3 prompt P3 menyebut role terakhir, belum diterapkan karena akan menduplikasi chip project.
+- [x] (P4b: dihapus) `projects/ProjectList.tsx` tidak dipakai komponen produksi mana pun.
+- [x] (P4b: keterangan cakupan ditambahkan) Pemilih model Pengaturan masih global padahal chat umum (Hermes) mengabaikannya.
+- [x] (P4b: chip agent terakhir tampil setelah ada run) Peran terakhir yang dipakai tidak tampil di Topbar.
 - [ ] `prepareDshRoot` (chown/chmod root dsh) hanya teruji di Linux sebagai root; belum dijalankan di CI Docker.
 
 ## Temuan P4 (fitur tersambung)
 
-- [ ] Pilihan "omp" dan "Hermes" di composer tidak memaksa mesin (hanya dsh yang dikirim). Bila ingin memaksa, perluas `SendMessageRequest.engine` di kontrak dan runner.
+- [x] (P4b: `engine` hermes, omp, dsh dipaksa dengan validasi konteks) Pilihan "omp" dan "Hermes" di composer tidak memaksa mesin.
 - [ ] Label tombol pratinjau berkas di baris aktivitas masih berbahasa Inggris ("Preview: nama") dan berasal dari sebelum P4; pindahkan ke `copy.ts`.
 - [ ] Efek skill `rich-answers` pada model nyata belum terukur (satu percobaan omp). Pertimbangkan evaluasi kecil beberapa prompt dan beberapa model.
 - [ ] Panel Progres untuk dsh hanya berisi konteks dan alat (dsh tidak mengirim rencana); `supportsTodo: false` sudah dilaporkan, tetapi UI belum menyembunyikan bagian Rencana secara eksplisit.

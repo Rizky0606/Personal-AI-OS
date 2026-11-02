@@ -271,3 +271,26 @@ Cabang `fix/p4-fitur-tersambung` (dari ujung P3). Tidak digabung ke `main`. dsh 
 - dsh sungguhan di VPS (hanya dsh palsu).
 - Screenshot aplikasi dari keluaran omp nyata; efek penegasan skill hanya dicoba satu kali (hasil model bisa bervariasi).
 - Rendering Hermes nyata dengan skill baru.
+
+## P4b — Mesin dipaksa dan sisa P3 (2026-11-02)
+
+Cabang `fix/p4b-mesin-dipaksa` (dari ujung P4). Tidak digabung ke `main`. Keputusan pengguna: (1) perluas agar mesin bisa dipaksa, (2) 9Router di VPS boleh dipakai untuk percobaan omp, (3) lanjutkan sisa P3.
+
+- **Mesin dipaksa:** `SendMessageRequest.engine` jadi `hermes | omp | dsh` (kontrak, perluasan). Gateway memvalidasi konteks: `omp` di chat umum 422 `project_required`, `dsh` di project 422 `engine_not_for_project`, `hermes` di dalam project dijawab Hermes lewat agent umum (router dipanggil tanpa project). Klien mengirim pilihan eksplisit (Otomatis tidak mengirim apa pun); Hermes kini bisa dipilih di project dan mengunci pemilih model. Tes: `engine-force.integration.test.ts` (5), `engineChoice.test.ts`, `EnginePicker.test.tsx`; tes dsh lama "engine selain dsh ditolak skema" diperbarui (nilai tak dikenal tetap 400).
+- **Chip agent di Topbar:** tampil hanya setelah ada run (agent terakhir yang menjawab), dengan tooltip penjelasan. Tes di `Topbar.test.tsx`.
+- **Pengaturan model:** keterangan cakupan (berlaku untuk omp dan dsh; chat umum lewat Hermes memakai model server). Tes di `Settings.test.tsx`.
+- **ProjectList mati dihapus:** komponen dan dua tes khusus komponen itu; perilaku produksi sudah dicakup `ProjectRoutes.test.tsx`.
+
+### Pemeriksaan
+
+| Pemeriksaan | Hasil |
+| --- | --- |
+| typecheck, eslint + prettier | lulus |
+| desktop | 98 file, 919 tes |
+| gateway | 64 file; 643 lulus pada run penuh, satu tes lama diperbarui lalu modul dsh 14 lulus |
+| e2e desktop, run penuh | 38/38 |
+
+### Tidak diverifikasi
+
+- Hermes nyata dengan mesin dipaksa di dalam project (hanya Hermes palsu).
+- Run gateway penuh ulang setelah perbaikan tes dsh (hanya modul dsh yang diulang).
