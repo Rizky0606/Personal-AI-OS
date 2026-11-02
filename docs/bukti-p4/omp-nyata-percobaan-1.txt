@@ -1,0 +1,7 @@
+| Database | Kelebihan | Kekurangan | Cocok untuk |
+|---|---|---|---|
+| SQLite | Tanpa server, ringan, mudah dipasang, backup sederhana | Kurang cocok untuk banyak penulisan bersamaan | Aplikasi lokal, prototipe, desktop, mobile |
+| PostgreSQL | Fitur lengkap, kuat, aman, transaksi andal | Perlu server dan konfigurasi | Aplikasi web kecil yang bisa berkembang |
+| MySQL | Populer, dokumentasi luas, hosting mudah ditemukan | Beberapa fitur SQL kurang konsisten dibanding PostgreSQL | CRUD web sederhana, shared hosting |
+
+**Rekomendasi:** SQLite untuk aplikasi kecil lokal; PostgreSQL untuk aplikasi web yang dipakai banyak pengguna.

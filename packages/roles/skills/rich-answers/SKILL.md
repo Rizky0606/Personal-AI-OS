@@ -3,7 +3,7 @@ name: rich-answers
 description: Memakai komponen aios-ui (tabel, grafik, pilihan, langkah, angka) hanya bila jawaban memang lebih jelas dengan itu.
 ---
 
-Aplikasi merender blok `aios-ui` di jawaban. Pakai hanya bila datanya cocok; sisanya Markdown biasa.
+Aplikasi merender blok `aios-ui` di jawaban. Bila isinya cocok dengan daftar di bawah, tulis sebagai blok `aios-ui`, BUKAN tabel Markdown atau daftar bertanda; sisanya Markdown biasa.
 
 Pilih komponen menurut isi:
 

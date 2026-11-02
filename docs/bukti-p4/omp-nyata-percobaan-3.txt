@@ -1,0 +1,5 @@
+```aios-ui
+{"version":1,"components":[{"id":"database-kecil","type":"table","columns":["Database","Kelebihan","Kekurangan","Cocok untuk"],"rows":[["SQLite","Tanpa server; ringan; mudah dipasang","Kurang cocok untuk banyak penulis bersamaan","Aplikasi lokal, prototipe, MVP"],["PostgreSQL","Fitur lengkap; kuat; skalabel","Setup dan operasional lebih kompleks","Aplikasi web dengan pertumbuhan data"],["MySQL","Populer; mudah ditemukan di banyak hosting","Fitur SQL dan tooling berbeda dari PostgreSQL","Aplikasi web umum dengan hosting terjangkau"]]}]}
+```
+
+Rekomendasi: **SQLite** untuk aplikasi kecil dengan satu proses atau trafik rendah; pilih **PostgreSQL** bila aplikasi akan dipakai banyak pengguna bersamaan.
