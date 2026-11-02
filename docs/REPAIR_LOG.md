@@ -69,3 +69,7 @@ Bukti:
 | test desktop | 87 file, 780 tes lulus (termasuk 3 tes `buildStamp`) |
 | test gateway (Postgres tertanam) | 611 lulus, 13 dilewati sejak awal, **2 gagal**: `dsh.integration` "izin diminta..." dan "izin ditolak..." (flaky, lihat BACKLOG "Temuan P0"); gateway tidak berbeda dari `main`; gagal 1 dari 3 run terisolasi |
 | e2e desktop (`pnpm --filter @aios/e2e e2e`) | 23 lulus |
+
+### E. Keputusan alur cabang (2026-11-02)
+
+Bagian D prompt P0 diubah atas keputusan pemilik repo: P0 **tidak** digabung ke `main` dan tidak di-push ke `main`. Tiap sesi perbaikan memakai cabang terpisah yang dibuat dari ujung cabang sesi sebelumnya (P0 `fix/p0-satukan-cabang` -> P1 -> ... -> P8), sehingga kodenya tetap tersambung. Merge ke `main`, push, dan penghapusan cabang lama (daftar butuh persetujuan) dilakukan sekali, di sesi terakhir. Konsekuensi: `main` tetap `23d785b` sampai saat itu, jadi baseline `baseline-p0` dan perbandingan `pnpm shots:compare` memakai folder baseline dari cabang P0, bukan dari `main`.
