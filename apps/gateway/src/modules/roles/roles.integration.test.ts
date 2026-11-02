@@ -52,7 +52,7 @@ describe('GET /roles', () => {
       fallbackModel: 'coding-cheap',
       approval: 'ask',
     });
-    expect(project.skills).toEqual([...CORE_SKILLS, 'find-skills']);
+    expect(project.skills).toEqual([...CORE_SKILLS, 'find-skills', 'plan-progress']);
     // Isi prompt tidak ikut ke klien.
     expect(JSON.stringify(items)).not.toContain('Definition of done');
   });

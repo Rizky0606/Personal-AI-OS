@@ -224,6 +224,8 @@ describe('kirim pesan dan run', () => {
       'route.decided',
       'run.status',
       'run.status',
+      // Konteks yang dipakai dikirim sekali setelah router memilih agent dan sebelum jawaban mengalir.
+      'context.used',
       'message.delta',
       'message.delta',
       'message.completed',
