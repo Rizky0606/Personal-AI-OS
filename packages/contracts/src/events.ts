@@ -240,6 +240,35 @@ export const ArtifactCreatedEventSchema = z.object({
   source: z.enum(['screenshot', 'file']),
 });
 
+/** Judul singkat satu fakta memori; bukan isinya (lihat `ContextUsedEventSchema`). */
+export const CONTEXT_MEMORY_TITLE_MAX = 40;
+
+/**
+ * Konteks yang dipakai run, dikirim gateway sekali saat run mulai (setelah router memilih role dan skill, dan
+ * setelah memori dibaca). Alat yang dipakai TIDAK ada di sini: klien menghitungnya dari `tool.started`. Isi memori
+ * dan isi lampiran tidak pernah dikirim, hanya jumlah dan judul singkat fakta serta nama berkas.
+ */
+export const ContextUsedEventSchema = z.object({
+  type: z.literal('context.used'),
+  runId: IdSchema,
+  role: RoleIdSchema,
+  engine: z.string().min(1).max(40),
+  model: z.string().max(120).nullable(),
+  skills: z.array(z.string().min(1).max(80)).max(40),
+  memory: z.object({
+    read: z.number().int().nonnegative(),
+    items: z
+      .array(z.object({ id: IdSchema, title: z.string().max(CONTEXT_MEMORY_TITLE_MAX + 1) }))
+      .max(50)
+      .optional(),
+  }),
+  attachments: z
+    .array(
+      z.object({ fileId: IdSchema, name: z.string().min(1).max(200), mime: z.string().max(255) }),
+    )
+    .max(20),
+});
+
 export const RunCompletedEventSchema = z.object({
   type: z.literal('run.completed'),
   summary: z.string(),
@@ -271,6 +300,7 @@ export const AgentEventSchema = z
     ResearchSourceEventSchema,
     ErrorEventSchema,
     ArtifactCreatedEventSchema,
+    ContextUsedEventSchema,
     RunCompletedEventSchema,
   ])
   .meta({ id: 'AgentEvent' });

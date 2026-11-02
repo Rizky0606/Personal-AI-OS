@@ -36,10 +36,12 @@ import {
   UsageSchema,
 } from './common.js';
 import {
+  DiffFileSchema,
   QueueNameSchema,
   QuestionAnswerSchema,
   RunEventSchema,
   TeamStatusSchema,
+  TodoPhaseSchema,
 } from './events.js';
 import { MergeSkippedSchema, ReviewCommentSchema } from './worker.js';
 import { RichAnswerFollowUpSchema } from './rich-answers.js';
@@ -736,3 +738,62 @@ export const StatusSchema = z
     activeRuns: z.number().int().nonnegative(),
   })
   .meta({ id: 'Status' });
+
+/** Batas jumlah output yang dikembalikan `GET /conversations/{id}/progress` (terbaru dulu). */
+export const PROGRESS_OUTPUTS_MAX = 50;
+
+const ProgressFileSchema = z.object({
+  runId: IdSchema,
+  at: TimestampSchema,
+  fileId: IdSchema,
+  name: z.string().min(1).max(200),
+  mime: z.string().min(1).max(255),
+  size: z.number().int().nonnegative(),
+});
+
+/** Satu hasil kerja agent di percakapan: gambar, berkas, ringkasan perubahan kode, atau laporan riset. */
+export const ProgressOutputSchema = z
+  .discriminatedUnion('kind', [
+    ProgressFileSchema.extend({ kind: z.literal('image') }),
+    ProgressFileSchema.extend({ kind: z.literal('file') }),
+    z.object({
+      kind: z.literal('diff'),
+      runId: IdSchema,
+      at: TimestampSchema,
+      files: z.array(DiffFileSchema).max(500),
+    }),
+    z.object({
+      kind: z.literal('research'),
+      runId: IdSchema,
+      at: TimestampSchema,
+      researchId: IdSchema,
+      title: z.string().max(300),
+    }),
+  ])
+  .meta({ id: 'ProgressOutput' });
+export type ProgressOutput = z.infer<typeof ProgressOutputSchema>;
+
+/**
+ * Agregat panel Progres satu percakapan, dibangun dari event run yang tersimpan sehingga tahan muat ulang:
+ * `plan` = todo.updated terakhir dari run terakhir yang punya rencana; `outputs` = hasil kerja, terbaru dulu;
+ * `used` = gabungan context.used semua run ditambah alat unik dari tool.started. Tanpa isi memori atau lampiran.
+ */
+export const ConversationProgressSchema = z
+  .object({
+    plan: z.object({ runId: IdSchema, phases: z.array(TodoPhaseSchema) }).nullable(),
+    outputs: z.array(ProgressOutputSchema).max(PROGRESS_OUTPUTS_MAX),
+    used: z.object({
+      skills: z.array(z.string()),
+      engine: z.string().nullable(),
+      model: z.string().nullable(),
+      memory: z.object({
+        read: z.number().int().nonnegative(),
+        items: z.array(z.object({ id: IdSchema, title: z.string() })),
+      }),
+      attachments: z.array(z.object({ fileId: IdSchema, name: z.string(), mime: z.string() })),
+      /** Nama tool unik dari tool.started (urutan pertama muncul); jenisnya dihitung klien. */
+      tools: z.array(z.string()),
+    }),
+  })
+  .meta({ id: 'ConversationProgress' });
+export type ConversationProgress = z.infer<typeof ConversationProgressSchema>;

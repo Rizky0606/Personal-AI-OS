@@ -1,4 +1,5 @@
 import {
+  ConversationProgressSchema,
   ApprovalDecisionRequestSchema,
   ApprovalParamsSchema,
   QuestionAnswerRequestSchema,
@@ -60,6 +61,18 @@ export const chatEndpoints: readonly Endpoint[] = [
     auth: true,
     params: IdParamsSchema,
     responses: [json(200, 'Percakapan', ConversationSchema)],
+    errors: [401, 404],
+  },
+  {
+    operationId: 'getConversationProgress',
+    method: 'get',
+    path: '/conversations/{id}/progress',
+    tag: 'Percakapan',
+    summary:
+      'Agregat panel Progres: rencana agent, hasil kerja, dan konteks yang dipakai (dari event run tersimpan)',
+    auth: true,
+    params: IdParamsSchema,
+    responses: [json(200, 'Progres percakapan', ConversationProgressSchema)],
     errors: [401, 404],
   },
   {
