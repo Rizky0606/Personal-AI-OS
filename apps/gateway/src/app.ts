@@ -86,8 +86,8 @@ export interface AppDeps {
     usage: UsageRecorder;
     /** Diam selama ini (ms) berarti stream model dianggap macet. */
     streamIdleMs?: number;
-    /** Engine yang bisa dipilih per pesan (GET /engines). */
-    engines?: () => EngineInfo[];
+    /** Mesin dan kemampuannya (GET /engines). */
+    engines?: () => EngineInfo[] | Promise<EngineInfo[]>;
   };
   chat: ChatService;
   files: FilesService;

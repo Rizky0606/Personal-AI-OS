@@ -3254,13 +3254,25 @@
           },
           "experimental": {
             "type": "boolean"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "supportsModelPick": {
+            "type": "boolean"
+          },
+          "supportsTodo": {
+            "type": "boolean"
           }
         },
         "required": [
           "id",
           "label",
           "available",
-          "experimental"
+          "experimental",
+          "supportsModelPick",
+          "supportsTodo"
         ]
       },
       "Quota": {

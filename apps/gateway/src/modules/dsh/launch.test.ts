@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createDshEngine, dshEnv, dshEngineList, type DshDeps } from './launch.js';
+import { createDshEngine, dshEnv, type DshDeps } from './launch.js';
 
 const config = (over: Partial<DshDeps['config']> = {}): DshDeps['config'] => ({
   DSH_COMMAND: '/usr/local/bin/dsh',
@@ -42,12 +42,8 @@ describe('dshEnv', () => {
 });
 
 describe('createDshEngine', () => {
-  it('tanpa DSH_COMMAND: engine tidak ada dan terdaftar sebagai tidak tersedia', () => {
-    const engine = createDshEngine({ config: config({ DSH_COMMAND: undefined }) });
-    expect(engine).toBeUndefined();
-    expect(dshEngineList(engine)).toEqual([
-      { id: 'dsh', label: 'DeepSeek Harness (dsh)', available: false, experimental: true },
-    ]);
+  it('tanpa DSH_COMMAND: engine tidak ada', () => {
+    expect(createDshEngine({ config: config({ DSH_COMMAND: undefined }) })).toBeUndefined();
   });
 
   it('menolak berjalan sebagai root tanpa DSH_UID', () => {

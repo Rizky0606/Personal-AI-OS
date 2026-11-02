@@ -12,7 +12,8 @@ import { createAuthService } from './modules/auth/service.js';
 import { deriveAuthKeys } from './modules/auth/secrets.js';
 import { createDevicesService } from './modules/devices/service.js';
 import { createOutbox } from './modules/files/outbox.js';
-import { createDshEngine, dshEngineList } from './modules/dsh/launch.js';
+import { createDshEngine } from './modules/dsh/launch.js';
+import { createEnginesService, workersOnlineFrom } from './modules/llm/engines.js';
 import { createMemoryService } from './modules/memory/service.js';
 import { createFleetService } from './modules/fleets/service.js';
 import { createForkService } from './modules/fork/service.js';
@@ -100,6 +101,12 @@ async function main(): Promise<void> {
       warn: (obj, msg) => app.log.warn(obj, msg),
       debug: (obj, msg) => app.log.debug(obj, msg),
     },
+  });
+  const engines = createEnginesService({
+    dsh,
+    workersOnline: workersOnlineFrom(db, (id) => workerHub.isOnline(id)),
+    hermesUp: async () => (await health.readiness()).checks.hermes.ok,
+    log: { warn: (obj, msg) => app.log.warn(obj, msg) },
   });
   const runner = createRunner({
     db,
@@ -199,7 +206,7 @@ async function main(): Promise<void> {
       models: createModelsService({ client, log: { warn: (obj, msg) => app.log.warn(obj, msg) } }),
       quota: createQuotaService(db),
       usage,
-      engines: () => dshEngineList(dsh),
+      engines: () => engines.list(),
     },
     chat,
     files,

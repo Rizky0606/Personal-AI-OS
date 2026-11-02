@@ -52,7 +52,8 @@ import { createRunsService } from '../modules/runs/service.js';
 import { createEventStore, type EventStore } from '../modules/runs/store.js';
 import { createTeamsService } from '../modules/teams/service.js';
 import { createTeamEventStore } from '../modules/teams/store.js';
-import { createDshEngine, dshEngineList, type DshDeps } from '../modules/dsh/launch.js';
+import { createDshEngine, type DshDeps } from '../modules/dsh/launch.js';
+import { createEnginesService, workersOnlineFrom } from '../modules/llm/engines.js';
 import { unusedResearch, unusedSchedules } from './stubs.js';
 import { createTestDatabase, type TestDatabase } from './db.js';
 
@@ -201,6 +202,11 @@ export async function createAuthEnv(
       })
     : undefined;
   const dsh = options.dsh ? createDshEngine({ config: options.dsh }) : undefined;
+  const engines = createEnginesService({
+    dsh,
+    workersOnline: workersOnlineFrom(db, (id) => workerHub.isOnline(id)),
+    hermesUp: () => Promise.resolve(true),
+  });
   const runner = createRunner({
     db,
     store,
@@ -334,7 +340,7 @@ export async function createAuthEnv(
       quota: createQuotaService(db, now),
       usage,
       ...(options.streamIdleMs ? { streamIdleMs: options.streamIdleMs } : {}),
-      engines: () => dshEngineList(dsh),
+      engines: () => engines.list(),
     },
     chat,
     files,

@@ -10,4 +10,5 @@ export * from './uuidv7.js';
 export * from './version.js';
 export * from './acp/rpc.js';
 export * from './acp/adapter.js';
+export * from './acp/probe.js';
 export * from './dsh.js';

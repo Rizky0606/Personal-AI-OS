@@ -107,7 +107,11 @@ export const ModelInfoSchema = z
   .meta({ id: 'ModelInfo' });
 export const ModelListSchema = itemsOf(ModelInfoSchema).meta({ id: 'ModelList' });
 
-/** Engine yang bisa dipilih klien per pesan (`SendMessageRequest.engine`). `available=false`: belum dikonfigurasi di server. */
+/**
+ * Mesin yang dilaporkan gateway beserta kemampuannya (`GET /engines`). `available=false`: belum dikonfigurasi atau
+ * pemeriksaan kesehatannya gagal; `reason` menjelaskannya untuk ditampilkan klien. Pilihan per pesan (`SendMessageRequest.engine`)
+ * hanya dibutuhkan untuk `dsh`; hermes dan omp dipilih otomatis menurut konteks (chat umum atau project).
+ */
 export const EngineInfoSchema = z
   .object({
     id: EngineSchema,
@@ -115,6 +119,12 @@ export const EngineInfoSchema = z
     available: z.boolean(),
     /** Developer preview / tidak diaudit; klien menampilkan penanda. */
     experimental: z.boolean(),
+    /** Alasan tidak tersedia, untuk ditampilkan apa adanya. */
+    reason: z.string().min(1).optional(),
+    /** Mesin menerima model pilihan pengguna per pesan; bila false, model diatur di sisi mesin. */
+    supportsModelPick: z.boolean(),
+    /** Mesin mengirim rencana langkah (tool todo) untuk panel Progres. */
+    supportsTodo: z.boolean(),
   })
   .meta({ id: 'EngineInfo' });
 export const EngineListSchema = itemsOf(EngineInfoSchema).meta({ id: 'EngineList' });

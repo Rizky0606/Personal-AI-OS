@@ -8,13 +8,15 @@ import type { QuotaService } from './usage.js';
 export const catalogRoutes: FastifyPluginCallback<{
   models: ModelsService;
   quota: QuotaService;
-  /** Engine yang bisa dipilih per pesan; tanpa ini daftar kosong. */
-  engines?: () => EngineInfo[];
+  /** Mesin dan kemampuannya; tanpa ini daftar kosong. */
+  engines?: () => EngineInfo[] | Promise<EngineInfo[]>;
 }> = (app, opts, done) => {
   const guard = { onRequest: requireScope('app') };
 
   app.get('/models', guard, async () => ModelListSchema.parse({ items: await opts.models.list() }));
-  app.get('/engines', guard, () => EngineListSchema.parse({ items: opts.engines?.() ?? [] }));
+  app.get('/engines', guard, async () =>
+    EngineListSchema.parse({ items: (await opts.engines?.()) ?? [] }),
+  );
   app.get('/quota', guard, async () => QuotaSchema.parse(await opts.quota.summary()));
 
   done();

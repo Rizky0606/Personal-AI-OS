@@ -136,10 +136,35 @@ describe('engine dsh di gateway', () => {
   it('GET /engines: tersedia bila dikonfigurasi, tidak bila tidak', async () => {
     const on = EngineListSchema.parse((await env.get('/engines', token)).json());
     const off = EngineListSchema.parse((await envOff.get('/engines', tokenOff)).json());
-    expect(on.items).toEqual([
-      { id: 'dsh', label: 'DeepSeek Harness (dsh)', available: true, experimental: true },
-    ]);
-    expect(off.items[0]).toMatchObject({ id: 'dsh', available: false });
+    const dsh = (items: typeof on.items) => items.find((item) => item.id === 'dsh');
+    // Tersedia hanya bila dikonfigurasi DAN proses dsh menjawab jabat tangan ACP (agen palsu di sini).
+    expect(dsh(on.items)).toEqual({
+      id: 'dsh',
+      label: 'dsh',
+      available: true,
+      experimental: true,
+      supportsModelPick: true,
+      supportsTodo: false,
+    });
+    expect(dsh(off.items)).toMatchObject({
+      available: false,
+      experimental: true,
+      reason: expect.stringContaining('DSH_COMMAND'),
+    });
+    // Hermes dan omp ikut dilaporkan dengan kemampuannya; model Hermes diatur di server.
+    expect(on.items.map((item) => item.id)).toEqual(['hermes', 'omp', 'dsh']);
+    expect(on.items.find((item) => item.id === 'hermes')).toMatchObject({
+      available: true,
+      supportsModelPick: false,
+      supportsTodo: false,
+    });
+    // Tidak ada worker tersambung di tes ini: omp dilaporkan tidak tersedia beserta alasannya.
+    expect(on.items.find((item) => item.id === 'omp')).toMatchObject({
+      available: false,
+      supportsModelPick: true,
+      supportsTodo: true,
+      reason: expect.stringContaining('worker'),
+    });
   });
 
   it('run selesai lewat ACP: engine dsh tercatat, teks tersimpan, event berurutan', async () => {
