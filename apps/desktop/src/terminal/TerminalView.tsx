@@ -9,6 +9,7 @@ import { cn } from '../lib/cn';
 import { Button } from '../ui/Button';
 import { IconButton } from '../ui/IconButton';
 import { workerErrorMessage } from '../worker/errors';
+import { TERMINAL_FONT_SIZE, terminalFontFamily, terminalFontReady } from './font';
 import { ErrorBanner } from '../ui/ErrorBanner';
 
 export interface TerminalViewProps {
@@ -44,59 +45,72 @@ export function TerminalView({ projectId, runId }: TerminalViewProps) {
     if (!element) return;
     setError(null);
     setExited(false);
-    const term = new Terminal({
-      fontFamily: 'IBM Plex Mono, monospace',
-      fontSize: 13,
-      cursorBlink: true,
-      theme: themeFromTokens(),
-      scrollback: 5000,
+    // Terminal dibuat setelah Geist Mono termuat: xterm mengukur sel saat open().
+    let stop: (() => void) | undefined;
+    let cancelled = false;
+    void terminalFontReady().then(() => {
+      if (!cancelled) stop = start(element);
     });
-    const fit = new FitAddon();
-    term.loadAddon(fit);
-    term.open(element);
-    fit.fit();
-
-    let id: string | null = null;
-    let disposed = false;
-    const unsubscribers: (() => void)[] = [];
-
-    void workerApi
-      .terminalOpen({ projectId, ...(runId ? { runId } : {}), cols: term.cols, rows: term.rows })
-      .then((info) => {
-        if (disposed) return;
-        id = info.id;
-        setTerminalId(info.id);
-        if (info.replay) term.write(info.replay);
-        if (info.exitCode !== null) setExited(info.exitCode);
-        unsubscribers.push(
-          localWorker.onPush((push) => {
-            if (push.push === 'terminal.data' && push.terminalId === id) term.write(push.data);
-            else if (push.push === 'terminal.exit' && push.terminalId === id)
-              setExited(push.exitCode);
-          }),
-        );
-        const input = term.onData(
-          (data) => void workerApi.terminalWrite(info.id, data).catch(() => undefined),
-        );
-        unsubscribers.push(() => input.dispose());
-        term.focus();
-      })
-      .catch((e: unknown) => {
-        if (!disposed) setError(workerErrorMessage(e));
-      });
-
-    const observer = new ResizeObserver(() => {
-      fit.fit();
-      if (id) void workerApi.terminalResize(id, term.cols, term.rows).catch(() => undefined);
-    });
-    observer.observe(element);
-
     return () => {
-      disposed = true;
-      observer.disconnect();
-      for (const off of unsubscribers) off();
-      term.dispose();
+      cancelled = true;
+      stop?.();
     };
+
+    function start(element: HTMLDivElement): () => void {
+      const term = new Terminal({
+        fontFamily: terminalFontFamily(),
+        fontSize: TERMINAL_FONT_SIZE,
+        cursorBlink: true,
+        theme: themeFromTokens(),
+        scrollback: 5000,
+      });
+      const fit = new FitAddon();
+      term.loadAddon(fit);
+      term.open(element);
+      fit.fit();
+
+      let id: string | null = null;
+      let disposed = false;
+      const unsubscribers: (() => void)[] = [];
+
+      void workerApi
+        .terminalOpen({ projectId, ...(runId ? { runId } : {}), cols: term.cols, rows: term.rows })
+        .then((info) => {
+          if (disposed) return;
+          id = info.id;
+          setTerminalId(info.id);
+          if (info.replay) term.write(info.replay);
+          if (info.exitCode !== null) setExited(info.exitCode);
+          unsubscribers.push(
+            localWorker.onPush((push) => {
+              if (push.push === 'terminal.data' && push.terminalId === id) term.write(push.data);
+              else if (push.push === 'terminal.exit' && push.terminalId === id)
+                setExited(push.exitCode);
+            }),
+          );
+          const input = term.onData(
+            (data) => void workerApi.terminalWrite(info.id, data).catch(() => undefined),
+          );
+          unsubscribers.push(() => input.dispose());
+          term.focus();
+        })
+        .catch((e: unknown) => {
+          if (!disposed) setError(workerErrorMessage(e));
+        });
+
+      const observer = new ResizeObserver(() => {
+        fit.fit();
+        if (id) void workerApi.terminalResize(id, term.cols, term.rows).catch(() => undefined);
+      });
+      observer.observe(element);
+
+      return () => {
+        disposed = true;
+        observer.disconnect();
+        for (const off of unsubscribers) off();
+        term.dispose();
+      };
+    }
   }, [projectId, runId, attempt]);
 
   return (

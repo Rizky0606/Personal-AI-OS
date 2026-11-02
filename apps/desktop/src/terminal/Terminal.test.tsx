@@ -1,6 +1,6 @@
 import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { copy } from '../copy';
 import { useUiStore } from '../state/uiStore';
 import { emitPush, resetApi, setWorker, workerApi } from '../test/fakeServices';
@@ -13,6 +13,7 @@ const xterm = vi.hoisted(() => ({
     written: string[];
     disposed: boolean;
     emit: (data: string) => void;
+    options: { fontFamily?: string; fontSize?: number };
     cols: number;
     rows: number;
   }[],
@@ -24,7 +25,9 @@ vi.mock('@xterm/xterm', () => ({
     cols = 100;
     rows = 30;
     private listener: ((data: string) => void) | undefined;
-    constructor() {
+    options: { fontFamily?: string; fontSize?: number };
+    constructor(options: { fontFamily?: string; fontSize?: number } = {}) {
+      this.options = options;
       xterm.instances.push(this);
     }
     loadAddon = vi.fn();
@@ -181,6 +184,65 @@ describe('TerminalPanel', () => {
 
     expect(xterm.instances[0]?.disposed).toBe(true);
     expect(workerApi.terminalClose).not.toHaveBeenCalled();
+  });
+});
+
+describe('TerminalPanel: font Geist Mono', () => {
+  const setFonts = (fonts: unknown) =>
+    Object.defineProperty(document, 'fonts', { value: fonts, configurable: true });
+  afterEach(() => Reflect.deleteProperty(document, 'fonts'));
+
+  it('xterm memakai Geist Mono (token --font-mono), bukan IBM Plex Mono', async () => {
+    document.documentElement.style.setProperty(
+      '--font-mono',
+      "'Geist Mono', 'IBM Plex Mono', monospace",
+    );
+    try {
+      await renderScreen(<TerminalPanel />);
+      await waitFor(() => expect(xterm.instances).toHaveLength(1));
+      const family = xterm.instances[0]!.options.fontFamily ?? '';
+      expect(family.startsWith("'Geist Mono'")).toBe(true);
+      expect(family.startsWith('IBM Plex')).toBe(false);
+      expect(xterm.instances[0]!.options.fontSize).toBe(13);
+    } finally {
+      document.documentElement.style.removeProperty('--font-mono');
+    }
+  });
+
+  it('terminal baru dibuat SESUDAH font termuat (document.fonts.load dan ready), bukan sebelum', async () => {
+    let release!: () => void;
+    const loaded = new Promise<FontFace[]>((resolve) => (release = () => resolve([])));
+    const load = vi.fn(() => loaded);
+    setFonts({ load, ready: Promise.resolve() });
+
+    await renderScreen(<TerminalPanel />);
+    await waitFor(() => expect(load).toHaveBeenCalledWith('13px "Geist Mono"'));
+    // Font belum termuat: xterm belum boleh mengukur sel.
+    await new Promise((r) => setTimeout(r, 30));
+    expect(xterm.instances).toHaveLength(0);
+    expect(workerApi.terminalOpen).not.toHaveBeenCalled();
+
+    release();
+    await waitFor(() => expect(xterm.instances).toHaveLength(1));
+    await waitFor(() => expect(workerApi.terminalOpen).toHaveBeenCalled());
+  });
+
+  it('font gagal dimuat: terminal tetap dibuka dengan font cadangan', async () => {
+    setFonts({ load: vi.fn(() => Promise.reject(new Error('gagal'))), ready: Promise.resolve() });
+    await renderScreen(<TerminalPanel />);
+    await waitFor(() => expect(xterm.instances).toHaveLength(1));
+  });
+
+  it('ditinggalkan sebelum font termuat: terminal tidak pernah dibuat (tanpa kebocoran)', async () => {
+    let release!: () => void;
+    const loaded = new Promise<FontFace[]>((resolve) => (release = () => resolve([])));
+    setFonts({ load: vi.fn(() => loaded), ready: Promise.resolve() });
+    const view = await renderScreen(<TerminalPanel />);
+    view.unmount();
+    release();
+    await new Promise((r) => setTimeout(r, 30));
+    expect(xterm.instances).toHaveLength(0);
+    expect(workerApi.terminalOpen).not.toHaveBeenCalled();
   });
 });
 
