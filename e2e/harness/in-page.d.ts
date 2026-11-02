@@ -7,3 +7,4 @@ export function comparePixels(args: {
   threshold: number;
   mask: { width: number; height: number };
 }): Promise<PixelCompare>;
+export function chipStartsWith(prefix: string): boolean;

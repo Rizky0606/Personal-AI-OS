@@ -76,3 +76,11 @@ export async function comparePixels({ imgA, imgB, threshold, mask }) {
   octx.putImageData(diff, w * 2, 0);
   return { percent: (changed / counted) * 100, side: out.toDataURL('image/png').split(',')[1] };
 }
+
+/** Chip Progres di topbar sedang menampilkan label yang diawali `prefix` (mis. "Langkah 7 dari 9")? */
+export function chipStartsWith(prefix) {
+  const label = document
+    .querySelector('button[aria-keyshortcuts="Control+."]')
+    ?.getAttribute('aria-label');
+  return typeof label === 'string' && label.startsWith(prefix);
+}

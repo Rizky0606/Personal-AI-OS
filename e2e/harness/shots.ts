@@ -5,7 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium, type Page } from '@playwright/test';
 import { preview } from 'vite';
-import { installE2eGlobals, scrollMainContent } from './in-page.js';
+import { chipStartsWith, installE2eGlobals, scrollMainContent } from './in-page.js';
 import { startStack } from './stack.js';
 
 /**
@@ -149,15 +149,7 @@ async function main() {
       // Panel Progres: rencana 9 langkah yang maju sendiri (skenario rencana), saat langkah 7 dan setelah selesai.
       await runScenario('[skenario:rencana]');
       const stepChip = page.getByRole('button', { name: /^Langkah \d+ dari 9/ });
-      await page.waitForFunction(
-        () =>
-          document
-            .querySelector('button[aria-keyshortcuts="Control+."]')
-            ?.getAttribute('aria-label')
-            ?.startsWith('Langkah 7 dari 9') === true,
-        undefined,
-        { timeout: 30_000 },
-      );
+      await page.waitForFunction(chipStartsWith, 'Langkah 7 dari 9', { timeout: 30_000 });
       await stepChip.click();
       await page.getByRole('region', { name: 'Progres percakapan' }).waitFor();
       await shot('progres-langkah7');

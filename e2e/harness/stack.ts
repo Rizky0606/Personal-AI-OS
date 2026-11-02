@@ -1,5 +1,6 @@
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
+import { crc32, deflateSync } from 'node:zlib';
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import {
   createServer as createHttpServer,
@@ -22,11 +23,40 @@ import { startFakes, type Fakes } from './fakes.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
-/** PNG 1x1 sebagai gambar uji skenario. */
-const ONE_PIXEL_PNG = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
-  'base64',
-);
+/** PNG valid (RGB 8-bit) dibangun dari fungsi piksel; dipakai sebagai gambar uji skenario. */
+function makePng(
+  width: number,
+  height: number,
+  pixel: (x: number, y: number) => [number, number, number],
+) {
+  const stride = width * 3 + 1;
+  const raw = Buffer.alloc(stride * height);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const [r, g, b] = pixel(x, y);
+      raw.set([r, g, b], y * stride + 1 + x * 3);
+    }
+  }
+  const chunk = (type: string, data: Buffer) => {
+    const length = Buffer.alloc(4);
+    length.writeUInt32BE(data.length);
+    const body = Buffer.concat([Buffer.from(type, 'ascii'), data]);
+    const crc = Buffer.alloc(4);
+    crc.writeUInt32BE(crc32(body) >>> 0);
+    return Buffer.concat([length, body, crc]);
+  };
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header.set([8, 2, 0, 0, 0], 8);
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk('IHDR', header),
+    chunk('IDAT', deflateSync(raw)),
+    chunk('IEND', Buffer.alloc(0)),
+  ]);
+}
+const TEST_IMAGE = makePng(96, 64, (x, y) => [40 + Math.round((x / 96) * 120), 90 + y, 160]);
 
 export interface Stack {
   /** Alamat server kendali (HTTP + WebSocket bridge) yang dipakai shim Tauri di halaman. */
@@ -136,9 +166,9 @@ export async function startStack(): Promise<Stack> {
       if (!runId) throw new Error('skenario rencana: tidak ada run chat yang sedang berjalan');
       await env.store.append(runId, make(runId));
     },
-    image: await scenarioFile('login-form.png', ONE_PIXEL_PNG),
+    image: await scenarioFile('login-form.png', TEST_IMAGE),
     file: await scenarioFile('hasil.md', Buffer.from('# Hasil\n\nSemua langkah selesai.\n')),
-    upload: await scenarioFile('desain.png', ONE_PIXEL_PNG),
+    upload: await scenarioFile('desain.png', TEST_IMAGE),
   });
   await env.app.listen({ port: 0, host: '127.0.0.1' });
   const gatewayUrl = `http://127.0.0.1:${(env.app.server.address() as AddressInfo).port}`;
