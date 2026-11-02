@@ -57,8 +57,10 @@ export function TerminalView({ projectId, runId }: TerminalViewProps) {
     };
 
     function start(element: HTMLDivElement): () => void {
+      // Keluarga font dari token --font-mono (Geist Mono), lihat terminal/font.ts.
+      const fontFamily = terminalFontFamily();
       const term = new Terminal({
-        fontFamily: terminalFontFamily(),
+        fontFamily,
         fontSize: TERMINAL_FONT_SIZE,
         cursorBlink: true,
         theme: themeFromTokens(),
