@@ -405,16 +405,17 @@ body {
     transition-duration: 1ms !important;
   }
   :root:not([data-reduce-motion='false']) .aios-shimmer,
-  :root:not([data-reduce-motion='false']) .aios-headline-shimmer,
   :root:not([data-reduce-motion='false']) .aios-pulse-ring::after,
   :root:not([data-reduce-motion='false']) .aios-draw-in {
     animation: none !important;
   }
   /* Kilau teks tanpa animasi: kembali ke warna teks biasa, bukan teks transparan. */
-  .aios-shimmer,
-  .aios-headline-shimmer {
+  .aios-shimmer {
     background-image: none;
     -webkit-text-fill-color: currentColor;
+  }
+  .aios-headline-shimmer::after {
+    display: none;
   }
   .aios-pulse-ring::after {
     opacity: 0;
@@ -433,13 +434,14 @@ body {
   transition-duration: 1ms !important;
 }
 :root[data-reduce-motion='true'] .aios-shimmer,
-:root[data-reduce-motion='true'] .aios-headline-shimmer,
 :root[data-reduce-motion='true'] .aios-pulse-ring::after,
 :root[data-reduce-motion='true'] .aios-draw-in {
   animation: none !important;
 }
-:root[data-reduce-motion='true'] .aios-shimmer,
-:root[data-reduce-motion='true'] .aios-headline-shimmer {
+:root[data-reduce-motion='true'] .aios-headline-shimmer::after {
+  display: none;
+}
+:root[data-reduce-motion='true'] .aios-shimmer {
   background-image: none;
   -webkit-text-fill-color: currentColor;
 }
@@ -543,27 +545,23 @@ body {
   animation: aios-shimmer 1800ms linear infinite;
 }
 
-/* Kilau judul aktivitas run: abu (text-3) dengan sapuan text; berhenti bersama animasi lain bila gerak dikurangi. */
-@keyframes aios-headline-shimmer {
-  from {
-    background-position: 100% 0;
-  }
-  to {
-    background-position: -100% 0;
-  }
-}
+/* Kilau judul aktivitas run: teks tetap abu (text-3); sapuan aksen transparan lewat di atasnya. */
 .aios-headline-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.aios-headline-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
   background-image: linear-gradient(
-    100deg,
-    var(--aios-text-3) 0%,
-    var(--aios-text) 50%,
-    var(--aios-text-3) 100%
+    90deg,
+    transparent,
+    color-mix(in oklch, var(--aios-accent) 30%, transparent),
+    transparent
   );
-  background-size: 200% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: aios-headline-shimmer 1800ms linear infinite;
+  animation: aios-sweep 1800ms var(--aios-easing) infinite;
 }
 
 /* Cincin denyut di sekeliling indikator aktif; warna lewat --aios-ring (default aksen). */
