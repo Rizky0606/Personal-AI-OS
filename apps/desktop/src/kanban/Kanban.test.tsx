@@ -142,7 +142,11 @@ describe('KanbanScreen: papan', () => {
     await column('running', 0);
     await column('done', 0);
     // Kartu tanpa role memberi tahu bahwa router yang memilih.
-    expect(within(await column('todo', 1)).getByText(copy.kanban.role.auto)).toBeInTheDocument();
+    const auto = within(await column('todo', 1)).getByText(copy.kanban.role.auto);
+    expect(auto).toBeInTheDocument();
+    // Label otomatis punya penjelasan, bukan satu kata "Otomatis" tanpa konteks.
+    expect(auto).toHaveAttribute('title', copy.kanban.role.autoHint);
+    expect(copy.kanban.role.auto).not.toBe('Otomatis');
   });
 
   it('klik kartu di Review membuka tab Diff untuk run-nya', async () => {

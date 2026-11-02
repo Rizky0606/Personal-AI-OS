@@ -47,10 +47,20 @@ export function ConnectionBadge() {
   );
 }
 
-function Chip({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+function Chip({
+  icon,
+  children,
+  hint,
+}: {
+  icon: React.ReactNode;
+  children: React.ReactNode;
+  /** Penjelasan singkat (tooltip) bila teks chip saja kurang jelas. */
+  hint?: string | undefined;
+}) {
   return (
     <span
       data-chip
+      title={hint}
       className="inline-flex h-7 min-w-0 max-w-56 items-center gap-2 rounded-badge bg-surface-2 px-2 text-meta text-text-2"
     >
       {icon}
@@ -117,6 +127,7 @@ export function Topbar({ title, chat, action, rightPanelOpen, onToggleRightPanel
             ) : null}
             <Chip
               icon={<Cpu size={14} strokeWidth={1.5} aria-hidden="true" className="shrink-0" />}
+              hint={modelId ? undefined : copy.settings.modelAutoHint}
             >
               {modelLabel}
             </Chip>

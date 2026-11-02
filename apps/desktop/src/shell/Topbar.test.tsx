@@ -81,7 +81,7 @@ describe('Topbar', () => {
     await renderTopbar();
     expect(await screen.findByText(copy.status.project)).toBeInTheDocument();
     expect(screen.getByText(copy.shell.modelAuto)).toBeInTheDocument();
-    expect(screen.queryByText(copy.status.model)).not.toBeInTheDocument();
+    expect(screen.queryByText('Otomatis', { exact: true })).not.toBeInTheDocument();
     expect(copy.status.project).not.toBe(copy.shell.modelAuto);
   });
 
@@ -91,6 +91,19 @@ describe('Topbar', () => {
 
     expect(await screen.findByText('Toko Online')).toBeInTheDocument();
     expect(await screen.findByText('Cepat')).toBeInTheDocument();
+  });
+
+  it('model otomatis: satu chip bermakna dengan penjelasan (tooltip); model dipilih: namanya tanpa penjelasan', async () => {
+    const view = await renderTopbar();
+    const auto = (await screen.findByText(copy.shell.modelAuto)).closest('[data-chip]');
+    expect(auto).toHaveAttribute('title', copy.settings.modelAutoHint);
+    view.unmount();
+
+    useUiStore.setState({ model: 'combo/fast' });
+    await renderTopbar();
+    const chosen = (await screen.findByText('Cepat')).closest('[data-chip]');
+    expect(chosen).not.toHaveAttribute('title');
+    expect(screen.queryByText(copy.shell.modelAuto)).not.toBeInTheDocument();
   });
 
   it('layar lain: tidak ada project dan model', async () => {

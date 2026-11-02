@@ -176,7 +176,10 @@ export function TaskCard({
         {task.agentRole ? (
           <RoleChip role={task.agentRole} roles={roles} />
         ) : (
-          <span className="inline-flex h-6 items-center rounded-badge bg-surface-2 px-2 text-meta text-text-3">
+          <span
+            title={copy.kanban.role.autoHint}
+            className="inline-flex h-6 items-center rounded-badge bg-surface-2 px-2 text-meta text-text-3"
+          >
             {copy.kanban.role.auto}
           </span>
         )}

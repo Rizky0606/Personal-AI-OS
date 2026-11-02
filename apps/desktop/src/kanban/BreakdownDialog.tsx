@@ -162,7 +162,10 @@ export function BreakdownDialog({
                     {item.body}
                   </span>
                 ) : null}
-                <span className="text-caption text-text-3">
+                <span
+                  title={item.agentRole ? undefined : copy.kanban.role.autoHint}
+                  className="text-caption text-text-3"
+                >
                   {roles.find((r) => r.id === item.agentRole)?.name ?? copy.kanban.role.auto}
                 </span>
               </span>

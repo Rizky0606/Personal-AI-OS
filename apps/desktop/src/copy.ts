@@ -171,8 +171,6 @@ export const copy = {
     idle: 'Tidak tersambung',
     offline: 'Offline',
     project: 'Chat umum',
-    role: 'Otomatis',
-    model: 'Otomatis',
     statusColumn: 'Status',
     page: {
       title: 'Status sistem',
@@ -1413,7 +1411,11 @@ export const copy = {
     dequeue: 'Keluar dari antrean',
     cardMenu: (title: string) => `Menu kartu ${title}`,
     cardHint: 'Alt + panah menggeser kartu',
-    role: { label: 'Role', auto: 'Otomatis' },
+    role: {
+      label: 'Role',
+      auto: 'Agent otomatis',
+      autoHint: 'Agent dipilih otomatis sesuai project; tidak perlu dipilih per kartu.',
+    },
     started: 'Kartu mulai dikerjakan.',
     queuedToast: 'Slot run penuh. Kartu menunggu giliran.',
     moved: 'Kartu dipindah.',
