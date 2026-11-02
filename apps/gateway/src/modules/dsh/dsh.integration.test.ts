@@ -14,6 +14,7 @@ import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, inject, it } from 'vitest';
 import { messages, runEvents } from '../../db/schema/index.js';
 import { createAuthEnv, type AuthEnv } from '../../testing/auth-env.js';
+import { dshTestIdentity, prepareDshRoot } from '../../testing/dsh-identity.js';
 import type { DshDeps } from './launch.js';
 
 /**
@@ -31,13 +32,14 @@ let tokenOff: string;
 
 beforeAll(async () => {
   root = await mkdtemp(join(tmpdir(), 'aios-dsh-gw-'));
+  await prepareDshRoot(root);
   const config: DshDeps['config'] = {
     DSH_COMMAND: process.execPath,
     DSH_ARGS: FAKE,
     DSH_HOME: undefined,
     DSH_WORKDIR_ROOT: root,
-    DSH_UID: undefined,
-    DSH_GID: undefined,
+    // Saat tes berjalan sebagai root (CI Docker), peluncur produksi mewajibkan identitas non-root; isi di sini.
+    ...dshTestIdentity(),
     DSH_MAX_MEMORY_MB: 512,
     DSH_RUN_TIMEOUT_MS: 60_000,
     DSH_IDLE_TIMEOUT_MS: 30_000,
@@ -50,9 +52,9 @@ beforeAll(async () => {
   tokenOff = (await envOff.loginOk({ kind: 'desktop' })).accessToken;
 });
 afterAll(async () => {
-  await env.close();
-  await envOff.close();
-  await rm(root, { recursive: true, force: true });
+  // beforeAll bisa gagal sebelum env terbentuk; penutupan tidak boleh melempar dan menutupi galat aslinya.
+  for (const target of [env, envOff] as (AuthEnv | undefined)[]) await target?.close();
+  if ((root as string | undefined) !== undefined) await rm(root, { recursive: true, force: true });
 });
 
 const until = async <T>(read: () => Promise<T>, ok: (v: T) => boolean, ms = 30_000): Promise<T> => {
@@ -120,6 +122,16 @@ const pendingApproval = async (runId: string) => {
   return found;
 };
 
+/**
+ * Event `approval.requested` tersimpan sedikit sebelum status run berpindah ke `waiting_approval`; menjawab atau membaca
+ * status sebelum itu adalah balapan di tes (bukan perilaku yang dijanjikan), jadi tunggu statusnya dulu.
+ */
+const waitingApproval = (runId: string) =>
+  until(
+    () => getRun(env, token, runId),
+    (run) => run.status === 'waiting_approval',
+  );
+
 describe('engine dsh di gateway', () => {
   it('GET /engines: tersedia bila dikonfigurasi, tidak bila tidak', async () => {
     const on = EngineListSchema.parse((await env.get('/engines', token)).json());
@@ -161,7 +173,7 @@ describe('engine dsh di gateway', () => {
     const approval = await pendingApproval(run.id);
     expect(approval.kind).toBe('command');
     expect(approval.detail).toContain('rm -rf build');
-    expect((await getRun(env, token, run.id)).status).toBe('waiting_approval');
+    expect((await waitingApproval(run.id)).status).toBe('waiting_approval');
     const res = await env.post(
       `/runs/${run.id}/approvals/${approval.approvalId}`,
       { decision: 'allow' },
@@ -175,6 +187,7 @@ describe('engine dsh di gateway', () => {
   it('izin ditolak: tool denied, agent diberi tahu', async () => {
     const { run } = await send(env, token, 'izin');
     const approval = await pendingApproval(run.id);
+    await waitingApproval(run.id);
     await env.post(`/runs/${run.id}/approvals/${approval.approvalId}`, { decision: 'deny' }, token);
     expect((await finalRun(env, token, run.id)).status).toBe('completed');
     expect(await assistantText(env, run.id)).toBe('ditolak');
