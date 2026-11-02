@@ -7,18 +7,23 @@ import { comparePixels } from './in-page.js';
  * `pnpm shots:compare <folderA> <folderB>`: persentase piksel berbeda per layar (beda > 24 pada kanal
  * mana pun) lewat canvas getImageData di Playwright. Label cap build (pojok kanan bawah) tidak dihitung
  * karena isinya selalu berubah. Menulis tabel markdown ke stdout dan gambar A | B | selisih per layar ke
- * <induk folderB>/_compare/<A>__<B>/.
+ * <induk folderB>/_compare/<A>__<B>/. Argumen ketiga (opsional) mengubah ambang kanal.
  */
-const [argA, argB] = process.argv.slice(2);
+const [argA, argB, argThreshold] = process.argv.slice(2);
 if (!argA || !argB) {
-  console.error('Pemakaian: pnpm shots:compare <folderA> <folderB>');
+  console.error('Pemakaian: pnpm shots:compare <folderA> <folderB> [ambang-kanal=24]');
   process.exit(2);
 }
 // pnpm --filter menjalankan skrip dari e2e/; path relatif dihitung dari folder tempat perintah diketik.
 const cwd = process.env.INIT_CWD ?? process.cwd();
 const dirA = path.resolve(cwd, argA);
 const dirB = path.resolve(cwd, argB);
-const CHANNEL_THRESHOLD = 24;
+// Ambang bawaan 24 mengabaikan beda tonal halus (mis. kanvas vs pulau); turunkan untuk mengukurnya.
+const CHANNEL_THRESHOLD = argThreshold === undefined ? 24 : Number(argThreshold);
+if (!Number.isInteger(CHANNEL_THRESHOLD) || CHANNEL_THRESHOLD < 0 || CHANNEL_THRESHOLD > 255) {
+  console.error('Ambang kanal harus bilangan bulat 0-255.');
+  process.exit(2);
+}
 const STAMP_MASK = { width: 280, height: 32 };
 
 const pngs = (dir: string) => new Set(readdirSync(dir).filter((f) => f.endsWith('.png')));

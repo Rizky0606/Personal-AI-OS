@@ -715,5 +715,12 @@ Catatan steer/follow-up: pesan yang diarahkan tidak disimpan sebagai pesan chat 
 
 - [ ] `apps/gateway/src/modules/dsh/dsh.integration.test.ts` ("izin diminta, disetujui lewat API, lalu run selesai" dan "izin ditolak") flaky: status run `running` saat tes menunggu `waiting_approval`/`completed`. Pada P0 gagal 1 dari 3 run terisolasi dan di 2 dari 3 run suite penuh; gateway tidak berbeda dari `main`, jadi sudah ada sebelum P0. Tes `schedules.integration` "pemicu cron saat run sebelumnya masih berjalan" gagal sekali saat mesin berbeban.
 - [ ] `e2e/.stack.json` dan `e2e/test-results/` terlacak git dan ditulis ulang tiap run e2e, sehingga working tree selalu kotor setelah e2e (cap build mengecualikannya). Hapus dari indeks dan masukkan ke `.gitignore`.
-- [ ] Layar Pengaturan: item sidebar "Ruang" masih tampil aktif (pelat penanda tidak pindah) setelah berpindah dari Ruang ke Pengaturan lewat Ctrl+6 dengan `prefers-reduced-motion`; lihat `docs/screenshots/baseline-p0/terang-pengaturan-gulir.png`. Perlu diselidiki di P1 (shell).
+- [x] (Dikoreksi di P1) Item sidebar "Ruang" yang tampak aktif di `terang-pengaturan-gulir.png` bukan bug: itu pelat hover karena kursor skrip `pnpm shots` masih di atas link Ruang.
 - [ ] `pnpm shots:compare` mengabaikan persegi 280x32 px di pojok kanan bawah (label cap build) agar teks hash tidak dihitung sebagai perbedaan.
+
+## Temuan P1 (pasang shell baru)
+
+- [ ] Kontras pulau terhadap kanvas lemah: `bg` vs `surface-1` hanya sekitar 8/255 per kanal (gelap) dan 5/255 (terang), sehingga pulau terbaca terutama lewat batas tipis dan jarak. Ambang selesai P1 (15% piksel berbeda pada ambang kanal 24) tidak tercapai (4 sampai 9%); pada ambang 4 perubahan 72 sampai 85%. Keputusan desain: naikkan kontras token atau terima.
+- [ ] Strip "Selesai" (RunActivity) dan composer tepi-ke-tepi di dalam pulau utama, bergaya lama (P2).
+- [ ] Panel kanan terbuka di lebar 1024 tidak ada di `pnpm shots` (hanya diuji e2e: tanpa gulir mendatar, tanpa teks terpotong); pertimbangkan menambah layar `lebar-1024-panel`.
+- [ ] Bentuk branch di chip project memakai teks mono kecil; pada project dengan nama panjang chip dipotong (truncate), nama lengkap belum ada di tooltip.
