@@ -117,7 +117,11 @@ export function ProjectsScreen() {
 
   return (
     <Page>
-      <PageHeader title={copy.projects.title} actions={workerReady ? addButton : undefined} />
+      {/* Keadaan kosong membawa tombol tambahnya sendiri; header hanya bila sudah ada project (satu tombol per layar). */}
+      <PageHeader
+        title={copy.projects.title}
+        actions={workerReady && view === 'content' ? addButton : undefined}
+      />
       <PageContainer>
         {!workerReady ? (
           <p role="alert" className="mb-3 text-meta text-warning">

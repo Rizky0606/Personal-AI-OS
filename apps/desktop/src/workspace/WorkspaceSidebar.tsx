@@ -119,8 +119,11 @@ function ProjectGroup({
 /**
  * Sidebar tab Project: semua project terdaftar, masing-masing dengan percakapannya dan penanda run yang
  * sedang berjalan. Memilih project atau percakapan membuka chat sesuai folder project itu.
+ *
+ * `addInMain`: layar utama (Kelola project) sudah punya tombol tambah, jadi keadaan kosong di sini hanya menawarkan
+ * muat ulang: satu aksi tambah per layar, di area utama.
  */
-export function WorkspaceSidebar() {
+export function WorkspaceSidebar({ addInMain = false }: { addInMain?: boolean }) {
   const projects = useProjects();
   const runs = useWorkspaceRuns();
   const online = useOnline();
@@ -145,10 +148,16 @@ export function WorkspaceSidebar() {
           loadingLabel={copy.projects.loading}
           emptyMessage={copy.projects.empty}
           emptyAction={
-            <Button variant="secondary" onClick={() => setDialogOpen(true)}>
-              <Plus size={14} strokeWidth={1.5} aria-hidden="true" />
-              {copy.projects.add}
-            </Button>
+            addInMain ? (
+              <Button variant="secondary" onClick={() => void projects.refetch()}>
+                {copy.states.retry}
+              </Button>
+            ) : (
+              <Button variant="secondary" onClick={() => setDialogOpen(true)}>
+                <Plus size={14} strokeWidth={1.5} aria-hidden="true" />
+                {copy.projects.add}
+              </Button>
+            )
           }
           errorMessage={projects.isError ? apiErrorMessage(projects.error, online) : ''}
           offlineMessage={copy.states.offline}

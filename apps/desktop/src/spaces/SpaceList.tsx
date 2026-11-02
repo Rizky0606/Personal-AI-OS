@@ -1,4 +1,4 @@
-import { Link, useNavigate, useParams } from '@tanstack/react-router';
+import { Link, useNavigate, useParams, useRouterState } from '@tanstack/react-router';
 import { apiErrorMessage } from '../api/errors';
 import { useSpaces } from '../api/queries';
 import { useOnline } from '../app/hooks';
@@ -14,6 +14,8 @@ export function SpaceList() {
   const online = useOnline();
   const params = useParams({ strict: false });
   const navigate = useNavigate();
+  // Di halaman Ruang formulir buat ruang sudah ada di area utama; sidebar tidak menggandakannya.
+  const onCreatePage = useRouterState({ select: (st) => st.location.pathname === '/spaces' });
   const items = query.data ?? [];
   const s = copy.spaces;
 
@@ -33,9 +35,15 @@ export function SpaceList() {
       loadingLabel={s.loading}
       emptyMessage={s.empty}
       emptyAction={
-        <Button variant="secondary" onClick={() => void navigate({ to: '/spaces' })}>
-          {s.createNew}
-        </Button>
+        onCreatePage ? (
+          <Button variant="secondary" onClick={() => void query.refetch()}>
+            {copy.states.retry}
+          </Button>
+        ) : (
+          <Button variant="secondary" onClick={() => void navigate({ to: '/spaces' })}>
+            {s.createNew}
+          </Button>
+        )
       }
       errorMessage={query.isError ? apiErrorMessage(query.error, online) : ''}
       offlineMessage={copy.states.offline}

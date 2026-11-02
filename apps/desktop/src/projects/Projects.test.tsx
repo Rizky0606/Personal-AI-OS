@@ -268,6 +268,22 @@ describe('ProjectsScreen: daftar', () => {
     expect(screen.getByRole('button', { name: copy.projects.add })).toBeDisabled();
   });
 
+  it('satu tombol Tambah project per layar: kosong dengan worker tersambung = satu (di keadaan kosong), ada project = satu (di header)', async () => {
+    connected();
+    const view = await renderScreen(<ProjectsScreen />, '/projects');
+    expect(await screen.findByText(copy.projects.empty)).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: copy.projects.add })).toHaveLength(1);
+    view.unmount();
+
+    api.listProjects.mockResolvedValue([project()]);
+    await renderScreen(<ProjectsScreen />, '/projects');
+    await screen.findByText('Aplikasi saya');
+    const buttons = screen.getAllByRole('button', { name: copy.projects.add });
+    expect(buttons).toHaveLength(1);
+    // Satu-satunya tombol itu ada di area header layar, bukan di keadaan kosong.
+    expect(screen.queryByText(copy.projects.empty)).not.toBeInTheDocument();
+  });
+
   it('daftar ringkas kosong: tombol Tambah project membuka dialog tambah project', async () => {
     connected();
     const user = userEvent.setup();

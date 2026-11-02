@@ -35,7 +35,7 @@ interface Section {
 /** Judul bagian dan isi sidebar menurut rute aktif. */
 function sectionFor(pathname: string): Section {
   if (pathname.startsWith('/projects'))
-    return { title: copy.workspace.manage, list: <WorkspaceSidebar /> };
+    return { title: copy.workspace.manage, list: <WorkspaceSidebar addInMain /> };
   if (pathname.startsWith('/kanban'))
     return {
       title: copy.nav.kanban,

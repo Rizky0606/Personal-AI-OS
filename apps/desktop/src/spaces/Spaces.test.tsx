@@ -77,6 +77,14 @@ describe('SpacesScreen dan SpaceList', () => {
 });
 
 describe('SpaceList kosong', () => {
+  it('di halaman Ruang formulir buat ruang sudah ada di area utama: sidebar tidak menggandakan tombolnya (hanya muat ulang)', async () => {
+    api.listSpaces.mockResolvedValue([]);
+    await renderScreen(<SpaceList />, '/spaces');
+    expect(await screen.findByText(s.empty)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: s.createNew })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: copy.states.retry })).toBeInTheDocument();
+  });
+
   it('Buat ruang baru membawa ke formulir ruang', async () => {
     const user = userEvent.setup();
     api.listSpaces.mockResolvedValue([]);
