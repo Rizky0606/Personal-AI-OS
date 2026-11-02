@@ -228,3 +228,46 @@ Butir 4 dan 5 ada di satu commit karena sama-sama mengubah `copy.ts`.
 
 - Tes dsh sebagai root sungguhan (mesin ini Windows). Yang diuji: pembantu `dshTestIdentity` dan bahwa peluncur produksi menerima identitas itu serta tetap menolak root tanpa `DSH_UID`. Perilaku `chown` pada `prepareDshRoot` hanya berjalan di Linux sebagai root.
 - Kegagalan `schedule.spec` di suite penuh tidak bisa direproduksi, jadi perbaikannya defensif.
+
+## P4 — Fitur tersambung (2026-11-02)
+
+Cabang `fix/p4-fitur-tersambung` (dari ujung P3). Tidak digabung ke `main`. dsh tetap opsional dan mati secara bawaan; tidak ada dependensi baru; kontrak hanya ditambah.
+
+### A. Jawaban kaya untuk semua role
+
+- `rich-answers` jadi skill inti (`CORE_SKILLS` 5 menjadi 6), dimuat untuk semua role di chat umum dan project, pada omp, Hermes, dan dsh (runner memakai `roles.bundle` untuk semua mesin). Keluar dari paket `frontend`. Tes roles diperbarui sesuai aturan baru (skill inti, bukan pengecualian yatim); gateway menegaskan skill itu ada di pesan sistem Hermes.
+- Isi skill: komponen menurut isi (perbandingan, deret angka, pilihan, langkah, angka penting), kapan TIDAK dipakai, maksimal 3 komponen, contoh benar dan salah, dan perbandingan harus blok `aios-ui`, bukan tabel Markdown.
+- e2e `[skenario:kaya]` (`e2e/tests/rich.spec.ts`): tabel, grafik, checklist tampil; blok rusak tampil sebagai kode; sama setelah muat ulang.
+- omp sungguhan ("Bandingkan 3 opsi database untuk aplikasi kecil dalam tabel", bundel role `general`, `omp -p --no-tools`): percobaan 1 menjawab tabel Markdown biasa (skill belum tegas), percobaan 2 habis waktu, percobaan 3 setelah penegasan menghasilkan blok `aios-ui` tipe `table` yang valid menurut `RichAnswerSchema`. Teks di `docs/bukti-p4/`. Screenshot aplikasi dari keluaran nyata tidak diambil.
+
+### B. Pilihan mesin
+
+- Kontrak: `EngineInfo` ditambah `reason?`, `supportsModelPick`, `supportsTodo`. `GET /engines` melaporkan `hermes` (health check), `omp` (worker tersambung), `dsh` (`DSH_COMMAND` terisi DAN jabat tangan ACP lulus; `probeAcp` di `packages/adapters`, cache 30 detik). Alasan ke klien umum, rincian galat ke log.
+- Desktop: pemilih mesin di composer (Otomatis, omp, Hermes, dsh), nonaktif dengan alasan (dari gateway atau konteks), dsh berlabel Pratinjau dengan tooltip "belum diaudit", tersimpan per percakapan (maks. 100), dipindah dari kunci chat baru ke id percakapan. Pemilih model mengikuti `supportsModelPick`. Hanya `engine: 'dsh'` yang dikirim; Otomatis, omp, Hermes mengikuti konteks.
+- e2e `engine.spec.ts` dengan `fake-dsh.mjs` lewat peluncur produksi: pilih dsh, kirim tugas, setujui izin, baris aktivitas dan panel Progres (mesin dsh) terisi, pilihan bertahan setelah muat ulang.
+
+### C. Thumbnail bukti
+
+- e2e `[skenario:screenshot]` (`thumbnail.spec.ts`): PNG nyata dan SVG lewat modul files; thumbnail di baris aktivitas dan Output Progres; klik membuka lightbox, Esc menutup; tahan muat ulang; SVG sebagai berkas.
+- Dua celah ditemukan e2e dan diperbaiki: jawaban tersimpan tanpa langkah tool tidak punya baris aktivitas dan thumbnail (kini dari agregat progress), dan SVG diklasifikasikan sebagai gambar (kini `isRasterImageMime` di kontrak, dipakai gateway dan desktop).
+
+### Bukti visual
+
+`docs/screenshots/p4/` (44 gambar, cap `09e0426`) vs `p3/`: chat kosong 0,21% (gelap dan terang), chat selesai 0,75-0,80%. Perubahan: pil "Mesin otomatis" di composer.
+
+### Pemeriksaan
+
+| Pemeriksaan | Hasil |
+| --- | --- |
+| typecheck, eslint + prettier | lulus |
+| contracts / roles / adapters / ui-tokens | 151 / 46 / 106 (+2 dilewati) / 28 |
+| desktop | 98 file, 919 tes |
+| gateway | 63 file, 639 tes (13 dilewati sejak awal) |
+| worker | 19 file, 282 tes (dua run pertama gagal di `files.test.ts` saat beban, lulus sendirian dan di run ketiga; `apps/worker` tidak diubah P4) |
+| e2e desktop, run penuh | 38/38 |
+
+### Tidak diverifikasi
+
+- dsh sungguhan di VPS (hanya dsh palsu).
+- Screenshot aplikasi dari keluaran omp nyata; efek penegasan skill hanya dicoba satu kali (hasil model bisa bervariasi).
+- Rendering Hermes nyata dengan skill baru.

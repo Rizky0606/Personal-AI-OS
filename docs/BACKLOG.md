@@ -752,3 +752,11 @@ Catatan steer/follow-up: pesan yang diarahkan tidak disimpan sebagai pesan chat 
 - [ ] Pemilih model Pengaturan (`ModelSettings`) masih global dan aktif padahal chat umum (Hermes) mengabaikannya; hanya composer yang terkunci. Beri keterangan di Pengaturan atau nonaktifkan bila tidak ada project.
 - [ ] Peran terakhir yang dipakai (Umum) tidak lagi ditampilkan di Topbar (chip project sudah menandai agent: "Chat umum" atau nama project); butir 3 prompt P3 menyebut role terakhir, belum diterapkan karena akan menduplikasi chip project.
 - [ ] `prepareDshRoot` (chown/chmod root dsh) hanya teruji di Linux sebagai root; belum dijalankan di CI Docker.
+
+## Temuan P4 (fitur tersambung)
+
+- [ ] Pilihan "omp" dan "Hermes" di composer tidak memaksa mesin (hanya dsh yang dikirim). Bila ingin memaksa, perluas `SendMessageRequest.engine` di kontrak dan runner.
+- [ ] Label tombol pratinjau berkas di baris aktivitas masih berbahasa Inggris ("Preview: nama") dan berasal dari sebelum P4; pindahkan ke `copy.ts`.
+- [ ] Efek skill `rich-answers` pada model nyata belum terukur (satu percobaan omp). Pertimbangkan evaluasi kecil beberapa prompt dan beberapa model.
+- [ ] Panel Progres untuk dsh hanya berisi konteks dan alat (dsh tidak mengirim rencana); `supportsTodo: false` sudah dilaporkan, tetapi UI belum menyembunyikan bagian Rencana secara eksplisit.
+- [ ] Tes worker `files.test.ts` ("memotong isi folder di 500 entri") flaky saat beban.
