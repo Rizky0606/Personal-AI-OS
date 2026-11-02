@@ -16,6 +16,7 @@ const list = (messages: ReturnType<typeof message>[]) => (
   <MessageList
     messages={messages}
     live={undefined}
+    now={0}
     failure={null}
     pending={null}
     roles={[]}

@@ -1,4 +1,4 @@
-import { act, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiProblem } from '../auth/authSession';
@@ -52,7 +52,12 @@ describe('ChatScreen: memuat riwayat', () => {
 
     expect(await screen.findByText('Apa kabar?')).toBeInTheDocument();
     expect(screen.getByText('jelas').tagName).toBe('STRONG');
-    expect(screen.getByText('web.search')).toBeInTheDocument();
+    // Langkah tool kini ringkasan terlipat di dalam jawaban; linimasa memuat langkah dan durasinya.
+    const row = screen.getByRole('button', { name: copy.runActivity.ui.toggle });
+    expect(row).toHaveTextContent('Selesai · 1 langkah');
+    expect(screen.queryByText('1,2 dtk')).not.toBeInTheDocument();
+    fireEvent.click(row);
+    expect(screen.getByText('Alat selesai: web.search')).toBeInTheDocument();
     expect(screen.getByText('1,2 dtk')).toBeInTheDocument();
     expect(screen.getByText('combo/fast')).toBeInTheDocument();
   });

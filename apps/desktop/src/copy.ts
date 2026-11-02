@@ -620,6 +620,7 @@ export const copy = {
       toggle: 'Buka aktivitas run',
       toolOutput: 'Output alat',
       openApproval: 'Buka approval',
+      timeline: 'Linimasa langkah',
       moreSteps: (n: number) => `+${n} langkah lainnya`,
       phase: {
         idle: 'Siap',

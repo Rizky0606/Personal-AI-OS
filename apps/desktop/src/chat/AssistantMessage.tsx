@@ -1,8 +1,7 @@
 import type { RoleInfo } from '../api/gateway';
 import { copy } from '../copy';
 import { Button } from '../ui/Button';
-import { cn } from '../lib/cn';
-import { Bot, Download, FileText } from 'lucide-react';
+import { Download, FileText } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { apiErrorMessage } from '../api/errors';
 import { useOnline } from '../app/hooks';
@@ -14,7 +13,9 @@ import { Markdown } from '../markdown/Markdown';
 import { splitSuggestions } from './suggestions';
 import { ReasoningBlock } from './ReasoningBlock';
 import { RoleChip } from './RoleChip';
-import { ToolStepRow, type ToolStepView } from './ToolStepRow';
+import { AgentOrb, type OrbState } from './AgentOrb';
+import { RunActivity, type RunActivityProps } from './RunActivity';
+import type { ToolStepView } from './ToolStepRow';
 import type { ComponentProps } from 'react';
 export type AssistantPart =
   | { type: 'text'; text: string }
@@ -30,6 +31,10 @@ export interface AssistantMessageProps {
   roles: RoleInfo[];
   /** Jawaban masih mengalir. */
   streaming?: boolean;
+  /** Keadaan Orb di avatar: fase run untuk jawaban yang berjalan; selain itu done (atau error bila run gagal). */
+  orb?: OrbState;
+  /** Baris aktivitas (judul, aksi saat ini, linimasa) di antara baris meta dan isi jawaban; tanpa ini tidak tampil. */
+  run?: RunActivityProps | undefined;
   /** Meminta konfirmasi hapus jawaban ini beserta sesudahnya. */
   onDelete?: (() => void) | undefined;
   /** Membuka percakapan baru berisi pesan sampai jawaban ini (cabang). */
@@ -39,10 +44,6 @@ export interface AssistantMessageProps {
   onRichFollowUp?: ComponentProps<typeof Markdown>['onRichFollowUp'];
 }
 
-type ToolPart = Extract<AssistantPart, { type: 'tool' }>;
-type Block =
-  { kind: 'tools'; key: string; tools: ToolPart[] } | { kind: 'text'; key: string; text: string };
-
 /** Tiga titik yang memudar bergiliran selama jawaban masih ditulis. */
 function TypingDots() {
   return (
@@ -50,24 +51,6 @@ function TypingDots() {
       <span className="size-1.5 rounded-full bg-accent shadow-glow" />
       <span className="size-1.5 rounded-full bg-accent shadow-glow" />
       <span className="size-1.5 rounded-full bg-accent shadow-glow" />
-    </span>
-  );
-}
-
-/** Avatar bot dengan titik status: hijau saat jawaban selesai, cyan berdenyut saat masih ditulis. */
-function BotAvatar({ streaming }: { streaming: boolean }) {
-  return (
-    <span
-      aria-hidden="true"
-      className="relative inline-flex size-7 shrink-0 items-center justify-center rounded-control border border-border bg-surface text-accent"
-    >
-      <Bot size={16} strokeWidth={1.5} />
-      <span
-        className={cn(
-          'absolute -right-0.5 -bottom-0.5 size-2 rounded-full ring-2 ring-bg',
-          streaming ? 'animate-aios-breathe bg-accent' : 'bg-success',
-        )}
-      />
     </span>
   );
 }
@@ -132,6 +115,8 @@ export function AssistantMessage({
   model,
   roles,
   streaming = false,
+  orb,
+  run,
   onDelete,
   onFork,
   onSuggest,
@@ -152,20 +137,11 @@ export function AssistantMessage({
         .suggestions,
     [parts],
   );
-  // Langkah tool berurutan dikelompokkan jadi satu baris chip yang membungkus.
-  const blocks: Block[] = [];
-  parts.forEach((part, i) => {
-    if (part.type === 'tool') {
-      const last = blocks[blocks.length - 1];
-      if (last?.kind === 'tools') last.tools.push(part);
-      else blocks.push({ kind: 'tools', key: part.id, tools: [part] });
-    } else if (part.type === 'text' && part.text) {
-      blocks.push({ kind: 'text', key: `t${i}`, text: part.text });
-    }
-  });
   return (
     <article aria-busy={streaming} className="group flex animate-aios-enter gap-3">
-      <BotAvatar streaming={streaming} />
+      <span aria-hidden="true" className="inline-flex size-7 shrink-0 items-center justify-center">
+        <AgentOrb state={orb ?? (streaming ? 'thinking' : 'done')} size={28} />
+      </span>
       <div className="flex min-w-0 max-w-(--aios-chat-measure) flex-1 flex-col gap-3">
         <header className="flex min-h-7 items-center gap-2 text-meta text-text-3">
           <span className="font-medium text-text-2">{copy.chat.assistantName}</span>
@@ -186,11 +162,10 @@ export function AssistantMessage({
             </span>
           ) : null}
         </header>
+        {run ? <RunActivity {...run} /> : null}
         {reasoning ? <ReasoningBlock text={reasoning} /> : null}
         {parts.map((part, i) =>
-          part.type === 'tool' ? (
-            <ToolStepRow key={part.id} {...part} />
-          ) : part.type === 'text' && part.text ? (
+          part.type === 'text' && part.text ? (
             <Markdown
               key={i}
               source={splitSuggestions(part.text).body}

@@ -405,12 +405,14 @@ body {
     transition-duration: 1ms !important;
   }
   :root:not([data-reduce-motion='false']) .aios-shimmer,
+  :root:not([data-reduce-motion='false']) .aios-headline-shimmer,
   :root:not([data-reduce-motion='false']) .aios-pulse-ring::after,
   :root:not([data-reduce-motion='false']) .aios-draw-in {
     animation: none !important;
   }
   /* Kilau teks tanpa animasi: kembali ke warna teks biasa, bukan teks transparan. */
-  .aios-shimmer {
+  .aios-shimmer,
+  .aios-headline-shimmer {
     background-image: none;
     -webkit-text-fill-color: currentColor;
   }
@@ -431,11 +433,13 @@ body {
   transition-duration: 1ms !important;
 }
 :root[data-reduce-motion='true'] .aios-shimmer,
+:root[data-reduce-motion='true'] .aios-headline-shimmer,
 :root[data-reduce-motion='true'] .aios-pulse-ring::after,
 :root[data-reduce-motion='true'] .aios-draw-in {
   animation: none !important;
 }
-:root[data-reduce-motion='true'] .aios-shimmer {
+:root[data-reduce-motion='true'] .aios-shimmer,
+:root[data-reduce-motion='true'] .aios-headline-shimmer {
   background-image: none;
   -webkit-text-fill-color: currentColor;
 }
@@ -537,6 +541,29 @@ body {
   background-clip: text;
   -webkit-text-fill-color: transparent;
   animation: aios-shimmer 1800ms linear infinite;
+}
+
+/* Kilau judul aktivitas run: abu (text-3) dengan sapuan text; berhenti bersama animasi lain bila gerak dikurangi. */
+@keyframes aios-headline-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+.aios-headline-shimmer {
+  background-image: linear-gradient(
+    100deg,
+    var(--aios-text-3) 0%,
+    var(--aios-text) 50%,
+    var(--aios-text-3) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: aios-headline-shimmer 1800ms linear infinite;
 }
 
 /* Cincin denyut di sekeliling indikator aktif; warna lewat --aios-ring (default aksen). */

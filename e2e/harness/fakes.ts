@@ -29,6 +29,39 @@ export const ARTIFACT_PARTS = [
   '```html index.html\n<h1 id="judul">Halo artifact</h1>\n',
   '<script>document.getElementById("judul").textContent += " berjalan";</script>\n```\n',
 ];
+/**
+ * Skenario run berjalan untuk bukti visual dan tes chat. Pesan yang memuat penandanya membuat Hermes palsu
+ * mengirim urutan event nyata (reasoning_content dan event SSE hermes.tool.progress) yang dipetakan adapter
+ * Hermes sungguhan dan mengalir lewat gateway: 5 tool berurutan dengan durasi 400-900 ms, satu output per
+ * tool, lalu jawaban. Hanya ada di stack e2e. "[skenario:izin]" tidak lewat Hermes (Hermes tidak punya
+ * izin): pesan di dalam project memakai skrip omp di bawah, yang berhenti di approval.requested.
+ */
+export const SCENARIO_TOOL = '[skenario:tool]';
+export const SCENARIO_ERROR = '[skenario:error]';
+export const SCENARIO_APPROVAL = '[skenario:izin]';
+export const SCENARIO_REASONING = [
+  'Aku perlu membaca login.ts dulu untuk memahami alur masuknya. ',
+  'Setelah itu kucari semua pemakai handleLogin sebelum mengubah apa pun.',
+];
+export const SCENARIO_ANSWER = ['Sudah beres. ', 'Alur masuk kini ', 'memeriksa sandi kosong.'];
+export const SCENARIO_STEPS = [
+  {
+    tool: 'read_file',
+    target: 'src/auth/login.ts',
+    ms: 500,
+    output: 'export function handleLogin(email, sandi) { … } (84 baris)',
+  },
+  {
+    tool: 'search_files',
+    target: 'handleLogin',
+    ms: 700,
+    output: 'src/auth/login.ts:12 src/auth/login.test.ts:8',
+  },
+  { tool: 'terminal', target: 'pnpm typecheck', ms: 900, output: 'tsc: tidak ada galat' },
+  { tool: 'patch', target: 'src/auth/login.ts', ms: 600, output: '1 berkas diubah (+4 -1)' },
+  { tool: 'terminal', target: 'pnpm test auth', ms: 800, output: '12 tes lulus' },
+];
+export const SCENARIO_ERROR_OUTPUT = 'error TS2322: Type string is not assignable to type number';
 export const CODING_FILE = 'catatan-e2e.txt';
 export const CODING_COMMIT = 'docs: tambah catatan e2e';
 
@@ -57,8 +90,42 @@ const textOf = (content: unknown) => (typeof content === 'string' ? content : ''
 
 export async function startFakes(): Promise<Fakes> {
   const hermes = await startFakeHermes();
-  hermes.onRequest(async (stream, req) => {
+  hermes.onRequest(async (stream, req, res) => {
     const last = req.body.messages.at(-1)?.content;
+    const scenario =
+      typeof last === 'string' && last.includes(SCENARIO_TOOL)
+        ? 'tool'
+        : typeof last === 'string' && last.includes(SCENARIO_ERROR)
+          ? 'error'
+          : null;
+    if (scenario) {
+      for (const sentence of SCENARIO_REASONING) {
+        stream.reasoning(sentence);
+        await sleep(150);
+      }
+      const progress = (payload: Record<string, unknown>) =>
+        res.write('event: hermes.tool.progress\ndata: ' + JSON.stringify(payload) + '\n\n');
+      for (const [i, step] of SCENARIO_STEPS.entries()) {
+        const toolCallId = `skenario-${i + 1}`;
+        progress({ toolCallId, tool: step.tool, status: 'running', target: step.target });
+        await sleep(step.ms);
+        const failed = scenario === 'error' && i === 2;
+        progress({
+          toolCallId,
+          tool: step.tool,
+          status: failed ? 'failed' : 'completed',
+          output: failed ? SCENARIO_ERROR_OUTPUT : step.output,
+        });
+      }
+      for (const part of SCENARIO_ANSWER) {
+        stream.delta(part);
+        await sleep(180);
+      }
+      stream.usage(40, 24);
+      stream.finish();
+      stream.done();
+      return;
+    }
     const parts =
       typeof last === 'string' && last.includes('artifact') ? ARTIFACT_PARTS : HERMES_PARTS;
     for (const part of parts) {

@@ -15,7 +15,6 @@ import { AgentHud } from './AgentHud';
 import { ChatWelcome } from './ChatWelcome';
 import { Composer } from './Composer';
 import { MessageList } from './MessageList';
-import { RunActivity } from './RunActivity';
 import { PlanBanner } from './PlanBanner';
 import { ReviewBanner } from './ReviewBanner';
 import { orbStateOf } from './AgentOrb';
@@ -26,7 +25,6 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
   const templates = usePromptTemplates();
   const insert = useTemplateInsert(chat.setDraft);
   const [dragging, setDragging] = useState(false);
-  const shownRun = chat.live ?? chat.finished;
   const { status } = chat;
   const now = useNow();
   const setAgentSteps = useUiStore((s) => s.setAgentSteps);
@@ -112,6 +110,8 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
               roles={chat.roles}
               pending={chat.pending}
               live={chat.live}
+              finished={chat.finished}
+              now={now}
               failure={chat.failure}
               editableUserId={chat.editableUserId}
               onResendLast={chat.resendLast}
@@ -129,19 +129,6 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
               loadingOlder={chat.loadingOlder}
               onLoadOlder={chat.loadOlder}
             />
-            {shownRun ? (
-              <RunActivity
-                activity={buildActivity(shownRun, now)}
-                now={now}
-                output={shownRun.tools.at(-1)?.output}
-                artifacts={shownRun.artifacts}
-                onApproval={() =>
-                  document
-                    .querySelector('[data-approval-panel]')
-                    ?.scrollIntoView({ block: 'center' })
-                }
-              />
-            ) : null}
           </StateView>
         )}
       </div>

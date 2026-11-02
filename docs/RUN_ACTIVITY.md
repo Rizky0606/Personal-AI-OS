@@ -1,6 +1,6 @@
 # Lapisan data aktivitas run (Sesi 3)
 
-Mengubah aliran event run menjadi data untuk baris progres ala Claude: satu judul abu ringkas, satu baris aksi saat ini dalam kalimat manusiawi, penghitung waktu, jumlah langkah (+N), dan ringkasan setelah selesai. Belum ada komponen UI; `AssistantMessage` tidak diubah.
+Mengubah aliran event run menjadi data untuk baris progres ala Claude: satu judul abu ringkas, satu baris aksi saat ini dalam kalimat manusiawi, penghitung waktu, jumlah langkah (+N), dan ringkasan setelah selesai. Sejak P2 baris ini tampil di dalam jawaban (lihat "Tampilan di chat (P2)").
 
 ## Alur
 
@@ -46,3 +46,16 @@ Fixture dibuat dengan menjalankan implementasi lalu memeriksa tiap keluaran seca
 - Pemisah ringkasan `" · "` (contoh di permintaan tertulis dengan spasi ganda).
 - `visibleSteps` = 3 dan `hiddenCount` dihitung dari jendela itu (UI "+N lain" bisa memakai `stepCount − 1`).
 - `rejected` (review ditolak) dianggap `done`, bukan `cancelled`.
+
+## Tampilan di chat (P2)
+
+`AssistantMessage` memuat `RunActivity` di antara baris meta dan isi jawaban, selebar kolom baca (`--aios-chat-measure`). Urutan seperti Claude:
+
+1. **Judul** abu (`headline`; tidak tampil bila null) dengan kilau (`.aios-headline-shimmer`) selama berjalan. Satu-satunya elemen `aria-live="polite"`; baris dan timer tidak diumumkan.
+2. **Baris terlipat** (tombol; Enter/Spasi membuka): aksi saat ini + target redup + timer + `+N` (langkah sebelum yang sekarang) + chevron. Fase `waiting_approval` menampilkan "Menunggu izin" (target tetap redup), bukan aksi tool-nya. Setelah selesai berisi ringkasan "Selesai · durasi · N langkah".
+3. **Linimasa** (saat dibuka): satu baris per langkah (ikon status, kalimat langkah, target, durasi), output terakhir, pratinjau artifact, dan jalan pintas ke panel izin. Terbuka sendiri bila `needsAttention` (tool galat atau izin menunggu); pengguna tetap bisa menutupnya. Deretan chip tool tidak lagi tampil di luar linimasa.
+4. **Avatar** adalah `AgentOrb` 28 px: fase dari `buildActivity` untuk jawaban berjalan; jawaban lama `done`, atau `error` bila run gagal.
+
+Sumber data per jawaban (`MessageList`): run berjalan dari `buildActivity(live, now)`; run yang baru selesai di sesi ini dari jejak `finished` (waktu nyata, selalu punya baris); jawaban lama dari `savedActivity(tools, run)` (`realtime/activity.ts`) memakai bagian `tool` yang tersimpan dan `Run` dari `getRun` (hanya diambil bila jawaban punya langkah tool; jawaban teks biasa tidak diberi baris). **Durasi jawaban lama hanya dihitung** bila status run `completed`/`failed`/`cancelled` (`updatedAt − createdAt`); `needs_review`/`accepted`/`rejected` berubah saat peninjauan, jadi hanya jumlah langkah yang ditampilkan. Tanpa data run, juga hanya jumlah langkah; durasi tidak dikarang.
+
+Skenario e2e (`e2e/harness/fakes.ts`, hanya di stack e2e): `[skenario:tool]` dan `[skenario:error]` membuat Hermes palsu mengirim 2 kalimat penalaran, 5 tool (400–900 ms, satu output per tool) lewat event SSE `hermes.tool.progress`, lalu jawaban; pada `[skenario:error]` tool ke-3 gagal. `[skenario:izin]` di dalam project memakai skrip omp yang meminta izin menulis berkas dan berhenti di `approval.requested`.

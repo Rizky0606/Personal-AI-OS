@@ -120,6 +120,30 @@ async function main() {
       await shot('palet');
       await page.keyboard.press('Escape');
 
+      // Skenario run berjalan (Hermes palsu yang bisa diatur): baris aktivitas di dalam jawaban.
+      const answer = () => page.getByRole('main').locator('article').last();
+      const activityRow = () => answer().getByRole('button', { name: 'Buka aktivitas run' });
+      const runScenario = async (marker: string) => {
+        await page.keyboard.press('Control+n');
+        await field.fill(`${marker} Perbaiki alur masuk.`);
+        await page.getByRole('button', { name: 'Kirim', exact: true }).click();
+      };
+      await runScenario('[skenario:tool]');
+      await answer().getByText('pnpm typecheck').first().waitFor();
+      await shot('chat-tool3');
+      await activityRow().click();
+      await shot('chat-tool3-dibuka');
+      await answer()
+        .getByText(/Selesai · \d+ dtk · 5 langkah/)
+        .waitFor({ timeout: 30_000 });
+      await activityRow().click();
+      await shot('chat-tool-selesai');
+      await runScenario('[skenario:error]');
+      await answer()
+        .getByText(/Selesai · \d+ dtk · 5 langkah/)
+        .waitFor({ timeout: 30_000 });
+      await shot('chat-error');
+
       await page.keyboard.press('Control+2');
       if (!projectRegistered) {
         await page.getByRole('link', { name: 'Kelola project' }).click();
@@ -151,6 +175,21 @@ async function main() {
       await shot('pengaturan-atas');
       await page.evaluate(scrollMainContent);
       await shot('pengaturan-gulir');
+
+      // Menunggu izin: run omp di project berhenti di approval.requested (butuh omp di mesin ini).
+      if ((await get<{ omp: boolean }>('/capabilities')).omp) {
+        await page.keyboard.press('Control+2');
+        await page.getByRole('list', { name: 'Daftar project' }).getByRole('link').first().click();
+        await field.fill('[skenario:izin] Tolong tambahkan file catatan.');
+        await page.getByRole('button', { name: 'Kirim', exact: true }).click();
+        await page.getByText('Agent meminta izin menulis file').waitFor({ timeout: 30_000 });
+        await shot('chat-izin');
+        // Ditolak supaya run berikutnya (tema lain) tidak antre di project yang sama.
+        await page.getByRole('button', { name: 'Tolak', exact: true }).click();
+        await page.getByText('Agent meminta izin menulis file').waitFor({ state: 'detached' });
+      } else {
+        console.warn('[shots] PERINGATAN: omp tidak terpasang; layar chat-izin dilewati.');
+      }
 
       await context.close();
     }

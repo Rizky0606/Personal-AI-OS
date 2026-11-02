@@ -1,7 +1,10 @@
 import type { Message, QuestionAnswer } from '@aios/contracts';
 import type { RoleInfo } from '../api/gateway';
+import { useQuery } from '@tanstack/react-query';
 import { useLayoutEffect, useRef, useState, type ComponentProps } from 'react';
+import { api } from '../app/services';
 import { copy } from '../copy';
+import { buildActivity, savedActivity, type SavedTool } from '../realtime/activity';
 import { isSettled, type LiveRun, type PendingApproval } from '../realtime/liveRun';
 import { Button } from '../ui/Button';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
@@ -9,6 +12,7 @@ import { ErrorBanner } from '../ui/ErrorBanner';
 import { RememberDialog } from '../memory/RememberDialog';
 import { ApprovalPanel } from './ApprovalPanel';
 import { QuestionPanel } from './QuestionPanel';
+import { orbStateOf } from './AgentOrb';
 import { AssistantMessage, type AssistantPart } from './AssistantMessage';
 import { HandoffNote, isHandoffNote } from './HandoffNote';
 import { messageText } from './messageData';
@@ -20,6 +24,10 @@ export interface MessageListProps {
   /** Teks pesan pengguna yang belum dikonfirmasi server. */
   pending: string | null;
   live: LiveRun | undefined;
+  /** Jejak run yang baru selesai di sesi ini (tanpa teks); memberi jawabannya baris aktivitas lengkap dengan waktu nyata. */
+  finished?: LiveRun | undefined;
+  /** Jam bersama (ms epoch) untuk timer baris aktivitas. */
+  now: number;
   /** Pesan kegagalan run terakhir, bila ada. */
   failure: string | null;
   /** Pesan pengguna terakhir yang boleh dikirim ulang (null saat jawaban berjalan). */
@@ -71,11 +79,107 @@ function assistantParts(message: Message): AssistantPart[] {
   });
 }
 
+/** Bagian tool tersimpan sebuah pesan, untuk ringkasan jawaban lama. */
+function savedTools(parts: AssistantPart[]): SavedTool[] {
+  return parts.flatMap((p) =>
+    p.type === 'tool'
+      ? [{ id: p.id, name: p.name, target: p.target, status: p.status, durationMs: p.durationMs }]
+      : [],
+  );
+}
+
+const scrollToApproval = () =>
+  document.querySelector('[data-approval-panel]')?.scrollIntoView({ block: 'center' });
+
+type SavedAssistantProps = Omit<ComponentProps<typeof AssistantMessage>, 'run' | 'orb'> & {
+  runId: string | null;
+};
+
+/**
+ * Jawaban lama (setelah muat ulang atau buka percakapan): ringkasan terlipat dari bagian tool dan waktu run yang
+ * tersimpan. Run diambil hanya bila jawaban punya langkah tool; jawaban teks biasa tidak mendapat baris.
+ */
+function SavedAssistantMessage({ runId, ...props }: SavedAssistantProps) {
+  const tools = savedTools(props.parts);
+  const run = useQuery({
+    queryKey: ['run', runId],
+    queryFn: () => api.getRun(runId!),
+    enabled: runId !== null && tools.length > 0,
+    retry: false,
+    staleTime: 60_000,
+  });
+  if (tools.length === 0) return <AssistantMessage {...props} />;
+  const activity = savedActivity(tools, run.data ?? null);
+  return (
+    <AssistantMessage {...props} orb={orbStateOf(activity.phase)} run={{ activity, now: 0 }} />
+  );
+}
+
+/** Jawaban tersimpan: aktivitas dari run yang baru selesai di sesi ini bila ada, selain itu dari data tersimpan. */
+function AssistantRow({
+  finished,
+  now,
+  runId,
+  ...props
+}: SavedAssistantProps & { finished: LiveRun | undefined; now: number }) {
+  if (finished && runId !== null && finished.runId === runId) {
+    const activity = buildActivity(finished, now);
+    // Run yang baru selesai di sesi ini selalu punya baris (juga tanpa langkah), supaya aktivitasnya bisa dibuka.
+    return (
+      <AssistantMessage
+        {...props}
+        orb={orbStateOf(activity.phase)}
+        run={{
+          activity,
+          now,
+          output: finished.tools.at(-1)?.output,
+          artifacts: finished.artifacts,
+          onApproval: scrollToApproval,
+        }}
+      />
+    );
+  }
+  return <SavedAssistantMessage runId={runId} {...props} />;
+}
+
 function liveParts(live: LiveRun): AssistantPart[] {
   return [
     ...live.tools.map((tool): AssistantPart => ({ type: 'tool', ...tool })),
     { type: 'text', text: live.text },
   ];
+}
+
+/** Jawaban yang sedang mengalir: Orb mengikuti fase, baris aktivitas hidup di dalamnya. */
+function LiveAssistant({
+  live,
+  roles,
+  streaming,
+  now,
+}: {
+  live: LiveRun;
+  roles: RoleInfo[];
+  streaming: boolean;
+  now: number;
+}) {
+  const activity = buildActivity(live, now);
+  return (
+    <AssistantMessage
+      parts={liveParts(live)}
+      reasoning={live.reasoning}
+      role={live.role}
+      model={null}
+      roles={roles}
+      streaming={streaming}
+      orb={orbStateOf(activity.phase)}
+      run={{
+        activity,
+        now,
+        output: live.tools.at(-1)?.output,
+        artifacts: live.artifacts,
+        onApproval: scrollToApproval,
+      }}
+    />
+  );
 }
 
 /** Daftar pesan yang mengikuti ujung bawah selama pengguna belum menggulir ke atas. */
@@ -84,6 +188,8 @@ export function MessageList({
   roles,
   pending,
   live,
+  finished,
+  now,
   failure,
   editableUserId = null,
   onResendLast,
@@ -165,8 +271,11 @@ export function MessageList({
               onRemember={() => setToRemember(messageText(message))}
             />
           ) : message.author === 'assistant' ? (
-            <AssistantMessage
+            <AssistantRow
               key={message.id}
+              runId={message.runId}
+              finished={finished}
+              now={now}
               parts={assistantParts(message)}
               role={message.agentRole}
               model={message.model}
@@ -181,23 +290,7 @@ export function MessageList({
           ) : null,
         )}
         {pending ? <UserMessage text={pending} /> : null}
-        {live ? (
-          <div className="flex flex-col gap-2">
-            <AssistantMessage
-              parts={liveParts(live)}
-              reasoning={live.reasoning}
-              role={live.role}
-              model={null}
-              roles={roles}
-              streaming={streaming}
-            />
-            {streaming && !live.text ? (
-              <p role="status" className="pl-10 text-meta text-text-2">
-                {copy.runStatus[live.status]}…
-              </p>
-            ) : null}
-          </div>
-        ) : null}
+        {live ? <LiveAssistant live={live} roles={roles} streaming={streaming} now={now} /> : null}
         {approvals.map((approval) => (
           <ApprovalPanel
             key={approval.approvalId}

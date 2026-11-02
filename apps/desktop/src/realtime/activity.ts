@@ -113,7 +113,7 @@ function kindOf(name: string): ToolKind | null {
 }
 
 /** Kalimat langkah menurut jenis tool dan status. */
-function stepLabel(name: string, status: ToolStep['status']): string {
+export function stepLabel(name: string, status: ToolStep['status']): string {
   const t = copy.runActivity;
   const kind = kindOf(name);
   if (status === 'running')
@@ -271,5 +271,61 @@ export function buildActivity(live: LiveRun, now: number, options: ActivityOptio
     needsAttention:
       live.tools.some((tool) => tool.status === 'error') ||
       (!settled && (live.approvals.length > 0 || live.status === 'waiting_approval')),
+  };
+}
+
+/** Satu langkah tool yang tersimpan di pesan (bagian `tool`), tanpa waktu mulai. */
+export interface SavedTool {
+  id: string;
+  name: string;
+  target?: string | undefined;
+  status: ToolStep['status'];
+  durationMs?: number | undefined;
+}
+
+/** Bagian run tersimpan (entitas Run dari server) yang dipakai untuk ringkasan jawaban lama. */
+export interface SavedRunInfo {
+  status: LiveRun['status'];
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Aktivitas jawaban lama (setelah muat ulang), dibangun dari bagian tool yang tersimpan dan waktu run, bukan dari
+ * event. Durasi hanya dihitung bila run berstatus completed/failed/cancelled (updatedAt = waktu selesai); status
+ * lain (needs_review, accepted, rejected) berubah saat peninjauan, jadi durasinya tidak dikarang dan ringkasan
+ * hanya memuat jumlah langkah. Tanpa data run, fase "done".
+ */
+export function savedActivity(tools: SavedTool[], run: SavedRunInfo | null): Activity {
+  const steps: ActivityStep[] = tools.map((t) => ({
+    id: t.id,
+    label: stepLabel(t.name, t.status),
+    ...(t.target ? { target: truncateTarget(t.target) } : {}),
+    status: t.status,
+    durationMs: t.durationMs ?? null,
+    startedAt: null,
+  }));
+  const phase: ActivityPhase =
+    run?.status === 'failed' ? 'error' : run?.status === 'cancelled' ? 'cancelled' : 'done';
+  const timed = run !== null && ['completed', 'failed', 'cancelled'].includes(run.status);
+  const span = timed ? Date.parse(run.updatedAt) - Date.parse(run.createdAt) : Number.NaN;
+  const elapsedMs = Number.isFinite(span) && span >= 0 ? span : null;
+  const t = copy.runActivity.summary;
+  const label = phase === 'error' ? t.error : phase === 'cancelled' ? t.cancelled : t.done;
+  return {
+    headline: null,
+    phase,
+    current: null,
+    stepCount: steps.length,
+    hiddenCount: 0,
+    elapsedMs: elapsedMs ?? 0,
+    steps,
+    summary: [
+      label,
+      ...(elapsedMs === null ? [] : [formatElapsed(elapsedMs)]),
+      ...(steps.length > 0 ? [t.steps(steps.length)] : []),
+    ].join(t.separator),
+    // Jawaban lama tetap terlipat; langkah gagal terbaca di linimasa.
+    needsAttention: false,
   };
 }

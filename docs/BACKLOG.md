@@ -724,3 +724,12 @@ Catatan steer/follow-up: pesan yang diarahkan tidak disimpan sebagai pesan chat 
 - [ ] Strip "Selesai" (RunActivity) dan composer tepi-ke-tepi di dalam pulau utama, bergaya lama (P2).
 - [ ] Panel kanan terbuka di lebar 1024 tidak ada di `pnpm shots` (hanya diuji e2e: tanpa gulir mendatar, tanpa teks terpotong); pertimbangkan menambah layar `lebar-1024-panel`.
 - [ ] Bentuk branch di chip project memakai teks mono kecil; pada project dengan nama panjang chip dipotong (truncate), nama lengkap belum ada di tooltip.
+
+## Temuan P2 (chat)
+
+- [ ] **Todo di AgentHud:** prompt P2 meminta HUD "tetap menampilkan antrean arahan dan subagent saja" karena rencana pindah ke panel Progres di P2B. Karena panel itu belum ada, rencana (TodoPanel) masih tampil di HUD supaya tidak hilang dari layar; pindahkan dan hapus di P2B.
+- [ ] **Jawaban lama tanpa langkah tool** tidak diberi baris aktivitas (tanpa pengambilan run); jawaban yang baru selesai di sesi ini selalu punya baris. Setelah muat ulang barisnya hilang untuk jawaban teks biasa.
+- [ ] **Satu `getRun` per jawaban lama bertool** saat percakapan dibuka (cache 60 dtk). Untuk percakapan panjang, pertimbangkan membawa durasi di entitas pesan atau mengambil run dalam satu panggilan.
+- [ ] Durasi jawaban lama memakai `Run.updatedAt`; run `needs_review` tanpa durasi karena berubah saat peninjauan. Server belum menyimpan waktu selesai run terpisah.
+- [ ] **ReasoningBlock** masih tampil terpisah di bawah baris aktivitas dan mengulang kalimat judul; pertimbangkan menggabungkannya ke linimasa.
+- [ ] `[skenario:izin]` butuh omp di mesin e2e (dilewati bila tidak ada); Hermes tidak punya izin sehingga tidak bisa dipakai untuk skenario ini.
