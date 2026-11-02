@@ -176,8 +176,8 @@ test('panel kanan: Ctrl+J melebar mulus ke lebar tersimpan dan tombol toggle di 
     'aria-pressed',
     'true',
   );
-  // Tab panel: yang aktif berlabel, ada 6 tab.
-  await expect(page.getByRole('tab')).toHaveCount(6);
+  // Tab panel: yang aktif berlabel, ada 7 tab (Progres pertama).
+  await expect(page.getByRole('tab')).toHaveCount(7);
 
   await page.keyboard.press('Control+j');
   await expect(panel).toBeHidden();

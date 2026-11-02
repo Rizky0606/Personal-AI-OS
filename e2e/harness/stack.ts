@@ -22,6 +22,12 @@ import { startFakes, type Fakes } from './fakes.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
+/** PNG 1x1 sebagai gambar uji skenario. */
+const ONE_PIXEL_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+  'base64',
+);
+
 export interface Stack {
   /** Alamat server kendali (HTTP + WebSocket bridge) yang dipakai shim Tauri di halaman. */
   controlUrl: string;
@@ -112,6 +118,27 @@ export async function startStack(): Promise<Stack> {
     schedules: { pollMs: 200 },
     taskMaxParallel: 2,
     rateLimits: { login: 1000 },
+  });
+  // Skenario "[skenario:rencana]": berkas nyata di gateway dan penyisipan event ke run yang sedang berjalan.
+  const scenarioFile = async (name: string, bytes: Buffer) => {
+    const record = await env.files.saveGenerated({ name, bytes });
+    return {
+      fileId: record.id,
+      name: record.name,
+      mime: record.mime,
+      size: record.size,
+      sha256: record.sha256,
+    };
+  };
+  fakes.attachScenario({
+    async inject(make) {
+      const runId = await env.activeRunId();
+      if (!runId) throw new Error('skenario rencana: tidak ada run chat yang sedang berjalan');
+      await env.store.append(runId, make(runId));
+    },
+    image: await scenarioFile('login-form.png', ONE_PIXEL_PNG),
+    file: await scenarioFile('hasil.md', Buffer.from('# Hasil\n\nSemua langkah selesai.\n')),
+    upload: await scenarioFile('desain.png', ONE_PIXEL_PNG),
   });
   await env.app.listen({ port: 0, host: '127.0.0.1' });
   const gatewayUrl = `http://127.0.0.1:${(env.app.server.address() as AddressInfo).port}`;

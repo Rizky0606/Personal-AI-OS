@@ -1,3 +1,4 @@
+import type { AgentEvent, TodoPhase } from '@aios/contracts';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { startFakeHermes } from '../../apps/gateway/src/testing/fake-hermes.js';
@@ -19,7 +20,26 @@ export interface Fakes {
   searxngUrl: string;
   /** Teks yang dikirim Hermes (untuk memastikan streaming sungguhan terjadi). */
   hermesAnswer: string;
+  /** Menyambungkan skenario "[skenario:rencana]" ke gateway e2e (event store dan berkas nyata). */
+  attachScenario(hooks: ScenarioHooks): void;
   close(): Promise<void>;
+}
+
+/** Berkas nyata di gateway e2e yang dirujuk event skenario. */
+export interface ScenarioFile {
+  fileId: string;
+  name: string;
+  mime: string;
+  size: number;
+  sha256: string;
+}
+
+export interface ScenarioHooks {
+  /** Menambahkan event ke run chat yang sedang berjalan lewat event store gateway (tersimpan dan disiarkan). */
+  inject(make: (runId: string) => AgentEvent): Promise<void>;
+  image: ScenarioFile;
+  file: ScenarioFile;
+  upload: ScenarioFile;
 }
 
 export const HERMES_PARTS = ['Halo! ', 'Ini jawaban ', 'streaming dari ', 'Hermes uji.'];
@@ -62,6 +82,52 @@ export const SCENARIO_STEPS = [
   { tool: 'terminal', target: 'pnpm test auth', ms: 800, output: '12 tes lulus' },
 ];
 export const SCENARIO_ERROR_OUTPUT = 'error TS2322: Type string is not assignable to type number';
+/**
+ * "[skenario:rencana]": Hermes tidak punya rencana, artifact, dan diff, jadi fake menyisipkan event itu ke run yang
+ * sedang berjalan lewat event store gateway: konteks yang dipakai (2 skill, 3 fakta memori, 1 lampiran), rencana 9
+ * langkah yang maju satu per satu tiap 600 ms, 2 artifact (gambar dan berkas), dan diff. Hanya di stack e2e.
+ */
+export const SCENARIO_PLAN = '[skenario:rencana]';
+export const PLAN_STEP_MS = 600;
+export const PLAN_PHASES = [
+  {
+    name: 'Persiapan',
+    tasks: ['Baca login.ts', 'Cari pemakai handleLogin', 'Tulis tes yang gagal'],
+  },
+  {
+    name: 'Pengerjaan',
+    tasks: ['Ubah login.ts', 'Perbarui tes login', 'Jalankan typecheck', 'Jalankan tes'],
+  },
+  { name: 'Verifikasi', tasks: ['Perbaiki galat tes', 'Periksa hasil'] },
+] as const;
+export const PLAN_TOTAL = PLAN_PHASES.reduce((n, p) => n + p.tasks.length, 0);
+export const PLAN_MEMORY = [
+  { id: '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e21', title: 'Suka jawaban singkat' },
+  { id: '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e22', title: 'Pakai bahasa Indonesia.' },
+  { id: '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e23', title: 'Zona waktu Asia/Jakarta.' },
+];
+export const PLAN_ANSWER = ['Rencana ', 'selesai dikerjakan, ', 'semua langkah lulus.'];
+
+/** Rencana dengan langkah ke-`active` (mulai 0) sedang dikerjakan; `active` = total berarti semuanya selesai. */
+export function planAt(active: number): TodoPhase[] {
+  let index = 0;
+  return PLAN_PHASES.map((phase) => ({
+    name: phase.name,
+    tasks: phase.tasks.map((content) => {
+      const i = index++;
+      return {
+        content,
+        status:
+          i < active
+            ? ('completed' as const)
+            : i === active
+              ? ('in_progress' as const)
+              : ('pending' as const),
+      };
+    }),
+  }));
+}
+
 export const CODING_FILE = 'catatan-e2e.txt';
 export const CODING_COMMIT = 'docs: tambah catatan e2e';
 
@@ -90,15 +156,66 @@ const textOf = (content: unknown) => (typeof content === 'string' ? content : ''
 
 export async function startFakes(): Promise<Fakes> {
   const hermes = await startFakeHermes();
+  let scenario: ScenarioHooks | undefined;
   hermes.onRequest(async (stream, req, res) => {
     const last = req.body.messages.at(-1)?.content;
-    const scenario =
+    if (typeof last === 'string' && last.includes(SCENARIO_PLAN)) {
+      if (!scenario) throw new Error('skenario rencana belum disambungkan (attachScenario)');
+      const hooks = scenario;
+      await sleep(300);
+      await hooks.inject((runId) => ({
+        type: 'context.used',
+        runId,
+        role: 'general',
+        engine: 'hermes',
+        model: 'combo/general',
+        skills: ['plan-progress', 'answer-first'],
+        memory: { read: PLAN_MEMORY.length, items: PLAN_MEMORY },
+        attachments: [
+          { fileId: hooks.upload.fileId, name: hooks.upload.name, mime: hooks.upload.mime },
+        ],
+      }));
+      const artifact = (file: ScenarioFile, source: 'screenshot' | 'file') =>
+        hooks.inject(() => ({
+          type: 'artifact.created',
+          fileId: file.fileId,
+          name: file.name,
+          mime: file.mime,
+          size: file.size,
+          sha256: file.sha256,
+          source,
+        }));
+      for (let step = 0; step < PLAN_TOTAL; step++) {
+        await hooks.inject(() => ({ type: 'todo.updated', phases: planAt(step) }));
+        await sleep(PLAN_STEP_MS);
+        if (step === 2) await artifact(hooks.image, 'screenshot');
+        if (step === 5) await artifact(hooks.file, 'file');
+        if (step === 7)
+          await hooks.inject(() => ({
+            type: 'diff.updated',
+            files: [
+              { path: 'src/auth/login.ts', additions: 4, deletions: 1 },
+              { path: 'src/auth/login.test.ts', additions: 12, deletions: 0 },
+            ],
+          }));
+      }
+      await hooks.inject(() => ({ type: 'todo.updated', phases: planAt(PLAN_TOTAL) }));
+      for (const part of PLAN_ANSWER) {
+        stream.delta(part);
+        await sleep(180);
+      }
+      stream.usage(30, 18);
+      stream.finish();
+      stream.done();
+      return;
+    }
+    const toolScenario =
       typeof last === 'string' && last.includes(SCENARIO_TOOL)
         ? 'tool'
         : typeof last === 'string' && last.includes(SCENARIO_ERROR)
           ? 'error'
           : null;
-    if (scenario) {
+    if (toolScenario) {
       for (const sentence of SCENARIO_REASONING) {
         stream.reasoning(sentence);
         await sleep(150);
@@ -109,7 +226,7 @@ export async function startFakes(): Promise<Fakes> {
         const toolCallId = `skenario-${i + 1}`;
         progress({ toolCallId, tool: step.tool, status: 'running', target: step.target });
         await sleep(step.ms);
-        const failed = scenario === 'error' && i === 2;
+        const failed = toolScenario === 'error' && i === 2;
         progress({
           toolCallId,
           tool: step.tool,
@@ -235,6 +352,9 @@ export async function startFakes(): Promise<Fakes> {
     ninerouterUrl: nine.url,
     searxngUrl: searx.url,
     hermesAnswer: HERMES_PARTS.join(''),
+    attachScenario(hooks) {
+      scenario = hooks;
+    },
     async close() {
       await Promise.all([hermes.close(), web.close(), searx.close(), nine.close()]);
     },

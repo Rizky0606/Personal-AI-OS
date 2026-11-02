@@ -178,3 +178,74 @@ test('composer: Kirim berubah jadi Hentikan dan bingkai berwarna fase selama run
     timeout: 40_000,
   });
 });
+
+test('[skenario:rencana]: chip maju "Langkah 1 dari 9" sampai "9 dari 9", panel Progres berisi tiga bagian, dan tetap sama setelah muat ulang', async ({
+  page,
+}) => {
+  await prepare(page);
+  await login(page);
+  await send(page, '[skenario:rencana] Perbaiki alur masuk.');
+
+  // Chip di topbar berganti satu per satu mengikuti rencana (tiap langkah 600 ms).
+  const chip = page.getByRole('button', { name: /^Langkah \d+ dari 9/ });
+  for (let n = 1; n <= 9; n++) {
+    await expect(chip).toContainText(`Langkah ${n} dari 9`, { timeout: 20_000 });
+  }
+  await expect(chip).toHaveAttribute('aria-label', /^Langkah 9 dari 9: Periksa hasil$/);
+
+  // Klik chip membuka panel kanan di tab Progres (tab pertama).
+  await chip.click();
+  const panel = page.getByRole('region', { name: 'Progres percakapan' });
+  await expect(panel).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Progres', selected: true })).toBeVisible();
+  await expect(page.getByRole('tab').first()).toHaveAccessibleName('Progres');
+
+  const assertPanel = async () => {
+    // (1) Progres: 9 selesai, dua terakhir terlihat, sisanya diringkas.
+    const timeline = panel.getByRole('list', { name: 'Linimasa progres' });
+    await expect(timeline.getByRole('button', { name: '7 langkah sebelumnya' })).toBeVisible();
+    await expect(timeline.getByText('Periksa hasil')).toBeVisible();
+    await expect(timeline.getByText('Perbaiki galat tes')).toBeVisible();
+    // (2) Output: gambar, berkas, dan perubahan kode.
+    const outputs = panel.getByRole('list', { name: 'Output' });
+    await expect(outputs.getByRole('listitem')).toHaveCount(3);
+    await expect(outputs).toContainText('login-form.png');
+    await expect(outputs).toContainText('hasil.md');
+    await expect(outputs).toContainText('2 berkas diubah');
+    // (3) Digunakan dalam sesi ini.
+    const used = panel.getByLabel('Digunakan dalam sesi ini');
+    await expect(used).toContainText('desain.png');
+    await expect(used).toContainText('plan-progress');
+    await expect(used).toContainText('Dibaca · 3 fakta');
+    await expect(used).toContainText('hermes');
+  };
+  await assertPanel();
+
+  // Linimasa dibuka: seluruh 9 langkah terlihat, dibuka dan ditutup lewat tombol.
+  const timeline = panel.getByRole('list', { name: 'Linimasa progres' });
+  await timeline.getByRole('button', { name: '7 langkah sebelumnya' }).click();
+  await expect(timeline.getByRole('listitem')).toHaveCount(9 + 1);
+  await expect(timeline.getByRole('button', { name: '7 langkah sebelumnya' })).toHaveAttribute(
+    'aria-expanded',
+    'true',
+  );
+  await timeline.getByRole('button', { name: '7 langkah sebelumnya' }).click();
+
+  // Memori: klik membuka judul fakta (bukan isinya).
+  await panel.getByRole('button', { name: /Dibaca · 3 fakta/ }).click();
+  await expect(
+    panel.getByRole('list', { name: 'Fakta memori yang dibaca' }).getByRole('listitem'),
+  ).toHaveCount(3);
+
+  // Tunggu jawaban selesai, lalu muat ulang aplikasi: data tahan muat ulang (dari event tersimpan).
+  await expect(page.getByRole('button', { name: 'Kirim', exact: true })).toBeVisible({
+    timeout: 30_000,
+  });
+  await page.reload();
+  await page.getByRole('complementary', { name: 'Daftar' }).getByText('Judul uji').first().click();
+  await expect(page.getByRole('button', { name: /^Langkah 9 dari 9/ })).toBeVisible();
+  // Pintasan keyboard dari sumber pintasan yang sama membuka tab Progres.
+  await page.keyboard.press('Control+.');
+  await expect(panel).toBeVisible();
+  await assertPanel();
+});
