@@ -17,6 +17,7 @@ import {
   OWNER_PASSWORD,
   type AuthEnv,
 } from '../../apps/gateway/src/testing/auth-env.js';
+import { dshTestIdentity, prepareDshRoot } from '../../apps/gateway/src/testing/dsh-identity.js';
 import { resolveOmp } from '../../apps/worker/src/runs/omp-path.js';
 import { startWorker, type RunningWorker } from '../../apps/worker/src/worker.js';
 import { startFakes, type Fakes } from './fakes.js';
@@ -141,7 +142,29 @@ export async function startStack(): Promise<Stack> {
   }
   const fakes = await startFakes();
 
+  // dsh palsu (agen ACP kecil) lewat peluncur produksi. DSH_ARGS dipisah spasi, jadi jalur dengan spasi tidak bisa dipakai:
+  // dsh dibiarkan mati (seperti bawaan produksi) dan tes yang membutuhkannya dilewati.
+  const fakeDsh = path.join(root, 'apps/gateway/src/testing/fake-dsh.mjs');
+  const dshRoot = path.join(base, 'dsh');
+  mkdirSync(dshRoot, { recursive: true });
+  await prepareDshRoot(dshRoot);
+  const dsh = /\s/.test(fakeDsh)
+    ? undefined
+    : {
+        DSH_COMMAND: process.execPath,
+        DSH_ARGS: fakeDsh,
+        DSH_HOME: undefined,
+        DSH_WORKDIR_ROOT: dshRoot,
+        ...dshTestIdentity(),
+        DSH_MAX_MEMORY_MB: 512,
+        DSH_RUN_TIMEOUT_MS: 60_000,
+        DSH_IDLE_TIMEOUT_MS: 30_000,
+        DSH_APPROVAL_TIMEOUT_MS: 60_000,
+        NINEROUTER_API_KEY: 'kunci-e2e',
+      };
+
   const env: AuthEnv = await createAuthEnv(databaseUrl, {
+    ...(dsh ? { dsh } : {}),
     ninerouterUrl: `${fakes.ninerouterUrl}/v1`,
     hermesUrl: fakes.hermesUrl,
     research: { searxngUrl: fakes.searxngUrl },
