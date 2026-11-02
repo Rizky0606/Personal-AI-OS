@@ -7,7 +7,9 @@ import { deriveAuthKeys } from '../modules/auth/secrets.js';
 import { createAuthService } from '../modules/auth/service.js';
 import { generateTotpSecret, timeStep, totpCode } from '../modules/auth/totp.js';
 import { createChatService, type ChatService } from '../modules/chat/service.js';
-import { createFilesService } from '../modules/files/service.js';
+import { createFilesService, type FilesService } from '../modules/files/service.js';
+import { desc, inArray } from 'drizzle-orm';
+import { runs as runsTable } from '../db/schema/index.js';
 import { createTitleService } from '../modules/chat/title.js';
 import { createDevicesService } from '../modules/devices/service.js';
 import { createOutbox } from '../modules/files/outbox.js';
@@ -85,8 +87,12 @@ export interface AuthEnv {
   /** pg-boss bersama (hanya ada bila riset atau jadwal dinyalakan). */
   boss: PgBoss | undefined;
   chat: ChatService;
+  /** Layanan berkas (untuk membuat berkas nyata di skenario E2E). */
+  files: FilesService;
   hub: EventHub;
   store: EventStore;
+  /** Run chat terbaru yang sedang disiapkan atau berjalan (skenario E2E menyisipkan event ke sana); null bila tak ada. */
+  activeRunId(): Promise<string | null>;
   /** Kode TOTP yang valid pada waktu sekarang menurut jam palsu. */
   code(): string;
   /** Login sebagai perangkat baru; jam dimajukan satu langkah TOTP agar kode tidak dianggap dipakai ulang. */
@@ -391,6 +397,16 @@ export async function createAuthEnv(
   return {
     app,
     database,
+    files,
+    async activeRunId() {
+      const [row] = await db
+        .select({ id: runsTable.id })
+        .from(runsTable)
+        .where(inArray(runsTable.status, ['preparing', 'running']))
+        .orderBy(desc(runsTable.createdAt))
+        .limit(1);
+      return row?.id ?? null;
+    },
     clock,
     totpSecret,
     runner,
