@@ -34,7 +34,9 @@ export function TextField({
           'h-9 rounded-control border bg-surface px-3 text-ui text-text transition-colors duration-[120ms] ease-aios placeholder:text-text-3',
           error ? 'border-danger' : 'border-border hover:border-border-strong focus:border-accent',
           'disabled:cursor-not-allowed disabled:opacity-50',
-          trailing ? 'w-full pr-10' : false,
+          // Selalu selebar ruas induk (kartu); tanpa ini input polos hanya selebar bawaan peramban.
+          'w-full',
+          trailing ? 'pr-10' : false,
           className,
         )}
         {...props}

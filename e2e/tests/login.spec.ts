@@ -56,4 +56,22 @@ test.describe('login', () => {
     await expect(page.getByText(/Server tidak terjangkau/)).toBeVisible();
     await expect(page.getByText(/Password atau kode TOTP salah/)).toHaveCount(0);
   });
+
+  test('semua kolom login selebar kartu: alamat server, password, dan kode TOTP sama lebar', async ({
+    page,
+  }) => {
+    await prepare(page);
+    await page.goto('/');
+    const server = page.getByLabel('Alamat server');
+    const password = page.getByLabel('Password', { exact: true });
+    const totp = page.getByLabel('Kode TOTP');
+    await expect(totp).toBeVisible();
+
+    const width = async (field: typeof server) => (await field.boundingBox())!.width;
+    const form = (await page.locator('form').boundingBox())!.width;
+    const widths = [await width(server), await width(password), await width(totp)];
+    // Ketiganya sama lebar (toleransi 1 px) dan hampir selebar kartu (kartu dikurangi padding 2 x 24 px).
+    expect(Math.max(...widths) - Math.min(...widths)).toBeLessThanOrEqual(1);
+    expect(widths[0]).toBeGreaterThan(form - 52);
+  });
 });

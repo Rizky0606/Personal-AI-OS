@@ -103,7 +103,6 @@ export function LoginScreen({
           disabled={submitting}
           autoFocus={!focusServer}
           autoComplete="current-password"
-          className="w-full"
           trailing={
             <IconButton
               label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
