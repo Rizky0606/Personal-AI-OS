@@ -197,7 +197,8 @@ export async function startFakes(): Promise<Fakes> {
           }));
         for (let step = 0; step < PLAN_TOTAL; step++) {
           await hooks.inject(() => ({ type: 'todo.updated', phases: planAt(step) }));
-          await wait(PLAN_STEP_MS);
+          // Hanya `pnpm shots`: menahan langkah ke-7 supaya screenshot "langkah 7" deterministik.
+          await wait(PLAN_STEP_MS + (step === 6 ? Number(process.env.SHOTS_PLAN_HOLD_MS ?? 0) : 0));
           if (step === 2) await artifact(hooks.image, 'screenshot');
           if (step === 5) await artifact(hooks.file, 'file');
           if (step === 7)

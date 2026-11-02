@@ -63,6 +63,8 @@ async function main() {
     preview: { host: '127.0.0.1', port, strictPort: true },
     logLevel: 'warn',
   });
+  // Skenario rencana menahan langkah ke-7 agar gambar "langkah 7" deterministik (lihat fakes.ts).
+  process.env.SHOTS_PLAN_HOLD_MS = '4000';
   const stack = await startStack();
   const browser = await chromium.launch({ channel: process.env.E2E_BROWSER ?? 'msedge' });
   try {
@@ -147,7 +149,15 @@ async function main() {
       // Panel Progres: rencana 9 langkah yang maju sendiri (skenario rencana), saat langkah 7 dan setelah selesai.
       await runScenario('[skenario:rencana]');
       const stepChip = page.getByRole('button', { name: /^Langkah \d+ dari 9/ });
-      await stepChip.filter({ hasText: 'Langkah 7 dari 9' }).waitFor({ timeout: 30_000 });
+      await page.waitForFunction(
+        () =>
+          document
+            .querySelector('button[aria-keyshortcuts="Control+."]')
+            ?.getAttribute('aria-label')
+            ?.startsWith('Langkah 7 dari 9') === true,
+        undefined,
+        { timeout: 30_000 },
+      );
       await stepChip.click();
       await page.getByRole('region', { name: 'Progres percakapan' }).waitFor();
       await shot('progres-langkah7');
