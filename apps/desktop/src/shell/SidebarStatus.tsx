@@ -3,12 +3,12 @@ import { Gauge } from 'lucide-react';
 import { useQuota } from '../api/queries';
 import { useConnection, useOnline } from '../app/hooks';
 import { copy } from '../copy';
-import { formatCost, formatTokens } from '../lib/format';
 import { cn } from '../lib/cn';
 import { Tooltip } from '../ui/Tooltip';
 import { useWorker } from '../worker/hooks';
 import { workerIndicator } from '../worker/status';
 import { connectionView, type ConnectionView } from './connectionView';
+import { quotaLabel } from './quotaLabel';
 
 const dotTone: Record<ConnectionView['tone'], string> = {
   success: 'bg-success',
@@ -23,12 +23,8 @@ export function SidebarStatus({ collapsed = false }: { collapsed?: boolean }) {
   const view = connectionView(connection, online);
   const worker = workerIndicator(useWorker());
   const quota = useQuota().data;
-  const quotaLabel = quota
-    ? copy.status.quotaSummary(
-        formatTokens(quota.totals.inputTokens + quota.totals.outputTokens),
-        formatCost(quota.totals.costUsd),
-      )
-    : copy.status.quotaTokens('0');
+  // Null = tidak ada data token: baris kuota disembunyikan (bukan "Kuota 0 token · $0,00").
+  const quotaText = quotaLabel(quota);
 
   const workerDot = (
     <span
@@ -75,15 +71,17 @@ export function SidebarStatus({ collapsed = false }: { collapsed?: boolean }) {
             {connectionDot}
           </span>
         </Tooltip>
-        <Tooltip label={quotaLabel}>
-          <Link
-            to="/quota"
-            aria-label={quotaLabel}
-            className="inline-flex size-8 items-center justify-center rounded-control text-text-2 transition-colors duration-[120ms] ease-aios hover:bg-surface-2 hover:text-text"
-          >
-            <Gauge size={16} strokeWidth={1.5} aria-hidden="true" />
-          </Link>
-        </Tooltip>
+        {quotaText === null ? null : (
+          <Tooltip label={quotaText}>
+            <Link
+              to="/quota"
+              aria-label={quotaText}
+              className="inline-flex size-8 items-center justify-center rounded-control text-text-2 transition-colors duration-[120ms] ease-aios hover:bg-surface-2 hover:text-text"
+            >
+              <Gauge size={16} strokeWidth={1.5} aria-hidden="true" />
+            </Link>
+          </Tooltip>
+        )}
       </div>
     );
   }
@@ -98,9 +96,11 @@ export function SidebarStatus({ collapsed = false }: { collapsed?: boolean }) {
         {workerDot}
         <span className="min-w-0 truncate">{copy.workerStatus[worker]}</span>
       </span>
-      <Link to="/quota" aria-label={quotaLabel}>
-        {quotaLabel}
-      </Link>
+      {quotaText === null ? null : (
+        <Link to="/quota" aria-label={quotaText}>
+          {quotaText}
+        </Link>
+      )}
       <span role="status" className="flex items-center gap-2">
         {connectionDot}
         <span className="min-w-0 truncate">{view.label}</span>
