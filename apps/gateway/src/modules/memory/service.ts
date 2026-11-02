@@ -1,4 +1,9 @@
-import type { CreateMemoryRequestSchema, Memory, UpdateMemoryRequestSchema } from '@aios/contracts';
+import {
+  CONTEXT_MEMORY_TITLE_MAX,
+  type CreateMemoryRequestSchema,
+  type Memory,
+  type UpdateMemoryRequestSchema,
+} from '@aios/contracts';
 import { asc, count, eq } from 'drizzle-orm';
 import type { z } from 'zod';
 import type { Database } from '../../db/client.js';
@@ -18,6 +23,24 @@ export interface MemoryService {
    * supaya perubahan dari aplikasi langsung berlaku pada pesan berikutnya.
    */
   promptSection(): Promise<string>;
+  /**
+   * Ringkasan memori yang masuk ke pesan sistem untuk event `context.used`: jumlah dan judul singkat tiap fakta
+   * (awal teks, maks. 40 karakter). Isi lengkap tidak pernah keluar dari sini selain lewat `promptSection`.
+   */
+  summary(): Promise<MemorySummary>;
+}
+
+export interface MemorySummary {
+  read: number;
+  items: { id: string; title: string }[];
+}
+
+/** Judul singkat satu fakta: spasi dipadatkan dan dipotong di 40 karakter. */
+export function memoryTitle(text: string): string {
+  const flat = text.replace(/\s+/g, ' ').trim();
+  return flat.length > CONTEXT_MEMORY_TITLE_MAX
+    ? `${flat.slice(0, CONTEXT_MEMORY_TITLE_MAX)}…`
+    : flat;
 }
 
 type MemoryRow = typeof memories.$inferSelect;
@@ -74,6 +97,14 @@ export function createMemoryService(deps: { db: Database }): MemoryService {
         .where(eq(memories.id, id))
         .returning({ id: memories.id });
       if (!deleted.length) throw notFound();
+    },
+
+    async summary() {
+      const active = (await rows()).filter((row) => row.enabled);
+      return {
+        read: active.length,
+        items: active.slice(0, 50).map((row) => ({ id: row.id, title: memoryTitle(row.text) })),
+      };
     },
 
     async promptSection() {

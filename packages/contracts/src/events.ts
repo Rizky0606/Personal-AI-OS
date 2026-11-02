@@ -94,6 +94,8 @@ export const DiffFileSchema = z.object({
   deletions: z.number().int().nonnegative(),
 });
 
+export type DiffFile = z.infer<typeof DiffFileSchema>;
+
 export const DiffUpdatedEventSchema = z.object({
   type: z.literal('diff.updated'),
   files: z.array(DiffFileSchema),

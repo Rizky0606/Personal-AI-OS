@@ -65,6 +65,8 @@ export interface LaunchInput {
   projectHistory?: () => Promise<NonNullable<StartRunInput['history']>>;
   /** Gambar lampiran pesan ini untuk model vision. */
   images?: StartRunInput['images'];
+  /** Berkas lampiran pesan ini (hanya metadata) untuk event `context.used`; isinya tidak lewat sini. */
+  attachments?: { fileId: string; name: string; mime: string }[];
   /** Project percakapan ini; wajib untuk role yang berjalan di worker (omp). */
   projectId: string | null;
   /** Revisi setelah komentar review: melanjutkan worktree dan branch run ini. */
@@ -115,11 +117,18 @@ export interface RunnerDeps {
   observer?: RunObserver;
   /** Bundel role (aturan perilaku + role + skill) yang disuntik sebagai pesan sistem. */
   roles: {
-    bundle(roleId: string, extraSkills?: readonly string[]): { systemPrompt: string };
+    bundle(
+      roleId: string,
+      extraSkills?: readonly string[],
+    ): { systemPrompt: string; skills?: readonly string[] };
     get(roleId: string): { engine: string; model?: string } | undefined;
   };
   /** Memori pemilik (W17) yang ditambahkan ke pesan sistem setiap run; tanpa ini tidak ada memori. */
-  memory?: { promptSection(): Promise<string> };
+  memory?: {
+    promptSection(): Promise<string>;
+    /** Jumlah dan judul singkat fakta yang masuk ke konteks, untuk event `context.used` (bukan isinya). */
+    summary?(): Promise<{ read: number; items: { id: string; title: string }[] }>;
+  };
   /** Folder kiriman: berkas buatan agent di server ditempel ke jawaban saat run chat selesai. */
   outbox?: {
     promptFor(runId: string): string;
@@ -220,8 +229,9 @@ export function createRunner(deps: RunnerDeps): Runner {
     runId: string,
     planOnly = false,
     skills: readonly string[] = [],
-  ): Promise<string> {
-    const bundle = deps.roles.bundle(roleId, skills).systemPrompt;
+  ): Promise<{ prompt: string; skills: readonly string[] }> {
+    const bundled = deps.roles.bundle(roleId, skills);
+    const bundle = bundled.systemPrompt;
     const extra = async (name: string, load: () => Promise<string> | undefined) => {
       try {
         return (await load()) ?? '';
@@ -237,7 +247,7 @@ export function createRunner(deps: RunnerDeps): Runner {
     const outbox = onServer && deps.outbox ? deps.outbox.promptFor(runId) : '';
     const project =
       !onServer && projectId ? await extra('konteks project', () => projectContext(projectId)) : '';
-    return [
+    const prompt = [
       bundle,
       project,
       SUGGEST_RULE,
@@ -249,6 +259,7 @@ export function createRunner(deps: RunnerDeps): Runner {
     ]
       .filter(Boolean)
       .join('\n\n');
+    return { prompt, skills: bundled.skills ?? [] };
   }
 
   /** Run coding memakai riwayat percakapan penuh; chat Hermes hanya riwayat sesi baru (bila ada). */
@@ -275,6 +286,36 @@ export function createRunner(deps: RunnerDeps): Runner {
     const toolParts = new Map<string, Extract<MessagePart, { type: 'tool' }>>();
 
     const emit = (event: AgentEvent) => store.append(run.id, event);
+
+    /**
+     * Event `context.used`: skill yang dimuat, memori (jumlah dan judul singkat, bukan isi), dan lampiran (nama berkas).
+     * Gagal membaca ringkasan memori tidak menggagalkan run.
+     */
+    const emitContextUsed = async (ctx: {
+      runId: string;
+      role: string;
+      engine: string;
+      model: string | null;
+      skills: readonly string[];
+      attachments: { fileId: string; name: string; mime: string }[];
+    }) => {
+      let memory: { read: number; items: { id: string; title: string }[] } = { read: 0, items: [] };
+      try {
+        memory = (await deps.memory?.summary?.()) ?? memory;
+      } catch (err) {
+        log?.warn({ err }, 'ringkasan memori gagal dimuat; context.used tanpa memori');
+      }
+      await emit({
+        type: 'context.used',
+        runId: ctx.runId,
+        role: ctx.role,
+        engine: ctx.engine,
+        model: ctx.model,
+        skills: [...ctx.skills],
+        memory: { read: memory.read, ...(memory.items.length ? { items: memory.items } : {}) },
+        attachments: ctx.attachments.slice(0, 20),
+      });
+    };
 
     /** Mengubah status sesuai diagram (canTransition), lalu menyiarkan `run.status`. */
     const advance = async (next: RunStatus, extra: Partial<RunRow> = {}) => {
@@ -467,21 +508,34 @@ export function createRunner(deps: RunnerDeps): Runner {
         // "Model otomatis" di run coding: omp memakai combo 9Router milik role (mis. coding-main), bukan nama "default".
         const model = run.model ?? (coding ? deps.roles.get(chosenRole)?.model : undefined);
         const prompt = await enrichedPrompt(input, ctl.abort.signal);
+        // Dihitung per run: perubahan role (mode dev) dan memori berlaku pada run berikutnya.
+        const system = await systemPromptFor(
+          chosenRole,
+          input.projectId ?? null,
+          !coding,
+          run.id,
+          planOnly,
+          decision.skills,
+        );
+        await emitContextUsed({
+          runId: run.id,
+          role: chosenRole,
+          engine: useDsh
+            ? 'dsh'
+            : coding
+              ? 'omp'
+              : (deps.roles.get(chosenRole)?.engine ?? 'hermes'),
+          model: model ?? null,
+          skills: system.skills,
+          attachments: input.attachments ?? [],
+        });
         let handle: RunHandle | undefined;
         try {
           handle = await startAdapter.startRun({
             runId: run.id,
             messageId: input.assistantMessageId,
             prompt,
-            // Dihitung per run: perubahan role (mode dev) dan memori berlaku pada run berikutnya.
-            systemPrompt: await systemPromptFor(
-              chosenRole,
-              input.projectId ?? null,
-              !coding,
-              run.id,
-              planOnly,
-              decision.skills,
-            ),
+            systemPrompt: system.prompt,
             sessionId: input.sessionId,
             ...(await historyFor(input, coding || useDsh)),
             ...(input.images?.length ? { images: input.images } : {}),

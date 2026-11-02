@@ -50,6 +50,7 @@ export const unusedMemory: AppDeps['memory'] = {
   update: unused('memory.update'),
   remove: unused('memory.remove'),
   promptSection: unused('memory.promptSection'),
+  summary: unused('memory.summary'),
 };
 export const unusedTemplates: AppDeps['templates'] = {
   list: unused('templates.list'),
@@ -80,6 +81,7 @@ export const unusedChat: AppDeps['chat'] = {
   listConversations: unused('chat.listConversations'),
   createConversation: unused('chat.createConversation'),
   getConversation: unused('chat.getConversation'),
+  progress: unused('chat.progress'),
   updateConversation: unused('chat.updateConversation'),
   archiveConversation: unused('chat.archiveConversation'),
   deleteConversation: unused('chat.deleteConversation'),

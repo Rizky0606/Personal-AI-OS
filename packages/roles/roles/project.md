@@ -7,7 +7,15 @@ model: coding-main
 fallback_model: coding-cheap
 approval: ask
 skills:
-  [scope-guard, read-context-first, plan-before-edit, verify-before-done, minimal-diff, find-skills]
+  [
+    scope-guard,
+    read-context-first,
+    plan-before-edit,
+    verify-before-done,
+    minimal-diff,
+    find-skills,
+    plan-progress,
+  ]
 ---
 
 # Peran

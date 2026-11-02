@@ -27,7 +27,7 @@ const SPEC: Record<string, { group: string; engine: string; skills: string[] }> 
     engine: 'hermes',
     skills: ['answer-first', 'clarify-once', 'find-skills'],
   },
-  project: { group: 'coding', engine: 'omp', skills: ['find-skills'] },
+  project: { group: 'coding', engine: 'omp', skills: ['find-skills', 'plan-progress'] },
   researcher: {
     group: 'umum',
     engine: 'research',
@@ -103,6 +103,51 @@ describe('isi agent dan skill di repo', () => {
   });
 });
 
+describe('skill plan-progress (rencana untuk panel Progres)', () => {
+  const body = registry.skills.get('plan-progress')!.body;
+
+  it('mewajibkan rencana tool todo untuk tugas 3 langkah atau lebih, tanpa rencana untuk tugas sederhana', () => {
+    for (const phrase of [
+      'tool `todo`',
+      '3 langkah atau lebih',
+      'WAJIB',
+      '3 sampai 12 langkah',
+      'Periksa hasil',
+      'tepat satu langkah `in_progress`',
+      'jangan buat rencana',
+    ]) {
+      expect(body, phrase).toContain(phrase);
+    }
+  });
+
+  it('memperbarui status tiap langkah selesai dan mengenal status abandoned dan blocked', () => {
+    for (const status of ['completed', 'pending', 'abandoned', 'blocked']) {
+      expect(body, status).toContain(status);
+    }
+    expect(body).toMatch(/saat itu juga/);
+  });
+
+  it('dimuat hanya untuk mesin yang punya tool todo (omp): agent project, bukan Hermes atau riset', () => {
+    expect(buildBundle(registry, 'project').skills).toContain('plan-progress');
+    expect(buildBundle(registry, 'general').skills).not.toContain('plan-progress');
+    expect(buildBundle(registry, 'researcher').skills).not.toContain('plan-progress');
+    expect(buildBundle(registry, 'project').systemPrompt).toContain(body);
+    expect(buildBundle(registry, 'general').systemPrompt).not.toContain(body);
+  });
+
+  it('muat bersama paket skill terbanyak tanpa melewati anggaran token', () => {
+    const bundle = buildBundle(registry, 'project', {
+      extraSkills: ['ui-baseline', 'a11y-check', 'ui-states', 'react-practices', 'rich-answers'],
+    });
+    expect(bundle.omittedSkills).toEqual([]);
+    expect(bundle.skills).toContain('plan-progress');
+  });
+
+  it('rencana satu kalimat per langkah: isi skill ringkas (di bawah 1.000 token)', () => {
+    expect(estimateTokens(body)).toBeLessThan(1000);
+  });
+});
+
 describe('bundel system prompt', () => {
   it.each([...registry.roles.keys()])('agent %s: di bawah anggaran dan semua bagian ada', (id) => {
     const bundle = buildBundle(registry, id);
@@ -136,7 +181,13 @@ describe('bundel system prompt', () => {
     const withUi = buildBundle(registry, 'project', {
       extraSkills: ['ui-baseline', 'a11y-check', 'ui-baseline', 'skill-hantu'],
     });
-    expect(withUi.skills).toEqual([...CORE_SKILLS, 'find-skills', 'ui-baseline', 'a11y-check']);
+    expect(withUi.skills).toEqual([
+      ...CORE_SKILLS,
+      'find-skills',
+      'plan-progress',
+      'ui-baseline',
+      'a11y-check',
+    ]);
     expect(withUi.systemPrompt).toContain(registry.skills.get('ui-baseline')!.body);
     expect(withUi.systemPrompt.match(/## ui-baseline/g)).toHaveLength(1);
   });

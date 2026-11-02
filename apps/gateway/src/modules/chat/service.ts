@@ -1,5 +1,6 @@
 import type {
   Conversation,
+  ConversationProgress,
   CreateConversationRequestSchema,
   Message,
   Run,
@@ -10,6 +11,7 @@ import { HANDOFF_PREFIX, TERMINAL_RUN_STATUSES } from '@aios/contracts';
 import { and, desc, eq, gte, isNotNull, isNull, lt, notInArray, sql } from 'drizzle-orm';
 import type { z } from 'zod';
 import type { Database } from '../../db/client.js';
+import { conversationProgress } from './progress.js';
 import { conversations, messages, projects, runs } from '../../db/schema/index.js';
 import { AppError } from '../../errors.js';
 import { uuidv7 } from '../../lib/uuidv7.js';
@@ -35,6 +37,8 @@ export interface ChatService {
   }): Promise<Page<Conversation>>;
   createConversation(input: z.infer<typeof CreateConversationRequestSchema>): Promise<Conversation>;
   getConversation(id: string): Promise<Conversation>;
+  /** Agregat panel Progres percakapan dari event run tersimpan. `404` bila percakapan tidak ada. */
+  progress(id: string): Promise<ConversationProgress>;
   updateConversation(
     id: string,
     patch: z.infer<typeof UpdateConversationRequestSchema>,
@@ -434,6 +438,11 @@ export function createChatService(deps: {
       return toConversationDto(await getConversation(id));
     },
 
+    async progress(id) {
+      await getConversation(id);
+      return conversationProgress(db, id);
+    },
+
     async updateConversation(id, patch) {
       const set: Partial<typeof conversations.$inferInsert> = {};
       if (patch.title !== undefined) set.title = patch.title.trim().slice(0, MAX_TITLE_CHARS);
@@ -561,6 +570,9 @@ export function createChatService(deps: {
         ...(history.length ? { history } : {}),
         projectHistory: projectHistoryFor(conversationId, userMessage.id),
         ...(images.length ? { images } : {}),
+        attachments: parts.flatMap((p) =>
+          p.type === 'file' ? [{ fileId: p.fileId, name: p.name, mime: p.mime }] : [],
+        ),
         projectId: conversation.projectId,
         ...(options?.continueFromRunId ? { continueFromRunId: options.continueFromRunId } : {}),
         resolveRole: makeResolver({
