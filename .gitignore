@@ -37,3 +37,6 @@ Thumbs.db
 
 # Environment compose di VPS (hanya *.env.example yang boleh di-commit)
 *.env
+
+# Hasil pnpm shots:compare (dibuat ulang tiap dijalankan)
+docs/screenshots/_compare/

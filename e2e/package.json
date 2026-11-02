@@ -7,7 +7,9 @@
     "e2e": "pnpm run build:app && playwright test",
     "test:only": "playwright test",
     "typecheck": "tsc -p tsconfig.json && tsc -p harness/tsconfig.json",
-    "android": "tsx harness/android-run.ts"
+    "android": "tsx harness/android-run.ts",
+    "shots": "tsx harness/shots.ts",
+    "shots:compare": "tsx harness/shots-compare.ts"
   },
   "dependencies": {
     "@aios/contracts": "workspace:*"

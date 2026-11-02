@@ -12,7 +12,9 @@
     "lint": "eslint . && prettier --check .",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "shots": "pnpm --filter @aios/e2e shots",
+    "shots:compare": "pnpm --filter @aios/e2e shots:compare"
   },
   "devDependencies": {
     "@aios/config": "workspace:*",
