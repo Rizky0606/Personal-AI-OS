@@ -159,7 +159,7 @@ describe('skill inti rich-answers (jawaban kaya untuk semua role)', () => {
     const start = body.indexOf('```aios-ui\n') + '```aios-ui\n'.length;
     const block = body.slice(start, body.indexOf('\n```', start));
     expect(block).toBeDefined();
-    const parsed = JSON.parse(block!) as { version: number; components: { type: string }[] };
+    const parsed = JSON.parse(block) as { version: number; components: { type: string }[] };
     expect(parsed.version).toBe(1);
     expect(parsed.components.length).toBeLessThanOrEqual(3);
     expect(parsed.components[0]!.type).toBe('table');

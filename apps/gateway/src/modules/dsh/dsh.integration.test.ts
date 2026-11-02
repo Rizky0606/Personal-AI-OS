@@ -146,11 +146,8 @@ describe('engine dsh di gateway', () => {
       supportsModelPick: true,
       supportsTodo: false,
     });
-    expect(dsh(off.items)).toMatchObject({
-      available: false,
-      experimental: true,
-      reason: expect.stringContaining('DSH_COMMAND'),
-    });
+    expect(dsh(off.items)).toMatchObject({ available: false, experimental: true });
+    expect(dsh(off.items)?.reason).toContain('DSH_COMMAND');
     // Hermes dan omp ikut dilaporkan dengan kemampuannya; model Hermes diatur di server.
     expect(on.items.map((item) => item.id)).toEqual(['hermes', 'omp', 'dsh']);
     expect(on.items.find((item) => item.id === 'hermes')).toMatchObject({
@@ -159,12 +156,9 @@ describe('engine dsh di gateway', () => {
       supportsTodo: false,
     });
     // Tidak ada worker tersambung di tes ini: omp dilaporkan tidak tersedia beserta alasannya.
-    expect(on.items.find((item) => item.id === 'omp')).toMatchObject({
-      available: false,
-      supportsModelPick: true,
-      supportsTodo: true,
-      reason: expect.stringContaining('worker'),
-    });
+    const omp = on.items.find((item) => item.id === 'omp');
+    expect(omp).toMatchObject({ available: false, supportsModelPick: true, supportsTodo: true });
+    expect(omp?.reason).toContain('worker');
   });
 
   it('run selesai lewat ACP: engine dsh tercatat, teks tersimpan, event berurutan', async () => {

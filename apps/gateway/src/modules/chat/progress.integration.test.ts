@@ -263,9 +263,10 @@ describe('GET /conversations/:id/progress', () => {
     await artifact(svg.id, 'diagram.svg', 'image/svg+xml', 'file');
     await artifact(png.id, 'layar.png', 'image/png', 'screenshot');
 
-    const outputs = (await progress(conv.id)).outputs;
-    expect(outputs.find((o) => o.name === 'diagram.svg')).toMatchObject({ kind: 'file' });
-    expect(outputs.find((o) => o.name === 'layar.png')).toMatchObject({ kind: 'image' });
+    const kindOf = async (name: string) =>
+      (await progress(conv.id)).outputs.find((o) => 'name' in o && o.name === name)?.kind;
+    expect(await kindOf('diagram.svg')).toBe('file');
+    expect(await kindOf('layar.png')).toBe('image');
   });
 
   it('berkas buatan agent di jawaban (bagian file) ikut sebagai output dengan ukurannya', async () => {

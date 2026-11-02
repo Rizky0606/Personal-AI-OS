@@ -38,7 +38,7 @@ Daftar engine:
 curl -fsS http://127.0.0.1:3000/v1/engines -H "Authorization: Bearer $TOKEN"
 ```
 
-Log stderr dsh masuk log gateway. `GET /engines` harus menunjukkan `dsh` dengan `available: true` hanya saat binary dan konfigurasi tersedia.
+Log stderr dsh masuk log gateway. `GET /engines` menunjukkan `dsh` dengan `available: true` hanya saat `DSH_COMMAND` terisi DAN proses dsh menjawab jabat tangan ACP (`initialize`, diluncurkan seperti run sungguhan, tanpa memanggil model; hasil dipakai ulang 30 detik). Bila gagal, `reason` berisi alasan umum dan rincian galat hanya di log gateway. Di aplikasi desktop, dsh muncul di pemilih mesin composer berlabel Pratinjau dan nonaktif dengan alasan itu.
 
 Saat shutdown gateway, active dsh process dihentikan. Untuk stop manual:
 
