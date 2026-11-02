@@ -285,7 +285,7 @@ test('sidebar: pelat aktif MELUNCUR antar item (bukan melompat) dan pelat hover 
 
   // Sampel posisi pelat tiap frame selama perpindahan Chat -> Jadwal.
   await page.evaluate(() => {
-    const plate = document.querySelector('[data-plate="active"]') as HTMLElement;
+    const plate = document.querySelector('[data-plate="active"]')!;
     const w = window as unknown as { __plateY: number[] };
     w.__plateY = [];
     const tick = () => {
@@ -333,7 +333,7 @@ test('panel kanan: buka dan tutup menggeser area utama bertahap, tidak melompat'
   await login(page);
   const track = () =>
     page.evaluate(() => {
-      const main = document.querySelector('main') as HTMLElement;
+      const main = document.querySelector('main')!;
       const w = window as unknown as { __mainW: number[] };
       w.__mainW = [];
       const tick = () => {
