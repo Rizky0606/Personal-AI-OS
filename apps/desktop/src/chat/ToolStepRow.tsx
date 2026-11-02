@@ -41,7 +41,7 @@ export function ToolStepRow({ step }: { step: ActivityStep }) {
           {step.target}
         </span>
       ) : null}
-      {step.durationMs !== null ? (
+      {step.durationMs !== null && step.status !== 'running' ? (
         <span className="ml-auto shrink-0 font-mono text-meta text-text-3">
           {formatDuration(step.durationMs)}
         </span>

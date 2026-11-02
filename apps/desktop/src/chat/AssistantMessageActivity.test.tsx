@@ -14,6 +14,7 @@ const text = [{ type: 'text' as const, text: 'Isi jawaban.' }];
 /** Checkpoint fixture emas yang sedang menjalankan tool dengan beberapa langkah sebelumnya. */
 const runningActivity = () =>
   allCheckpoints().find((c) => c.activity.current !== null && c.activity.stepCount >= 3)!.activity;
+const DURATION = /\d+(,\d)? (ms|dtk)/;
 const SETTLED = ['done', 'error', 'cancelled'];
 const follows = (a: Element, b: Element) =>
   Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
@@ -123,6 +124,19 @@ describe('baris aktivitas di dalam jawaban', () => {
       expect(screen.getByTestId('agent-orb')).toHaveAttribute('data-state', orbStateOf(phase));
       unmount();
     }
+  });
+
+  it('langkah yang masih berjalan tidak menampilkan durasi (bukan "0 ms"); yang selesai menampilkannya', async () => {
+    const user = userEvent.setup();
+    const activity = runningActivity();
+    render(<AssistantMessage {...baseProps} parts={text} streaming run={{ activity, now: 0 }} />);
+    await user.click(screen.getByRole('button', { name: ui.toggle }));
+    const items = within(screen.getByRole('list', { name: ui.timeline })).getAllByRole('listitem');
+    activity.steps.forEach((step, i) => {
+      if (step.status === 'running') expect(items[i]).not.toHaveTextContent(DURATION);
+      else if (step.durationMs !== null) expect(items[i]).toHaveTextContent(DURATION);
+    });
+    expect(activity.steps.some((s) => s.status === 'running')).toBe(true);
   });
 
   it('aria-live hanya pada judul; baris, timer, dan linimasa tidak diumumkan', () => {
