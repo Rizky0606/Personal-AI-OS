@@ -710,3 +710,10 @@ Dibandingkan dengan omp 18.13.2 (`omp --help`, `omp://rpc.md`), pi.dev, dan onor
 Urutan yang disarankan berikutnya: (1) `--advisor` sebagai peninjau pasif, (2) tingkat berpikir (`--thinking`) bila data model tersedia, (3) hentikan/arahkan subagent.
 
 Catatan steer/follow-up: pesan yang diarahkan tidak disimpan sebagai pesan chat dan tidak tampil di daftar pesan; yang terlihat hanya daftar "Menunggu giliran" selama masih mengantre.
+
+## Temuan P0 (satukan cabang dan alat bukti visual)
+
+- [ ] `apps/gateway/src/modules/dsh/dsh.integration.test.ts` ("izin diminta, disetujui lewat API, lalu run selesai" dan "izin ditolak") flaky: status run `running` saat tes menunggu `waiting_approval`/`completed`. Pada P0 gagal 1 dari 3 run terisolasi dan di 2 dari 3 run suite penuh; gateway tidak berbeda dari `main`, jadi sudah ada sebelum P0. Tes `schedules.integration` "pemicu cron saat run sebelumnya masih berjalan" gagal sekali saat mesin berbeban.
+- [ ] `e2e/.stack.json` dan `e2e/test-results/` terlacak git dan ditulis ulang tiap run e2e, sehingga working tree selalu kotor setelah e2e (cap build mengecualikannya). Hapus dari indeks dan masukkan ke `.gitignore`.
+- [ ] Layar Pengaturan: item sidebar "Ruang" masih tampil aktif (pelat penanda tidak pindah) setelah berpindah dari Ruang ke Pengaturan lewat Ctrl+6 dengan `prefers-reduced-motion`; lihat `docs/screenshots/baseline-p0/terang-pengaturan-gulir.png`. Perlu diselidiki di P1 (shell).
+- [ ] `pnpm shots:compare` mengabaikan persegi 280x32 px di pojok kanan bawah (label cap build) agar teks hash tidak dihitung sebagai perbedaan.

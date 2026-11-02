@@ -23,7 +23,15 @@ export default defineConfig({
     __BUILD_COMMIT__: JSON.stringify(git('rev-parse', '--short', 'HEAD')),
     __BUILD_TIME__: JSON.stringify(new Date().toISOString().slice(0, 19) + 'Z'),
     __BUILD_DIRTY__: JSON.stringify(
-      git('status', '--porcelain', '--', '.', ':!docs/screenshots') !== '',
+      git(
+        'status',
+        '--porcelain',
+        '--',
+        '.',
+        ':!docs/screenshots',
+        ':!e2e/.stack.json',
+        ':!e2e/test-results',
+      ) !== '',
     ),
   },
   resolve: {
