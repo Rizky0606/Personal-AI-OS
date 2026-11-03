@@ -147,6 +147,15 @@ fun ChatScreen(viewModel: ChatViewModel, snackbar: SnackbarHostState) {
 
         if (ui.editingId != null) EditingStrip(onCancel = viewModel::cancelEdit)
 
+        ui.trace?.approvals?.forEach { approval ->
+            ApprovalPanel(
+                approval = approval,
+                busy = approval.approvalId in ui.resolvingApprovals,
+                onResolve = { decision -> viewModel.resolveApproval(approval, decision) },
+                modifier = Modifier.padding(horizontal = Tokens.Space.s16, vertical = Tokens.Space.s8)
+            )
+        }
+
         Composer(
             draft = ui.draft,
             onDraft = viewModel::onDraft,

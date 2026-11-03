@@ -3,13 +3,16 @@ package app.aios.android.data.chat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import app.aios.android.data.api.ChatApi
+import app.aios.android.data.api.ApprovalResult
 import app.aios.android.data.api.Conversation
+import app.aios.android.data.api.ConversationProgress
 import app.aios.android.data.api.CreateConversationRequest
 import app.aios.android.data.api.SearchHit
 import app.aios.android.data.api.InputPart
 import app.aios.android.data.api.Message
 import app.aios.android.data.api.MessagePart
 import app.aios.android.data.api.ModelInfo
+import app.aios.android.data.api.ResolveApprovalRequest
 import app.aios.android.data.api.RoleInfo
 import app.aios.android.data.api.Run
 import app.aios.android.data.api.SURFACE_ANDROID
@@ -87,6 +90,12 @@ interface ChatRepository {
     suspend fun run(id: String): Run
 
     suspend fun cancel(runId: String): Run
+
+    /** Agregat panel Progres (P6); null bila server belum punya apa pun untuk percakapan ini. */
+    suspend fun progress(conversationId: String): ConversationProgress
+
+    /** Keputusan atas permintaan izin agent: `allow`/`deny`, opsional "selalu" untuk project ini. */
+    suspend fun resolveApproval(runId: String, approvalId: String, decision: String, remember: Boolean): ApprovalResult
 
     suspend fun models(): List<ModelInfo>
 
@@ -217,6 +226,15 @@ class RoomChatRepository(
     override suspend fun run(id: String): Run = api.getRun(id)
 
     override suspend fun cancel(runId: String): Run = api.cancelRun(runId)
+
+    override suspend fun progress(conversationId: String): ConversationProgress = api.getProgress(conversationId)
+
+    override suspend fun resolveApproval(
+        runId: String,
+        approvalId: String,
+        decision: String,
+        remember: Boolean
+    ): ApprovalResult = api.resolveApproval(runId, approvalId, ResolveApprovalRequest(decision, remember))
 
     override suspend fun models(): List<ModelInfo> = api.listModels().items
 

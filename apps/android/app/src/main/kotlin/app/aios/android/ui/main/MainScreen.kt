@@ -7,12 +7,13 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.rememberDrawerState
@@ -48,13 +49,18 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.material3.SnackbarHostState
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -122,6 +128,21 @@ fun MainScreen(online: Boolean, sessionKey: String, link: AppLink?, onLinkConsum
     val scope = rememberCoroutineScope()
     val onChat = route == Routes.CHAT
     val chatTitle = chatUi.title.ifBlank { stringResource(R.string.nav_chat) }
+    var progressSheetOpen by remember { mutableStateOf(false) }
+    val activityTexts = remember(context) {
+        app.aios.android.ui.chat.activity.ResourceActivityTexts(context.resources, context.packageName)
+    }
+    val progressView = if (onChat) {
+        app.aios.android.ui.chat.activity.buildProgress(
+            chatUi.progressResponse,
+            chatUi.trace,
+            chatUi.live?.runId ?: chatUi.traceRunId,
+            System.currentTimeMillis(),
+            activityTexts
+        )
+    } else {
+        null
+    }
 
     // Tujuan dari share atau ketukan notifikasi. Teks dari share hanya mengisi composer; tidak pernah terkirim sendiri.
     LaunchedEffect(link) {
@@ -204,7 +225,10 @@ fun MainScreen(online: Boolean, sessionKey: String, link: AppLink?, onLinkConsum
                     onBack = { nav.popBackStack() },
                     onSettings = { nav.navigate(Routes.SETTINGS) { launchSingleTop = true } },
                     showSettings = isTab,
-                    onMenu = if (onChat) ({ scope.launch { drawerState.open() } }) else null
+                    onMenu = if (onChat) ({ scope.launch { drawerState.open() } }) else null,
+                    progressChip = progressView?.chip?.let { chip ->
+                        { ProgressChip(chip, onClick = { progressSheetOpen = true }) }
+                    }
                 )
             },
             bottomBar = { if (isTab) BottomBar(route, nav) },
@@ -316,6 +340,14 @@ fun MainScreen(online: Boolean, sessionKey: String, link: AppLink?, onLinkConsum
             }
         }
     }
+
+    if (progressSheetOpen && progressView != null) {
+        app.aios.android.ui.chat.ProgressSheet(
+            view = progressView,
+            onDismiss = { progressSheetOpen = false },
+            onOpenOutput = { progressSheetOpen = false }
+        )
+    }
 }
 
 @StringRes
@@ -339,7 +371,8 @@ private fun TopBar(
     onBack: () -> Unit,
     onSettings: () -> Unit,
     onMenu: (() -> Unit)? = null,
-    orbPhase: AgentPhase? = null
+    orbPhase: AgentPhase? = null,
+    progressChip: (@Composable () -> Unit)? = null
 ) {
     val colors = AiosTheme.colors
     Row(
@@ -367,6 +400,7 @@ private fun TopBar(
             color = colors.text,
             modifier = Modifier.weight(1f)
         )
+        progressChip?.invoke()
         // Orb kecil hanya selama agent bekerja di chat; dibacakan sebagai status singkat.
         if (orbPhase != null) {
             AgentOrb(
@@ -378,6 +412,29 @@ private fun TopBar(
         if (showSettings) {
             IconButton(R.drawable.ic_settings, stringResource(R.string.nav_settings), onSettings)
         }
+    }
+}
+
+/** Chip "Langkah N dari M" (atau "Langkah N" tanpa total) di topbar chat; ketuk membuka panel Progres (P6). */
+@Composable
+private fun ProgressChip(chip: app.aios.android.ui.chat.activity.ProgressChip, onClick: () -> Unit) {
+    val colors = AiosTheme.colors
+    val description = if (chip.total != null) {
+        stringResource(R.string.progress_chip_label, chip.current, chip.total, chip.label)
+    } else {
+        stringResource(R.string.progress_chip_label_no_total, chip.current, chip.label)
+    }
+    val text = if (chip.total != null) "${chip.current}/${chip.total}" else "${chip.current}"
+    Row(
+        modifier = Modifier
+            .heightIn(min = Tokens.touchTarget)
+            .clip(RoundedCornerShape(Tokens.Radius.sm))
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = Tokens.Space.s8)
+            .semantics(mergeDescendants = true) { contentDescription = description },
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text = text, style = AiosTheme.type.meta, color = colors.text2)
     }
 }
 

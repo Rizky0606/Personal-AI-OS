@@ -22,7 +22,9 @@ data class ToolStep(
     val target: String?,
     /** running, ok, error, denied, cancelled. */
     val status: String,
-    val durationMs: Long?
+    val durationMs: Long?,
+    /** Baris terakhir dari `tool.output` (non-kosong); null sampai ada output. */
+    val output: String? = null
 )
 
 /** Keadaan satu run yang sedang (atau baru saja) mengalir lewat WebSocket. Murni, tanpa Android. */
@@ -53,6 +55,16 @@ data class LiveRun(
             tools = tools.filterNot { it.id == event.toolCallId } +
                 ToolStep(event.toolCallId, event.name, event.target, "running", null)
         )
+        is ServerEvent.ToolOutput -> {
+            val output = event.chunk.lineSequence().lastOrNull { it.isNotBlank() }
+            if (output == null) {
+                this
+            } else {
+                copy(
+                    tools = tools.map { if (it.id == event.toolCallId) it.copy(output = output) else it }
+                )
+            }
+        }
         is ServerEvent.ToolFinished -> copy(
             tools = tools.map {
                 if (it.id == event.toolCallId) it.copy(status = event.status, durationMs = event.durationMs) else it
@@ -71,6 +83,8 @@ data class LiveRun(
         is ServerEvent.ResearchSourceFound,
         is ServerEvent.ResearchCompleted,
         is ServerEvent.ScheduleResult,
+        is ServerEvent.TodoUpdated,
+        is ServerEvent.ContextUsed,
         is ServerEvent.Other -> this
     }
 }

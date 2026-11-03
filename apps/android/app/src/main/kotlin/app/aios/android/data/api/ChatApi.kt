@@ -65,6 +65,18 @@ interface ChatApi {
     @POST("runs/{id}/cancel")
     suspend fun cancelRun(@Path("id") id: String): Run
 
+    /** Agregat panel Progres (P2B/P6): rencana, hasil kerja, dan alat/konteks dipakai, tahan muat ulang. */
+    @GET("conversations/{id}/progress")
+    suspend fun getProgress(@Path("id") id: String): ConversationProgress
+
+    /** Keputusan atas permintaan izin agent: `allow` atau `deny`; `remember` = selalu izinkan untuk project ini. */
+    @POST("runs/{runId}/approvals/{approvalId}")
+    suspend fun resolveApproval(
+        @Path("runId") runId: String,
+        @Path("approvalId") approvalId: String,
+        @Body body: ResolveApprovalRequest
+    ): ApprovalResult
+
     @GET("models")
     suspend fun listModels(): ModelList
 

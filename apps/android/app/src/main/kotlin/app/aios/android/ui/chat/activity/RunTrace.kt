@@ -1,9 +1,9 @@
-@file:Suppress("MaxLineLength")
-
 package app.aios.android.ui.chat.activity
 
 import app.aios.android.data.api.TERMINAL_RUN_STATUSES
+import app.aios.android.data.realtime.ContextMemory
 import app.aios.android.data.realtime.ServerEvent
+import app.aios.android.data.realtime.TodoPhase
 import app.aios.android.ui.chat.Artifact
 
 /** Aktivitas terbaru, untuk membedakan menalar, menulis, dan memutuskan langkah berikutnya. */
@@ -18,22 +18,47 @@ data class TraceTool(
     val status: String,
     val durationMs: Long?,
     /** Waktu event mulai (ms epoch, dari envelope); null bila tidak diketahui. */
-    val startedAt: Long?
+    val startedAt: Long?,
+    /** Baris terakhir dari `tool.output` (non-kosong); null sampai ada output. */
+    val output: String? = null
+)
+
+/** Permintaan izin yang belum diputuskan: detail lengkap untuk panel izin (paritas desktop P6). */
+data class TraceApproval(
+    val approvalId: String,
+    val kind: String,
+    val detail: String,
+    val cwd: String?,
+    val toolCallId: String?
+)
+
+/** Konteks yang dipakai run ini (event `context.used`); null sampai event itu tiba. */
+data class TraceContext(
+    val engine: String?,
+    val model: String?,
+    val skills: List<String>,
+    val memory: ContextMemory,
+    val attachments: List<app.aios.android.data.realtime.ContextAttachment>
 )
 
 /**
  * Jejak waktu dan langkah satu run untuk baris aktivitas; hidup di samping `LiveRun` (yang menyimpan teks), tidak
- * menggantikannya. Setara `LiveRun` desktop untuk bagian yang dibaca `buildActivity`. Murni, tanpa Android.
+ * menggantikannya. Setara `LiveRun` desktop untuk bagian yang dibaca `buildActivity` dan `buildProgress` (P6).
+ * Murni, tanpa Android.
  */
 data class RunTrace(
     val status: String = "queued",
     val tools: List<TraceTool> = emptyList(),
     val artifacts: List<Artifact> = emptyList(),
-    /** ID permintaan izin yang belum diputuskan. */
-    val approvals: List<String> = emptyList(),
+    /** Permintaan izin yang belum diputuskan. */
+    val approvals: List<TraceApproval> = emptyList(),
     val reasoning: String = "",
     val reasoningSummary: String? = null,
     val lastActivity: LastActivity? = null,
+    /** Rencana agent terbaru (tool `todo`); kosong bila agent tidak membuatnya. */
+    val todos: List<TodoPhase> = emptyList(),
+    /** Konteks dipakai run; null sampai event `context.used` tiba. */
+    val context: TraceContext? = null,
     /** Waktu event pertama yang terlihat atau waktu run dibuat di server, yang lebih awal (ms epoch). */
     val startedAt: Long? = null,
     /** Waktu aktivitas berakhir: run.completed, error, atau status selesai pertama. Elapsed berhenti di sini. */
@@ -67,15 +92,21 @@ data class RunTrace(
         is ServerEvent.ReasoningDelta -> copy(reasoning = reasoning + event.text, lastActivity = LastActivity.Reasoning)
         is ServerEvent.ReasoningSummary -> copy(reasoningSummary = event.text)
         is ServerEvent.ToolStarted -> copy(lastActivity = LastActivity.Tool, tools = startTool(event, at))
+        is ServerEvent.ToolOutput -> copy(lastActivity = LastActivity.Tool, tools = outputTool(event))
         is ServerEvent.ToolFinished -> copy(lastActivity = LastActivity.Tool, tools = finishTool(event))
         is ServerEvent.ApprovalRequested -> copy(
-            approvals = approvals.filterNot { it == event.approvalId } + event.approvalId
+            approvals = approvals.filterNot { it.approvalId == event.approvalId } +
+                TraceApproval(event.approvalId, event.kind, event.detail, event.cwd, event.toolCallId)
         )
-        is ServerEvent.ApprovalResolved -> copy(approvals = approvals.filterNot { it == event.approvalId })
+        is ServerEvent.ApprovalResolved -> copy(approvals = approvals.filterNot { it.approvalId == event.approvalId })
         is ServerEvent.ArtifactCreated -> copy(
             artifacts = artifacts.filterNot {
                 it.fileId == event.fileId
             } + Artifact(event.fileId, event.name, event.mime, event.size, event.sha256, event.source)
+        )
+        is ServerEvent.TodoUpdated -> copy(todos = event.phases)
+        is ServerEvent.ContextUsed -> copy(
+            context = TraceContext(event.engine, event.model, event.skills, event.memory, event.attachments)
         )
         else -> this
     }
@@ -92,6 +123,11 @@ data class RunTrace(
                 it
             }
         }
+    }
+
+    private fun outputTool(event: ServerEvent.ToolOutput): List<TraceTool> {
+        val output = event.chunk.lineSequence().lastOrNull { it.isNotBlank() } ?: return tools
+        return tools.map { if (it.id == event.toolCallId) it.copy(output = output) else it }
     }
 
     private fun finishTool(event: ServerEvent.ToolFinished): List<TraceTool> {

@@ -65,14 +65,23 @@ fun SettingsScreen(
                 )
                 AiosListItem(
                     title = stringResource(R.string.settings_server),
-                    trailing = current.serverUrl
-                )
-                AiosListItem(
-                    title = stringResource(R.string.settings_app_version),
-                    trailing = BuildConfig.VERSION_NAME,
+                    trailing = current.serverUrl,
                     showDivider = false
                 )
             }
+        }
+
+        Section(R.string.settings_about_section)
+        Group {
+            AiosListItem(
+                title = stringResource(R.string.settings_app_version),
+                trailing = BuildConfig.VERSION_NAME
+            )
+            AiosListItem(
+                title = stringResource(R.string.settings_about_build),
+                trailing = BuildConfig.BUILD_COMMIT,
+                showDivider = false
+            )
         }
 
         Section(R.string.memory_title)
