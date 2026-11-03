@@ -12,7 +12,7 @@ Sumber kebenaran pemetaan adapter (`packages/adapters`). Kontrak ada di `package
 ## Status rekaman (jujur)
 
 - **omp:** ada. 7 rekaman lama (omp 18.12.6, `docs/VERIFICATION.md`) dan 4 rekaman baru yang saya buat di Sesi 2 dengan omp 18.13.2 + LLM tiruan lokal: `thinking`, `abort-tool`, `todo`, `task-subagent`. Format: baris `<` = keluaran omp, `>` = masukan dari adapter.
-- **Hermes: tidak ada rekaman.** Folder `packages/adapters/fixtures/` tidak ada di repo dan Hermes tidak terpasang di PC ini (`docs/VERIFICATION.md`). Semua yang tertulis tentang payload Hermes berasal dari dokumentasi resmi dan issue `NousResearch/hermes-agent#16588`. Harness replay Hermes sudah ada (`src/hermes.replay.test.ts`) dan akan otomatis memutar `packages/adapters/fixtures/hermes/*.sse` begitu berkas itu ada; sampai itu, tesnya tercatat sebagai **skip**.
+- **Hermes: ada, sejak Sesi P5.** 7 rekaman `curl -N` nyata terhadap Hermes 0.22.5 yang berjalan di VPS ini (`127.0.0.1:8642`, bukan simulasi): `packages/adapters/fixtures/hermes/{plain-text,reasoning,tool-success,tool-failure,tool-sequence,cancel-mid-tool,model-override}.sse`. Snapshot otomatis di `src/__snapshots__/hermes.replay.test.ts.snap` (`hermes.replay.test.ts`, 7/7 lulus, tidak lagi skip). Toolset yang aktif di instance ini hanya `terminal`, `file`, `vision`, `skills` (`web`, `browser` dimatikan), jadi semua rekaman tool memakai tool `terminal`; nama tool lain (`web_search`, `browser_*`, dll) di tabel di bawah masih dari dokumentasi/daftar tool umum, belum teramati.
 
 ## Event kontrak yang dihasilkan adapter
 
@@ -80,35 +80,36 @@ Direkam (`abort-tool.jsonl`) dengan bash berjalan 1,5 dtk lalu `abort`: omp meng
 
 ## Hermes (`POST /v1/chat/completions`, SSE)
 
-Tidak ada rekaman. Tabel di bawah berasal dari dokumentasi (`docs/VERIFICATION.md`, halaman API Server Hermes v0.22.x) dan issue #16588.
+Diverifikasi Sesi P5 dengan 7 rekaman nyata (`curl -N`) terhadap Hermes 0.22.5 di VPS ini. Kolom **Bukti** memakai label **Rekaman** bila teramati di salah satu dari ketujuh berkas; selain itu **Dokumen** (dari `docs/VERIFICATION.md` dan issue #16588, belum pernah teramati).
 
 | Event mentah | Payload | Event kontrak | Bukti |
 | --- | --- | --- | --- |
-| `data:` chunk `chat.completion.chunk`, `choices[0].delta.content` string | string | `message.delta` | Dokumen; tes sintetis |
-| `choices[0].delta.reasoning_content` string | string | `reasoning.delta` | Dokumen ("emitted only when the model actually produces reasoning"); tes sintetis |
-| `choices[0].finish_reason` | `stop` / `error` / `cancelled` / lain | `stop`: lanjut; `error`: `error hermes_error`; `cancelled`: `error hermes_cancelled` | Dokumen |
-| chunk dengan `usage{prompt_tokens, completion_tokens, completion_tokens_details.reasoning_tokens}` (diminta lewat `stream_options.include_usage`) | number | `usage` di `message.completed` dan `run.completed` | Dokumen |
+| `data:` chunk `chat.completion.chunk`, `choices[0].delta.content` string | string | `message.delta` | Rekaman (semua berkas) |
+| `choices[0].delta.reasoning_content` string | string | `reasoning.delta` | Rekaman (`tool-failure.sse`, `tool-sequence.sse`); **tidak** muncul di `plain-text.sse` maupun `reasoning.sse` (pertanyaan matematika murni tanpa tool) walau diminta berpikir langkah demi langkah. Pola yang teramati: muncul hanya saat giliran itu memanggil tool, dan tidak konsisten (satu dari dua rekaman tool tanpa reasoning: `tool-success.sse`) |
+| `choices[0].delta.role` string (`"assistant"`, chunk pembuka) | string | tidak dipetakan (diam-diam diabaikan; benar, tidak ada aksi) | Rekaman (semua berkas) |
+| `choices[0].finish_reason` | `stop` (semua rekaman) / `error` / `cancelled` (dari dokumen) | `stop`: lanjut; `error`: `error hermes_error`; `cancelled`: `error hermes_cancelled` | `stop` Rekaman; `error`/`cancelled` Dokumen |
+| chunk dengan `usage{prompt_tokens, completion_tokens}` (`stream_options.include_usage`) | number | `usage` di `message.completed` dan `run.completed` | Rekaman (semua berkas); `completion_tokens_details.reasoning_tokens`/`prompt_tokens_details.cached_tokens` tidak pernah muncul di rekaman (Dokumen saja) |
 | `data: {"error":{"message"}}` | string | `error hermes_error` | Dokumen |
-| `data: [DONE]` | — | penutup normal | Dokumen |
-| `: keepalive` (tiap 10 dtk tanpa event) | komentar | diabaikan; mereset batas idle | Dokumen |
-| `event: hermes.tool.progress` | **bentuk belum terverifikasi.** Dokumen: hanya "tool-start visibility". Issue #16588 (ditutup) mengusulkan `{toolCallId, tool\|name, status: running\|completed, input\|args, output\|result}` | `tool.started` / `tool.output` / `tool.finished` (lihat bawah) | Dokumen; tes sintetis |
-| event bernama lain, JSON rusak, bentuk chunk asing (mis. `delta.tool_calls`) | apa pun | diabaikan, tanpa error | Sintetis |
+| `data: [DONE]` | — | penutup normal | Rekaman (semua berkas) |
+| `: keepalive` (tiap ~10 dtk tanpa event) | komentar | diabaikan; mereset batas idle | Rekaman |
+| `event: hermes.tool.progress` `status: "running"` | `{tool, emoji, label, toolCallId, status}` — **toolCallId selalu ada**, tidak pernah anonim; `emoji` tidak dipakai | `tool.started {toolCallId, name: tool, target: label}` | Rekaman (`tool-success`, `tool-failure`, `tool-sequence`, `cancel-mid-tool`) |
+| `event: hermes.tool.progress` `status: "completed"` | `{tool, toolCallId, status}` — **tidak pernah** membawa `output`/`result`, bahkan saat perintah gagal (exit code ≠ 0: `tool-failure.sse`) | `tool.finished {toolCallId, status: 'ok', durationMs}` (jalur `output`/`result` → `tool.output` tidak pernah terpicu di rekaman) | Rekaman (`tool-success`, `tool-failure`, `tool-sequence`) |
+| `status` lain (`failed`/`error`/`success`/dll, anonim tanpa `toolCallId`) | — | kode adapter menyediakan jalur ini (`TOOL_FAILED`, ID `hermes-tool-N`) tapi **tidak pernah teramati** | **Belum terverifikasi** (Dokumen/issue #16588 saja) |
+| event bernama lain, JSON rusak, bentuk chunk asing (`delta.tool_calls`, dll) | apa pun | diabaikan, tanpa error | Rekaman (`model-override.sse` dan `hermes.test.ts` memverifikasi beberapa bentuk rusak secara sintetis) |
 
-Pemetaan `hermes.tool.progress` yang dibuat di Sesi 2 (`hermes.ts`, `onToolProgress`), dengan komentar "belum terverifikasi" **dipertahankan** karena tidak ada rekaman:
+Temuan tambahan dari rekaman:
 
-- `status` running/started/in_progress atau tanpa status → `tool.started {toolCallId, name, target?}`. `toolCallId` dari payload (`toolCallId`/`tool_call_id`/`id`); tanpa ID (event lama hanya penanda mulai) adapter membuat `hermes-tool-<n>`, unik per run. Pembaruan `running` untuk ID yang sama tidak menggandakan event.
-- `status` completed/done/success/ok → `tool.output` (bila ada `output`/`result`, maks 8000 karakter) lalu `tool.finished ok`; failed/error → `tool.finished error`. Selesai untuk ID yang tak dikenal diabaikan.
-- `durationMs` dihitung dari selisih jam adapter (`now()`), karena Hermes tidak mengirimnya.
-- Tool yang masih terbuka ditutup: `ok` saat jawaban selesai (sebelum `message.completed`), `cancelled` bila dibatalkan, `error` bila stream putus/gagal.
-- Risiko: bila payload asli berbeda, event tool hilang (diabaikan) alih-alih salah; jawaban teks tidak terpengaruh.
+- **Hermes dapat menggabungkan beberapa perintah shell ke dalam satu panggilan tool.** Diminta menjalankan dua `echo` berurutan, Hermes mengirim SATU pasang `running`/`completed` dengan `label: "echo langkah-satu-p5 + 1 command"` (`tool-sequence.sse`), bukan dua pasang terpisah. Skenario "dua tool berurutan" di rekaman ini membuktikan perilaku Hermes (penggabungan), bukan dua event tool berbeda seperti diasumsikan sebelumnya.
+- **Status `hermes.tool.progress` HANYA pernah `running` atau `completed`** di keempat rekaman tool, termasuk saat perintah gagal (exit code 2, `ls` ke folder yang tak ada): Hermes tetap melapor `completed` dan menaruh pesan galat di teks jawaban (`choices[0].delta.content`), bukan di event tool. Jadi "satu tool gagal" di Hermes (level `hermes.tool.progress`) secara praktik terlihat identik dengan "satu tool sukses"; kegagalan hanya terlihat di teks jawaban.
+- **Model yang diminta berbeda (`model-override.sse`, body `"model":"gpt-4o-mini"`) dipantulkan apa adanya** di field `model` setiap chunk, tetapi jumlah `prompt_tokens` (7771) identik dengan rekaman `hermes-agent` biasa (7780, `plain-text.sse`) untuk pertanyaan sejenis — konsisten dengan dokumentasi: Hermes mengabaikan `model` klien kecuali `direct_model_requests: true` (tidak diuji; butuh akses config Hermes).
 
 ### Penalaran Hermes
 
-Hermes hanya mengirim `reasoning_content` bila model menghasilkan penalaran dan konfigurasi mengizinkan. **Belum terbukti bahwa Hermes di VPS mengirimnya**; tidak ada rekaman. UI nanti sebaiknya menyembunyikan judul penalaran untuk mesin ini sampai event `reasoning.delta` benar-benar terlihat.
+**Terverifikasi rekaman (Sesi P5): Hermes di VPS ini MENGIRIM `reasoning_content`** — berbahasa Inggris, walau percakapan dan system prompt berbahasa Indonesia (`"User asks: run terminal command ls /tidak-ada-folder-p5 and write result as-is..."`). Teramati pada 2 dari 4 giliran yang memanggil tool (`tool-failure.sse`, `tool-sequence.sse`); TIDAK teramati pada giliran teks biasa tanpa tool (`plain-text.sse`, `model-override.sse`) maupun pada pertanyaan penalaran matematis tanpa tool yang diulang 2 kali (`reasoning.sse` + 2 percobaan tambahan, lihat REPAIR_LOG P5). Kesimpulan kerja: pada konfigurasi Hermes VPS ini, `reasoning_content` tampak terkait keputusan memanggil tool (bukan kompleksitas soal), dan tidak konsisten (satu dari empat giliran tool, `tool-success.sse`, tidak menghasilkannya). UI tetap menyembunyikan judul penalaran bila event ini tidak datang (P2); perilaku itu sudah benar untuk kasus `tool-success.sse`.
 
 ### Pembatalan Hermes
 
-`cancel()` memutus koneksi (`AbortController`); aliran berakhir tanpa event penutup dan gateway menulis `run.status cancelled` (tes gateway: teks sebagian tersimpan, tanpa error). Tool yang terbuka ditutup `cancelled`. **Belum diketahui apakah Hermes ikut menghentikan run-nya di sisi server** (`docs/VERIFICATION.md`); butuh uji di VPS (opsi: `POST /v1/runs/{id}/stop`).
+**Terverifikasi rekaman (Sesi P5):** memutus koneksi SSE klien (SIGKILL pada proses `curl`, tanpa TCP FIN yang rapi) **TIDAK menghentikan eksekusi tool di sisi server**. Uji: perintah `sleep 8 && touch <marker>` diminta lewat tool terminal; koneksi klien dibunuh persis setelah event `hermes.tool.progress status:"running"` diterima (sebelum `completed`); berkas marker tetap muncul di sisi server ~8 detik kemudian, membuktikan proses lanjut berjalan tanpa klien. `POST /v1/runs/{id}/stop` **tidak bisa dipakai** untuk menghentikannya dari adapter ini: `/v1/chat/completions` tidak mengembalikan run id apa pun di body maupun header respons (diperiksa dengan `curl -D -`; hanya `X-Hermes-Session-Id` yang dipantulkan). Endpoint `/v1/runs/*` adalah jalur submission terpisah (`POST /v1/runs` dengan `input`/`session_id`) yang adapter ini tidak pakai. **Keputusan dibutuhkan:** menghentikan run Hermes benar-benar di server memerlukan mengganti transport adapter dari `/v1/chat/completions` ke `/v1/runs` (submit + `GET .../events` + `POST .../stop`) — perubahan arsitektur yang lebih besar dari cakupan sesi ini, belum dikerjakan. Sampai ada keputusan, perilaku saat ini (klien berhenti menerima event, tool yang terbuka ditutup `cancelled` di sisi klien, tapi proses asli bisa saja masih berjalan di VPS) dipertahankan dan didokumentasikan sebagai batasan yang diketahui.
 
 ## Pemilihan model
 
@@ -128,13 +129,13 @@ Hermes hanya mengirim `reasoning_content` bila model menghasilkan penalaran dan 
 ## Cara menambah rekaman
 
 - **omp:** bungkus `OmpTransport` dengan pencatat yang menulis `< <baris stdout>` dan `> <frame yang dikirim>` ke `.jsonl`, jalankan satu skenario lewat adapter terhadap LLM tiruan (`apps/worker/src/testing/mock-llm.ts`, mendukung `reasoning`), taruh di `src/__fixtures__/omp/`, lalu tambahkan skenario dan reaksi klien di `src/omp.replay.test.ts`. Periksa tidak ada path lokal di berkas.
-- **Hermes (dibutuhkan):** tangkap SSE mentah di VPS, mis.
-  `curl -N -sS http://127.0.0.1:8642/v1/chat/completions -H "Authorization: Bearer $API_SERVER_KEY" -H "Content-Type: application/json" -H "X-Hermes-Session-Id: rec-1" -d '{"model":"hermes-agent","stream":true,"stream_options":{"include_usage":true},"messages":[{"role":"user","content":"…"}]}' > packages/adapters/fixtures/hermes/<nama>.sse`
-  Skenario yang dibutuhkan: teks biasa; dengan penalaran; satu tool sukses; satu tool gagal; dua tool berurutan; dibatalkan di tengah tool (hentikan `curl`, lalu catat apakah sesi/run Hermes berhenti); satu dengan `model` berbeda (dan `direct_model_requests` nyala/mati). Setelah ada, snapshot dibuat otomatis oleh `hermes.replay.test.ts` dan pemetaan di atas bisa dikoreksi.
+- **Hermes (dilakukan Sesi P5):** rekaman diambil langsung dari Hermes yang berjalan di VPS tempat repo ini berada (`127.0.0.1:8642`, key dari `~/.hermes/.env`), bukan simulasi:
+  `curl -N -sS http://127.0.0.1:8642/v1/chat/completions -H "Authorization: Bearer $HK" -H "Content-Type: application/json" -H "X-Hermes-Session-Id: <nama>" -d '{"model":"hermes-agent","stream":true,"stream_options":{"include_usage":true},"messages":[...]}' > packages/adapters/fixtures/hermes/<nama>.sse`
+  Skenario yang sudah terekam: teks biasa; dengan penalaran (diminta tapi tidak muncul `reasoning_content`, lihat atas); satu tool sukses; satu tool "gagal" (status tetap `completed`, lihat atas); dua tool berurutan (digabung Hermes jadi satu panggilan); dibatalkan di tengah tool (SIGKILL pada `curl` setelah event `running`, dibuktikan server tetap jalan lewat berkas marker); satu dengan `model` berbeda. Snapshot dibuat otomatis oleh `hermes.replay.test.ts` begitu berkas `*.sse` ada. Diperiksa sebelum commit: tidak ada token/API key di rekaman (header `Authorization` tidak pernah masuk ke body SSE); hanya prompt generik tanpa data pribadi dipakai.
 
 ## Yang belum dipetakan (ringkas)
 
 1. `todo.updated`, `subagent.updated`: tidak ada di kontrak (omp punya datanya).
 2. omp `todo_reminder`, `queue_update`, batas blok `*_start/*_end`: sengaja tidak dipetakan.
-3. Hermes: payload `hermes.tool.progress` asli, `/v1/runs/{id}/events` (jalur lain, tidak dipakai), penghentian run di sisi Hermes.
+3. Hermes: status `hermes.tool.progress` selain `running`/`completed` (belum teramati), `output`/`result` pada payload completed (belum teramati), toolCallId anonim (belum teramati), `/v1/runs/{id}/events` (jalur lain, tidak dipakai), penghentian run Hermes di sisi server saat koneksi diputus (terbukti TIDAK berhenti via `/v1/chat/completions`; perlu keputusan apakah pindah ke jalur `/v1/runs` untuk benar-benar menghentikannya).
 4. Subagen async omp yang belum selesai saat `prompt_result` completed.

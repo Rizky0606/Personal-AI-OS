@@ -53,7 +53,12 @@ export const TARGET_MAX = 60;
 
 export type ToolKind = keyof typeof copy.runActivity.tools;
 
-/** Nama tool (huruf kecil) → jenis. omp: bash, write, todo, task terverifikasi rekaman; sisanya dari daftar tool omp/Hermes. */
+/**
+ * Nama tool (huruf kecil) → jenis. Terverifikasi rekaman: omp `bash`, `write`, `todo`, `task`; Hermes
+ * `terminal` (Sesi P5, 4 rekaman nyata VPS, kalimat "Menjalankan perintah" cocok). Sisanya dari daftar
+ * tool omp dan nama umum Hermes (belum teramati di rekaman; `web_search`/`browser`/dll tidak aktif di
+ * konfigurasi Hermes VPS yang diuji).
+ */
 const TOOL_KINDS: Record<string, ToolKind> = {
   bash: 'command',
   sh: 'command',

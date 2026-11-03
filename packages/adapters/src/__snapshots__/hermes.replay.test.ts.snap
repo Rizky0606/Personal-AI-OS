@@ -1,0 +1,1581 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Hermes: rekaman nyata → event kontrak (snapshot) > cancel-mid-tool.sse 1`] = `
+[
+  {
+    "name": "terminal",
+    "target": "sleep 8 + 2 commands",
+    "toolCallId": "call_ee81a3608bd64f6f9fc705f7ee463574",
+    "type": "tool.started",
+  },
+  {
+    "durationMs": 250,
+    "status": "error",
+    "toolCallId": "call_ee81a3608bd64f6f9fc705f7ee463574",
+    "type": "tool.finished",
+  },
+  {
+    "code": "hermes_stream_truncated",
+    "message": "Jawaban Hermes terputus.",
+    "retryable": true,
+    "type": "error",
+  },
+]
+`;
+
+exports[`Hermes: rekaman nyata → event kontrak (snapshot) > model-override.sse 1`] = `
+[
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "B",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "iru",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "type": "message.completed",
+    "usage": {
+      "inputTokens": 7771,
+      "outputTokens": 6,
+    },
+  },
+  {
+    "summary": "Biru",
+    "type": "run.completed",
+    "usage": {
+      "inputTokens": 7771,
+      "outputTokens": 6,
+    },
+  },
+]
+`;
+
+exports[`Hermes: rekaman nyata → event kontrak (snapshot) > plain-text.sse 1`] = `
+[
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "Jak",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "arta",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": ".",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "type": "message.completed",
+    "usage": {
+      "inputTokens": 7780,
+      "outputTokens": 7,
+    },
+  },
+  {
+    "summary": "Jakarta.",
+    "type": "run.completed",
+    "usage": {
+      "inputTokens": 7780,
+      "outputTokens": 7,
+    },
+  },
+]
+`;
+
+exports[`Hermes: rekaman nyata → event kontrak (snapshot) > reasoning.sse 1`] = `
+[
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "Ker",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "eta",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " A",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " ungg",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "ul",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " ",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "30",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " km",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": ":",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " ",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "0",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": ",",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "5",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " jam",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " ×",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " ",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "60",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " km",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "/j",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "am",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": ".
+
+",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "Sel",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "is",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "ih",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " ke",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "cep",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "atan",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": ":",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " ",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "90",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " −",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " ",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "60",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " =",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " ",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "30",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " km",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "/j",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "am",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": ".
+
+",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "W",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "aktu",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " meny",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "us",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "ul",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": ":",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " ",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "30",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " ÷",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " ",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "30",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " =",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " ",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "1",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " jam",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " setelah",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " ",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "08",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": ":",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "30",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": ".
+
+",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "Jaw",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "aban",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": ":",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " ",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "09",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": ":",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "30",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": ".",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "type": "message.completed",
+    "usage": {
+      "inputTokens": 7836,
+      "outputTokens": 128,
+    },
+  },
+  {
+    "summary": "Kereta A unggul 30 km: 0,5 jam × 60 km/jam. Selisih kecepatan: 90 − 60 = 30 km/jam. Waktu menyusul: 30 ÷ 30 = 1 jam setelah 08:30. Jawaban: 09:30.",
+    "type": "run.completed",
+    "usage": {
+      "inputTokens": 7836,
+      "outputTokens": 128,
+    },
+  },
+]
+`;
+
+exports[`Hermes: rekaman nyata → event kontrak (snapshot) > tool-failure.sse 1`] = `
+[
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "User",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " asks",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": ":",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " run",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " terminal",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " command",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " ls",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " /",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "t",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "idak",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "-",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "ada",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "-f",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "older",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "-p",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "5",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " and",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " write",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " result",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " as",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "-is",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": ".
+
+",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "Just",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " run",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " it",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": ".
+
+",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "Reply",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " language",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": ":",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " Indonesian",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": ".",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " T",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "erse",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": ".",
+    "type": "reasoning.delta",
+  },
+  {
+    "name": "terminal",
+    "target": "ls /tidak-ada-folder-p5",
+    "toolCallId": "call_00_UbY2ZNvjA9AtAZvDGYJj3255",
+    "type": "tool.started",
+  },
+  {
+    "durationMs": 250,
+    "status": "ok",
+    "toolCallId": "call_00_UbY2ZNvjA9AtAZvDGYJj3255",
+    "type": "tool.finished",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "
+
+Output",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " apa",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " adanya",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": ":
+
+",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "ls",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": ":",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " cannot",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " access",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " '/",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "t",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "idak",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "-",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "ada",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "-f",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "older",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "-p",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "5",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "':",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " No",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " such",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " file",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " or",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " directory",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "
+
+",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "Exit",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " code",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " ",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "2",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": ".",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " Folder",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " tidak",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " ada",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": ".",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "type": "message.completed",
+    "usage": {
+      "inputTokens": 18699,
+      "outputTokens": 114,
+    },
+  },
+  {
+    "summary": "Output apa adanya: ls: cannot access '/tidak-ada-folder-p5': No such file or directory Exit code 2. Folder tidak ada.",
+    "type": "run.completed",
+    "usage": {
+      "inputTokens": 18699,
+      "outputTokens": 114,
+    },
+  },
+]
+`;
+
+exports[`Hermes: rekaman nyata → event kontrak (snapshot) > tool-sequence.sse 1`] = `
+[
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "User",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " asks",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " two",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " sequential",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " commands",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": ".",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " Simple",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": ".",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " Two",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " calls",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": ",",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " sequential",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " (",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "dependency",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": ":",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " order",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": ").",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " Could",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " do",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " one",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " call",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " with",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " both",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "?",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " They",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " said",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " sequentially",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": ".",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " Just",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " two",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " terminal",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " calls",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " in",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " sequence",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": ".
+
+",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "Could",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " combine",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " into",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " one",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " command",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " with",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " new",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "line",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": ",",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " but",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " they",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " want",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " report",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " of",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " both",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": ".",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " Simpl",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "est",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": ":",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " one",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " call",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " with",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " both",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " lines",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " sequential",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " —",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " still",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " sequential",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " execution",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": ".",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " But",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " "",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "du",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "a",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " per",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "intah",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": """,
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " report",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " both",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " results",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": ".",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " Do",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " two",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " calls",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " sequentially",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " to",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " be",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " safe",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": ".
+
+",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "Actually",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " lazy",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": ":",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " single",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " call",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " \`",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "echo",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " lang",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "kah",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "-s",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "atu",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "-p",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "5",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": ";",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " echo",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " lang",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "kah",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "-du",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "a",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "-p",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "5",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "\`",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " is",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " sequential",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " and",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " shows",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " both",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": ".",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " Do",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": " that",
+    "type": "reasoning.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": ".",
+    "type": "reasoning.delta",
+  },
+  {
+    "name": "terminal",
+    "target": "echo langkah-satu-p5 + 1 command",
+    "toolCallId": "call_00_Wr6IxfbKtvsoYPRYuoeI8847",
+    "type": "tool.started",
+  },
+  {
+    "durationMs": 250,
+    "status": "ok",
+    "toolCallId": "call_00_Wr6IxfbKtvsoYPRYuoeI8847",
+    "type": "tool.finished",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "
+
+lang",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "kah",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "-s",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "atu",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "-p",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "5",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "
+",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "lang",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "kah",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "-du",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "a",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "-p",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "5",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "type": "message.completed",
+    "usage": {
+      "inputTokens": 17163,
+      "outputTokens": 183,
+    },
+  },
+  {
+    "summary": "langkah-satu-p5 langkah-dua-p5",
+    "type": "run.completed",
+    "usage": {
+      "inputTokens": 17163,
+      "outputTokens": 183,
+    },
+  },
+]
+`;
+
+exports[`Hermes: rekaman nyata → event kontrak (snapshot) > tool-success.sse 1`] = `
+[
+  {
+    "name": "terminal",
+    "target": "echo rekaman-ok-p5",
+    "toolCallId": "call_41f7b7ef9deb43279afea39a6db248df",
+    "type": "tool.started",
+  },
+  {
+    "durationMs": 250,
+    "status": "ok",
+    "toolCallId": "call_41f7b7ef9deb43279afea39a6db248df",
+    "type": "tool.finished",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "
+
+rek",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "aman",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "-ok",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "-p",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "text": "5",
+    "type": "message.delta",
+  },
+  {
+    "messageId": "0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f",
+    "type": "message.completed",
+    "usage": {
+      "inputTokens": 15626,
+      "outputTokens": 32,
+    },
+  },
+  {
+    "summary": "rekaman-ok-p5",
+    "type": "run.completed",
+    "usage": {
+      "inputTokens": 15626,
+      "outputTokens": 32,
+    },
+  },
+]
+`;

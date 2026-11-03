@@ -617,17 +617,17 @@ Disusun 2026-10-26 dari perbandingan dengan Orca, Pi, Cline, Amp, Goose, dan Vib
 
 ## Temuan Sesi 2 (event Hermes dan omp, lihat `docs/ADAPTER_EVENTS.md`)
 
-- [ ] **Rekaman Hermes tidak ada** (`packages/adapters/fixtures/` tidak ada; Hermes tidak terpasang di PC ini). Pemetaan `hermes.tool.progress` memakai bentuk dari issue #16588 dan komentar "belum terverifikasi" dipertahankan. Tangkap SSE di VPS sesuai `docs/ADAPTER_EVENTS.md` ("Cara menambah rekaman"), taruh di `packages/adapters/fixtures/hermes/*.sse`; `hermes.replay.test.ts` (kini skip) akan membuat snapshot, lalu koreksi pemetaan.
+- [x] **Rekaman Hermes tidak ada** — **Selesai Sesi P5.** 7 rekaman nyata direkam dari Hermes 0.22.5 di VPS ini (`packages/adapters/fixtures/hermes/*.sse`); `hermes.replay.test.ts` 7/7 lulus (tidak lagi skip); pemetaan `hermes.tool.progress` dikoreksi sesuai bentuk nyata di `docs/ADAPTER_EVENTS.md`.
 - [ ] **`todo.updated` dan `subagent.updated` tidak ada di kontrak.** omp punya datanya (`tool_execution_end.result.details.phases` untuk tool `todo`; `tool_execution_update.partialResult.details.progress` untuk tool `task`). Perlu keputusan menambah event kontrak (perubahan tambahan) sebelum UI HUD memakainya.
 - [ ] **Subagen omp async:** `prompt_result completed` datang dengan `sessionSettled=false` selagi subagen berjalan; adapter mengakhiri run dan mematikan omp sehingga hasil subagen terbuang. Putuskan: tunggu `sessionSettled`, atau tampilkan sebagai tidak selesai.
 - [ ] **omp `todo_reminder`** memicu giliran model tambahan (sampai 3x) selama todo terbuka; jawaban bisa terduplikasi di rekaman `todo`. Periksa apakah perlu dihaluskan di UI atau dimatikan lewat konfigurasi omp.
-- [ ] **Hermes: penghentian run di sisi server** setelah koneksi diputus belum terbukti (opsi: `POST /v1/runs/{id}/stop`). Apakah Hermes mengirim `reasoning_content` di VPS juga belum terbukti.
+- [x] **Hermes: penghentian run di sisi server** — **Dibuktikan Sesi P5 (bukan diselesaikan): TIDAK berhenti.** Koneksi SSE diputus (SIGKILL) saat tool `running`; proses server lanjut sampai selesai (dibuktikan berkas marker). `POST /v1/runs/{id}/stop` tidak bisa dipakai dari adapter ini (`/v1/chat/completions` tidak mengembalikan run id). **Keputusan dibutuhkan:** pindah transport ke `/v1/runs` untuk benar-benar menghentikan run, atau terima batasan ini. Hermes DI VPS INI terbukti mengirim `reasoning_content` (tidak konsisten, lihat `docs/ADAPTER_EVENTS.md`).
 - [ ] **Pilihan model tidak mengganti model Hermes** (diabaikan tanpa `direct_model_requests`); UI sebaiknya menonaktifkan pemilih model untuk mesin ini atau menyatakannya.
 
 ## Temuan Sesi 3 (lapisan data aktivitas, lihat `docs/RUN_ACTIVITY.md`)
 
 - [ ] **Gateway belum mengirim `reasoning.summary`** dan tidak ada mesin yang menyediakannya; judul selalu turunan klien dari teks penalaran. Bila omp/Hermes kelak menyediakan ringkasan, petakan di adapter.
-- [ ] **Nama tool Hermes untuk kalimat berjalan belum terverifikasi rekaman** (`TOOL_KINDS` di `activity.ts`). Perbarui setelah rekaman Hermes ada (lihat Sesi 2).
+- [x] **Nama tool Hermes untuk kalimat berjalan** — **Diverifikasi Sesi P5.** `terminal` (satu-satunya tool yang teramati di 4 rekaman nyata) sudah terpetakan ke `command` di `TOOL_KINDS` (`activity.ts`); kalimat "Menjalankan perintah" tepat. Tool lain (`web_search`, `browser_*`, dll) tidak aktif di konfigurasi Hermes VPS yang diuji, masih belum terverifikasi.
 - [ ] **Waktu mulai dari envelope/`Run.createdAt`,** bukan dari `startedAt` di `run.status` (tidak ditambahkan karena `Run.createdAt` sudah ada). Polling mengisi `endedAt` dari `Run.updatedAt`, yang bisa lebih lambat dari waktu selesai sebenarnya.
 - [ ] **Android:** fixture `packages/contracts/fixtures/activity` belum dibaca Kotlin (sesi 8); `Frames.kt` belum mengenal `reasoning.summary`.
 - [ ] `AssistantMessage`, `ToolStepRow`, `ReasoningBlock`, `AgentHud` masih memakai data lama dan belum membaca `buildActivity` (sesi UI berikutnya).
@@ -760,3 +760,10 @@ Catatan steer/follow-up: pesan yang diarahkan tidak disimpan sebagai pesan chat 
 - [ ] Efek skill `rich-answers` pada model nyata belum terukur (satu percobaan omp). Pertimbangkan evaluasi kecil beberapa prompt dan beberapa model.
 - [ ] Panel Progres untuk dsh hanya berisi konteks dan alat (dsh tidak mengirim rencana); `supportsTodo: false` sudah dilaporkan, tetapi UI belum menyembunyikan bagian Rencana secara eksplisit.
 - [ ] Tes worker `files.test.ts` ("memotong isi folder di 500 entri") flaky saat beban.
+
+## Temuan Sesi P5 (Hermes, lihat `docs/ADAPTER_EVENTS.md`)
+
+- [ ] **Keputusan dibutuhkan: pembatalan Hermes tidak benar-benar menghentikan run di server.** Dibuktikan dengan rekaman nyata (lihat ADAPTER_EVENTS.md "Pembatalan Hermes"): memutus koneksi `/v1/chat/completions` tidak menghentikan tool yang berjalan di VPS Hermes. Tidak ada run id di jalur ini untuk memakai `POST /v1/runs/{id}/stop`. Opsi: (a) terima batasan ini (dokumentasikan ke pengguna, risiko: proses/tool "zombie" terus jalan di server setelah pengguna membatalkan di UI); (b) pindahkan adapter Hermes dari `/v1/chat/completions` ke jalur `/v1/runs` (submit + `GET .../events` + `POST .../stop`) — perubahan transport besar, di luar cakupan P5.
+- [ ] **Toolset `web`/`browser` tidak aktif di Hermes VPS yang diuji** (hanya `terminal`, `file`, `vision`, `skills` aktif). Nama tool Hermes selain `terminal` di `TOOL_KINDS` (`activity.ts`) masih dari daftar umum, belum terverifikasi rekaman. Aktifkan toolset itu di Hermes bila ingin merekam skenario `web_search`/`browser_*`.
+- [ ] **`reasoning_content` Hermes tidak konsisten**: muncul pada 2 dari 4 giliran yang memanggil tool, tidak pernah pada giliran teks biasa (termasuk soal penalaran matematis tanpa tool, diuji 3x). Penyebab pasti (keputusan model, bukan konfigurasi adapter) tidak diselidiki lebih jauh di sesi ini.
+- [ ] **`direct_model_requests` Hermes tidak diuji** (butuh ubah config Hermes, di luar cakupan P5 yang hanya boleh baca). `model-override.sse` membuktikan field `model` klien dipantulkan di respons tapi token usage identik dengan model bawaan untuk pertanyaan sejenis — konsisten dengan dokumentasi (diabaikan tanpa `direct_model_requests: true`), tapi tidak dikonfirmasi langsung.

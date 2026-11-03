@@ -1,0 +1,5 @@
+data: {"id": "chatcmpl-ca4eecdee9784665b04719db54294", "object": "chat.completion.chunk", "created": 1793675623, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"role": "assistant"}, "finish_reason": null}]}
+
+event: hermes.tool.progress
+data: {"tool": "terminal", "emoji": "\ud83d\udcbb", "label": "sleep 8 + 2 commands", "toolCallId": "call_ee81a3608bd64f6f9fc705f7ee463574", "status": "running"}
+
