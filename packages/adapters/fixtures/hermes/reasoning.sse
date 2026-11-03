@@ -1,0 +1,146 @@
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"role": "assistant"}, "finish_reason": null}]}
+
+: keepalive
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "Ker"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "eta"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": " A"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": " ungg"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "ul"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": " "}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "30"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": " km"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": ":"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": " "}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "0"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": ","}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "5"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": " jam"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": " \u00d7"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": " "}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "60"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": " km"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "/j"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "am"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": ".\n\n"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "Sel"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "is"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "ih"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": " ke"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "cep"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "atan"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": ":"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": " "}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "90"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": " \u2212"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": " "}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "60"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": " ="}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": " "}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "30"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": " km"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "/j"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "am"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": ".\n\n"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "W"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "aktu"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": " meny"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "us"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "ul"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": ":"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": " "}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "30"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": " \u00f7"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": " "}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "30"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": " ="}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": " "}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "1"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": " jam"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": " setelah"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": " "}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "08"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": ":"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "30"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": ".\n\n"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "Jaw"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "aban"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": ":"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": " "}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "09"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": ":"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "30"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "."}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-ba17b1991a244f5b8a6bd8d6129d5", "object": "chat.completion.chunk", "created": 1793675168, "model": "hermes-agent", "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}], "usage": {"prompt_tokens": 7836, "completion_tokens": 128, "total_tokens": 7964}}
+
+data: [DONE]
+

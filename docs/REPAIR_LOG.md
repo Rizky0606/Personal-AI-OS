@@ -294,3 +294,55 @@ Cabang `fix/p4b-mesin-dipaksa` (dari ujung P4). Tidak digabung ke `main`. Keputu
 
 - Hermes nyata dengan mesin dipaksa di dalam project (hanya Hermes palsu).
 - Run gateway penuh ulang setelah perbaikan tes dsh (hanya modul dsh yang diulang).
+
+## P5 — Hermes (2026-11-03)
+
+Cabang `fix/p5-hermes` (dari ujung `fix/p4b-mesin-dipaksa`). Tidak digabung ke `main` (ditunda sampai semua sesi selesai, keputusan pengguna). Berbeda dari sesi lain: tidak ada rekaman Hermes sebelumnya di repo maupun git history manapun (dicek `git log --all -- 'packages/adapters/fixtures/hermes/*'`, kosong), jadi sesi berhenti dan meminta klarifikasi sebelum menulis kode. Pengguna mengonfirmasi Hermes hidup di VPS tempat repo ini berjalan (`127.0.0.1:8642`, key di `~/.hermes/.env`), sehingga rekaman direkam langsung di sini, bukan disimulasikan.
+
+### A. Rekaman
+
+7 rekaman `curl -N` nyata terhadap Hermes 0.22.5 (`health` melaporkan versi), toolset aktif hanya `terminal`/`file`/`vision`/`skills` (web/browser mati): `packages/adapters/fixtures/hermes/{plain-text,reasoning,tool-success,tool-failure,tool-sequence,cancel-mid-tool,model-override}.sse`. Diperiksa sebelum commit: tidak ada API key/token di berkas (hanya di header `Authorization` request, tidak pernah di body SSE), hanya prompt generik tanpa data pribadi. `hermes.replay.test.ts` tidak lagi skip: 7/7 lulus, snapshot di `src/__snapshots__/hermes.replay.test.ts.snap`.
+
+Temuan dari rekaman (detail: `docs/ADAPTER_EVENTS.md`):
+1. Pemetaan `hermes.tool.progress` yang ada (Sesi 2) **sudah benar** terhadap bentuk nyata (`tool`, `label`→target, `toolCallId` selalu ada, `status: running|completed`) — tidak ada bug, hanya komentar "belum terverifikasi" yang dikoreksi.
+2. **Status `hermes.tool.progress` HANYA pernah `running`/`completed`**, tidak pernah `failed`/`error`, bahkan untuk perintah exit code ≠0 (`ls` ke folder tak ada): Hermes melapor `completed` dan menaruh galat di teks jawaban. Payload `completed` **tidak pernah** membawa `output`/`result`.
+3. **Hermes dapat menggabungkan beberapa perintah shell jadi satu panggilan tool** (dua `echo` berurutan → satu `running`/`completed` dengan label `"... + 1 command"`).
+4. **`reasoning_content` TERBUKTI dikirim Hermes VPS ini** (2 dari 4 giliran yang memanggil tool), tapi tidak konsisten dan tidak pernah muncul di giliran teks biasa tanpa tool (diuji 3x, termasuk soal matematika yang diminta berpikir langkah demi langkah).
+5. **Pembatalan: server TIDAK berhenti saat koneksi diputus.** Uji: `sleep 8 && touch <marker>` lewat tool terminal; proses `curl` di-SIGKILL tepat setelah event `running` (sebelum `completed`); berkas marker tetap muncul ~8 detik kemudian di server. `POST /v1/runs/{id}/stop` **tidak bisa dipakai** dari adapter ini: `/v1/chat/completions` tidak mengembalikan run id apa pun (diperiksa header via `curl -D -`). Mengatasi ini butuh pindah transport ke jalur `/v1/runs` — keputusan arsitektur di luar cakupan sesi ini (BACKLOG "Temuan Sesi P5").
+6. `model-override.sse`: field `model` klien dipantulkan di respons tapi token usage identik model bawaan untuk pertanyaan sejenis, konsisten dokumen (diabaikan tanpa `direct_model_requests`); tidak dikonfirmasi langsung (butuh ubah config Hermes).
+
+### B. Perubahan kode
+
+- `packages/adapters/src/hermes.ts`: komentar pada `onToolProgress` dan docstring adapter dikoreksi sesuai bukti rekaman (lihat atas); **tidak ada perubahan logika pemetaan** (sudah benar).
+- `packages/adapters/src/hermes.replay.test.ts`: jam deterministik (`now: () => (t += 250)`, pola sama dengan `hermes.test.ts`) ditambahkan ke `replay()` agar `durationMs` di snapshot tidak flaky (sebelumnya 0 atau 1 ms tergantung CPU).
+- `apps/desktop/src/realtime/activity.ts`: komentar `TOOL_KINDS` dikoreksi — `terminal` kini terverifikasi rekaman Hermes (kalimat "Menjalankan perintah" tepat); tidak ada perubahan pemetaan (sudah benar).
+- `docs/ADAPTER_EVENTS.md`, `docs/BACKLOG.md`: ditulis ulang sesuai bukti rekaman (lihat A).
+
+### Bukti tersambung
+
+```
+onToolProgress dipakai:  hermes.ts:249 (if (msg.event === 'hermes.tool.progress') yield* onToolProgress(...))
+TOOL_KINDS['terminal']:  activity.ts:61 -> 'command' -> copy.ts:578 "Menjalankan perintah"
+hermes.replay.test.ts:   mengimpor createHermesAdapter dari hermes.ts (bukan tiruan), 7 fixture nyata diputar
+```
+
+### Pemeriksaan
+
+| Pemeriksaan | Hasil |
+| --- | --- |
+| `pnpm typecheck` | lulus (12/12 paket; gap `unpdf` pre-existing diperbaiki dengan `pnpm install --frozen-lockfile`, tidak menambah dependensi baru) |
+| `pnpm lint` (eslint + prettier) | lulus |
+| adapters | 7 file, 113 lulus, 1 dilewati sejak awal (`dsh asli`, butuh binary dsh) — stabil 3x run berturut-turut |
+| contracts / roles / ui-tokens | 151 / 46 / 28 lulus |
+| desktop | 98 file, 919 tes lulus |
+| gateway / worker / e2e | **tidak bisa dijalankan**: Postgres tertanam gagal start di VPS ARM64 ini (`libicuuc.so.60` tidak ada; hanya `libicu74` terpasang, ABI tidak kompatibel dengan binary `@embedded-postgres/linux-arm64`). Dikonfirmasi pre-existing (`git stash` lalu uji ulang: gagal sama, tidak terkait perubahan sesi ini) |
+
+### Tidak diverifikasi
+
+- Gateway/worker/e2e penuh (lihat tabel Pemeriksaan): environment VPS ini tidak bisa menjalankan Postgres tertanam. Tidak diperbaiki (di luar cakupan P5, perbaikan ICU/binary Postgres butuh keputusan terpisah).
+- `direct_model_requests` on/off di Hermes (butuh ubah config Hermes di VPS, sesi ini hanya membaca).
+- Penyebab pasti `reasoning_content` tidak konsisten (keputusan model, bukan diselidiki lebih lanjut).
+- Tool selain `terminal` (`web_search`, `browser_*`, `read_file`, dll): toolset itu mati di konfigurasi Hermes VPS ini.
+- Bukti visual: sesi ini tidak mengubah UI (hanya komentar), jadi `pnpm shots` tidak dijalankan (tidak relevan, tidak ada perubahan tampilan untuk dipotret).
+
+

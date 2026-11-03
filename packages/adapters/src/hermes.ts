@@ -45,9 +45,15 @@ const firstString = (...values: unknown[]): string | undefined =>
   values.find((v): v is string => typeof v === 'string' && v !== '');
 
 /**
- * Status di payload `hermes.tool.progress`. Bentuk payload BELUM terverifikasi dengan rekaman nyata:
- * dasarnya dokumentasi Hermes (event hanya untuk awal tool) dan issue NousResearch/hermes-agent#16588
- * (`toolCallId`, `tool`/`name`, `status: running | completed`, `input`, `output`). Yang tidak cocok diabaikan.
+ * Status di payload `hermes.tool.progress`. Diverifikasi Sesi P5 dengan 4 rekaman nyata (Hermes 0.22.5,
+ * VPS, tool `terminal`): payload punya `tool`, `label` (dipakai sebagai target), `toolCallId` (selalu ada,
+ * tidak pernah anonim), dan `status` yang HANYA pernah bernilai `running` atau `completed` — tidak pernah
+ * `failed`/`error`/`success`/dll, bahkan untuk perintah yang gagal (exit code bukan 0): Hermes tetap
+ * mengirim `status: completed` dan menaruh ringkasan galat di teks jawaban, bukan di event tool. Payload
+ * `completed` juga TIDAK PERNAH membawa `output`/`result` di rekaman manapun. Nilai `TOOL_FAILED` dan
+ * jalur `output`/`result` di bawah karenanya masih **belum terverifikasi rekaman** (dipertahankan untuk
+ * kompatibilitas ke depan bila Hermes mengirimnya suatu saat); begitu juga toolCallId anonim (event tanpa
+ * ID belum pernah teramati). Lihat docs/ADAPTER_EVENTS.md untuk tabel lengkap.
  */
 const TOOL_RUNNING: Record<string, true> = {
   running: true,
@@ -83,8 +89,13 @@ function statusError(status: number): AdapterError {
 
 /**
  * Adapter Hermes lewat `POST /v1/chat/completions` (stream). Riwayat percakapan dipegang Hermes
- * berdasarkan `X-Hermes-Session-Id`, jadi hanya pesan baru yang dikirim. Pembatalan memutus koneksi;
- * apakah Hermes ikut menghentikan run-nya belum terverifikasi (docs/VERIFICATION.md).
+ * berdasarkan `X-Hermes-Session-Id`, jadi hanya pesan baru yang dikirim. Pembatalan memutus koneksi
+ * (`AbortController`): **diverifikasi Sesi P5 di VPS bahwa Hermes TIDAK menghentikan eksekusi tool di
+ * sisi server** saat koneksi SSE diputus (perintah `sleep` + `touch` tetap menghasilkan berkas beberapa
+ * detik setelah koneksi klien dibunuh). `/v1/chat/completions` tidak mengembalikan run id apa pun (hanya
+ * `X-Hermes-Session-Id` yang dipantulkan di header respons), jadi `POST /v1/runs/{id}/stop` TIDAK BISA
+ * dipakai dari jalur ini — endpoint itu milik jalur submission `/v1/runs` yang terpisah dan tidak dipakai
+ * adapter ini. Lihat docs/ADAPTER_EVENTS.md ("Pembatalan Hermes") untuk detail dan keputusan yang dibutuhkan.
  */
 export function createHermesAdapter(options: HermesAdapterOptions): AgentAdapter {
   const {

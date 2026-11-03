@@ -1,0 +1,22 @@
+data: {"id": "chatcmpl-f29651d32cf7466481a8931f25e24", "object": "chat.completion.chunk", "created": 1793675192, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"role": "assistant"}, "finish_reason": null}]}
+
+event: hermes.tool.progress
+data: {"tool": "terminal", "emoji": "\ud83d\udcbb", "label": "echo rekaman-ok-p5", "toolCallId": "call_41f7b7ef9deb43279afea39a6db248df", "status": "running"}
+
+event: hermes.tool.progress
+data: {"tool": "terminal", "toolCallId": "call_41f7b7ef9deb43279afea39a6db248df", "status": "completed"}
+
+data: {"id": "chatcmpl-f29651d32cf7466481a8931f25e24", "object": "chat.completion.chunk", "created": 1793675192, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "\n\nrek"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-f29651d32cf7466481a8931f25e24", "object": "chat.completion.chunk", "created": 1793675192, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "aman"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-f29651d32cf7466481a8931f25e24", "object": "chat.completion.chunk", "created": 1793675192, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "-ok"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-f29651d32cf7466481a8931f25e24", "object": "chat.completion.chunk", "created": 1793675192, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "-p"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-f29651d32cf7466481a8931f25e24", "object": "chat.completion.chunk", "created": 1793675192, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "5"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-f29651d32cf7466481a8931f25e24", "object": "chat.completion.chunk", "created": 1793675192, "model": "hermes-agent", "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}], "usage": {"prompt_tokens": 15626, "completion_tokens": 32, "total_tokens": 15658}}
+
+data: [DONE]
+

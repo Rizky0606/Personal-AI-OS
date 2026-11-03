@@ -1,0 +1,16 @@
+data: {"id": "chatcmpl-91272b7a42d74e4f870a3c57f9231", "object": "chat.completion.chunk", "created": 1793675415, "model": "gpt-4o-mini", "choices": [{"index": 0, "delta": {"role": "assistant"}, "finish_reason": null}]}
+
+: keepalive
+
+: keepalive
+
+: keepalive
+
+data: {"id": "chatcmpl-91272b7a42d74e4f870a3c57f9231", "object": "chat.completion.chunk", "created": 1793675415, "model": "gpt-4o-mini", "choices": [{"index": 0, "delta": {"content": "B"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-91272b7a42d74e4f870a3c57f9231", "object": "chat.completion.chunk", "created": 1793675415, "model": "gpt-4o-mini", "choices": [{"index": 0, "delta": {"content": "iru"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-91272b7a42d74e4f870a3c57f9231", "object": "chat.completion.chunk", "created": 1793675415, "model": "gpt-4o-mini", "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}], "usage": {"prompt_tokens": 7771, "completion_tokens": 6, "total_tokens": 7777}}
+
+data: [DONE]
+

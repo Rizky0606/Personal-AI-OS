@@ -1,0 +1,14 @@
+data: {"id": "chatcmpl-3b345d43b79e4bb2be65478e6653c", "object": "chat.completion.chunk", "created": 1793675147, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"role": "assistant"}, "finish_reason": null}]}
+
+: keepalive
+
+data: {"id": "chatcmpl-3b345d43b79e4bb2be65478e6653c", "object": "chat.completion.chunk", "created": 1793675147, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "Jak"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-3b345d43b79e4bb2be65478e6653c", "object": "chat.completion.chunk", "created": 1793675147, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "arta"}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-3b345d43b79e4bb2be65478e6653c", "object": "chat.completion.chunk", "created": 1793675147, "model": "hermes-agent", "choices": [{"index": 0, "delta": {"content": "."}, "finish_reason": null}]}
+
+data: {"id": "chatcmpl-3b345d43b79e4bb2be65478e6653c", "object": "chat.completion.chunk", "created": 1793675147, "model": "hermes-agent", "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}], "usage": {"prompt_tokens": 7780, "completion_tokens": 7, "total_tokens": 7787}}
+
+data: [DONE]
+

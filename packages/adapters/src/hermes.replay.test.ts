@@ -22,8 +22,12 @@ const RUN_ID = '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8ea0';
 
 async function replay(file: string): Promise<AgentEvent[]> {
   const raw = readFileSync(join(DIR, file));
+  // Jam tetap (seperti hermes.test.ts): durasi tool dari rekaman tidak merepresentasikan waktu nyata di
+  // VPS (SSE diputar dari berkas, instan), jadi tanpa ini durationMs flaky (0 atau 1 ms tergantung CPU).
+  let t = 1_000;
   const adapter = createHermesAdapter({
     baseUrl: 'http://hermes.test',
+    now: () => (t += 250),
     fetch: () =>
       Promise.resolve(
         new Response(raw, { status: 200, headers: { 'content-type': 'text/event-stream' } }),
