@@ -345,4 +345,53 @@ hermes.replay.test.ts:   mengimpor createHermesAdapter dari hermes.ts (bukan tir
 - Tool selain `terminal` (`web_search`, `browser_*`, `read_file`, dll): toolset itu mati di konfigurasi Hermes VPS ini.
 - Bukti visual: sesi ini tidak mengubah UI (hanya komentar), jadi `pnpm shots` tidak dijalankan (tidak relevan, tidak ada perubahan tampilan untuk dipotret).
 
+## P6 — Android (2026-11-03)
+
+Cabang `fix/p6-android` (dari ujung `fix/p4b-mesin-dipaksa`). Tidak digabung ke `main` (ditunda). JDK: OpenJDK 17.0.20.1 (`/usr/lib/jvm/java-17-openjdk-arm64`), sesuai syarat README (17–21). SDK Android dipasang manual di `/tmp/androidsdk` (platform 36 + build-tools 36 ditambahkan di sesi ini; sebelumnya hanya ada platform 35).
+
+### A. Lingkungan: emulator/instrumentasi TIDAK MUNGKIN di VPS ini
+
+Dibuktikan, bukan diasumsikan: tidak ada `/dev/kvm`, tidak ada modul kernel `kvm`, dan `sdkmanager --install emulator` gagal dengan `Failed to find package 'emulator'` (tidak ada paket emulator untuk host ARM64 di repository yang dipakai cmdline-tools versi ini). Konsekuensi: `RunActivityTest`, `FloatingNavBarTest`, `ActivityScreenshotsTest`, `AiosE2ETest` (semua di `androidTest/`) dan screenshot emulator (tugas 8) **tidak bisa dijalankan di sini**. Build debug dan tes unit JVM (`test/`) tidak terpengaruh dan dijalankan nyata (lihat Pemeriksaan).
+
+### B. Perubahan
+
+1. **Build dari main + cap build (tugas 1, 2):** `assembleDebug` dan `testDebugUnitTest`/`testReleaseUnitTest` dijalankan nyata. `build.gradle.kts`: `buildConfigField BUILD_COMMIT` (hash commit git pendek + `-kotor` bila ada perubahan belum di-commit, dari `git rev-parse --short HEAD` dan `git status --porcelain` saat konfigurasi Gradle). Ditampilkan di `SettingsScreen.kt` (bagian baru "Tentang"), bersama versi aplikasi (dipindah dari bagian "Perangkat" agar tidak dobel).
+2. **Panel izin (tugas 3):** kontrak `approval.requested`/`approval.resolved` diperkaya sesuai skema (`kind`, `detail`, `cwd`, `toolCallId`, `decision`, `remember`) di `Frames.kt` dan `RunTrace.kt` (`TraceApproval`, bukan sekadar ID). `ApprovalPanel.kt` (baru): detail persis, folder kerja bila ada, tiga tombol (Izinkan sekali/Selalu/Tolak, target sentuh `Tokens.touchTarget` = 48 dp), seluruh panel satu blok semantik (`mergeDescendants`) sehingga TalkBack membacakan judul + detail + folder kerja sebagai satu pengumuman sebelum tombol. `ChatViewModel.resolveApproval` → `ChatRepository.resolveApproval` → `POST /runs/{runId}/approvals/{approvalId}` (kontrak yang sudah ada, `ApprovalDecisionRequestSchema`/`ApprovalSchema`). Wiring nyata di `ChatScreen.kt` (bukan hanya dipanggil dari tes).
+3. **`tool.output` (tugas 4):** `Frames.kt` memetakan `ServerEvent.ToolOutput` (sebelumnya jatuh ke `Other`); `RunTrace`/`LiveRun` menyimpan baris terakhir non-kosong (`output`, sama dengan aturan desktop `liveRun.ts`: `chunk.split(/\r?\n/).filter(Boolean).at(-1)`).
+4. **Panel Progres (tugas 5, paritas P2B):** `ProgressBuilder.kt` (baru) — port Kotlin murni dari `apps/desktop/src/realtime/progress.ts` (`buildProgress`), diuji dengan **fixture JSON yang SAMA** dengan desktop (`packages/contracts/fixtures/progress/*.json`, sudah tersedia di classpath tes lewat `sourceSets.test.resources` yang sudah ada sejak Sesi 8) di `ProgressBuilderTest.kt`: 4 fixture (`plan-midway`, `hermes-no-plan`, `reload-complete`, `blocked-and-abandoned`), replay event lewat `Frames.parse` yang sama dengan aplikasi, dibandingkan `steps`/`chip`/`used`/`outputs` persis. `Frames.kt` diperluas dengan `ServerEvent.TodoUpdated` dan `ServerEvent.ContextUsed` (keduanya sebelumnya jatuh ke `Other`) agar rencana dan konteks live bisa dibaca. `ProgressDto.kt` (baru): model `GET /conversations/:id/progress` sesuai `ConversationProgressSchema` (kontrak yang sudah ada, tidak diubah). Chip "Langkah N dari M" (atau "Langkah N" tanpa total) di topbar chat (`MainScreen.kt`, parameter baru `progressChip` pada `TopBar`), ketuk membuka `ProgressSheet.kt` (baru, `ModalBottomSheet`): Progres (linimasa, "N langkah sebelumnya"), Output (daftar, ketuk — pratinjau penuh belum diimplementasikan, lihat Tidak diverifikasi), Digunakan dalam sesi ini. Data `progressResponse` diambil `ChatViewModel` dari server setiap kali pesan disegarkan dan setiap run selesai (`refreshProgress`), sehingga **bertahan setelah aplikasi dibuka ulang** — menutup BACKLOG "RunTrace tidak bertahan" untuk bagian Progres (RunTrace itu sendiri, data run yang sedang mengalir, tetap tidak persisten by design, sama seperti desktop).
+5. **AgentOrb (tugas 6):** sudah terpenuhi tanpa perubahan kode (lihat Bukti tersambung).
+6. **CI (tugas 7):** `build.yml` job `android` sudah menjalankan `./gradlew check` (ktlint, detekt, lint Android, `testDebugUnitTest`) di setiap push/PR; ditambah komentar yang menjelaskan mengapa tanpa instrumentasi (runner GitHub Actions bawaan tidak punya emulator terpasang; dibuktikan sesi ini VPS pengembangan juga tidak bisa memasangnya di ARM64).
+7. **Screenshot (tugas 8):** **tidak bisa dijalankan** (lihat bagian A).
+
+### Bukti tersambung
+
+```
+ApprovalPanel dipakai: ChatScreen.kt:151 (ui.trace?.approvals?.forEach { ApprovalPanel(...) })
+ProgressSheet dipakai: MainScreen.kt:345 (if (progressSheetOpen && progressView != null) ProgressSheet(...))
+ProgressChip dipakai:  MainScreen.kt:229-231 (progressChip = progressView?.chip?.let { ... })
+buildProgress dipakai: MainScreen.kt:136 (progressView = buildProgress(chatUi.progressResponse, chatUi.trace, ...))
+AgentOrb (sudah ada sebelum sesi ini, diverifikasi ulang):
+  avatar:  ChatMessages.kt:354 AgentOrb(phase = orbPhase, size = OrbSizeCompact, ...)
+  topbar:  MainScreen.kt (TopBar) baris ~400 AgentOrb(phase = orbPhase, ...)
+```
+
+### Pemeriksaan
+
+| Pemeriksaan | Hasil |
+| --- | --- |
+| `./gradlew assembleDebug` | BUILD SUCCESSFUL; `BuildConfig.BUILD_COMMIT` terverifikasi berisi hash commit nyata (`fc4f595-kotor` saat working tree masih kotor) |
+| `./gradlew check` (ktlint, detekt, lint Android, tes unit debug+release) | BUILD SUCCESSFUL |
+| tes unit JVM (debug dan release) | 203 lulus, 0 gagal, masing-masing (termasuk `ProgressBuilderTest` baru, 4 fixture + 2 tes tambahan) |
+| Android lint | 0 error, 126 warning (pre-existing, tidak diperiksa satu-satu) |
+| tes instrumentasi (`androidTest`) | **tidak dijalankan** — lihat bagian A |
+
+### Tidak diverifikasi
+
+- Tes instrumentasi (`RunActivityTest`, `FloatingNavBarTest`, `ActivityScreenshotsTest`, `AiosE2ETest`) dan screenshot emulator (tugas 8): lingkungan VPS ini tidak punya KVM dan tidak bisa memasang paket emulator (dibuktikan, bukan diasumsikan; lihat bagian A). Tidak diverifikasi di perangkat/CI lain.
+- TalkBack sungguhan atas `ApprovalPanel` (hanya diverifikasi lewat struktur semantics di kode; tidak ada perangkat/emulator untuk mendengarkan pembacaan nyata).
+- Font 200% pada `ApprovalPanel`/`ProgressSheet` secara visual (tidak ada emulator; komponen memakai token `Tokens.touchTarget`/teks Compose yang mengikuti `fontScale` sistem secara otomatis, tapi tidak diperiksa dengan mata).
+- Pratinjau penuh saat kartu Output di `ProgressSheet` diketuk (saat ini hanya menutup sheet; integrasi ke `ArtifactDialog`/lightbox yang sudah ada di chat tidak dikerjakan, di luar anggaran waktu sesi ini).
+- `ResourceActivityTexts` dan `buildProgress` di `MainScreen.kt` dipanggil ulang tiap recomposition tanpa `remember` eksplisit pada hasilnya (hanya `activityTexts` yang di-`remember`); berpotensi dihitung ulang lebih sering dari perlu — tidak diukur dampak performanya.
+- Konektor MCP dan grup tool `web`/`browser` di panel Progres Android: logikanya ada (port dari desktop) tapi belum teramati dengan data nyata (sama seperti P5, toolset itu mati di Hermes VPS; omp project belum diuji dengan tool MCP di Android).
+
 

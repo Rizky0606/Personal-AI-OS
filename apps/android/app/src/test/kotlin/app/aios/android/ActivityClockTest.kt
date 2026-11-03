@@ -76,10 +76,10 @@ class RunTraceTest {
     fun permintaanIzinMembuatFaseMenungguIzinSampaiDiputuskan() {
         val waiting = trace(
             ServerEvent.RunStatus("running") to 1_000L,
-            ServerEvent.ApprovalRequested("a1") to 2_000L
+            ServerEvent.ApprovalRequested("a1", "command", "ls", null, null) to 2_000L
         )
         assertEquals(ActivityPhase.WaitingApproval, waiting.phase())
-        val resolved = waiting.reduce(ServerEvent.ApprovalResolved("a1"), 3_000L)
+        val resolved = waiting.reduce(ServerEvent.ApprovalResolved("a1", "allow", false), 3_000L)
         assertEquals(ActivityPhase.Thinking, resolved.phase())
     }
 

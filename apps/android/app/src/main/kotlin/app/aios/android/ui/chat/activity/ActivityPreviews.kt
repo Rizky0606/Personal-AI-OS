@@ -46,7 +46,7 @@ internal fun sampleTrace(phase: ActivityPhase): RunTrace = when (phase) {
     ActivityPhase.WaitingApproval -> RunTrace(
         status = "waiting_approval",
         tools = listOf(tool("a", "bash", "running", "rm -rf build")),
-        approvals = listOf("ap1"),
+        approvals = listOf(TraceApproval("ap1", "command", "rm -rf build", null, null)),
         startedAt = T0
     )
     ActivityPhase.Done -> RunTrace(

@@ -8,6 +8,8 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
@@ -28,11 +30,19 @@ sealed interface ServerEvent {
     /** Judul ringkas dari mesin untuk baris aktivitas. */
     data class ReasoningSummary(val messageId: String, val text: String) : ServerEvent
 
-    data class ApprovalRequested(val approvalId: String) : ServerEvent
+    data class ApprovalRequested(
+        val approvalId: String,
+        val kind: String,
+        val detail: String,
+        val cwd: String?,
+        val toolCallId: String?
+    ) : ServerEvent
 
-    data class ApprovalResolved(val approvalId: String) : ServerEvent
+    data class ApprovalResolved(val approvalId: String, val decision: String, val remember: Boolean) : ServerEvent
 
     data class ToolStarted(val toolCallId: String, val name: String, val target: String?) : ServerEvent
+
+    data class ToolOutput(val toolCallId: String, val chunk: String, val stream: String?) : ServerEvent
 
     data class ToolFinished(val toolCallId: String, val status: String, val durationMs: Long) : ServerEvent
 
@@ -61,7 +71,29 @@ sealed interface ServerEvent {
         val sha256: String,
         val source: String
     ) : ServerEvent
+
+    /** Rencana agent terbaru (tool `todo`); selalu seluruh daftar, bukan selisih. */
+    data class TodoUpdated(val phases: List<TodoPhase>) : ServerEvent
+
+    /** Konteks dipakai run (dikirim sekali, setelah role/skill dipilih dan memori dibaca). */
+    data class ContextUsed(
+        val runId: String,
+        val engine: String?,
+        val model: String?,
+        val skills: List<String>,
+        val memory: ContextMemory,
+        val attachments: List<ContextAttachment>
+    ) : ServerEvent
 }
+
+@Serializable
+data class TodoTask(val content: String, val status: String, val blocker: String? = null)
+
+@Serializable
+data class TodoPhase(val name: String, val tasks: List<TodoTask>)
+data class ContextMemoryItem(val id: String, val title: String)
+data class ContextMemory(val read: Int, val items: List<ContextMemoryItem>)
+data class ContextAttachment(val fileId: String, val name: String, val mime: String)
 
 /** Frame dari server di `/v1/ws`. */
 sealed interface Frame {
@@ -132,9 +164,20 @@ object Frames {
         "run.completed" -> ServerEvent.RunCompleted(e.str("summary"))
         "reasoning.delta" -> ServerEvent.ReasoningDelta(e.str("messageId"), e.str("text"))
         "reasoning.summary" -> ServerEvent.ReasoningSummary(e.str("messageId"), e.str("text"))
-        "approval.requested" -> ServerEvent.ApprovalRequested(e.str("approvalId"))
-        "approval.resolved" -> ServerEvent.ApprovalResolved(e.str("approvalId"))
+        "approval.requested" -> ServerEvent.ApprovalRequested(
+            e.str("approvalId"),
+            e.str("kind"),
+            e.str("detail"),
+            e["cwd"]?.str(),
+            e["toolCallId"]?.str()
+        )
+        "approval.resolved" -> ServerEvent.ApprovalResolved(
+            e.str("approvalId"),
+            e.str("decision"),
+            e["remember"]?.jsonPrimitive?.contentOrNull == "true"
+        )
         "tool.started" -> ServerEvent.ToolStarted(e.str("toolCallId"), e.str("name"), e["target"]?.str())
+        "tool.output" -> ServerEvent.ToolOutput(e.str("toolCallId"), e.str("chunk"), e["stream"]?.str())
         "tool.finished" -> ServerEvent.ToolFinished(
             e.str("toolCallId"),
             e.str("status"),
@@ -161,7 +204,39 @@ object Frames {
         "research.source" -> ServerEvent.ResearchSourceFound(e.str("sourceId"), e.str("url"), e.str("title"))
         "schedule.result" -> ServerEvent.ScheduleResult(e.str("scheduleId"), e.str("status"))
         "research.completed" -> ServerEvent.ResearchCompleted(e.str("researchId"), e["runId"]?.str())
+        "todo.updated" -> ServerEvent.TodoUpdated(todoPhases(e["phases"]))
+        "context.used" -> ServerEvent.ContextUsed(
+            e.str("runId"),
+            e["engine"]?.str(),
+            e["model"]?.str(),
+            e["skills"]?.jsonArray?.mapNotNull { it.str() } ?: emptyList(),
+            contextMemory(e["memory"]?.jsonObject),
+            e["attachments"]?.jsonArray?.mapNotNull { a ->
+                val o = a as? JsonObject ?: return@mapNotNull null
+                ContextAttachment(o.str("fileId"), o.str("name"), o.str("mime"))
+            } ?: emptyList()
+        )
         else -> ServerEvent.Other(type)
+    }
+
+    private fun todoPhases(raw: JsonElement?): List<TodoPhase> = raw?.jsonArray?.mapNotNull { p ->
+        val o = p as? JsonObject ?: return@mapNotNull null
+        TodoPhase(
+            o.str("name"),
+            o["tasks"]?.jsonArray?.mapNotNull { t ->
+                val task = t as? JsonObject ?: return@mapNotNull null
+                TodoTask(task.str("content"), task.str("status"), task["blocker"]?.str())
+            } ?: emptyList()
+        )
+    } ?: emptyList()
+
+    private fun contextMemory(raw: JsonObject?): ContextMemory {
+        if (raw == null) return ContextMemory(0, emptyList())
+        val items = raw["items"]?.jsonArray?.mapNotNull { i ->
+            val o = i as? JsonObject ?: return@mapNotNull null
+            ContextMemoryItem(o.str("id"), o.str("title"))
+        } ?: emptyList()
+        return ContextMemory(raw["read"]?.jsonPrimitive?.int ?: 0, items)
     }
 
     private fun JsonObject.str(key: String): String = this[key]?.jsonPrimitive?.contentOrNull.orEmpty()

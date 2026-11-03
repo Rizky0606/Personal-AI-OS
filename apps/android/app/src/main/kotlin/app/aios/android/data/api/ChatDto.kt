@@ -122,6 +122,21 @@ data class Message(
 @Serializable
 data class RunError(val code: String, val message: String, val retryable: Boolean = false)
 
+/** Keputusan atas permintaan izin: `allow`/`deny`; `remember` = selalu izinkan untuk project ini. */
+@Serializable
+data class ResolveApprovalRequest(val decision: String, val remember: Boolean)
+
+@Serializable
+data class ApprovalResult(
+    val id: String,
+    val runId: String,
+    val kind: String,
+    val detail: String,
+    val status: String,
+    val remember: Boolean,
+    val decidedAt: String? = null
+)
+
 @Serializable
 data class Run(
     val id: String,

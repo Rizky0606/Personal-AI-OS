@@ -90,10 +90,10 @@ class ChatModelsTest {
     @Test
     fun `event dengan field tambahan dan tipe baru tidak merusak`() {
         val ev = Frames.parse(
-            envelope("run:r1", 1, """{"type":"tool.output","toolCallId":"t","chunk":"x","stream":"stdout"}"""),
+            envelope("run:r1", 1, """{"type":"subagent.updated","id":"s1","status":"running"}"""),
             testJson
         ) as Frame.Envelope
-        assertEquals(ServerEvent.Other("tool.output"), ev.event)
+        assertEquals(ServerEvent.Other("subagent.updated"), ev.event)
     }
 
     @Test

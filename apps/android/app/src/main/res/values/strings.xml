@@ -69,4 +69,31 @@
 
     <!-- Katalog komponen (debug) -->
     <string name="catalog_title">Katalog komponen</string>
+
+    <!-- Panel izin (paritas desktop P2/P6) -->
+    <string name="approval_title_command">Agent meminta izin menjalankan perintah</string>
+    <string name="approval_title_file_write">Agent meminta izin menulis file</string>
+    <string name="approval_title_network">Agent meminta izin akses jaringan</string>
+    <string name="approval_detail_label">Perintah</string>
+    <string name="approval_cwd">Folder kerja</string>
+    <string name="approval_allow_once">Izinkan sekali</string>
+    <string name="approval_allow_always">Selalu untuk project ini</string>
+    <string name="approval_deny">Tolak</string>
+    <string name="approval_always_hint">\"Selalu\" hanya berlaku untuk perintah yang persis sama.</string>
+
+    <!-- Panel Progres (paritas desktop P2B/P6) -->
+    <string name="progress_chip_label">Langkah %1$d dari %2$d: %3$s</string>
+    <string name="progress_chip_label_no_total">Langkah %1$d: %2$s</string>
+    <string name="progress_sheet_title">Progres</string>
+    <string name="progress_tab_plan">Progres</string>
+    <string name="progress_tab_outputs">Hasil kerja</string>
+    <string name="progress_tab_used">Digunakan dalam sesi ini</string>
+    <string name="progress_previous_steps">%1$d langkah sebelumnya</string>
+    <string name="progress_empty">Belum ada progres untuk percakapan ini.</string>
+    <string name="progress_used_memory">Dibaca · %1$d fakta</string>
+    <string name="progress_used_engine_model">%1$s · %2$s</string>
+
+    <!-- Tentang (Pengaturan) -->
+    <string name="settings_about_section">Tentang</string>
+    <string name="settings_about_build">Build</string>
 </resources>

@@ -194,6 +194,12 @@ jobs:
           echo "ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
 
       - name: Lint dan tes unit
+        # Hanya tes unit JVM (testDebugUnitTest, lewat `check`): tanpa emulator di runner GitHub Actions
+        # bawaan (tidak ada system image/KVM terpasang bawaan), jadi tes instrumentasi (androidTest:
+        # RunActivityTest, FloatingNavBarTest, ActivityScreenshotsTest, AiosE2ETest) TIDAK dijalankan di
+        # sini. Dibuktikan P6: VPS pengembangan juga tidak punya KVM dan sdkmanager tidak menawarkan paket
+        # `emulator` untuk ARM64; menambah emulator ke CI (mis. reactivecircus/android-emulator-runner,
+        # yang butuh x86_64 + KVM) adalah keputusan terpisah di luar cakupan sesi ini.
         run: ./gradlew check
 
       - name: APK debug (selalu bisa dipasang)

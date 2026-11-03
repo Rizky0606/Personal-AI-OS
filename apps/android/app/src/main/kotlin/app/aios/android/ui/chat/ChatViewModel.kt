@@ -8,6 +8,7 @@ import app.aios.android.data.Connectivity
 import app.aios.android.data.api.ApiError
 import app.aios.android.data.api.AUTHOR_ASSISTANT
 import app.aios.android.data.api.AUTHOR_USER
+import app.aios.android.data.api.ConversationProgress
 import app.aios.android.data.api.Message
 import app.aios.android.data.api.ModelInfo
 import app.aios.android.data.api.RoleInfo
@@ -87,7 +88,11 @@ data class ChatUiState(
     /** Null = otomatis (default sesuai role). */
     val selectedModel: String? = null,
     val roles: List<RoleInfo> = emptyList(),
-    val attachments: List<PendingAttachment> = emptyList()
+    val attachments: List<PendingAttachment> = emptyList(),
+    /** Agregat panel Progres (P6); null sampai pertama kali diambil dari server. */
+    val progressResponse: ConversationProgress? = null,
+    /** ID izin yang sedang dikirim keputusannya; tombol dinonaktifkan agar tidak terkirim dua kali. */
+    val resolvingApprovals: Set<String> = emptySet()
 ) {
     val uploading: Boolean get() = attachments.any { it.uploading }
 
@@ -205,6 +210,7 @@ class ChatViewModel @Inject constructor(
             val more = repo.refreshMessages(id)
             state.update { it.copy(hasMore = more, loading = false, loadError = null) }
             resumeIfRunning(id)
+            refreshProgress(id)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -404,6 +410,30 @@ class ChatViewModel @Inject constructor(
         }
     }
 
+    /** Keputusan atas permintaan izin (panel izin, P6): allow/deny, opsional "selalu" untuk project ini. */
+    fun resolveApproval(approval: app.aios.android.ui.chat.activity.TraceApproval, decision: ApprovalDecision) {
+        val runId = state.value.live?.runId ?: state.value.traceRunId ?: return
+        if (approval.approvalId in state.value.resolvingApprovals) return
+        state.update { it.copy(resolvingApprovals = it.resolvingApprovals + approval.approvalId) }
+        viewModelScope.launch {
+            try {
+                repo.resolveApproval(runId, approval.approvalId, decision.decision, decision.remember)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                notices.trySend(ChatEvent.Notice(e.toApiError(connectivity.isConnected()).messageRes))
+            } finally {
+                state.update { it.copy(resolvingApprovals = it.resolvingApprovals - approval.approvalId) }
+            }
+        }
+    }
+
+    /** Agregat panel Progres (P6); diambil ulang setiap run selesai agar tahan muat ulang aplikasi. */
+    private suspend fun refreshProgress(conversationId: String) {
+        val progress = runCatching { repo.progress(conversationId) }.getOrNull() ?: return
+        if (state.value.conversationId == conversationId) state.update { it.copy(progressResponse = progress) }
+    }
+
     fun loadOlder() {
         val id = state.value.conversationId ?: return
         if (!state.value.hasMore || state.value.loadingOlder) return
@@ -469,6 +499,7 @@ class ChatViewModel @Inject constructor(
                     if (attempt < FINISH_RETRIES) delay(FINISH_RETRY_MS)
                 }
             }
+            refreshProgress(conversationId)
         }
         val failed = last.status == "failed" || last.error != null
         state.update {

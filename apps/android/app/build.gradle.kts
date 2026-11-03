@@ -37,6 +37,17 @@ android {
             .orElse(providers.environmentVariable("AIOS_GATEWAY_URL"))
             .getOrElse("https://ai.ojixx.my.id")
         buildConfigField("String", "GATEWAY_URL", "\"$gatewayUrl\"")
+        // Hash commit git pendek, agar screenshot/APK debug bisa dibuktikan berasal dari build sesi ini
+        // (layar Pengaturan -> Tentang). "kotor" ditambahkan bila ada perubahan belum di-commit.
+        val gitHash = providers.exec {
+            commandLine("git", "rev-parse", "--short", "HEAD")
+            isIgnoreExitValue = true
+        }.standardOutput.asText.get().trim().ifEmpty { "lokal" }
+        val gitDirty = providers.exec {
+            commandLine("git", "status", "--porcelain")
+            isIgnoreExitValue = true
+        }.standardOutput.asText.get().isNotBlank()
+        buildConfigField("String", "BUILD_COMMIT", "\"$gitHash${if (gitDirty) "-kotor" else ""}\"")
     }
 
     // Penandatanganan rilis opsional: aktif hanya bila keystore diberikan lewat variabel lingkungan (CI memasangnya

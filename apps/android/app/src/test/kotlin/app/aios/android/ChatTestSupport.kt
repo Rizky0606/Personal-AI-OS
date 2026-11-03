@@ -1,9 +1,11 @@
 package app.aios.android
 
 import app.aios.android.data.Connectivity
+import app.aios.android.data.api.ApprovalResult
 import app.aios.android.data.api.AUTHOR_ASSISTANT
 import app.aios.android.data.api.AUTHOR_USER
 import app.aios.android.data.api.Conversation
+import app.aios.android.data.api.ConversationProgress
 import app.aios.android.data.api.Message
 import app.aios.android.data.api.MessagePart
 import app.aios.android.data.api.ModelInfo
@@ -255,6 +257,21 @@ class FakeChatRepo : ChatRepository {
     override suspend fun cancel(runId: String): Run {
         cancelCalls += runId
         return run(runId, "cancelled")
+    }
+
+    var progressResult: ConversationProgress = ConversationProgress()
+    val resolveApprovalCalls = mutableListOf<Triple<String, String, String>>()
+
+    override suspend fun progress(conversationId: String) = progressResult
+
+    override suspend fun resolveApproval(
+        runId: String,
+        approvalId: String,
+        decision: String,
+        remember: Boolean
+    ): ApprovalResult {
+        resolveApprovalCalls += Triple(runId, approvalId, decision)
+        return ApprovalResult(approvalId, runId, "command", "", "allowed", remember)
     }
 
     override suspend fun models() = models
