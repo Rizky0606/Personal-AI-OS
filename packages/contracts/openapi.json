@@ -6392,7 +6392,8 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/TeamAssignment"
-            }
+            },
+            "default": []
           },
           "cancelRequestedAt": {
             "type": [
@@ -6427,7 +6428,6 @@
           "prompt",
           "limits",
           "members",
-          "assignments",
           "cancelRequestedAt",
           "failureCode",
           "finishedAt"

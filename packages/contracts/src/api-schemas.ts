@@ -388,7 +388,7 @@ export const TeamDetailSchema = z
     prompt: z.string(),
     limits: TeamLimitsSchema,
     members: z.array(TeamMemberSummarySchema),
-    assignments: z.array(TeamAssignmentSchema),
+    assignments: z.array(TeamAssignmentSchema).default([]),
     cancelRequestedAt: TimestampSchema.nullable(),
     failureCode: z.string().nullable(),
     finishedAt: TimestampSchema.nullable(),
