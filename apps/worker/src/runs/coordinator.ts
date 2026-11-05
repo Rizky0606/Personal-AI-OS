@@ -325,16 +325,17 @@ export class RunCoordinator {
       });
       if (run.cancelRequested) void run.handle.cancel();
 
+      const runTimeoutMs = cmd.timeoutMs ?? this.deps.maxRunMs ?? DEFAULT_MAX_RUN_MS;
       run.timer = setTimeout(() => {
         this.forward(runId, run, {
           type: 'error',
           code: 'run_timeout',
-          message: 'Run melewati batas waktu 30 menit dan dihentikan.',
+          message: `Run melewati batas waktu ${Math.round(runTimeoutMs / 60_000)} menit dan dihentikan.`,
           retryable: false,
         });
         run.terminal = true;
         void run.handle?.cancel();
-      }, this.deps.maxRunMs ?? DEFAULT_MAX_RUN_MS);
+      }, runTimeoutMs);
 
       for await (const event of run.handle.events) await this.onEvent(runId, run, event);
 

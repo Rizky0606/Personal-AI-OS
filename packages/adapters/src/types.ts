@@ -44,6 +44,8 @@ export interface StartRunInput {
   mcpServers?: Record<string, { url: string; headers?: Record<string, string> }> | undefined;
   /** Menyalakan LSP omp (diagnostik setelah edit, definisi, referensi). Hanya omp; bawaan mati. */
   lsp?: boolean | undefined;
+  /** Batas waktu run ini (ms), menimpa bawaan worker. Dipakai tim Orca untuk batas per-Worker. Hanya omp via worker. */
+  timeoutMs?: number | undefined;
 }
 
 export interface RunHandle {

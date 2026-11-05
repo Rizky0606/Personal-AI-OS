@@ -71,6 +71,8 @@ export interface LaunchInput {
   projectId: string | null;
   /** Revisi setelah komentar review: melanjutkan worktree dan branch run ini. */
   continueFromRunId?: string | undefined;
+  /** Batas waktu run ini (ms), menimpa bawaan worker (SECURITY_OPS.md: 30 menit). Dipakai tim Orca per-Worker. */
+  timeoutMs?: number | undefined;
   /** Menentukan agent dan skill (aturan tetap, tanpa model) dan menyimpannya; dipanggil pada status `routing`. */
   resolveRole(signal: AbortSignal): Promise<ResolvedRole>;
 }
@@ -546,6 +548,7 @@ export function createRunner(deps: RunnerDeps): Runner {
               : {}),
             ...(planOnly ? { planOnly: true } : {}),
             ...(model ? { model } : {}),
+            ...(input.timeoutMs ? { timeoutMs: input.timeoutMs } : {}),
             signal: ctl.abort.signal,
           });
         } catch (err) {

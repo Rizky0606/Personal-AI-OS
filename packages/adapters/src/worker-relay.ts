@@ -141,6 +141,7 @@ export function createWorkerRelayAdapter(options: WorkerRelayOptions): AgentAdap
           ...(input.continueFromRunId ? { continueFromRunId: input.continueFromRunId } : {}),
           ...(input.planOnly ? { planOnly: true } : {}),
           ...(input.history?.length ? { history: [...input.history] } : {}),
+          ...(input.timeoutMs ? { timeoutMs: input.timeoutMs } : {}),
         });
       } catch (error) {
         stop();
