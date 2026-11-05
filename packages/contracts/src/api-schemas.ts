@@ -24,6 +24,7 @@ import {
   ScheduleTargetSchema,
   StackSchema,
   TaskStatusSchema,
+  TeamAssignmentSchema,
 } from './entities.js';
 import {
   DeviceKindSchema,
@@ -387,6 +388,7 @@ export const TeamDetailSchema = z
     prompt: z.string(),
     limits: TeamLimitsSchema,
     members: z.array(TeamMemberSummarySchema),
+    assignments: z.array(TeamAssignmentSchema),
     cancelRequestedAt: TimestampSchema.nullable(),
     failureCode: z.string().nullable(),
     finishedAt: TimestampSchema.nullable(),
@@ -434,6 +436,9 @@ export const ApprovalDecisionRequestSchema = z
   .meta({ id: 'ApprovalDecisionRequest' });
 
 export const QuestionParamsSchema = z.object({ id: IdSchema, questionId: IdSchema });
+
+/** Params untuk aksi per-anggota tim (mis. hentikan satu Worker tanpa membatalkan seluruh tim). */
+export const TeamMemberParamsSchema = z.object({ id: IdSchema, memberId: IdSchema });
 
 /** Menarik satu arahan dari antrean agent sebelum diproses; `text` persis seperti di event `queue.updated`. */
 export const RemoveQueuedRequestSchema = z

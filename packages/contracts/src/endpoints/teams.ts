@@ -2,6 +2,7 @@ import {
   IdParamsSchema,
   TeamDetailSchema,
   TeamListSchema,
+  TeamMemberParamsSchema,
   TeamRequestSchema,
 } from '../api-schemas.js';
 import { json, type Endpoint } from '../endpoint.js';
@@ -48,6 +49,17 @@ export const teamEndpoints: readonly Endpoint[] = [
     auth: true,
     params: IdParamsSchema,
     responses: [json(200, 'Tim setelah pembatalan', TeamDetailSchema)],
+    errors: [401, 404, 409],
+  },
+  {
+    operationId: 'cancelTeamMember',
+    method: 'post',
+    path: '/teams/{id}/members/{memberId}/cancel',
+    tag: 'Team',
+    summary: 'Hentikan satu anggota tim (mis. Worker) tanpa membatalkan seluruh tim',
+    auth: true,
+    params: TeamMemberParamsSchema,
+    responses: [json(200, 'Tim setelah anggota dihentikan', TeamDetailSchema)],
     errors: [401, 404, 409],
   },
 ];

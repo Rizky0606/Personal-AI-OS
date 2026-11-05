@@ -398,11 +398,28 @@ export const TeamReviewCompletedEventSchema = z.object({
   completedAt: TimestampSchema,
 });
 
+/** Status satu assignment berubah (dibuat, mulai, perlu tinjauan, selesai/gagal/dibatalkan). */
+export const TeamAssignmentUpdatedEventSchema = z.object({
+  type: z.literal('team.assignment.updated'),
+  teamId: IdSchema,
+  assignment: z
+    .object({
+      id: IdSchema,
+      title: z.string(),
+      status: z.enum(['queued', 'running', 'needs_review', 'completed', 'failed', 'cancelled']),
+      attempt: z.number().int(),
+      workerMemberId: IdSchema.nullable(),
+      updatedAt: TimestampSchema,
+    })
+    .strict(),
+});
+
 export const TeamEventSchema = z
   .discriminatedUnion('type', [
     TeamCreatedEventSchema,
     TeamMemberUpdatedEventSchema,
     TeamReviewCompletedEventSchema,
+    TeamAssignmentUpdatedEventSchema,
   ])
   .meta({ id: 'TeamEvent' });
 export type TeamEvent = z.infer<typeof TeamEventSchema>;

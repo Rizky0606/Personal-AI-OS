@@ -33,6 +33,13 @@ export interface SkillPack {
  */
 export const SKILL_PACKS: readonly SkillPack[] = [
   {
+    // Protokol internal Lead tim Orca (ORCA_DESIGN.md): hanya dipilih lewat skills: ['orca-lead']
+    // di teams/service.ts, tidak pernah lewat kata kunci pesan biasa.
+    id: 'orca',
+    skills: ['orca-lead'],
+    pattern: /(?!)/,
+  },
+  {
     id: 'debugging',
     skills: ['reproduce-first', 'diagnosing-bugs'],
     pattern:

@@ -5,10 +5,17 @@ import {
   type TeamListSchema,
   type TeamSummarySchema,
 } from '@aios/contracts';
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import type { z } from 'zod';
 import type { Database } from '../../db/client.js';
-import { approvals, projects, runs, teamMembers, teams } from '../../db/schema/index.js';
+import {
+  approvals,
+  projects,
+  runs,
+  teamAssignments,
+  teamMembers,
+  teams,
+} from '../../db/schema/index.js';
 import { AppError } from '../../errors.js';
 import type { ChatService } from '../chat/service.js';
 import type { RunsService } from '../runs/service.js';
@@ -20,6 +27,8 @@ export interface TeamsService {
   list(): Promise<z.infer<typeof TeamListSchema>>;
   get(id: string): Promise<z.infer<typeof TeamDetailSchema>>;
   cancel(id: string): Promise<z.infer<typeof TeamDetailSchema>>;
+  /** Menghentikan satu anggota (biasanya Worker) tanpa membatalkan seluruh tim. */
+  cancelMember(teamId: string, memberId: string): Promise<z.infer<typeof TeamDetailSchema>>;
   exists(id: string): Promise<boolean>;
 }
 
@@ -46,8 +55,36 @@ export function createTeamsService(deps: {
   hub: Pick<EventHub, 'publishLive'>;
   store: TeamEventStore;
   now?: () => number;
+  /** Menjadwalkan orkestrator Lead->Worker untuk tim ini; tanpa ini tim dibuat tapi tidak pernah diproses. */
+  enqueue?: (teamId: string) => Promise<void>;
 }): TeamsService {
-  const { db, chat, runs: runService, hub, store, now = Date.now } = deps;
+  const { db, chat, runs: runService, hub, store, now = Date.now, enqueue } = deps;
+
+  async function assignmentsOf(
+    teamId: string,
+  ): Promise<z.infer<typeof TeamDetailSchema>['assignments']> {
+    const rows = await db
+      .select()
+      .from(teamAssignments)
+      .where(eq(teamAssignments.teamId, teamId))
+      .orderBy(asc(teamAssignments.createdAt));
+    return rows.map((row) => ({
+      id: row.id,
+      teamId: row.teamId,
+      workerMemberId: row.workerMemberId,
+      title: row.title,
+      prompt: row.prompt,
+      acceptanceCriteria: row.acceptanceCriteria,
+      status: row.status,
+      attempt: row.attempt,
+      maxAttempts: row.maxAttempts,
+      resultSummary: row.resultSummary,
+      resultRef: row.resultRef,
+      reviewStatus: row.reviewStatus,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+    }));
+  }
 
   async function detail(id: string): Promise<z.infer<typeof TeamDetailSchema>> {
     const [row] = await db.select().from(teams).where(eq(teams.id, id));
@@ -59,11 +96,18 @@ export function createTeamsService(deps: {
       : [];
     const byRun = new Map(runRows.map((run) => [run.id, run]));
     const leadRun = row.parentRunId ? byRun.get(row.parentRunId) : undefined;
+    // Setelah Lead menghasilkan rencana, orkestrator (orchestrator.ts) menjadi satu-satunya penulis
+    // status tim (lewat `teams.status`) karena percakapan Lead berlanjut multi-giliran (rencana ->
+    // tinjauan per tugas) sehingga status run Lead yang PERTAMA ('completed' begitu rencana selesai)
+    // tidak lagi mewakili status tim secara keseluruhan. Sebelum ada rencana (jalur lama/tanpa
+    // orkestrator), status tetap diturunkan dari status run Lead agar perilaku lama tidak berubah.
     const status = row.cancelRequestedAt
       ? 'cancelled'
-      : leadRun
-        ? teamStatus(leadRun.status)
-        : row.status;
+      : row.plan
+        ? row.status
+        : leadRun
+          ? teamStatus(leadRun.status)
+          : row.status;
     const approvalsRows = runIds.length
       ? await db
           .select()
@@ -96,6 +140,7 @@ export function createTeamsService(deps: {
       prompt: row.prompt,
       limits: row.limits as z.infer<typeof TeamDetailSchema>['limits'],
       members: summaries,
+      assignments: await assignmentsOf(id),
       cancelRequestedAt: row.cancelRequestedAt?.toISOString() ?? null,
       failureCode: row.failureCode,
       finishedAt:
@@ -133,6 +178,10 @@ export function createTeamsService(deps: {
       });
       const { run } = await chat.sendMessage(conversation.id, {
         parts: [{ type: 'text', text: input.prompt }],
+        // Lead berjalan di VPS lewat Hermes (keputusan ORCA_DESIGN.md "Keputusan terbuka" #1), bukan omp di
+        // worker: tanpa ini conversation.projectId membuat router memilih agent coding (omp).
+        engine: 'hermes',
+        skills: ['orca-lead'],
         ...(input.model ? { model: input.model } : {}),
       });
       const [team] = await db
@@ -172,6 +221,7 @@ export function createTeamsService(deps: {
           updatedAt: new Date(now()).toISOString(),
         },
       });
+      await enqueue?.(team!.id);
       return detail(team!.id);
     },
     async list() {
@@ -203,7 +253,31 @@ export function createTeamsService(deps: {
           if (!(error instanceof AppError && error.status === 409)) throw error;
         }
       }
+      // Pembatalan tim merambat ke semua anggota (Worker) yang masih berjalan, bukan hanya Lead.
+      for (const member of value.members) {
+        if (member.runId === value.parentRunId) continue;
+        if (['completed', 'failed', 'cancelled'].includes(member.status)) continue;
+        try {
+          await runService.cancel(member.runId);
+        } catch (error) {
+          if (!(error instanceof AppError && error.status === 409)) throw error;
+        }
+      }
       return detail(id);
+    },
+    async cancelMember(teamId, memberId) {
+      await detail(teamId); // melempar 404 bila tim tidak ada
+      const [member] = await db
+        .select()
+        .from(teamMembers)
+        .where(and(eq(teamMembers.id, memberId), eq(teamMembers.teamId, teamId)));
+      if (!member) throw new AppError(404, 'team_member_not_found', 'Anggota tim tidak ditemukan.');
+      try {
+        await runService.cancel(member.runId);
+      } catch (error) {
+        if (!(error instanceof AppError && error.status === 409)) throw error;
+      }
+      return detail(teamId);
     },
     async exists(id) {
       const [row] = await db.select({ id: teams.id }).from(teams).where(eq(teams.id, id));

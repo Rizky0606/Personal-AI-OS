@@ -54,6 +54,8 @@ const DOCUMENTED_TABLES = [
   'teams',
   'team_members',
   'team_events',
+  'team_assignments',
+  'team_reviews',
 ];
 
 describe('skema Drizzle', () => {

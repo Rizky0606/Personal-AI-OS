@@ -155,6 +155,7 @@ export const unusedTeams: AppDeps['teams'] = {
   list: unused('teams.list'),
   get: unused('teams.get'),
   cancel: unused('teams.cancel'),
+  cancelMember: unused('teams.cancelMember'),
   exists: unused('teams.exists'),
 };
 export const unusedWs: AppDeps['ws'] = {

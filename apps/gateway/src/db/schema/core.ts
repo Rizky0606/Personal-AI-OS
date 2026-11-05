@@ -18,6 +18,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
 import { uuidv7 } from '../../lib/uuidv7.js';
@@ -25,7 +26,9 @@ import {
   approvalDecision,
   approvalKind,
   approvalStatus,
+  assignmentStatus,
   deviceKind,
+  leadReviewDecision,
   messageAuthor,
   runEngine,
   runKind,
@@ -227,6 +230,10 @@ export const teams = pgTable(
     status: teamStatus('status').notNull().default('queued'),
     prompt: text('prompt').notNull(),
     limits: jsonb('limits').$type<Record<string, number>>().notNull(),
+    /** Rencana terstruktur Lead (TeamPlan): daftar tugas yang sudah dipecah jadi assignment. Null sampai Lead merencanakan. */
+    plan: jsonb('plan').$type<{
+      tasks: { title: string; prompt: string; acceptanceCriteria: string }[];
+    }>(),
     cancelRequestedAt: timestamp('cancel_requested_at', { withTimezone: true }),
     failureCode: text('failure_code'),
     createdAt: createdAt(),
@@ -274,6 +281,57 @@ export const teamEvents = pgTable(
     ts: timestamp('ts', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.teamId, t.seq] })],
+);
+
+/** Satu tugas Worker di tim Orca (ORCA_DESIGN.md "Model data"): satu assignment aktif per Worker. */
+export const teamAssignments = pgTable(
+  'team_assignments',
+  {
+    id: id(),
+    teamId: uuid('team_id')
+      .notNull()
+      .references(() => teams.id, { onDelete: 'cascade' }),
+    workerMemberId: uuid('worker_member_id').references(() => teamMembers.id, {
+      onDelete: 'set null',
+    }),
+    title: text('title').notNull(),
+    prompt: text('prompt').notNull(),
+    acceptanceCriteria: text('acceptance_criteria').notNull(),
+    status: assignmentStatus('status').notNull().default('queued'),
+    attempt: integer('attempt').notNull().default(1),
+    maxAttempts: integer('max_attempts').notNull(),
+    resultSummary: text('result_summary'),
+    /** Commit SHA di branch sementara Worker setelah materialisasi hasil (accept tanpa merge). */
+    resultRef: text('result_ref'),
+    reviewStatus: leadReviewDecision('review_status'),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index('team_assignments_team_idx').on(t.teamId)],
+);
+
+/** Satu putaran tinjauan Lead atas satu assignment; append-only (constraint unik assignmentId+attempt). */
+export const teamReviews = pgTable(
+  'team_reviews',
+  {
+    id: id(),
+    assignmentId: uuid('assignment_id')
+      .notNull()
+      .references(() => teamAssignments.id, { onDelete: 'cascade' }),
+    attempt: integer('attempt').notNull(),
+    decision: leadReviewDecision('decision').notNull(),
+    feedback: text('feedback').notNull().default(''),
+    checks: jsonb('checks')
+      .$type<{ command: string; exitCode: number; ok: boolean }[]>()
+      .notNull()
+      .default([]),
+    commitSha: text('commit_sha'),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('team_reviews_assignment_idx').on(t.assignmentId),
+    uniqueIndex('team_reviews_assignment_attempt_idx').on(t.assignmentId, t.attempt),
+  ],
 );
 
 export const approvalRules = pgTable(

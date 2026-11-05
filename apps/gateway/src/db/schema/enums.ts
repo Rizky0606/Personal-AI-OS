@@ -2,8 +2,10 @@ import {
   ApprovalDecisionSchema,
   ApprovalKindSchema,
   ApprovalStatusSchema,
+  AssignmentStatusSchema,
   DeviceKindSchema,
   EngineSchema,
+  LeadReviewDecisionSchema,
   MessageAuthorSchema,
   ResearchDepthSchema,
   ResearchStatusSchema,
@@ -47,6 +49,11 @@ export const teamMemberRole = pgEnum('team_member_role', values(TeamMemberRoleSc
 export const teamMemberStatus = pgEnum(
   'team_member_status',
   values(TeamMemberStatusSchema.options),
+);
+export const assignmentStatus = pgEnum('assignment_status', values(AssignmentStatusSchema.options));
+export const leadReviewDecision = pgEnum(
+  'lead_review_decision',
+  values(LeadReviewDecisionSchema.options),
 );
 export const researchDepth = pgEnum('research_depth', values(ResearchDepthSchema.options));
 export const researchStatus = pgEnum('research_status', values(ResearchStatusSchema.options));

@@ -1,4 +1,4 @@
-import { IdParamsSchema, TeamRequestSchema } from '@aios/contracts';
+import { IdParamsSchema, TeamMemberParamsSchema, TeamRequestSchema } from '@aios/contracts';
 import type { FastifyPluginCallback } from 'fastify';
 import { requireScope } from '../auth/guard.js';
 import type { TeamsService } from './service.js';
@@ -15,5 +15,9 @@ export const teamRoutes: FastifyPluginCallback<{ teams: TeamsService }> = (
   app.get('/teams', guard, () => teams.list());
   app.get('/teams/:id', guard, (req) => teams.get(IdParamsSchema.parse(req.params).id));
   app.post('/teams/:id/cancel', guard, (req) => teams.cancel(IdParamsSchema.parse(req.params).id));
+  app.post('/teams/:id/members/:memberId/cancel', guard, (req) => {
+    const { id, memberId } = TeamMemberParamsSchema.parse(req.params);
+    return teams.cancelMember(id, memberId);
+  });
   done();
 };
