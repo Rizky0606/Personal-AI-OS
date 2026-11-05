@@ -32,6 +32,13 @@ export const RunStartCommandSchema = z.object({
     .array(z.object({ role: z.enum(['user', 'assistant']), content: z.string() }))
     .max(40)
     .optional(),
+  /** Batas waktu run ini (ms); tanpa ini worker memakai default globalnya (SECURITY_OPS.md: 30 menit). Dipakai tim Orca untuk batas per-Worker (ORCA_DESIGN.md). */
+  timeoutMs: z
+    .number()
+    .int()
+    .positive()
+    .max(2 * 60 * 60_000)
+    .optional(),
 });
 
 export const RunSteerCommandSchema = z.object({

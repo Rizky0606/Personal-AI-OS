@@ -52,6 +52,7 @@ import { createRunsService } from '../modules/runs/service.js';
 import { createEventStore, type EventStore } from '../modules/runs/store.js';
 import { createTeamsService } from '../modules/teams/service.js';
 import { createTeamEventStore } from '../modules/teams/store.js';
+import { createTeamOrchestrator, type TeamOrchestrator } from '../modules/teams/orchestrator.js';
 import { createDshEngine, type DshDeps } from '../modules/dsh/launch.js';
 import { createEnginesService, workersOnlineFrom } from '../modules/llm/engines.js';
 import { unusedResearch, unusedSchedules } from './stubs.js';
@@ -85,8 +86,10 @@ export interface AuthEnv {
   status: StatusService;
   workerRelay: WorkerRelay;
   push: PushService;
-  /** pg-boss bersama (hanya ada bila riset atau jadwal dinyalakan). */
+  /** pg-boss bersama (hanya ada bila riset, jadwal, atau tim dinyalakan). */
   boss: PgBoss | undefined;
+  /** Orkestrator tim Orca (hanya ada bila `options.teams` dinyalakan). */
+  orca: TeamOrchestrator | undefined;
   chat: ChatService;
   /** Layanan berkas (untuk membuat berkas nyata di skenario E2E). */
   files: FilesService;
@@ -143,6 +146,8 @@ export async function createAuthEnv(
         error: (obj: object, msg: string) => void;
       };
     };
+    /** Menyalakan orkestrator tim Orca (pg-boss) di database tes; tanpa ini tim hanya CRUD (tidak diproses). */
+    teams?: { pollMs?: number; globalWorkerSlots?: number };
     /** Push FCM ke server FCM palsu. */
     push?: { baseUrl: string; account: ServiceAccount };
     /** Alamat Hermes tiruan. Default: port yang tidak mendengarkan. */
@@ -231,7 +236,7 @@ export async function createAuthEnv(
   const routing = createRoutingService({ db, roles });
   const usage = createUsageRecorder(db);
   const boss =
-    options.research || options.schedules
+    options.research || options.schedules || options.teams
       ? new PgBoss({ connectionString: database.url, schema: 'pgboss', max: 3 })
       : undefined;
   await boss?.start();
@@ -270,7 +275,33 @@ export async function createAuthEnv(
   });
   const teamStore = createTeamEventStore(db, hub);
   const runs = createRunsService({ db, store, runner, hub, relay: workerRelay, chat, observer });
-  const teams = createTeamsService({ db, chat, runs, hub, store: teamStore, now });
+  const orca =
+    options.teams && boss
+      ? createTeamOrchestrator({
+          db,
+          chat,
+          runs,
+          hub,
+          runEvents: store,
+          store: teamStore,
+          boss,
+          now,
+          ...(options.teams.pollMs ? { pollMs: options.teams.pollMs } : {}),
+          ...(options.teams.globalWorkerSlots
+            ? { globalWorkerSlots: options.teams.globalWorkerSlots }
+            : {}),
+        })
+      : undefined;
+  if (orca) await orca.start();
+  const teams = createTeamsService({
+    db,
+    chat,
+    runs,
+    hub,
+    store: teamStore,
+    now,
+    ...(orca ? { enqueue: (teamId: string) => orca.enqueue(teamId) } : {}),
+  });
   const tasks = createTasksService({
     db,
     hub,
@@ -425,6 +456,7 @@ export async function createAuthEnv(
     workerRelay,
     push,
     boss,
+    orca,
     chat,
     hub,
     store,
@@ -450,6 +482,7 @@ export async function createAuthEnv(
       push.close();
       await schedules.close().catch(() => undefined);
       await research.close().catch(() => undefined);
+      await orca?.close().catch(() => undefined);
       await boss?.stop({ graceful: false, timeout: 5000 }).catch(() => undefined);
       await runner.idle();
       await tasks.idle();

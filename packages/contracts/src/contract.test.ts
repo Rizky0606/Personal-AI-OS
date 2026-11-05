@@ -45,6 +45,7 @@ const DOCUMENTED_ENDPOINTS = [
   'GET /teams',
   'GET /teams/:id',
   'POST /teams/:id/cancel',
+  'POST /teams/:id/members/:memberId/cancel',
   'DELETE /messages/:id',
   'GET /runs',
   'GET /runs/:id',

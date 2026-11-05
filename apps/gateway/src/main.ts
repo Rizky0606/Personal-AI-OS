@@ -53,6 +53,7 @@ import { createRunsService } from './modules/runs/service.js';
 import { createEventStore } from './modules/runs/store.js';
 import { createTeamsService } from './modules/teams/service.js';
 import { createTeamEventStore } from './modules/teams/store.js';
+import { createTeamOrchestrator } from './modules/teams/orchestrator.js';
 
 async function main(): Promise<void> {
   const config = loadConfig();
@@ -142,7 +143,24 @@ async function main(): Promise<void> {
     }),
   });
   const runs = createRunsService({ db, store, runner, hub, relay: workerRelay, chat, observer });
-  const teams = createTeamsService({ db, chat, runs, hub, store: teamStore });
+  const orca = createTeamOrchestrator({
+    db,
+    chat,
+    runs,
+    hub,
+    runEvents: store,
+    store: teamStore,
+    boss,
+    log,
+  });
+  const teams = createTeamsService({
+    db,
+    chat,
+    runs,
+    hub,
+    store: teamStore,
+    enqueue: (teamId) => orca.enqueue(teamId),
+  });
   const tasks = createTasksService({
     db,
     hub,
@@ -256,6 +274,7 @@ async function main(): Promise<void> {
     push.close();
     await schedules.close();
     await research.close();
+    await orca.close();
     dsh?.close();
     await boss.stop({ graceful: true, timeout: 10_000 }).catch(() => undefined);
     roles.close();
@@ -270,6 +289,7 @@ async function main(): Promise<void> {
   push.start();
   const recovered = await runner.recoverOrphans();
   if (recovered > 0) app.log.warn({ recovered }, 'run tertinggal ditandai gagal setelah restart');
+  await orca.start();
   await tasks.start();
 
   await app.listen({ host: config.HOST, port: config.PORT });

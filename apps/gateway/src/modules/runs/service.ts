@@ -60,7 +60,7 @@ export interface RunsService {
    * atau tolak dengan komentar (agent memperbaiki di worktree yang sama lewat run baru).
    */
   review(
-    actorDeviceId: string,
+    actorDeviceId: string | null,
     runId: string,
     input: z.infer<typeof ReviewRequestSchema>,
   ): Promise<z.infer<typeof ReviewResponseSchema>>;

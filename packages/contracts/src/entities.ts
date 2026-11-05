@@ -155,6 +155,85 @@ export const ApprovalRuleSchema = z
   .meta({ id: 'ApprovalRule' });
 export type ApprovalRule = z.infer<typeof ApprovalRuleSchema>;
 
+export const AssignmentStatusSchema = z.enum([
+  'queued',
+  'running',
+  'needs_review',
+  'completed',
+  'failed',
+  'cancelled',
+]);
+export type AssignmentStatus = z.infer<typeof AssignmentStatusSchema>;
+
+export const LeadReviewDecisionSchema = z.enum(['accept', 'revise', 'reject']);
+export type LeadReviewDecision = z.infer<typeof LeadReviewDecisionSchema>;
+
+/** Satu tugas Worker di tim Orca (ORCA_DESIGN.md): satu assignment aktif per Worker, tanpa dependency antartugas. */
+export const TeamAssignmentSchema = z
+  .object({
+    id: IdSchema,
+    teamId: IdSchema,
+    workerMemberId: IdSchema.nullable(),
+    title: z.string().min(1).max(200),
+    prompt: z.string().min(1).max(20_000),
+    acceptanceCriteria: z.string().min(1).max(4_000),
+    status: AssignmentStatusSchema,
+    attempt: z.number().int().min(1),
+    maxAttempts: z.number().int().min(1),
+    /** Ringkasan hasil kerja Worker (teks singkat), diisi setelah run selesai. */
+    resultSummary: z.string().nullable(),
+    /** Commit SHA di branch sementara Worker; null bila belum ada perubahan untuk diterima. */
+    resultRef: z.string().nullable(),
+    /** Keputusan tinjauan Lead TERAKHIR untuk assignment ini; null sampai Lead meninjau. */
+    reviewStatus: LeadReviewDecisionSchema.nullable(),
+    createdAt: TimestampSchema,
+    updatedAt: TimestampSchema,
+  })
+  .meta({ id: 'TeamAssignment' });
+export type TeamAssignment = z.infer<typeof TeamAssignmentSchema>;
+
+/** Satu putaran tinjauan Lead atas satu assignment; append-only (constraint unik assignmentId+attempt). */
+export const TeamReviewSchema = z
+  .object({
+    id: IdSchema,
+    assignmentId: IdSchema,
+    attempt: z.number().int().min(1),
+    decision: LeadReviewDecisionSchema,
+    feedback: z.string().max(4_000),
+    /** Cek yang dijalankan (command/status/exit code), bila ada; tanpa isi berkas atau rahasia. */
+    checks: z.array(z.object({ command: z.string(), exitCode: z.number().int(), ok: z.boolean() })),
+    commitSha: z.string().nullable(),
+    createdAt: TimestampSchema,
+  })
+  .meta({ id: 'TeamReview' });
+export type TeamReview = z.infer<typeof TeamReviewSchema>;
+
+/** Rencana terstruktur yang dihasilkan Lead (skill Lead): daftar tugas dengan kriteria selesai. */
+export const TeamPlanTaskSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  prompt: z.string().trim().min(1).max(20_000),
+  acceptanceCriteria: z.string().trim().min(1).max(4_000),
+});
+export const MAX_TEAM_PLAN_TASKS = 8;
+export const TeamPlanSchema = z
+  .object({ tasks: z.array(TeamPlanTaskSchema).min(1).max(MAX_TEAM_PLAN_TASKS) })
+  .meta({ id: 'TeamPlan' });
+export type TeamPlan = z.infer<typeof TeamPlanSchema>;
+
+/** Hasil kerja Worker yang Lead minta ditinjau, dikirim sebagai konteks pesan review. */
+export const TeamReviewRequestSchema = z
+  .object({
+    title: z.string(),
+    resultSummary: z.string().nullable(),
+    commitSha: z.string().nullable(),
+    diffStat: z.array(z.object({ path: z.string(), additions: z.number(), deletions: z.number() })),
+    checks: z.array(z.object({ command: z.string(), exitCode: z.number().int(), ok: z.boolean() })),
+    attempt: z.number().int(),
+    maxAttempts: z.number().int(),
+  })
+  .meta({ id: 'TeamReviewRequest' });
+export type TeamReviewRequest = z.infer<typeof TeamReviewRequestSchema>;
+
 /** Hasil deteksi stack; path project tetap lokal di worker dan tidak ada di sini. */
 export const StackSchema = z
   .object({

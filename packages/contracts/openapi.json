@@ -2366,6 +2366,72 @@
               "decision",
               "completedAt"
             ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "team.assignment.updated"
+                ]
+              },
+              "teamId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "assignment": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "queued",
+                      "running",
+                      "needs_review",
+                      "completed",
+                      "failed",
+                      "cancelled"
+                    ]
+                  },
+                  "attempt": {
+                    "type": "integer"
+                  },
+                  "workerMemberId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "updatedAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "required": [
+                  "id",
+                  "title",
+                  "status",
+                  "attempt",
+                  "workerMemberId",
+                  "updatedAt"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "type",
+              "teamId",
+              "assignment"
+            ]
           }
         ]
       },
@@ -2553,6 +2619,11 @@
                   ]
                 },
                 "maxItems": 40
+              },
+              "timeoutMs": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 7200000
               }
             },
             "required": [
@@ -6317,6 +6388,12 @@
               "$ref": "#/components/schemas/TeamMemberSummary"
             }
           },
+          "assignments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TeamAssignment"
+            }
+          },
           "cancelRequestedAt": {
             "type": [
               "string",
@@ -6350,6 +6427,7 @@
           "prompt",
           "limits",
           "members",
+          "assignments",
           "cancelRequestedAt",
           "failureCode",
           "finishedAt"
@@ -6474,6 +6552,108 @@
           "runId",
           "updatedAt",
           "exitReason"
+        ]
+      },
+      "TeamAssignment": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "teamId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "workerMemberId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "prompt": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20000
+          },
+          "acceptanceCriteria": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "needs_review",
+              "completed",
+              "failed",
+              "cancelled"
+            ]
+          },
+          "attempt": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "maxAttempts": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "resultSummary": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "resultRef": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reviewStatus": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "accept",
+              "revise",
+              "reject",
+              null
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "teamId",
+          "workerMemberId",
+          "title",
+          "prompt",
+          "acceptanceCriteria",
+          "status",
+          "attempt",
+          "maxAttempts",
+          "resultSummary",
+          "resultRef",
+          "reviewStatus",
+          "createdAt",
+          "updatedAt"
         ]
       },
       "TeamRequest": {
@@ -12332,6 +12512,102 @@
         "responses": {
           "200": {
             "description": "Tim setelah pembatalan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Belum login atau token tidak berlaku",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token tidak punya scope yang dibutuhkan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tidak ditemukan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Konflik dengan status saat ini",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/teams/{id}/members/{memberId}/cancel": {
+      "post": {
+        "operationId": "cancelTeamMember",
+        "tags": [
+          "Team"
+        ],
+        "summary": "Hentikan satu anggota tim (mis. Worker) tanpa membatalkan seluruh tim",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "memberId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tim setelah anggota dihentikan",
             "content": {
               "application/json": {
                 "schema": {
