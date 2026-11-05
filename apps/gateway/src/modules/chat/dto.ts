@@ -9,6 +9,7 @@ export function toConversationDto(row: typeof conversations.$inferSelect): Conve
     surface: row.surface,
     projectId: row.projectId,
     spaceId: row.spaceId,
+    teamId: row.teamId,
     pinned: row.pinned,
     archivedAt: row.archivedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),

@@ -3760,6 +3760,13 @@
             ],
             "format": "uuid"
           },
+          "teamId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
           "pinned": {
             "type": "boolean"
           },
@@ -6530,6 +6537,13 @@
           },
           "runId": {
             "type": "string",
+            "format": "uuid"
+          },
+          "conversationId": {
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "uuid"
           },
           "updatedAt": {

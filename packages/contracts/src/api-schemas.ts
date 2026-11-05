@@ -376,6 +376,8 @@ export const TeamMemberSummarySchema = z
     task: z.string(),
     branch: z.string().nullable(),
     runId: IdSchema,
+    /** Percakapan run ini; dipakai UI untuk membuka chat anggota (Lead) langsung setelah tim dibuat. */
+    conversationId: IdSchema.nullable().optional(),
     updatedAt: TimestampSchema,
     exitReason: z.string().nullable(),
   })

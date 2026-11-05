@@ -10,6 +10,7 @@ import type { z } from 'zod';
 import type { Database } from '../../db/client.js';
 import {
   approvals,
+  conversations,
   projects,
   runs,
   teamAssignments,
@@ -132,6 +133,7 @@ export function createTeamsService(deps: {
         task: member.task,
         branch: member.branch,
         runId: member.runId,
+        conversationId: run?.conversationId ?? null,
         updatedAt: (run?.updatedAt ?? member.updatedAt).toISOString(),
         exitReason: member.exitReason,
       };
@@ -212,6 +214,9 @@ export function createTeamsService(deps: {
           task: input.prompt,
         })
         .returning();
+      // Menandai percakapan Lead sebagai milik tim ini, supaya UI (desktop/Android) tahu kapan
+      // menampilkan pohon tim di panel Progres/Aktivitas tanpa query balik tambahan per pesan.
+      await db.update(conversations).set({ teamId: team!.id }).where(eq(conversations.id, conversation.id));
       const event = {
         type: 'team.created' as const,
         teamId: team!.id,

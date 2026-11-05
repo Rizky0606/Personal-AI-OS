@@ -107,6 +107,13 @@ export const conversations = pgTable(
     surface: surface('surface').notNull(),
     projectId: uuid('project_id').references(() => projects.id, { onDelete: 'set null' }),
     spaceId: uuid('space_id').references(() => spaces.id, { onDelete: 'set null' }),
+    /** Tim Orca (P7) yang membuat percakapan ini (selalu Lead); null untuk percakapan biasa. Dipakai UI
+     * untuk tahu kapan menampilkan pohon tim di panel Progres/Aktivitas tanpa query tambahan. Tanpa FK
+     * eksplisit (bukan `.references()`): conversations->teams->runs->conversations akan jadi siklus tiga
+     * arah yang merusak inferensi tipe TypeScript lintas paket (@aios/e2e, terbukti saat dicoba). Teams
+     * tidak pernah dihapus lewat endpoint manapun, jadi risiko referensi basi diterima.
+     */
+    teamId: uuid('team_id'),
     hermesSessionId: text('hermes_session_id'),
     pinned: boolean('pinned').notNull().default(false),
     archivedAt: timestamp('archived_at', { withTimezone: true }),
