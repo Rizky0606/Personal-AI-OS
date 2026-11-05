@@ -61,6 +61,8 @@ export interface ChatService {
        * Dikirim setelah teks pesan tetapi tidak disimpan di pesan pengguna, jadi riwayat tetap ringkas.
        */
       context?: string;
+      /** Batas waktu run ini (ms), menimpa bawaan worker. Dipakai tim Orca untuk batas per-Worker. */
+      timeoutMs?: number;
     },
   ): Promise<{ message: Message; run: Run }>;
   /**
@@ -583,6 +585,7 @@ export function createChatService(deps: {
         ),
         projectId: conversation.projectId,
         ...(options?.continueFromRunId ? { continueFromRunId: options.continueFromRunId } : {}),
+        ...(options?.timeoutMs ? { timeoutMs: options.timeoutMs } : {}),
         resolveRole: makeResolver({
           conversation,
           runId: run.id,

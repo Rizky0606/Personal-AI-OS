@@ -116,7 +116,15 @@ export function createTeamsService(deps: {
       : [];
     const summaries = members.map((member) => {
       const run = byRun.get(member.runId);
-      const state = run ? memberStatus(run.status) : member.status;
+      // 'needs_attention' hanya ditulis eksplisit oleh orkestrator (restart gateway, keputusan #7) --
+      // memberStatus() dari run tidak pernah menghasilkan nilai ini, jadi tidak ambigu untuk diutamakan
+      // di atas status run yang masih 'running' (run itu sendiri yatim, bukan pertanda member aktif).
+      const state =
+        member.status === 'needs_attention'
+          ? ('needs_attention' as const)
+          : run
+            ? memberStatus(run.status)
+            : (member.status as ReturnType<typeof memberStatus>);
       return {
         id: member.id,
         role: member.role,

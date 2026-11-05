@@ -266,7 +266,12 @@ export function createTeamOrchestrator(deps: TeamOrchestratorDeps): TeamOrchestr
       const { run } = await chat.sendMessage(
         conversation.id,
         { parts: [{ type: 'text', text: prompt }] },
-        runId ? { continueFromRunId: runId } : {},
+        {
+          ...(runId ? { continueFromRunId: runId } : {}),
+          ...(limits.memberTimeoutMinutes
+            ? { timeoutMs: limits.memberTimeoutMinutes * 60_000 }
+            : {}),
+        },
       );
       runId = run.id;
       await db

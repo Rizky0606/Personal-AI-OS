@@ -48,10 +48,10 @@ import { createRolesService, type RolesService } from '../modules/roles/service.
 import { createEventHub, type EventHub } from '../modules/runs/hub.js';
 import { createRunObserver } from '../modules/runs/observer.js';
 import { createRunner, type Runner } from '../modules/runs/runner.js';
-import { createRunsService } from '../modules/runs/service.js';
+import { createRunsService, type RunsService } from '../modules/runs/service.js';
 import { createEventStore, type EventStore } from '../modules/runs/store.js';
 import { createTeamsService } from '../modules/teams/service.js';
-import { createTeamEventStore } from '../modules/teams/store.js';
+import { createTeamEventStore, type TeamEventStore } from '../modules/teams/store.js';
 import { createTeamOrchestrator, type TeamOrchestrator } from '../modules/teams/orchestrator.js';
 import { createDshEngine, type DshDeps } from '../modules/dsh/launch.js';
 import { createEnginesService, workersOnlineFrom } from '../modules/llm/engines.js';
@@ -91,6 +91,10 @@ export interface AuthEnv {
   /** Orkestrator tim Orca (hanya ada bila `options.teams` dinyalakan). */
   orca: TeamOrchestrator | undefined;
   chat: ChatService;
+  /** Layanan run (untuk tes yang perlu membangun orkestrator Orca kedua, mis. skenario restart gateway). */
+  runs: RunsService;
+  /** Toko event tim Orca (sama dengan yang dipakai `orca`/`teams`). */
+  teamStore: TeamEventStore;
   /** Layanan berkas (untuk membuat berkas nyata di skenario E2E). */
   files: FilesService;
   hub: EventHub;
@@ -458,6 +462,8 @@ export async function createAuthEnv(
     boss,
     orca,
     chat,
+    runs,
+    teamStore,
     hub,
     store,
     code,
