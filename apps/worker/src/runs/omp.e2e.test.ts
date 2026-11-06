@@ -249,13 +249,14 @@ describe.skipIf(ompPath === null)('run coding dengan omp sungguhan', () => {
     await until(() => finished(RUN_1), 'run pertama selesai', 90_000);
     first.stop();
     expect(first.asked).toHaveLength(2);
-    await worker.coordinator.reviewApply({
+    const rejected = await worker.coordinator.reviewApply({
       type: 'review.apply',
       runId: RUN_1,
       decision: 'reject',
       comments: [],
       merge: false,
     });
+    expect(rejected.ok).toBe(true);
 
     const second = autoAnswer(RUN_2, () => ({ decision: 'allow', remember: false }));
     sendCommand(startCommand(RUN_2));
@@ -275,13 +276,15 @@ describe.skipIf(ompPath === null)('run coding dengan omp sungguhan', () => {
     const wt = worker.worktrees.get(RUN_1)!;
     const mainBefore = git(repo, 'rev-parse', 'main');
 
-    await worker.coordinator.reviewApply({
+    const accepted = await worker.coordinator.reviewApply({
       type: 'review.apply',
       runId: RUN_1,
       decision: 'accept',
       comments: [],
       merge: false,
     });
+    expect(accepted.ok).toBe(true);
+    expect(accepted.commit).not.toBeNull();
 
     await expect(fs.stat(wt.root)).rejects.toThrow();
     expect(git(repo, 'ls-tree', '-r', '--name-only', wt.branch)).toContain('math.test.js');

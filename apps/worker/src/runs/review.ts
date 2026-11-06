@@ -32,6 +32,8 @@ const MAX_PATCH_BYTES = 200_000;
 const MAX_STAT_FILES = 2000;
 const LOCK_RETRIES = 6;
 const LOCK_WAIT_MS = 150;
+const ASSERT_IDLE_RETRIES = 10;
+const ASSERT_IDLE_WAIT_MS = 50;
 
 type Status = ReviewFile['status'];
 interface Change {
@@ -179,7 +181,7 @@ export class ReviewService {
   async undo(runId: string, checkpointId: string): Promise<ReviewState> {
     await this.exclusive(runId, async () => {
       const wt = this.worktree(runId);
-      this.assertIdle(runId);
+      await this.assertIdle(runId);
       const git = this.git(wt);
       const target =
         checkpointId === 'base' ? wt.base : await this.resolveCheckpoint(wt, checkpointId);
@@ -196,7 +198,7 @@ export class ReviewService {
   async revertFile(runId: string, path: string): Promise<ReviewState> {
     await this.exclusive(runId, async () => {
       const wt = this.worktree(runId);
-      this.assertIdle(runId);
+      await this.assertIdle(runId);
       const git = this.git(wt);
       const tree = await this.snapshot(wt);
       const names = await git(
@@ -242,7 +244,7 @@ export class ReviewService {
     options: { merge: boolean; commitMessage?: string | undefined },
   ): Promise<ReviewOutcome> {
     const wt = this.worktree(runId);
-    this.assertIdle(runId);
+    await this.assertIdle(runId);
     const outcome = await this.exclusive(runId, async (): Promise<ReviewOutcome> => {
       const git = this.git(wt);
       await git(wt.root, ['add', '-A']);
@@ -273,7 +275,7 @@ export class ReviewService {
 
   async reject(runId: string): Promise<ReviewOutcome> {
     const wt = this.worktree(runId);
-    this.assertIdle(runId);
+    await this.assertIdle(runId);
     await this.deps.worktrees.remove(runId, { deleteBranch: true });
     this.forget(runId);
     return { branch: wt.branch, commit: null, merged: false, mergeSkipped: null };
@@ -415,12 +417,21 @@ export class ReviewService {
     return wt;
   }
 
-  private assertIdle(runId: string): void {
-    if (this.deps.isWorking(runId)) {
-      throw new ReviewError(
-        'run_active',
-        'Run masih berjalan. Tunggu sampai selesai atau hentikan dulu.',
-      );
+  /**
+   * `isWorking()` dan event `run.completed`/`error` yang diteruskan ke gateway seharusnya berubah serentak
+   * (lihat `RunState.finished` di coordinator.ts). Retry singkat ini hanya jaring pengaman tambahan untuk sisa
+   * balapan yang belum tertutup (mis. panggilan lama yang masih di tengah jalan) -- bukan pengganti perbaikan
+   * urutan itu. Ditemukan nyata lewat `omp.e2e.test.ts` flaky di VPS ARM64 (REPAIR_LOG P8).
+   */
+  private async assertIdle(runId: string): Promise<void> {
+    for (let attempt = 1; this.deps.isWorking(runId); attempt++) {
+      if (attempt >= ASSERT_IDLE_RETRIES) {
+        throw new ReviewError(
+          'run_active',
+          'Run masih berjalan. Tunggu sampai selesai atau hentikan dulu.',
+        );
+      }
+      await new Promise((r) => setTimeout(r, ASSERT_IDLE_WAIT_MS));
     }
   }
 

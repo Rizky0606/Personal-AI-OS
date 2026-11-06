@@ -62,7 +62,13 @@ interface RunState {
   outbox: AgentEvent[];
   cancelRequested: boolean;
   terminal: boolean;
-  /** Mesin sudah berhenti; run tidak lagi mengubah worktree. */
+  /**
+   * Mesin sudah berhenti; run tidak lagi mengubah worktree. Di-set SERENTAK dengan `terminal` (saat event
+   * penutup diteruskan ke gateway: run.completed, error, timeout, atau cancelled), BUKAN setelah `cleanup()`
+   * selesai -- cleanup() melakukan kerja async (stop preview, kill proses, hapus worktree pristine) yang bisa
+   * makan waktu, dan menunggunya dulu membuka jendela balapan: klien bisa melihat run "selesai" lalu memanggil
+   * accept/reject sebelum assertIdle() tahu run sudah tidak aktif (lihat review_apply_race di REPAIR_LOG P8).
+   */
   finished: boolean;
   /** Diff terakhir yang dikirim (JSON); event diff.updated hanya dikirim bila berubah. */
   diffKey: string;
@@ -244,6 +250,13 @@ export class RunCoordinator {
       };
     } catch (error) {
       const gone = error instanceof ReviewError && error.code === 'review_not_found';
+      // 'run_active' seharusnya tidak pernah terjadi lagi setelah retry di assertIdle() (lihat review.ts);
+      // bila tetap muncul, itu anomali nyata (bukan balapan sesaat) dan layak diketahui, bukan ditelan diam-diam.
+      if (error instanceof ReviewError && error.code === 'run_active') {
+        this.deps.log?.(
+          `review.apply ${cmd.runId}: run_active bertahan setelah retry assertIdle (anomali, lihat BACKLOG).`,
+        );
+      }
       frame = {
         type: 'review.result',
         runId: cmd.runId,
@@ -327,13 +340,14 @@ export class RunCoordinator {
 
       const runTimeoutMs = cmd.timeoutMs ?? this.deps.maxRunMs ?? DEFAULT_MAX_RUN_MS;
       run.timer = setTimeout(() => {
+        run.terminal = true;
+        run.finished = true;
         this.forward(runId, run, {
           type: 'error',
           code: 'run_timeout',
           message: `Run melewati batas waktu ${Math.round(runTimeoutMs / 60_000)} menit dan dihentikan.`,
           retryable: false,
         });
-        run.terminal = true;
         void run.handle?.cancel();
       }, runTimeoutMs);
 
@@ -424,8 +438,10 @@ export class RunCoordinator {
       if (run.text === '') run.text = event.summary;
       await this.publishDiff(runId, run);
       run.terminal = true;
+      run.finished = true;
     } else if (event.type === 'error') {
       run.terminal = true;
+      run.finished = true;
     }
     this.forward(runId, run, event);
     if (event.type === 'tool.finished' && event.status === 'ok') {
@@ -470,11 +486,13 @@ export class RunCoordinator {
   ): void {
     if (run.terminal) return;
     run.terminal = true;
+    run.finished = true;
     this.forward(runId, run, { type: 'error', code, message, retryable });
   }
 
   private cancelled(runId: string, run: RunState): void {
     run.terminal = true;
+    run.finished = true;
     this.forward(runId, run, { type: 'run.status', status: 'cancelled' });
   }
 
@@ -500,6 +518,8 @@ export class RunCoordinator {
     run.mcp?.unregister();
     await this.deps.preview?.stopRun(run.cmd.projectId, runId).catch(() => undefined);
     await this.deps.processes.killRun(runId).catch(() => undefined);
+    // Sudah di-set serentak dengan `terminal` (onEvent/fail/cancelled/timeout); diulang di sini hanya sebagai
+    // jaring pengaman jika suatu saat ada jalur baru yang lolos dari situ.
     run.finished = true;
     this.deps.review.setMeta(runId, run.text);
     // Tanpa perubahan apa pun, tidak ada yang perlu ditinjau: worktree dan branch dibuang.

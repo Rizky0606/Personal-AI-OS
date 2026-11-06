@@ -677,7 +677,7 @@ describe('RunCoordinator: hasil ditinjau', () => {
     const wt = await finishedWithChange();
     const mainBefore = git(repo, 'rev-parse', 'main');
 
-    await coordinator.reviewApply({
+    const accepted = await coordinator.reviewApply({
       type: 'review.apply',
       runId: RUN,
       decision: 'accept',
@@ -685,6 +685,7 @@ describe('RunCoordinator: hasil ditinjau', () => {
       merge: false,
     });
 
+    expect(accepted.ok).toBe(true);
     await expect(fs.stat(wt.root)).rejects.toThrow();
     expect(git(repo, 'log', '-1', '--format=%s', wt.branch)).toBe('test: tes ditambahkan');
     expect(git(repo, 'ls-tree', '-r', '--name-only', wt.branch)).toContain('math.test.js');
@@ -698,7 +699,7 @@ describe('RunCoordinator: hasil ditinjau', () => {
     const wt = await finishedWithChange();
     const mainBefore = git(repo, 'rev-parse', 'main');
 
-    await coordinator.reviewApply({
+    const rejected = await coordinator.reviewApply({
       type: 'review.apply',
       runId: RUN,
       decision: 'reject',
@@ -706,6 +707,7 @@ describe('RunCoordinator: hasil ditinjau', () => {
       merge: false,
     });
 
+    expect(rejected.ok).toBe(true);
     await expect(fs.stat(wt.root)).rejects.toThrow();
     expect(git(repo, 'branch', '--list', 'aios/*')).toBe('');
     expect(git(repo, 'rev-parse', 'main')).toBe(mainBefore);
