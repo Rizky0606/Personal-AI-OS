@@ -216,7 +216,10 @@ export function createTeamsService(deps: {
         .returning();
       // Menandai percakapan Lead sebagai milik tim ini, supaya UI (desktop/Android) tahu kapan
       // menampilkan pohon tim di panel Progres/Aktivitas tanpa query balik tambahan per pesan.
-      await db.update(conversations).set({ teamId: team!.id }).where(eq(conversations.id, conversation.id));
+      await db
+        .update(conversations)
+        .set({ teamId: team!.id })
+        .where(eq(conversations.id, conversation.id));
       const event = {
         type: 'team.created' as const,
         teamId: team!.id,

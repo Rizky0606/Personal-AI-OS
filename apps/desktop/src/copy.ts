@@ -941,6 +941,15 @@ export const copy = {
       approve: 'Setujui dan kerjakan',
       approvalMessage: 'Rencana disetujui. Kerjakan sekarang sesuai rencana di atas.',
     },
+    team: {
+      chip: 'Kerjakan sebagai tim',
+      chipHint:
+        'Lead merencanakan lalu membagi ke Worker (maks. satu Worker per putaran). Hasil tidak pernah digabung otomatis ke project; Anda yang memutuskan lewat tinjauan.',
+      createFailed: 'Tim belum bisa dibuat.',
+      cancelFailed: 'Tim belum bisa dihentikan.',
+      cancel: 'Hentikan tim',
+      cancelMember: 'Hentikan anggota ini',
+    },
     placeholder: 'Tulis pesan. Enter mengirim, Shift+Enter baris baru.',
     send: 'Kirim',
     stop: 'Hentikan',

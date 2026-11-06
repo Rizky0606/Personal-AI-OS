@@ -76,6 +76,8 @@ export function useChatController(conversationId: string | undefined) {
   const [focusNonce, setFocusNonce] = useState(0);
   /** Mode rencana: pesan berikutnya di project hanya membuat rencana, tanpa mengubah berkas. */
   const [planFirst, setPlanFirst] = useState(false);
+  /** Kerjakan sebagai tim (Lead + Worker, opt-in, hanya di project): pesan berikutnya membuat tim. */
+  const [teamMode, setTeamMode] = useState(false);
   const attach = useFileAttachments(online);
 
   const messages = useMemo(() => chronological(messagesQuery.data), [messagesQuery.data]);
@@ -172,6 +174,33 @@ export function useChatController(conversationId: string | undefined) {
       // Konteks dari preview (elemen terpilih) dikirim bersama pesan ini.
       const sentAttachments = attachments;
       const body = withAttachments(text, sentAttachments);
+      // Kerjakan sebagai tim: pesan ini membuat tim (Lead + Worker) di project, bukan percakapan biasa.
+      // Hanya untuk percakapan baru di dalam project (tim selalu punya percakapan Lead sendiri).
+      if (teamMode && activeProjectId !== null && conversationId === undefined) {
+        setSending(true);
+        setPending(body || text);
+        if (override === undefined) setDraft('');
+        try {
+          const team = await api.createTeam({ projectId: activeProjectId, prompt: body || text });
+          setTeamMode(false);
+          const lead = team.members.find((m) => m.role === 'lead');
+          if (lead?.conversationId) {
+            queryClient.invalidateQueries({ queryKey: ['conversations'] }).catch(() => undefined);
+            await goConversation(
+              navigate,
+              { id: lead.conversationId, projectId: activeProjectId },
+              true,
+            );
+          }
+        } catch (error) {
+          if (override === undefined) setDraft((current) => current || text);
+          fail(error, `${copy.chat.team.createFailed} ${apiErrorMessage(error, online)}`);
+        } finally {
+          setPending(null);
+          setSending(false);
+        }
+        return;
+      }
       setSending(true);
       setPending(body || files.map((f) => f.name).join(', '));
       if (override === undefined) setDraft('');
@@ -228,6 +257,7 @@ export function useChatController(conversationId: string | undefined) {
       engineWire,
       setEngineChoice,
       planFirst,
+      teamMode,
       webSearch,
       skillPacks,
       setSkillPacks,
@@ -485,6 +515,8 @@ export function useChatController(conversationId: string | undefined) {
     focusNonce,
     planFirst,
     setPlanFirst,
+    teamMode,
+    setTeamMode,
     webSearch,
     setWebSearch,
     skillPacks,
