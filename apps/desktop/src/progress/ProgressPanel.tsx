@@ -3,6 +3,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { WifiOff } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { apiErrorMessage } from '../api/errors';
+import { useConversation, useTeam } from '../api/queries';
 import { api } from '../app/services';
 import { ArtifactLightbox, type LightboxFile } from '../chat/ArtifactLightbox';
 import { useProgressView } from '../chat/useProgressView';
@@ -14,6 +15,7 @@ import { StateView, type ViewState } from '../ui/StateView';
 import { useToastStore } from '../ui/Toaster';
 import { OutputCards } from './OutputCards';
 import { ProgressTimeline } from './ProgressTimeline';
+import { TeamProgressTree } from './TeamProgressTree';
 import { UsedSection, hasUsed } from './UsedSection';
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -39,9 +41,23 @@ export function ProgressPanel() {
   const navigate = useNavigate();
   const push = useToastStore((s) => s.push);
   const openReview = useUiStore((s) => s.openReview);
+  const conversationId = useUiStore((s) => s.progressSource?.conversationId);
   const [lightbox, setLightbox] = useState<LightboxFile | null>(null);
+  const conversation = useConversation(conversationId);
+  const teamId = conversation.data?.teamId ?? null;
+  const team = useTeam(teamId);
 
-  const hasData = view.steps.length > 0 || view.outputs.length > 0 || hasUsed(view.used);
+  async function cancelMember(memberId: string) {
+    if (!teamId) return;
+    try {
+      await api.cancelTeamMember(teamId, memberId);
+    } catch (error) {
+      push(`${copy.chat.team.cancelFailed} ${apiErrorMessage(error, !offline)}`, 'danger');
+    }
+  }
+
+  const hasData =
+    !!team.data || view.steps.length > 0 || view.outputs.length > 0 || hasUsed(view.used);
   const viewState: ViewState = !state.hasSource
     ? 'empty'
     : state.loading && !hasData
@@ -98,7 +114,9 @@ export function ProgressPanel() {
         }
       >
         <Section title={copy.progress.sections.progress}>
-          {view.steps.length > 0 ? (
+          {team.data ? (
+            <TeamProgressTree team={team.data} onCancelMember={(id) => void cancelMember(id)} />
+          ) : view.steps.length > 0 ? (
             <ProgressTimeline steps={view.steps} phase={phase} />
           ) : (
             <p className="text-ui text-text-2">{copy.progress.noSteps}</p>

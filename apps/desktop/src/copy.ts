@@ -678,6 +678,23 @@ export const copy = {
       files: 'Berkas',
       subagent: 'Subagent',
     },
+    reviewAction: 'Tinjau',
+    team: {
+      leadTitle: 'Lead',
+      statusLine: (status: string) =>
+        ({
+          queued: 'Tim menunggu dimulai.',
+          running: 'Tim sedang berjalan.',
+          reviewing: 'Lead meninjau hasil Worker.',
+          completed: 'Tim selesai.',
+          failed: 'Tim gagal.',
+          cancelled: 'Tim dihentikan.',
+          needs_attention: 'Tim perlu perhatian Anda.',
+        })[status] ?? `Status: ${status}`,
+      cancelRequested: 'pembatalan diminta',
+      attempt: (n: number, max: number) => `Percobaan ${n} dari ${max}`,
+      planning: 'Lead sedang merencanakan tugas untuk Worker.',
+    },
     loading: 'Memuat progres',
     empty: 'Belum ada aktivitas di percakapan ini',
     emptyAction: 'Tulis pesan',

@@ -35,6 +35,18 @@ export const useConversation = (id: string | undefined) =>
     enabled: id !== undefined,
   });
 
+const TEAM_TERMINAL = ['completed', 'failed', 'cancelled'];
+
+/** Status tim Orca (P7): dipoll tiap 2s selagi belum final, supaya pohon Lead->Worker tetap hidup. */
+export const useTeam = (teamId: string | null | undefined) =>
+  useQuery({
+    queryKey: ['team', teamId],
+    queryFn: () => api.getTeam(teamId!),
+    enabled: !!teamId,
+    refetchInterval: (query) =>
+      query.state.data && TEAM_TERMINAL.includes(query.state.data.status) ? false : 2000,
+  });
+
 /** Agregat panel Progres satu percakapan; diambil ulang saat run selesai (lihat `useProgressView`). */
 export const useConversationProgress = (conversationId: string | undefined) =>
   useQuery({

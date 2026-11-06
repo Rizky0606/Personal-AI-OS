@@ -300,3 +300,181 @@ describe('ProgressPanel: Output dan Digunakan', () => {
     expect(screen.queryByText(p.used.connectors)).not.toBeInTheDocument();
   });
 });
+
+describe('ProgressPanel: pohon tim Orca (P7)', () => {
+  const TEAM_ID = uid();
+  const WORKER_MEMBER = uid();
+  const WORKER_RUN = uid();
+  const LEAD_RUN = uid();
+
+  it('percakapan milik tim: pohon Lead->tugas->Worker tampil menggantikan linimasa biasa', async () => {
+    source();
+    api.getConversationProgress.mockResolvedValue(emptyProgress());
+    api.getConversation.mockResolvedValue({
+      id: CONV,
+      title: 'Lead: tambah tes',
+      surface: 'windows',
+      projectId: 'proj-1',
+      spaceId: null,
+      teamId: TEAM_ID,
+      pinned: false,
+      archivedAt: null,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    });
+    api.getTeam.mockResolvedValue({
+      id: TEAM_ID,
+      projectId: 'proj-1',
+      status: 'running',
+      memberCount: 2,
+      pendingApprovals: 0,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      parentRunId: LEAD_RUN,
+      prompt: 'Tambahkan tes untuk fungsi tambah.',
+      limits: {
+        maxWorkers: 1,
+        maxReviewRounds: 2,
+        teamTimeoutMinutes: 120,
+        memberTimeoutMinutes: 30,
+        stepsPerMember: 100,
+        tokensPerTeam: 100_000,
+        tokensPerMember: 40_000,
+        inputTokensPerCall: 20_000,
+        outputTokensPerCall: 8_000,
+      },
+      members: [
+        {
+          id: uid(),
+          role: 'lead',
+          status: 'completed',
+          task: 'Tambahkan tes untuk fungsi tambah.',
+          branch: null,
+          runId: LEAD_RUN,
+          conversationId: CONV,
+          updatedAt: '2026-01-01T00:00:00.000Z',
+          exitReason: null,
+        },
+        {
+          id: WORKER_MEMBER,
+          role: 'worker',
+          status: 'running',
+          task: 'Tambah tes matematika',
+          branch: null,
+          runId: WORKER_RUN,
+          conversationId: uid(),
+          updatedAt: '2026-01-01T00:00:00.000Z',
+          exitReason: null,
+        },
+      ],
+      assignments: [
+        {
+          id: uid(),
+          teamId: TEAM_ID,
+          workerMemberId: WORKER_MEMBER,
+          title: 'Tambah tes matematika',
+          prompt: 'Tambahkan tes untuk fungsi tambah.',
+          acceptanceCriteria: 'Tes baru ada dan lulus.',
+          status: 'running',
+          attempt: 1,
+          maxAttempts: 3,
+          resultSummary: null,
+          resultRef: null,
+          reviewStatus: null,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        },
+      ],
+      cancelRequestedAt: null,
+      failureCode: null,
+      finishedAt: null,
+    });
+
+    await renderScreen(<ProgressPanel />);
+
+    expect(await screen.findByText('Lead')).toBeInTheDocument();
+    expect(screen.getByText('Tambah tes matematika')).toBeInTheDocument();
+    expect(screen.getByText(/Percobaan 1 dari 3/)).toBeInTheDocument();
+    expect(screen.queryByText(p.noSteps)).not.toBeInTheDocument();
+  });
+
+  it('anggota Worker yang masih berjalan punya tombol hentikan; memanggil cancelTeamMember', async () => {
+    source();
+    api.getConversationProgress.mockResolvedValue(emptyProgress());
+    api.getConversation.mockResolvedValue({
+      id: CONV,
+      title: 'Lead: tambah tes',
+      surface: 'windows',
+      projectId: 'proj-1',
+      spaceId: null,
+      teamId: TEAM_ID,
+      pinned: false,
+      archivedAt: null,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    });
+    api.getTeam.mockResolvedValue({
+      id: TEAM_ID,
+      projectId: 'proj-1',
+      status: 'running',
+      memberCount: 2,
+      pendingApprovals: 0,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      parentRunId: LEAD_RUN,
+      prompt: 'x',
+      limits: {
+        maxWorkers: 1,
+        maxReviewRounds: 2,
+        teamTimeoutMinutes: 120,
+        memberTimeoutMinutes: 30,
+        stepsPerMember: 100,
+        tokensPerTeam: 100_000,
+        tokensPerMember: 40_000,
+        inputTokensPerCall: 20_000,
+        outputTokensPerCall: 8_000,
+      },
+      members: [
+        {
+          id: WORKER_MEMBER,
+          role: 'worker',
+          status: 'running',
+          task: 'Tugas',
+          branch: null,
+          runId: WORKER_RUN,
+          conversationId: uid(),
+          updatedAt: '2026-01-01T00:00:00.000Z',
+          exitReason: null,
+        },
+      ],
+      assignments: [
+        {
+          id: uid(),
+          teamId: TEAM_ID,
+          workerMemberId: WORKER_MEMBER,
+          title: 'Tugas',
+          prompt: 'x',
+          acceptanceCriteria: 'y',
+          status: 'running',
+          attempt: 1,
+          maxAttempts: 3,
+          resultSummary: null,
+          resultRef: null,
+          reviewStatus: null,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        },
+      ],
+      cancelRequestedAt: null,
+      failureCode: null,
+      finishedAt: null,
+    });
+    api.cancelTeamMember.mockResolvedValue({} as never);
+
+    const user = userEvent.setup();
+    await renderScreen(<ProgressPanel />);
+    const stop = await screen.findByRole('button', { name: copy.chat.team.cancelMember });
+    await user.click(stop);
+    expect(api.cancelTeamMember).toHaveBeenCalledWith(TEAM_ID, WORKER_MEMBER);
+  });
+});
