@@ -198,6 +198,40 @@ export function planAt(active: number): TodoPhase[] {
 export const CODING_FILE = 'catatan-e2e.txt';
 export const CODING_COMMIT = 'docs: tambah catatan e2e';
 
+/**
+ * "[skenario:tim]": prompt pertama Lead (P7 ORCA) membuat rencana 2 tugas; Worker mengerjakan
+ * keduanya berurutan (maxWorkers:1) lewat skrip coding omp yang SAMA dipakai coding.spec.ts
+ * (tulis CODING_FILE lalu selesai) -- diputuskan reuse, bukan skrip LLM baru per tugas, karena
+ * tujuan e2e ini membuktikan ORKESTRASI (rencana -> dispatch -> tinjau -> accept, dua kali),
+ * bukan keragaman isi kode. Lead selalu menerima (TEAM_REVIEW_ACCEPT) untuk request tinjauan apa
+ * pun -- dikenali dari teks yang DIBUAT ORCHESTRATOR sendiri ("Tinjau hasil Worker..."), bukan
+ * marker yang diketik pengguna (request tinjauan tidak lewat composer).
+ */
+export const SCENARIO_TEAM = '[skenario:tim]';
+export const TEAM_TASK_1 = 'Tambah tes pertama';
+export const TEAM_TASK_2 = 'Tambah tes kedua';
+export const TEAM_PLAN_TWO_TASKS =
+  'Rencana: dua tugas untuk Worker.\n```orca-plan\n' +
+  JSON.stringify({
+    tasks: [
+      {
+        title: TEAM_TASK_1,
+        prompt: 'Tambahkan catatan e2e pertama.',
+        acceptanceCriteria: 'Berkas catatan ada.',
+      },
+      {
+        title: TEAM_TASK_2,
+        prompt: 'Tambahkan catatan e2e kedua.',
+        acceptanceCriteria: 'Berkas catatan ada.',
+      },
+    ],
+  }) +
+  '\n```';
+export const TEAM_REVIEW_ACCEPT =
+  'Hasil sudah memenuhi kriteria.\n```orca-review\n' +
+  JSON.stringify({ decision: 'accept', feedback: 'Bagus, sesuai permintaan.' }) +
+  '\n```';
+
 const readBody = (req: IncomingMessage) =>
   new Promise<string>((resolve) => {
     const chunks: Buffer[] = [];
@@ -365,6 +399,22 @@ export async function startFakes(): Promise<Fakes> {
         await sleep(180);
       }
       stream.usage(40, 24);
+      stream.finish();
+      stream.done();
+      return;
+    }
+    // Lead tim Orca (P7): request pertama (prompt pengguna dengan marker) -> rencana 2 tugas;
+    // request berikutnya (dibuat orchestrator, bukan diketik pengguna) -> selalu accept.
+    if (typeof last === 'string' && last.includes('Tinjau hasil Worker untuk tugas ini')) {
+      stream.delta(TEAM_REVIEW_ACCEPT);
+      stream.usage(20, 15);
+      stream.finish();
+      stream.done();
+      return;
+    }
+    if (typeof last === 'string' && last.includes(SCENARIO_TEAM)) {
+      stream.delta(TEAM_PLAN_TWO_TASKS);
+      stream.usage(20, 30);
       stream.finish();
       stream.done();
       return;
