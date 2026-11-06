@@ -477,4 +477,55 @@ describe('ProgressPanel: pohon tim Orca (P7)', () => {
     await user.click(stop);
     expect(api.cancelTeamMember).toHaveBeenCalledWith(TEAM_ID, WORKER_MEMBER);
   });
+
+  it('tombol "Hentikan tim" memanggil cancelTeam; tidak muncul lagi setelah cancelRequestedAt terisi', async () => {
+    source();
+    api.getConversationProgress.mockResolvedValue(emptyProgress());
+    api.getConversation.mockResolvedValue({
+      id: CONV,
+      title: 'Lead: x',
+      surface: 'windows',
+      projectId: 'proj-1',
+      spaceId: null,
+      teamId: TEAM_ID,
+      pinned: false,
+      archivedAt: null,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    });
+    const base = {
+      id: TEAM_ID,
+      projectId: 'proj-1',
+      status: 'running' as const,
+      memberCount: 1,
+      pendingApprovals: 0,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      parentRunId: LEAD_RUN,
+      prompt: 'x',
+      limits: {
+        maxWorkers: 1,
+        maxReviewRounds: 2,
+        teamTimeoutMinutes: 120,
+        memberTimeoutMinutes: 30,
+        stepsPerMember: 100,
+        tokensPerTeam: 100_000,
+        tokensPerMember: 40_000,
+        inputTokensPerCall: 20_000,
+        outputTokensPerCall: 8_000,
+      },
+      members: [],
+      assignments: [],
+      failureCode: null,
+      finishedAt: null,
+    };
+    api.getTeam.mockResolvedValue({ ...base, cancelRequestedAt: null });
+    api.cancelTeam.mockResolvedValue({ ...base, cancelRequestedAt: '2026-01-01T00:01:00.000Z' });
+
+    const user = userEvent.setup();
+    await renderScreen(<ProgressPanel />);
+    const stop = await screen.findByRole('button', { name: copy.chat.team.cancel });
+    await user.click(stop);
+    expect(api.cancelTeam).toHaveBeenCalledWith(TEAM_ID);
+  });
 });

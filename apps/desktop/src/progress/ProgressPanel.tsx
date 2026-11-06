@@ -56,6 +56,15 @@ export function ProgressPanel() {
     }
   }
 
+  async function cancelTeam() {
+    if (!teamId) return;
+    try {
+      await api.cancelTeam(teamId);
+    } catch (error) {
+      push(`${copy.chat.team.cancelFailed} ${apiErrorMessage(error, !offline)}`, 'danger');
+    }
+  }
+
   const hasData =
     !!team.data || view.steps.length > 0 || view.outputs.length > 0 || hasUsed(view.used);
   const viewState: ViewState = !state.hasSource
@@ -115,7 +124,11 @@ export function ProgressPanel() {
       >
         <Section title={copy.progress.sections.progress}>
           {team.data ? (
-            <TeamProgressTree team={team.data} onCancelMember={(id) => void cancelMember(id)} />
+            <TeamProgressTree
+              team={team.data}
+              onCancelMember={(id) => void cancelMember(id)}
+              onCancelTeam={() => void cancelTeam()}
+            />
           ) : view.steps.length > 0 ? (
             <ProgressTimeline steps={view.steps} phase={phase} />
           ) : (

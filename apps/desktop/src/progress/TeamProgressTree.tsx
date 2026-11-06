@@ -72,9 +72,11 @@ function Row({
 export function TeamProgressTree({
   team,
   onCancelMember,
+  onCancelTeam,
 }: {
   team: TeamDetail;
   onCancelMember?: (memberId: string) => void;
+  onCancelTeam?: () => void;
 }) {
   const openReview = useUiStore((s) => s.openReview);
   const lead = team.members.find((m) => m.role === 'lead');
@@ -82,10 +84,17 @@ export function TeamProgressTree({
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-meta text-text-2">
-        {copy.progress.team.statusLine(team.status)}
-        {team.cancelRequestedAt ? ` · ${copy.progress.team.cancelRequested}` : ''}
-      </p>
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-meta text-text-2">
+          {copy.progress.team.statusLine(team.status)}
+          {team.cancelRequestedAt ? ` · ${copy.progress.team.cancelRequested}` : ''}
+        </p>
+        {active && !team.cancelRequestedAt && onCancelTeam ? (
+          <Button variant="secondary" onClick={onCancelTeam}>
+            {copy.chat.team.cancel}
+          </Button>
+        ) : null}
+      </div>
       <ul className="flex flex-col gap-2">
         {lead ? (
           <Row
