@@ -73,10 +73,12 @@ export function TeamProgressTree({
   team,
   onCancelMember,
   onCancelTeam,
+  onResolveApproval,
 }: {
   team: TeamDetail;
   onCancelMember?: (memberId: string) => void;
   onCancelTeam?: () => void;
+  onResolveApproval?: (runId: string, approvalId: string, decision: 'allow' | 'deny') => void;
 }) {
   const openReview = useUiStore((s) => s.openReview);
   const lead = team.members.find((m) => m.role === 'lead');
@@ -124,6 +126,34 @@ export function TeamProgressTree({
       </ul>
       {team.assignments.length === 0 ? (
         <p className={cn('text-ui text-text-2')}>{copy.progress.team.planning}</p>
+      ) : null}
+      {team.approvals.length > 0 ? (
+        <ul aria-label={copy.progress.team.approvalsTitle} className="flex flex-col gap-2">
+          {team.approvals.map((a) => (
+            <li
+              key={a.id}
+              className="flex flex-col gap-2 rounded-control border border-warning bg-surface-2 px-3 py-2"
+            >
+              <p className="text-meta text-text-2">
+                {copy.progress.team.approvalFrom(a.memberRole)} · {copy.approval.title[a.kind]}
+              </p>
+              <pre className="max-h-32 overflow-auto rounded-control border border-border bg-surface p-2 font-mono text-ui break-all whitespace-pre-wrap text-text">
+                {a.detail}
+              </pre>
+              <div className="flex gap-2">
+                <Button
+                  variant="primary"
+                  onClick={() => onResolveApproval?.(a.runId, a.id, 'allow')}
+                >
+                  {copy.approval.allowOnce}
+                </Button>
+                <Button variant="danger" onClick={() => onResolveApproval?.(a.runId, a.id, 'deny')}>
+                  {copy.approval.deny}
+                </Button>
+              </div>
+            </li>
+          ))}
+        </ul>
       ) : null}
     </div>
   );

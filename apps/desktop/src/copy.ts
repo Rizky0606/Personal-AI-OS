@@ -694,6 +694,8 @@ export const copy = {
       cancelRequested: 'pembatalan diminta',
       attempt: (n: number, max: number) => `Percobaan ${n} dari ${max}`,
       planning: 'Lead sedang merencanakan tugas untuk Worker.',
+      approvalsTitle: 'Izin menunggu',
+      approvalFrom: (role: string) => (role === 'lead' ? 'Dari Lead' : 'Dari Worker'),
     },
     loading: 'Memuat progres',
     empty: 'Belum ada aktivitas di percakapan ini',

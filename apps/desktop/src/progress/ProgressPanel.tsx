@@ -65,6 +65,19 @@ export function ProgressPanel() {
     }
   }
 
+  async function resolveTeamApproval(
+    runId: string,
+    approvalId: string,
+    decision: 'allow' | 'deny',
+  ) {
+    try {
+      await api.resolveApproval(runId, approvalId, { decision, remember: false });
+      void team.refetch();
+    } catch (error) {
+      push(`${copy.approval.failed} ${apiErrorMessage(error, !offline)}`, 'danger');
+    }
+  }
+
   const hasData =
     !!team.data || view.steps.length > 0 || view.outputs.length > 0 || hasUsed(view.used);
   const viewState: ViewState = !state.hasSource
@@ -128,6 +141,9 @@ export function ProgressPanel() {
               team={team.data}
               onCancelMember={(id) => void cancelMember(id)}
               onCancelTeam={() => void cancelTeam()}
+              onResolveApproval={(runId, approvalId, decision) =>
+                void resolveTeamApproval(runId, approvalId, decision)
+              }
             />
           ) : view.steps.length > 0 ? (
             <ProgressTimeline steps={view.steps} phase={phase} />

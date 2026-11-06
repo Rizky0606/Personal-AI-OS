@@ -151,6 +151,23 @@ export function createTeamsService(deps: {
       limits: row.limits as z.infer<typeof TeamDetailSchema>['limits'],
       members: summaries,
       assignments: await assignmentsOf(id),
+      approvals: approvalsRows.flatMap((a) => {
+        const owner = members.find((m) => m.runId === a.runId);
+        if (!owner) return [];
+        return [
+          {
+            id: a.id,
+            runId: a.runId,
+            kind: a.kind,
+            detail: a.detail,
+            status: a.status,
+            remember: a.remember,
+            decidedAt: a.decidedAt?.toISOString() ?? null,
+            memberId: owner.id,
+            memberRole: owner.role,
+          },
+        ];
+      }),
       cancelRequestedAt: row.cancelRequestedAt?.toISOString() ?? null,
       failureCode: row.failureCode,
       finishedAt:
