@@ -3760,6 +3760,13 @@
             ],
             "format": "uuid"
           },
+          "teamId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
           "pinned": {
             "type": "boolean"
           },
@@ -6395,6 +6402,13 @@
             },
             "default": []
           },
+          "approvals": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TeamApproval"
+            },
+            "default": []
+          },
           "cancelRequestedAt": {
             "type": [
               "string",
@@ -6532,6 +6546,13 @@
             "type": "string",
             "format": "uuid"
           },
+          "conversationId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
           "updatedAt": {
             "type": "string",
             "format": "date-time"
@@ -6654,6 +6675,71 @@
           "reviewStatus",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "TeamApproval": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "runId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "command",
+              "file_write",
+              "network"
+            ]
+          },
+          "detail": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "allowed",
+              "denied",
+              "cancelled"
+            ]
+          },
+          "remember": {
+            "type": "boolean"
+          },
+          "decidedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "memberId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "memberRole": {
+            "type": "string",
+            "enum": [
+              "lead",
+              "worker"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "runId",
+          "kind",
+          "detail",
+          "status",
+          "remember",
+          "decidedAt",
+          "memberId",
+          "memberRole"
         ]
       },
       "TeamRequest": {

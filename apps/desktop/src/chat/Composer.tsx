@@ -57,6 +57,10 @@ export interface ComposerProps {
   /** Mode rencana (hanya di dalam project): tanpa onPlanMode sakelarnya tidak tampil. */
   planMode?: boolean;
   onPlanMode?: (on: boolean) => void;
+  /** Kerjakan sebagai tim (Lead + Worker, opt-in, hanya di dalam project): tanpa onTeamMode sakelarnya
+   * tidak tampil. Mengirim dengan sakelar ini aktif membuat tim, bukan pesan biasa. */
+  teamMode?: boolean;
+  onTeamMode?: (on: boolean) => void;
   /** Cari di web untuk pesan berikutnya; tanpa onWebSearch sakelarnya tidak tampil. */
   webSearch?: boolean;
   onWebSearch?: (on: boolean) => void;
@@ -121,6 +125,8 @@ export function Composer({
   onUseTemplate,
   planMode = false,
   onPlanMode,
+  teamMode = false,
+  onTeamMode,
   webSearch = false,
   onWebSearch,
   skillPacks = [],
@@ -378,6 +384,15 @@ export function Composer({
                 onClick={() => onPlanMode(!planMode)}
               >
                 {copy.chat.plan.chip}
+              </Pill>
+            ) : null}
+            {onTeamMode ? (
+              <Pill
+                selected={teamMode}
+                title={copy.chat.team.chipHint}
+                onClick={() => onTeamMode(!teamMode)}
+              >
+                {copy.chat.team.chip}
               </Pill>
             ) : null}
             {onWebSearch ? (

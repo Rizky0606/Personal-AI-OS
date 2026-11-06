@@ -198,6 +198,9 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
         onSkillPacks={chat.setSkillPacks}
         skillOptions={packOptions(chat.inProject)}
         {...(chat.inProject ? { planMode: chat.planFirst, onPlanMode: chat.setPlanFirst } : {})}
+        {...(chat.inProject && conversationId === undefined
+          ? { teamMode: chat.teamMode, onTeamMode: chat.setTeamMode }
+          : {})}
       />
       {insert.dialog}
     </div>

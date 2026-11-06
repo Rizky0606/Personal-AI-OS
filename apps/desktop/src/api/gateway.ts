@@ -197,6 +197,8 @@ export function createGatewayApi(call: Call) {
     createTeam: (input: { projectId: string; prompt: string; model?: string }) =>
       get('/teams', TeamDetailSchema, { method: 'POST', body: input }),
     cancelTeam: (id: string) => get(`/teams/${id}/cancel`, TeamDetailSchema, { method: 'POST' }),
+    cancelTeamMember: (id: string, memberId: string) =>
+      get(`/teams/${id}/members/${memberId}/cancel`, TeamDetailSchema, { method: 'POST' }),
     listModels: async () => (await get('/models', ModelListSchema)).items,
     /** Mesin yang dikenal gateway beserta ketersediaan dan kemampuannya. */
     listEngines: async () => (await get('/engines', EngineListSchema)).items,

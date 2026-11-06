@@ -3,6 +3,7 @@ import {
   DEFAULT_TIMEZONE,
   CronSchema,
   ApprovalDecisionSchema,
+  ApprovalSchema,
   SteerModeSchema,
   DeviceSchema,
   MEMORY_TEXT_MAX,
@@ -376,10 +377,17 @@ export const TeamMemberSummarySchema = z
     task: z.string(),
     branch: z.string().nullable(),
     runId: IdSchema,
+    /** Percakapan run ini; dipakai UI untuk membuka chat anggota (Lead) langsung setelah tim dibuat. */
+    conversationId: IdSchema.nullable().optional(),
     updatedAt: TimestampSchema,
     exitReason: z.string().nullable(),
   })
   .meta({ id: 'TeamMemberSummary' });
+
+/** Satu persetujuan menunggu milik anggota tim; dikumpulkan jadi satu daftar di tab Aktivitas (ORCA_DESIGN.md tugas 9). */
+export const TeamApprovalSchema = z
+  .object({ ...ApprovalSchema.shape, memberId: IdSchema, memberRole: z.enum(['lead', 'worker']) })
+  .meta({ id: 'TeamApproval' });
 
 export const TeamDetailSchema = z
   .object({
@@ -389,6 +397,8 @@ export const TeamDetailSchema = z
     limits: TeamLimitsSchema,
     members: z.array(TeamMemberSummarySchema),
     assignments: z.array(TeamAssignmentSchema).default([]),
+    /** Persetujuan tertunda dari semua anggota, agregat (additive; count tetap di pendingApprovals). */
+    approvals: z.array(TeamApprovalSchema).default([]),
     cancelRequestedAt: TimestampSchema.nullable(),
     failureCode: z.string().nullable(),
     finishedAt: TimestampSchema.nullable(),

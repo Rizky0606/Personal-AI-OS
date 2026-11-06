@@ -48,6 +48,7 @@ export const api: FakeApi = {
   getTeam: fn<'getTeam'>(),
   createTeam: fn<'createTeam'>(),
   cancelTeam: fn<'cancelTeam'>(),
+  cancelTeamMember: fn<'cancelTeamMember'>(),
   listModels: fn<'listModels'>(),
   listEngines: fn<'listEngines'>(),
   listRoles: fn<'listRoles'>(),

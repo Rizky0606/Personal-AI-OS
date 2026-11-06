@@ -169,6 +169,7 @@ export async function startStack(): Promise<Stack> {
     hermesUrl: fakes.hermesUrl,
     research: { searxngUrl: fakes.searxngUrl },
     schedules: { pollMs: 200 },
+    teams: { pollMs: 200 },
     taskMaxParallel: 2,
     rateLimits: { login: 1000 },
   });

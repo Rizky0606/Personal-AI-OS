@@ -39,6 +39,8 @@ export const ConversationSchema = z
     projectId: IdSchema.nullable(),
     /** Ruang pengetahuan (W21): jawaban di percakapan ini memakai dokumen ruang itu sebagai sumber. */
     spaceId: IdSchema.nullable(),
+    /** Tim Orca (P7) yang membuat percakapan ini (selalu Lead); null/tidak ada untuk percakapan biasa. */
+    teamId: IdSchema.nullable().optional(),
     pinned: z.boolean(),
     archivedAt: TimestampSchema.nullable(),
     createdAt: TimestampSchema,
