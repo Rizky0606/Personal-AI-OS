@@ -394,4 +394,68 @@ AgentOrb (sudah ada sebelum sesi ini, diverifikasi ulang):
 - `ResourceActivityTexts` dan `buildProgress` di `MainScreen.kt` dipanggil ulang tiap recomposition tanpa `remember` eksplisit pada hasilnya (hanya `activityTexts` yang di-`remember`); berpotensi dihitung ulang lebih sering dari perlu — tidak diukur dampak performanya.
 - Konektor MCP dan grup tool `web`/`browser` di panel Progres Android: logikanya ada (port dari desktop) tapi belum teramati dengan data nyata (sama seperti P5, toolset itu mati di Hermes VPS; omp project belum diuji dengan tool MCP di Android).
 
+## P7 — ORCA Lead->Worker, Tahap 1 (backend) + Tahap 2 (UI desktop) (2026-11-05)
+
+Cabang kerja: `fix/p7-orca-lead-worker`, `fix/p7b-orca-sisa`, `fix/p7c-orca-ui-tahap2` (semua dari ujung `fix/p4b-mesin-dipaksa`, digabung balik berurutan). Tidak digabung ke `main` (ditunda sampai semua sesi P0-P8 selesai, sesuai aturan sejak P5). Hash gabungan terakhir: `54eb2c4`.
+
+12 keputusan pemilik atas pertanyaan terbuka `ORCA_DESIGN.md` dicatat verbatim di awal sesi (lihat riwayat percakapan); yang relevan untuk catatan ini: Lead berjalan di VPS lewat Hermes (bukan omp/worker); satu Worker aktif per tim (slot global in-process, bukan durable lintas proses — gateway satu proses, konsisten dengan keputusan "restart tidak auto-resume"); diff per Worker tanpa auto-merge; restart gateway/Lead mati -> `needs_attention` + intervensi pemilik; e2e memakai fake adapters yang harus benar-benar diimplementasikan (bukan stub kosong).
+
+### Temuan lingkungan penting: Postgres tertanam tetap rusak, tapi ditemukan jalan keluar
+
+Sama seperti P5: Postgres tertanam (`@embedded-postgres`) masih gagal start di VPS ARM64 ini (ICU tidak kompatibel). **Berbeda dari P5/P6**: ditemukan Postgres asli (`postgresql-16` dari apt) sudah terpasang; dibuat instance disposable sendiri (`initdb`+`pg_ctl` di scratch dir, port terpisah, **bukan** database produksi personal-ai-os sungguhan yang kebetulan juga berjalan di port 5432 pada host ini — diverifikasi dan dihindari secara sengaja). `TEST_DATABASE_URL` diarahkan ke instance disposable ini, yang dihormati `global-setup.ts` gateway (melewati jalur tertanam sepenuhnya). **Ini membuka jalan verifikasi nyata untuk SEMUA tes gateway berbasis DB di VPS ini**, sesuatu yang pada P5/P6 dianggap tidak mungkin. Dicatat sebagai skill (`integration-test-database`) untuk sesi berikutnya.
+
+### A. Tahap 1 — Backend (apps/gateway/src/modules/teams/orchestrator.ts, baru)
+
+1. **Model data tambahan (additive):** migrasi `0014_blushing_vision.sql` (`team_assignments`, `team_reviews`, kolom `teams.plan`) dan `0015_silent_silk_fever.sql` (`conversations.team_id`, kolom biasa BUKAN FK — FK eksplisit menimbulkan siklus tipe `conversations->teams->runs->conversations` yang merusak inferensi TypeScript lintas paket `@aios/e2e`, terbukti saat dicoba dan diperbaiki).
+2. **Lead merencanakan terstruktur:** skill baru `packages/roles/skills/orca-lead/SKILL.md` (pola `never-match`, tidak terpilih otomatis); protokol blok ` ```orca-plan`/` ```orca-review` ; gateway memvalidasi tidak kosong, maks `MAX_TEAM_PLAN_TASKS`, ada kriteria selesai per tugas. Lead dipaksa `engine: 'hermes', skills: ['orca-lead']` saat dibuat (bug nyata ditemukan dan diperbaiki: sebelumnya bisa default ke omp, bertentangan keputusan pemilik).
+3. **Orkestrator pg-boss:** menjalankan assignment satu per satu (konkurensi dari `team.limits.maxWorkers`, slot global `createSemaphore`), tiap Worker memakai run+worktree lewat infrastruktur coding yang **SUDAH ADA** (`chat.sendMessage`, `runsService.cancel/review`) — **tidak** diimplementasikan ulang. `timeoutMs` per-run mengalir end-to-end: kontrak `RunStartCommandSchema.timeoutMs` (sudah ada) -> `AgentRunInput.timeoutMs` (baru, `packages/adapters`) -> `worker-relay.ts` -> `apps/worker/coordinator.ts` (timer per-run, bukan hanya default 30 menit global) -> `LaunchInput.timeoutMs` (gateway `runner.ts`) -> `ChatService.sendMessage` options -> orchestrator kirim `memberTimeoutMinutes * 60000`.
+4. **Review Lead:** accept/revise (maks `maxReviewRounds`)/reject lewat `runsService.review()` yang sudah ada, **selalu `merge: false`** — hasil tidak pernah digabung otomatis ke project; pemilik memutuskan di luar tim.
+5. **Batas waktu/langkah/token ditegakkan dengan menghentikan proses sungguhan**, dibuktikan: `waitForRun()` memanggil `runsService.cancel(runId)` nyata saat `memberTimeoutMinutes`/`stepsPerMember`/`tokensPerMember` terlampaui — bukan hanya tanda di database. Pembatalan tim merambat ke Worker aktif (bug nyata ditemukan dan diperbaiki: `teams/service.ts` `cancel()` sebelumnya hanya membatalkan run Lead). Restart gateway tidak menghilangkan tim: `orchestrator.start()` menandai tim `running` yatim (tanpa proses JS yang melacaknya) sebagai `needs_attention`/`gateway_restarted`, **tidak** auto-resume.
+6. **Dua bug status nyata ditemukan dan diperbaiki** (ditemukan lewat debugging tes, bukan desain awal yang benar): (a) `assistantTextOf()` salah mengambil pesan user bukan jawaban Lead (lupa filter `author='assistant'`); (b) `teams/service.ts` `detail()` menurunkan status tim/anggota dari status run terkait, menimpa nilai eksplisit (`needs_attention` restart) yang ditulis orchestrator — diperbaiki dengan memprioritaskan kolom tersimpan begitu `plan` ada / status eksplisit `needs_attention`.
+7. **Bug akar paling krusial:** `actorDeviceId` string buatan (`'orca-orchestrator'`) dipakai di audit log yang kolomnya `uuid`+FK ke `devices.id` — insert gagal di Postgres, error **tertelan diam-diam** oleh job handler pg-boss (tim tampak macet tanpa pesan error apa pun). Diperbaiki: `RunsService.review()` `actorDeviceId` dilonggarkan jadi `string | null`, orchestrator kirim `null` (makna: tidak ada aktor manusia).
+8. **Endpoint baru** `POST /teams/:id/members/:memberId/cancel` (hentikan satu anggota tanpa membatalkan seluruh tim), kontrak `TeamMemberParamsSchema` dan `TeamMemberSummary.conversationId`/`TeamDetail.approvals` (additive, lihat bagian B).
+
+### B. Tahap 2 — UI desktop (4 dari 5 tugas; Android belum disentuh)
+
+1. **Tombol "Kerjakan sebagai tim" (tugas 7):** pill opt-in di `Composer.tsx` (pola identik `planMode`), hanya tampil di project + percakapan baru. `useChatController.ts`: cabang baru di `send()` memanggil `api.createTeam()` lalu navigasi otomatis ke percakapan Lead (lewat `TeamMemberSummary.conversationId` baru).
+2. **Panel Progres pohon tim (tugas 8):** `TeamProgressTree.tsx` (baru) — Lead + daftar assignment dengan `AgentOrb` per status, tombol Tinjau membuka tab Diff **yang sudah ada** (`openReview(runId)`, bukan UI baru), tombol Hentikan per-anggota dan seluruh tim. `ProgressPanel.tsx` mendeteksi `conversation.teamId` (`useConversation`) dan merender pohon ini menggantikan linimasa biasa.
+3. **Persetujuan agregat (tugas 9, DIADAPTASI):** prompt asli minta ini di tab Aktivitas; diputuskan taruh di panel Progres yang sudah jadi permukaan tim-aware (tugas 8), karena tab Aktivitas terikat ketat ke satu run aktif (`useLiveRun`/`chat.approvals`) dan retrofit ke banyak run anggota tim berisiko tinggi untuk sesi ini. Kontrak `TeamApprovalSchema` baru (additive); `teams/service.ts` memetakan `approvalsRows` (sudah dihitung untuk `pendingApprovals`) ke bentuk beranotasi pemilik, tanpa query baru. Tombol Izinkan/Tolak memakai `api.resolveApproval()` **yang sudah ada**.
+4. **e2e tim dua tugas (tugas 11):** `e2e/tests/team.spec.ts` (baru) — Playwright **browser sungguhan** (Chromium), omp **sungguhan** untuk Worker (bukan fake WS), Hermes palsu untuk Lead (`e2e/harness/fakes.ts`, skenario `[skenario:tim]` baru). Toggle tim -> rencana 2 tugas -> omp sungguhan minta izin tulis file nyata (SECURITY_OPS: `--approval-mode always-ask`) -> muncul di daftar persetujuan agregat (tugas 9) -> Izinkan -> Lead terima -> tugas 2 -> izin lagi -> terima -> tim selesai -> **branch main repo tidak berubah** (tidak auto-merge, diverifikasi).
+5. **Android read-only (tugas 10): TIDAK dikerjakan.** Dicatat sebagai item BACKLOG terbuka.
+
+### Bukti tersambung
+
+```
+teamMode/onTeamMode dipakai:  Composer.tsx (pill) <- ChatScreen.tsx (hanya saat inProject && conversationId===undefined)
+createTeam dipakai nyata:     useChatController.ts send() (sebelumnya 0 pemakaian produksi sejak kontrak dibuat sesi lalu)
+TeamProgressTree dipakai:     ProgressPanel.tsx (team.data ? <TeamProgressTree ...> : <ProgressTimeline ...>)
+openReview (sudah ada) dipakai lewat tombol Tinjau: TeamProgressTree.tsx -> useUiStore().openReview(member.runId)
+resolveApproval (sudah ada) dipakai lewat daftar agregat: ProgressPanel.tsx resolveTeamApproval() -> api.resolveApproval(runId, approvalId, {decision, remember:false})
+cancelTeamMember dipakai nyata: ProgressPanel.tsx cancelMember() (endpoint sudah ada sejak draf awal P7, 0 client sampai sesi ini)
+orchestrator.start()/enqueue dipanggil nyata: apps/gateway/src/main.ts (produksi) dan testing/auth-env.ts (opsional, options.teams)
+```
+
+### Pemeriksaan
+
+| Pemeriksaan | Hasil |
+| --- | --- |
+| `pnpm typecheck` (9 paket monorepo) | lulus, nol error |
+| `pnpm lint` (eslint+prettier, monorepo) | lulus, nol error |
+| `orchestrator.integration.test.ts` (Postgres disposable nyata) | **7/7 lulus**: sukses, Lead reject, pembatalan merambat, Worker mati (timeout nyata), Worker lambat (stepsCap nyata), revisi (percobaan ke-2), restart gateway (`needs_attention`, tidak auto-resume) |
+| `orchestrator.parser.test.ts` (murni, tanpa DB) | 7/7 lulus |
+| gateway full suite | 654 lulus, 13 skip, 4 gagal (semua **pre-existing**, tidak terkait P7: Postgres trust-auth lokal untuk tes 503, Chromium tidak terpasang untuk render) |
+| worker full suite | 282/282 lulus (1 tes `omp.e2e.test.ts` flaky sekali saat beban, lulus 12/12 saat diulang — pre-existing, file tidak tersentuh sesi ini) |
+| adapters / contracts / roles full suite | 113/114 (1 skip pre-existing) / 151/151 / 46/46, semua lulus |
+| desktop full suite | 923/923 lulus (919 lama + 4 baru sesi ini) |
+| e2e `coding.spec.ts` + `chat.spec.ts` (berbagi `fakes.ts` yang diubah) | 8/8 lulus, nol regresi |
+| e2e `team.spec.ts` (baru) | lulus bersih 2x berturut (27.8s, 28.0s); gagal 2x saat debugging karena omp sungguhan gagal menjalankan tugasnya (bukan bug kode, lihat BACKLOG) |
+
+### Tidak diverifikasi
+
+- **Android read-only (tugas 10):** tidak dikerjakan sama sekali di sesi ini.
+- **Keputusan terbuka Lead-worktree (keputusan pemilik P7 #2):** secara arsitektur tidak bisa lewat Hermes (dibuktikan: request Hermes tidak punya field tools/MCP). Lead tetap meninjau lewat ringkasan teks + `diffStat`, bukan isi diff sungguhan. Dua opsi didokumentasikan di BACKLOG, ditunda atas persetujuan pemilik.
+- **Skenario "pembersihan worktree" (ke-8 dari 8):** tidak diduplikasi sebagai tes gateway baru — sudah terbukti oleh `apps/worker/src/runs/coordinator.test.ts` yang ADA (36/36 lulus) karena Orca memakai mekanisme cancel/review yang sama, bukan worktree sendiri.
+- **Patch diff sungguhan untuk Lead (bukan hanya `diffStat`):** butuh round-trip protokol baru gateway<->worker (`review.diff`); ditunda atas keputusan pemilik eksplisit sesi ini, dicatat di BACKLOG dengan opsi lengkap.
+- **TalkBack/Android untuk fitur tim mana pun:** tidak relevan (Android tidak tersentuh).
+
 
