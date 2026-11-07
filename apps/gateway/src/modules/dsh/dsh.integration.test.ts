@@ -32,14 +32,15 @@ let tokenOff: string;
 
 beforeAll(async () => {
   root = await mkdtemp(join(tmpdir(), 'aios-dsh-gw-'));
-  await prepareDshRoot(root);
+  const gatewayUid = process.getuid?.();
+  await prepareDshRoot(root, gatewayUid);
   const config: DshDeps['config'] = {
     DSH_COMMAND: process.execPath,
     DSH_ARGS: FAKE,
     DSH_HOME: undefined,
     DSH_WORKDIR_ROOT: root,
     // Saat tes berjalan sebagai root (CI Docker), peluncur produksi mewajibkan identitas non-root; isi di sini.
-    ...dshTestIdentity(),
+    ...dshTestIdentity(gatewayUid),
     DSH_MAX_MEMORY_MB: 512,
     DSH_RUN_TIMEOUT_MS: 60_000,
     DSH_IDLE_TIMEOUT_MS: 30_000,
