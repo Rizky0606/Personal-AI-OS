@@ -487,8 +487,17 @@ Clone bersih ke folder baru, `pnpm install --frozen-lockfile`, `pnpm build` (7/7
 - **dsh sebagai root sungguhan di VPS ini masih gagal 6/9 tes `dsh.integration.test.ts`**: `createDshEngine` benar menegakkan "root wajib DSH_UID" lalu drop-privilege ke uid 65534 (`nobody`) untuk menjalankan fake-dsh (Node). Tapi Node di VPS ini terpasang di `/home/ubuntu/.local/bin/node`, dan `/home/ubuntu` bermode `750` — `nobody` (bukan owner/grup) tidak bisa traverse ke situ sama sekali (`sudo -u nobody node ...` → `Permission denied`). **Bukan bug desain sandbox** (image Docker produksi memakai `node:22-bookworm-slim`, Node di `/usr/local/bin`, bukan di folder pengguna) — murni cara Node terpasang di mesin pengembangan ini. Lihat BACKLOG "Temuan P8".
 - **Chromium default (`playwright-core`/Playwright test, channel `msedge`) tidak tersedia** di Linux ARM64 ini. `chromium-browser` (snap) gagal dikendalikan Playwright sebagai pengguna biasa (AppArmor confinement memblokir CDP), tapi **berhasil sebagai root** (ditemukan saat verifikasi "test sebagai root" — `render.test.ts` 3 tes yang gagal sebagai pengguna biasa lulus 5/5 sebagai root). Google Chrome resmi (`/opt/google/chrome`, bukan snap) berhasil di kedua mode lewat `E2E_BROWSER=chrome`, dipakai untuk semua `pnpm shots`/`pnpm --filter @aios/e2e e2e` sesi ini.
 - **Satu instance Postgres disposable yang dipakai berulang (~10× full-suite) dalam sesi panjang ini sempat gagal dengan "permission denied to terminate process"** saat `DROP DATABASE ... WITH (FORCE)` di `src/testing/db.ts` — koneksi sisa dari run sebelumnya tidak bisa diterminasi oleh role non-superuser `aios_p8`. Hilang setelah `pg_ctlcluster 16 main restart`. Bukan bug kode; infrastruktur tes di VPS yang dipakai sangat intensif, bukan di VM CI yang segar tiap run.
+- **Flake baru, belum pernah tercatat**: `e2e/tests/shell.spec.ts:255` ("satu judul per layar") gagal ~50% dari percobaan (2/3 run lokal + 2/2 rerun CI terpisah di commit yang tidak menyentuh shell/kanban). Kemungkinan race navigasi hash-route vs render judul. Tidak diperbaiki sesi ini (dicatat di BACKLOG untuk sesi tersendiri).
 
-### E. Verifikasi akhir (commit `5609247`, clone bersih)
+### E. Bug nyata #3 — `outputs.sort()` tanpa pemecah seri (chat/progress), ditemukan dari CI yang terus flaky
+
+**Ditemukan**: setelah 3 commit berturut di sesi ini, CI `check` gagal 3× pada `progress.integration.test.ts` dengan gejala berbeda (urutan `['diff','image','file']` vs `['diff','file','image']`; lalu `hasil-58.png` vs `hasil-59.png`) — selalu lulus di run lokal (10/10 setelah dicoba berulang), hanya gagal di runner CI (lebih banyak worker paralel = lebih sering dua event event tercatat di milidetik yang sama). Root cause: `outputs.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0))` di `apps/gateway/src/modules/chat/progress.ts` tidak punya pemecah seri saat `.at` (string ISO) sama persis.
+
+**Perbaikan**: pemecah seri run lebih baru duluan (`byRun` terbalik, konsisten "hasil kerja terbaru dulu"), lalu `kind` alfabetis; sisanya memakai kestabilan `Array.prototype.sort` (dijamin stabil sejak ES2019) yang mempertahankan urutan sisip asli (sudah deterministik dari `ORDER BY seq` pada query utama). **Di luar dua bug yang diminta untuk diperbaiki (B, C) — ditemukan dan diperbaiki karena terus memblokir sinyal CI bersih yang menjadi tujuan gerbang ini, bukan scope creep yang disengaja.**
+
+**Bukti**: `progress.integration.test.ts` 10/10 run lokal berturut setelah perbaikan; suite gateway penuh 655 lulus/13 skip/3 gagal (pre-existing, tidak terkait). CI run setelah commit perbaikan: lihat bagian F.
+
+### F. Verifikasi akhir (commit `5609247` lalu susulan dokumentasi dan perbaikan #3, clone bersih)
 
 | Pemeriksaan | Hasil |
 | --- | --- |
@@ -498,7 +507,7 @@ Clone bersih ke folder baru, `pnpm install --frozen-lockfile`, `pnpm build` (7/7
 | `pnpm --filter @aios/e2e e2e`, 3× berturut (`E2E_BROWSER=chrome`) | 39/39, 39/39, 38/39 (`team.spec` omp sungguhan, pre-existing P7) |
 | `pnpm shots p8` + `pnpm shots:compare baseline-p0 p8` | 44 gambar + `_ringkasan.png` (6 layar berdampingan); 3,9–9,5% (ambang 24) akumulasi perubahan P1–P7, konsisten dengan progresi sesi-sesi sebelumnya |
 | Android | tidak tersentuh sesi ini (lihat A) |
-| CI (`check`/`gateway-image`/`e2e-desktop`) | sukses untuk `413d66e` dan `5609247` |
+| CI (`check`/`gateway-image`/`e2e-desktop`) | sukses (dengan rerun) untuk `413d66e`, `5609247`, `63958dc`, `123f99d`, `b107f22`; perbaikan #3 (bagian E) menyusul di commit terakhir sesi |
 
 ### Tidak diverifikasi
 

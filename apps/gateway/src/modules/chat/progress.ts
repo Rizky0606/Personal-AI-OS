@@ -189,6 +189,15 @@ export async function conversationProgress(
         title: job.question.slice(0, 300),
       });
 
-  outputs.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
+  // Beberapa output bisa punya cap waktu yang persis sama (event dicatat di detik/milidetik yang sama di
+  // bawah beban tinggi); tanpa pemecah seri kedua urutannya tidak deterministik antar-panggilan (ketahuan
+  // flaky di CI, bukan lokal, karena lebih banyak pekerjaan paralel). Pemecah seri: run lebih baru duluan
+  // (byRun terbalik, konsisten dengan "hasil kerja terbaru dulu"), lalu `kind` sebagai jatuhan terakhir.
+  outputs.sort((a, b) => {
+    if (a.at !== b.at) return a.at < b.at ? 1 : -1;
+    const runDiff = byRun(b, a);
+    if (runDiff !== 0) return runDiff;
+    return a.kind < b.kind ? -1 : a.kind > b.kind ? 1 : 0;
+  });
   return { plan, outputs: outputs.slice(0, PROGRESS_OUTPUTS_MAX), used };
 }
