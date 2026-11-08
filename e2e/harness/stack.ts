@@ -147,7 +147,8 @@ export async function startStack(): Promise<Stack> {
   const fakeDsh = path.join(root, 'apps/gateway/src/testing/fake-dsh.mjs');
   const dshRoot = path.join(base, 'dsh');
   mkdirSync(dshRoot, { recursive: true });
-  await prepareDshRoot(dshRoot);
+  const gatewayUid = process.getuid?.();
+  await prepareDshRoot(dshRoot, gatewayUid);
   const dsh = /\s/.test(fakeDsh)
     ? undefined
     : {
@@ -155,7 +156,7 @@ export async function startStack(): Promise<Stack> {
         DSH_ARGS: fakeDsh,
         DSH_HOME: undefined,
         DSH_WORKDIR_ROOT: dshRoot,
-        ...dshTestIdentity(),
+        ...dshTestIdentity(gatewayUid),
         DSH_MAX_MEMORY_MB: 512,
         DSH_RUN_TIMEOUT_MS: 60_000,
         DSH_IDLE_TIMEOUT_MS: 30_000,
