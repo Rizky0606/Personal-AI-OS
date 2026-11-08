@@ -28,8 +28,8 @@ android {
         targetSdk = 36
         // CI (build.yml) mengisi keduanya dari versi rilis: versionCode = mayor*1.000.000 + minor*1.000 + patch, jadi
         // selalu naik (Android hanya memasang menimpa bila kodenya lebih tinggi). Build lokal memakai nilai bawaan.
-        versionCode = providers.gradleProperty("aiosVersionCode").orNull?.toInt() ?: 100
-        versionName = providers.gradleProperty("aiosVersionName").getOrElse("1.0.3")
+        versionCode = providers.gradleProperty("aiosVersionCode").orNull?.toInt() ?: 1_001_000
+        versionName = providers.gradleProperty("aiosVersionName").getOrElse("1.1.0")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Alamat gateway tertanam: layar login tidak meminta alamat. Kosongkan (-PaiosGatewayUrl=) agar alamat
         // diketik saat login, mis. untuk E2E atau gateway lokal.

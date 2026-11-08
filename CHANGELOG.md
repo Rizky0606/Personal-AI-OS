@@ -2,25 +2,38 @@
 
 Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/); versi mengikuti [SemVer](https://semver.org/lang/id/).
 
-## [Unreleased]
+## [1.1.0] - 2026-11-08
+
+Merangkum pekerjaan sesi P1 sampai P8 (perbaikan berantai di cabang `fix/*`, belum digabung ke `main`). **Perombakan "Command Center" yang tercatat di sini sebelumnya sudah ditulis ulang total** menjadi shell "pulau" (lihat Diubah); catatan lama dihapus karena tidak lagi menggambarkan kode yang ada.
 
 ### Diubah
 
-- **Perombakan tampilan "Command Center"** (desktop dan Android): satu sidebar 232 px dengan pencarian Ctrl K, enam bagian, daftar konteks, serta kartu status worker/kuota (menggantikan rail dan status bar); header 48 px dengan breadcrumb project/branch dan pil status run; jawaban AI tanpa kartu, langkah tool sebagai chip, composer mengambang, dan **Agent HUD** satu bilah lipat untuk rencana, antrean, dan subagent; tab panel kanan berbentuk pil dengan ikon; layar Project, Pengaturan, Kanban, dan lainnya diselaraskan dengan header halaman dan dialog seragam; radius baru (desktop 6/10/14, Android 10/14/20). Android: kartu jawaban tanpa bingkai tebal, composer membulat, baris daftar lebih lega, pengaturan berkelompok. Fitur dan pintasan tidak berubah.
-- Hapus klaim role otomatis pada teks sambutan desktop dan Android.
-- Perbarui README repo dan tambahkan checklist aksesibilitas serta catatan kesiapan rilis.
+- **Shell desktop ditulis ulang total** menjadi tiga pulau terpisah (sidebar, area utama, panel kanan) berjarak 8 px dari tepi jendela, bukan rail/status-bar/Command Center. Topbar satu-satunya pemilik judul halaman (`h1`); chip "Lokasi saat ini" (project, branch, status run, model).
+- **Jawaban AI** tanpa kartu tebal: avatar `AgentOrb` 28 px, baris aktivitas tool di dalam jawaban (judul berkilau, baris terlipat, linimasa), ringkasan "Selesai · durasi · N langkah".
+- **Pemilihan mesin agent** (Otomatis/omp/Hermes/dsh) bisa dipaksa eksplisit per pesan lewat composer, dengan validasi konteks (omp butuh project, dsh tidak boleh di project).
+- **Palet Electric Slate** dan polish gerak (P0 sebelum rework P1) ditimpa oleh token shell pulau baru (radius, jarak, kontras); detail di `docs/DESIGN_SYSTEM.md`.
+- Hapus klaim role otomatis pada teks sambutan; hapus pemilih role manual (digantikan router otomatis lalu, akhirnya, dihapus total bersama skill paket per permintaan pemilik — lihat `docs/BACKLOG.md` Fase 48).
 
 ### Ditambah
 
-- Desktop: arahkan agent coding yang sedang berjalan dari composer. Enter menyisipkan arahan setelah langkah yang sedang berjalan, Alt+Enter mengantre pesan sampai agent selesai (`POST /runs/:id/steer` menerima `mode: steer | followUp`).
-- Desktop, layar Project: **Setup worktree** per project (disimpan di worker): perintah yang dijalankan sebelum agent mulai (mis. `pnpm install --offline`, tampil sebagai langkah `setup` di chat) dan opsi menautkan node_modules.
-- LSP omp untuk run coding: agent mendapat diagnostik tipe setelah mengubah berkas serta definisi dan referensi, bila server bahasa ditemukan di worktree atau PATH. Bisa dimatikan per project.
-- Rencana agent langsung: daftar tugas dari tool `todo` omp tampil di jawaban yang sedang berjalan, dengan bilah kemajuan dan status tiap tugas (event baru `todo.updated`).
-- Antrean arahan terlihat: arahan (Enter) dan pesan antre (Alt+Enter) yang belum diproses agent tampil sebagai daftar "Menunggu giliran" dan hilang saat diproses (event baru `queue.updated`).
-- Agent bisa bertanya langsung ke pengguna: tool `ask` omp tampil sebagai panel "Agent bertanya" (pilihan tunggal atau ganda, teks bebas, atau "Pakai yang disarankan"). Adapter omp kini berjalan di `--mode rpc-ui` karena di `--mode rpc` tool `ask` tidak tersedia; izin tool tetap lewat panel izin (diuji).
-- Arahan yang masih mengantre bisa ditarik: tombol X di daftar "Menunggu giliran" (`POST /runs/:id/queue/remove`, omp `remove_queued_message`; diuji dengan omp sungguhan).
-- Subagent omp (tool `task`) tampil sebagai pohon di tab Aktivitas: nama, jenis agent, status, tugas, jumlah tool, durasi, dan keluaran terakhir (event baru `subagent.updated`).
-- Skill `find-skills` (adaptasi vercel-labs/skills) untuk agent umum dan project: bila topik spesifik dan belum ditutup skill yang dimuat, agent mencari skill yang cocok di skills.sh dan merekomendasikannya (nama, pemasang, perintah pasang). Hanya mencari; pemasangan tetap oleh pemilik.
+- **Panel Progres**: rencana (todo), hasil kerja (diff, berkas, gambar, laporan riset), dan konteks yang digunakan (skill, memori, lampiran) dalam satu panel tiga bagian; chip "Langkah N dari M" di Topbar.
+- **Jawaban kaya**: tabel, grafik, daftar langkah, dan angka penting lewat blok `aios-ui` (skill inti `rich-answers`, berlaku untuk semua role dan semua mesin).
+- **Thumbnail bukti**: screenshot dan SVG dari tool agent tampil sebagai thumbnail di baris aktivitas dan panel Progres; lightbox dengan Esc untuk menutup.
+- **Tim Orca (ORCA Lead → Worker)**: tombol "Kerjakan sebagai tim" di composer project; Lead (Hermes) merencanakan dan membagi tugas ke Worker (omp) paralel sampai batas tim; panel Progres menampilkan pohon Lead → tugas → Worker; persetujuan izin agregat dan tombol hentikan per-anggota/seluruh tim. Tidak ada auto-merge; pemilik memutuskan di luar tim.
+- **dsh** sebagai pilihan mesin pratinjau (label "Pratinjau", tooltip "belum diaudit"): butuh `DSH_COMMAND` dikonfigurasi di server, muncul di `GET /engines` bila jabat tangan ACP berhasil.
+- Rekaman nyata adapter Hermes (7 skenario, Hermes 0.22.5) menggantikan asumsi sebelumnya; dua temuan penting dicatat di `docs/ADAPTER_EVENTS.md`: Hermes tidak menghentikan tool yang berjalan saat koneksi diputus, dan `hermes.tool.progress` tidak pernah melapor gagal (galat masuk ke teks jawaban).
+- Android: panel izin baru (deskripsi lengkap, folder kerja, tiga tombol dengan target sentuh 48 dp, satu pengumuman TalkBack), panel Progres (fixture sama dengan desktop), cap build (`BuildConfig.BUILD_COMMIT`) di layar Tentang.
+
+### Diperbaiki
+
+- **Balapan `review.apply` vs run selesai** (worker): klien yang melihat run "selesai" lalu langsung menerima/menolak hasil bisa ditolak diam-diam (`run_active`) tanpa worktree pernah terhapus. Flag internal kini berubah serentak dengan event penutup, bukan menunggu pembersihan proses selesai.
+- Tes harness dsh (`dshTestIdentity`) yang salah mensimulasikan "bukan root" saat benar-benar dijalankan sebagai root di Linux (ditemukan saat verifikasi gerbang P8; tidak memengaruhi kode produksi).
+- Deretan perbaikan bug kecil P3 (lebar input `TextField`, label kuota sidebar, keterangan model dari data server, pemilih model dinonaktifkan untuk Hermes, xterm menunggu font siap) dan P4b (mesin dipaksa, chip agent di Topbar, `ProjectList` mati dihapus).
+
+### Diketahui
+
+- dsh sebagai root belum terbukti bekerja ujung-ke-ujung di CI Docker/VPS produksi (hanya diverifikasi di satu mesin pengembangan Linux dengan kendala tata letak folder yang spesifik mesin itu). Hermes dan dsh **nyata** (bukan tiruan) belum pernah dicoba dalam alur pengguna lengkap sejak P5 (Hermes) dan sama sekali (dsh). Lihat `docs/BACKLOG.md` "Ringkasan status gerbang P8" untuk daftar lengkap blocker/penting/nanti.
+- Belum digabung ke `main`; tag rilis dan deploy VPS **belum dilakukan** (lihat `docs/RELEASE_NOTES.md`).
 
 ## [1.0.3] - 2026-10-25
 
