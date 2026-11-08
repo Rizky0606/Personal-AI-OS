@@ -458,4 +458,51 @@ orchestrator.start()/enqueue dipanggil nyata: apps/gateway/src/main.ts (produksi
 - **Patch diff sungguhan untuk Lead (bukan hanya `diffStat`):** butuh round-trip protokol baru gateway<->worker (`review.diff`); ditunda atas keputusan pemilik eksplisit sesi ini, dicatat di BACKLOG dengan opsi lengkap.
 - **TalkBack/Android untuk fitur tim mana pun:** tidak relevan (Android tidak tersentuh).
 
+## P8 — Gerbang akhir: verifikasi dari nol, bug nyata ditemukan dan diperbaiki (2026-11-06/08)
+
+Cabang kerja: `fix/p4b-mesin-dipaksa` (dari ujung P7, `da7b915`). Hash akhir sesi: `5609247`. **Bukan gerbang rilis** — dua bug nyata ditemukan dan diperbaiki selama verifikasi; tidak ada fitur baru.
+
+### A. Lingkungan verifikasi: Linux ARM64 sungguhan, berbeda dari semua sesi P0–P7 (Windows)
+
+Clone bersih ke folder baru, `pnpm install --frozen-lockfile`, `pnpm build` (7/7), `pnpm typecheck` (12/12), `pnpm lint` (bersih) — semuanya lulus di commit awal `da7b915`/`413d66e`. Postgres 16 asli (`pg_createcluster`, port 5433, disposable, bukan produksi) dipakai lewat `TEST_DATABASE_URL` karena `embedded-postgres` tetap tidak bisa start di ARM64 (ICU, sama seperti P5/P7). Android SDK (`platform-36`, `build-tools;36.0.0`) dipasang dari nol; `./gradlew assembleDebug testDebugUnitTest testReleaseUnitTest` BUILD SUCCESSFUL, 203/203 tes JVM (debug+release) — **tidak tersentuh sesi ini**, dicatat sebagai baseline gerbang.
+
+### B. Bug nyata #1 — balapan `review.apply` vs run selesai (worker)
+
+**Ditemukan**: `omp.e2e.test.ts > hasil diterima...` flaky ~50% saat dijalankan sendirian di VM 2 vCPU ini (jauh lebih sering daripada "sekali saat beban" yang tercatat P7 di mesin Windows). Root cause dibuktikan lewat instrumentasi sementara (dihapus sebelum commit): `RunCoordinator.run.finished` baru `true` setelah `cleanup()` (stop preview, kill proses, cek/hapus worktree pristine) selesai, padahal event `run.completed`/`error` sudah diteruskan ke klien lebih dulu (di dalam loop `for await` yang mendahului `finally { cleanup() }`). Klien yang melihat run "selesai" dan langsung memanggil `accept()`/`reject()` bisa tiba sebelum `cleanup()` menyelesaikan tugasnya, kena `ReviewError('run_active')` yang ditelan `reviewApply()` jadi `frame.ok:false` diam-diam — worktree tidak pernah dihapus.
+
+**Perbaikan** (`apps/worker/src/runs/coordinator.ts`, commit `413d66e`): `run.finished = true` di-set serentak dengan `run.terminal` di titik yang sama persis dengan event penutup diteruskan (`onEvent` run.completed/error, `fail()`, `cancelled()`, timer timeout) — bukan menunggu `cleanup()` penuh. Jaring pengaman tambahan (`apps/worker/src/runs/review.ts`): `assertIdle()` jadi async dengan retry singkat (10×50ms) sebelum menolak. `reviewApply()` kini mencatat lewat `log()` bila `run_active` tetap muncul setelah retry (anomali nyata, bukan balapan sesaat) — tidak ditelan diam-diam. Tes yang sebelumnya tidak memeriksa hasil `reviewApply()` (`omp.e2e.test.ts`, `coordinator.test.ts`) kini memeriksa `result.ok` eksplisit.
+
+**Bukti**: tes yang tadinya flaky, diulang 25× berturut-turut (sendirian + dalam suite penuh 3×) setelah perbaikan: 25/25 lulus. Worker 19/19 file, 282/282 tes. CI (`github.com/Rizky0606/Personal-AI-OS`, run `42190695415`): `check`/`gateway-image`/`e2e-desktop` semua sukses.
+
+### C. Bug nyata #2 — `dshTestIdentity` diam-diam memakai `getuid()` asli (test harness, bukan produksi)
+
+**Ditemukan saat tes gateway dijalankan sungguhan sebagai root di Linux** — belum pernah dilakukan di sesi mana pun sebelumnya (P3 mencatat "mesin ini Windows"). `dshTestIdentity(gatewayUid: number | undefined = process.getuid?.())` memakai default parameter JS, yang hanya berlaku saat argumen persis `undefined`. Tes `dshTestIdentity(undefined)` bermaksud mensimulasikan "tanpa getuid (Windows)" tapi diam-diam dihitung ulang dari `process.getuid?.()` NYATA — saat proses benar-benar root, hasilnya salah.
+
+**Perbaikan** (`apps/gateway/src/testing/dsh-identity.ts` + 3 pemanggil: `dsh.integration.test.ts`, `e2e/harness/stack.ts`, commit `079bd9e` + `5609247`): `gatewayUid` wajib eksplisit di kedua fungsi (`dshTestIdentity`, `prepareDshRoot`), tidak ada lagi default parameter; tiap pemanggil menyimpan `process.getuid?.()` ke variabel lalu mengirimkannya eksplisit. **Catatan proses**: commit pertama (`079bd9e`) melewatkan pemanggil di `e2e/harness/stack.ts`, membuat CI `check` (typecheck) gagal; diperbaiki lewat commit susulan (`5609247`, fast-forward, tanpa menimpa riwayat) setelah ditemukan dari log CI, bukan dari pemeriksaan lokal (`pnpm typecheck` penuh di scratch clone awalnya memakai cache turbo yang tidak menangkap paket `@aios/e2e`).
+
+**Bukti**: `dsh-identity.test.ts` 4/4 lulus sebagai root sungguhan (sebelumnya 1 gagal). CI run `42434146146` (setelah 1× rerun job yang kena flake tak terkait, lihat D): `check`/`gateway-image`/`e2e-desktop` semua sukses.
+
+### D. Temuan lingkungan (bukan bug kode) — dicatat, tidak diperbaiki
+
+- **dsh sebagai root sungguhan di VPS ini masih gagal 6/9 tes `dsh.integration.test.ts`**: `createDshEngine` benar menegakkan "root wajib DSH_UID" lalu drop-privilege ke uid 65534 (`nobody`) untuk menjalankan fake-dsh (Node). Tapi Node di VPS ini terpasang di `/home/ubuntu/.local/bin/node`, dan `/home/ubuntu` bermode `750` — `nobody` (bukan owner/grup) tidak bisa traverse ke situ sama sekali (`sudo -u nobody node ...` → `Permission denied`). **Bukan bug desain sandbox** (image Docker produksi memakai `node:22-bookworm-slim`, Node di `/usr/local/bin`, bukan di folder pengguna) — murni cara Node terpasang di mesin pengembangan ini. Lihat BACKLOG "Temuan P8".
+- **Chromium default (`playwright-core`/Playwright test, channel `msedge`) tidak tersedia** di Linux ARM64 ini. `chromium-browser` (snap) gagal dikendalikan Playwright sebagai pengguna biasa (AppArmor confinement memblokir CDP), tapi **berhasil sebagai root** (ditemukan saat verifikasi "test sebagai root" — `render.test.ts` 3 tes yang gagal sebagai pengguna biasa lulus 5/5 sebagai root). Google Chrome resmi (`/opt/google/chrome`, bukan snap) berhasil di kedua mode lewat `E2E_BROWSER=chrome`, dipakai untuk semua `pnpm shots`/`pnpm --filter @aios/e2e e2e` sesi ini.
+- **Satu instance Postgres disposable yang dipakai berulang (~10× full-suite) dalam sesi panjang ini sempat gagal dengan "permission denied to terminate process"** saat `DROP DATABASE ... WITH (FORCE)` di `src/testing/db.ts` — koneksi sisa dari run sebelumnya tidak bisa diterminasi oleh role non-superuser `aios_p8`. Hilang setelah `pg_ctlcluster 16 main restart`. Bukan bug kode; infrastruktur tes di VPS yang dipakai sangat intensif, bukan di VM CI yang segar tiap run.
+
+### E. Verifikasi akhir (commit `5609247`, clone bersih)
+
+| Pemeriksaan | Hasil |
+| --- | --- |
+| `pnpm build` / `pnpm typecheck` / `pnpm lint` | 7/7, 12/12, bersih |
+| `pnpm test` sebagai pengguna biasa (Postgres nyata) | 655 lulus, 13 skip, 3 gagal (pre-existing, Chromium snap, lihat D) |
+| `pnpm test` sebagai root (Postgres nyata) | 652 lulus, 13 skip, 6 gagal (Temuan D, lingkungan) |
+| `pnpm --filter @aios/e2e e2e`, 3× berturut (`E2E_BROWSER=chrome`) | 39/39, 39/39, 38/39 (`team.spec` omp sungguhan, pre-existing P7) |
+| `pnpm shots p8` + `pnpm shots:compare baseline-p0 p8` | 44 gambar + `_ringkasan.png` (6 layar berdampingan); 3,9–9,5% (ambang 24) akumulasi perubahan P1–P7, konsisten dengan progresi sesi-sesi sebelumnya |
+| Android | tidak tersentuh sesi ini (lihat A) |
+| CI (`check`/`gateway-image`/`e2e-desktop`) | sukses untuk `413d66e` dan `5609247` |
+
+### Tidak diverifikasi
+
+- Alur pengguna lengkap dengan Hermes/dsh **nyata** (bukan fixture): Hermes nyata hanya pernah direkam P5 (VPS terpisah, tidak tersedia di sini); dsh nyata tidak pernah tersedia di mesin pengembangan mana pun sejak P0 (binary tidak ada). Alur dicoba lewat e2e `[skenario:rencana]`/`[skenario:kaya]`/`[skenario:screenshot]` (Hermes palsu) dan `engine.spec.ts` (dsh palsu via `fake-dsh.mjs`) — semua lulus bersih di run e2e ke-2 (39/39).
+- Tes instrumentasi Android, emulator, perangkat fisik (sama seperti P6 — tidak ada KVM di VPS ARM64 ini).
+
 
