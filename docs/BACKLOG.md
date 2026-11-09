@@ -812,4 +812,20 @@ Cabang `fix/p4b-mesin-dipaksa` (dari ujung P7). Commit: `413d66e` (bug #1), `079
 
 **Nanti** (katalog ide/keterbatasan yang tidak mendesak): semua isi "Rencana fitur lanjutan (Fase 25–53)" di atas yang belum dikerjakan, dan setiap butir "Keterbatasan yang diketahui" di seluruh dokumen ini yang tidak disebut ulang di dua kelompok atas.
 
+## Temuan P9 (katalog skill dan pemilihan oleh agent)
+
+Cabang `fix/p9-katalog-skill` (dari ujung P8, `9ad1808`). Commit `c7dfc5c` (task 1-2, fondasi). CI hijau setelah 2× rerun job `e2e-desktop` yang kena flake `shell.spec.ts` "satu judul per layar" yang sudah tercatat di atas (bukan temuan baru, tidak terkait perubahan sesi ini).
+
+- [x] **Task 2 (deskripsi skill) selesai.** Ke-29 skill bawaan (27 + 2 protokol internal `orca-lead`/`plan-progress`) ditulis ulang agar semua menyebut jelas kapan dipakai, maks 200 karakter. Validasi otomatis (`SkillDescriptionSchema`) + tes baru di `roles.test.ts` memeriksa seluruh registry (46/46 lulus).
+- [x] **Task 1 (katalog) fondasi selesai, bagian "P10" belum.** Kontrak `SkillSummarySchema`/`SkillListSchema`/`SkillDetailSchema` (additive); modul gateway `modules/skills/` (`GET /skills`, `GET /skills/:id`, scope `app` ATAU `worker` lewat `requireAnyScope` baru); `source` saat ini selalu `builtin` -- pemuat skill dari folder data gateway (`user`) **belum ada**, disiapkan lewat parameter opsional `userSkills` di `createSkillsService` tapi tidak pernah dipanggil. Checksum = sha256 isi (body), bukan metadata. 6/6 tes integrasi baru lulus.
+- [ ] **Task 3 (omp: hapus `--no-skills`, overlay folder worker terisolasi) belum dikerjakan.**
+- [ ] **Task 4 (sinkron ke `~/.hermes/skills/aios/`) belum dikerjakan.**
+- [ ] **Task 5 (keyword pack jadi indeks, bukan tempel utuh secara bawaan; `SKILL_PACKS` jadi cadangan) belum dikerjakan.** Saat ini `SKILL_PACKS` masih menempel isi penuh secara bawaan seperti sebelum P9 (lihat `packages/roles/src/agents.ts` + `apps/gateway/src/modules/router/service.ts`).
+- [ ] **Task 6 (`context.used` memisahkan `skills.opened` dari `skills.pinned`) belum dikerjakan.** `ContextUsedEventSchema.skills` (P2B) masih satu daftar flat.
+- [ ] **Task 7 (`pnpm eval:skills`, 20 pesan contoh) belum dikerjakan.**
+- [ ] **Task 8 (tes gabungan: overlay omp tanpa skill luar, sinkron hanya `aios/`, fallback kata kunci saat dinyalakan) belum dikerjakan** -- menunggu task 3-5 selesai dulu.
+
+**Dua tes lama yang disesuaikan** (bukan dilemahkan; kategori baru untuk route yang memang sengaja multi-scope): `security.audit.integration.test.ts` (kategori `app_or_worker`), `contract.test.ts` + `docs/API_CONTRACT.md` (route baru didaftarkan, bukan dihapus dari pemeriksaan).
+
+
 
