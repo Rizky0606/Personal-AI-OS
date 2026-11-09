@@ -800,7 +800,7 @@ Cabang `fix/p4b-mesin-dipaksa` (dari ujung P7). Commit: `413d66e` (bug #1), `079
 
 **Blocker** (menghalangi klaim "siap rilis", tapi semuanya butuh verifikasi di luar mesin pengembangan manapun yang pernah dipakai — bukan sesuatu yang bisa diperbaiki lagi di sesi berikutnya tanpa akses itu):
 - [ ] dsh sebagai root belum pernah terbukti benar-benar bekerja ujung-ke-ujung di CI Docker/VPS produksi (hanya terbukti di Linux ARM64 dev dengan kegagalan environment-specific, lihat Temuan P8).
-- [ ] Hermes dan dsh **nyata** (bukan fixture/palsu) tidak pernah dicoba sejak P5 (Hermes, VPS terpisah) dan tidak pernah sama sekali (dsh, binary tidak pernah ada). Klaim "alur pengguna lengkap" hanya terbukti dengan mesin palsu.
+- [x] (P8, lihat REPAIR_LOG bagian G) ~~Hermes dan dsh **nyata** (bukan fixture) tidak pernah dicoba dalam alur pengguna lengkap~~ — **Hermes nyata sebagian tertutup**: ditemukan Hermes 0.22.5 sungguhan berjalan di VPS sesi ini; alur gateway<->Hermes nyata (login, kirim pesan, tool terminal nyata, panel Progres akurat, bertahan setelah muat ulang) terbukti bekerja lewat panggilan API langsung. **dsh nyata tetap blocker** (binary tidak pernah ada di mesin pengembangan mana pun). Sisa yang belum tersentuh untuk Hermes: kenapa `approval.requested` tidak muncul untuk tool terminal aman, UI sungguhan (bukan API langsung), pembatalan tool nyata, konten panel Progres yang lebih kaya (diff/gambar/riset) — lihat REPAIR_LOG "Tidak diverifikasi (lanjutan G)".
 - [ ] Deploy, backup/restore, load test di VPS produksi nyata — belum pernah dijalankan sejak Fase 23/24 (tetap seperti yang tercatat di RELEASE_NOTES.md), tidak tersentuh gerbang P8.
 
 **Penting** (sebaiknya diselesaikan sebelum rilis, tapi tidak memblokir gerbang teknis):

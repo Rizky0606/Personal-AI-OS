@@ -156,6 +156,8 @@ export async function createAuthEnv(
     push?: { baseUrl: string; account: ServiceAccount };
     /** Alamat Hermes tiruan. Default: port yang tidak mendengarkan. */
     hermesUrl?: string;
+    /** API key Hermes nyata (Authorization: Bearer). Default: kunci tiruan (Hermes palsu tidak memeriksanya). */
+    hermesApiKey?: string;
     /** Folder kiriman berkas buatan agent (sama untuk gateway dan agent di tes). */
     outboxDir?: string;
     hermesIdleMs?: number;
@@ -223,7 +225,7 @@ export async function createAuthEnv(
     observer,
     adapter: createHermesAdapter({
       baseUrl: options.hermesUrl ?? 'http://127.0.0.1:9',
-      apiKey: 'kunci-hermes-uji',
+      apiKey: options.hermesApiKey ?? 'kunci-hermes-uji',
       idleTimeoutMs: options.hermesIdleMs ?? 5000,
       connectTimeoutMs: 5000,
     }),

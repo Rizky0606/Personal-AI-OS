@@ -511,7 +511,27 @@ Clone bersih ke folder baru, `pnpm install --frozen-lockfile`, `pnpm build` (7/7
 
 ### Tidak diverifikasi
 
-- Alur pengguna lengkap dengan Hermes/dsh **nyata** (bukan fixture): Hermes nyata hanya pernah direkam P5 (VPS terpisah, tidak tersedia di sini); dsh nyata tidak pernah tersedia di mesin pengembangan mana pun sejak P0 (binary tidak ada). Alur dicoba lewat e2e `[skenario:rencana]`/`[skenario:kaya]`/`[skenario:screenshot]` (Hermes palsu) dan `engine.spec.ts` (dsh palsu via `fake-dsh.mjs`) — semua lulus bersih di run e2e ke-2 (39/39).
+- Alur pengguna lengkap dengan **dsh** nyata: binary dsh tidak pernah tersedia di mesin pengembangan mana pun sejak P0. `engine.spec.ts` dan `pnpm shots` tetap memakai dsh palsu (`fake-dsh.mjs`) — lulus bersih (39/39 di run e2e ke-2).
 - Tes instrumentasi Android, emulator, perangkat fisik (sama seperti P6 — tidak ada KVM di VPS ARM64 ini).
 
+### G. Hermes NYATA, alur gateway lengkap — ditemukan hidup di VPS ini, diverifikasi, blocker BACKLOG tertutup sebagian
+
+**Ditemukan**: Hermes 0.22.5 beserta 9Router dan SearXNG benar-benar berjalan di VPS tempat sesi ini dilakukan (`127.0.0.1:8642`, `127.0.0.1:20128`; sama dengan yang dipakai P5 untuk merekam fixture, tapi P5 hanya menguji adapter secara terisolasi lewat rekaman, **bukan** alur gateway penuh). Kunci Hermes (`API_SERVER_KEY`) ada di `~/.hermes/.env`; 9Router instance ini `requireApiKey:false` (kunci apa pun diterima, bahkan kosong).
+
+**Perbaikan test harness (additive, bukan fitur)**: `apps/gateway/src/testing/auth-env.ts` menambah opsi `hermesApiKey?: string` (sebelumnya `apiKey` Hermes di `createHermesAdapter` dikunci ke string tiruan `'kunci-hermes-uji'`, tidak bisa dioverride) — mengikuti pola `ninerouterKey` yang sudah ada. Default tidak berubah (semua tes lama tidak terpengaruh).
+
+**Verifikasi nyata** (skrip sekali pakai, tidak disimpan di repo — `createAuthEnv` dengan `hermesUrl`/`hermesApiKey` diarahkan ke Hermes sungguhan, `ninerouterUrl` ke 9Router sungguhan, lewat gateway ASLI/modul produksi, Postgres nyata):
+
+1. Login pemilik -> buat percakapan -> kirim "Sebutkan 3 warna primer" -> run `completed` -> jawaban nyata dari Hermes: *"Merah, kuning, dan biru."* -> baca ulang pesan (simulasi muat ulang) -> jawaban tetap ada.
+2. Pesan kedua "Jalankan perintah terminal: echo P8-REAL-HERMES" -> run `completed` dengan urutan event nyata: `route.decided, context.used, tool.started, tool.finished, message.delta, message.completed, run.completed` (tanpa `approval.requested` muncul untuk `echo` -- **belum diselidiki kenapa**, lihat Tidak diverifikasi).
+3. `GET /conversations/:id/progress` setelah run kedua mengembalikan data NYATA yang akurat: `used.engine:"hermes"`, `used.tools:["terminal"]`, `used.skills` berisi bundel skill sungguhan (`scope-guard`, `read-context-first`, `plan-before-edit`, `verify-before-done`, `minimal-diff`, `rich-answers`, `answer-first`, `clarify-once`, `find-skills`), `plan:null` (Hermes tidak mengirim rencana, sesuai temuan P5), `outputs:[]` (benar, `echo` tidak membuat artefak).
+
+**Kesimpulan**: alur inti gateway<->Hermes nyata (routing, bundel skill, context.used, tool terminal, streaming, penyimpanan, bertahan setelah muat ulang) **terbukti benar-benar bekerja**, bukan hanya diasumsikan dari rekaman statis P5. Ini menutup **sebagian** (bukan seluruh) blocker BACKLOG "Hermes nyata belum pernah dicoba dalam alur pengguna lengkap" — lihat Tidak diverifikasi untuk sisa yang belum tersentuh.
+
+### Tidak diverifikasi (lanjutan G)
+
+- **Mengapa `echo` lewat tool terminal Hermes tidak memicu `approval.requested`** di gateway: entah Hermes mengizinkan otomatis perintah yang dianggap aman di sisi servernya sendiri, entah ada jalur lain. Belum dicoba dengan perintah yang lebih berisiko (tulis file, jaringan) untuk memastikan gerbang izin tetap berfungsi dengan Hermes nyata.
+- Panel Progres dengan isi lebih kaya (diff, gambar, laporan riset) dari Hermes nyata: belum dicoba (permintaan sesi ini hanya teks dan satu perintah terminal).
+- Pembatalan (`stop`) pertengahan tool Hermes nyata: tidak dicoba ulang sesi ini (sudah dibuktikan P5 tidak benar-benar menghentikan proses di server Hermes saat koneksi diputus — keterbatasan yang sama berlaku).
+- Alur lewat UI sungguhan (bukan panggilan API langsung): skrip verifikasi ini memanggil gateway langsung (`light-my-request`, bukan browser), karena e2e harness (`startStack()`) hardwired ke Hermes palsu dan mengubahnya berisiko menyentuh seluruh suite e2e. UI (chip langkah, panel Progres dirender, dsb.) dengan Hermes nyata belum dicoba secara visual.
 
