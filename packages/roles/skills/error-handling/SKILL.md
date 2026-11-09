@@ -1,6 +1,6 @@
 ---
 name: error-handling
-description: 'Penanganan error yang eksplisit: error domain bertipe, tidak ada yang ditelan, log aman.'
+description: 'Saat menulis penanganan error di kode backend: pakai error domain bertipe, jangan menelan error, dan log dengan aman.'
 ---
 
 - Lempar error domain dengan kode stabil; jangan melempar string bebas.

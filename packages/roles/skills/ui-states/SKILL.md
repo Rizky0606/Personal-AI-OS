@@ -1,6 +1,6 @@
 ---
 name: ui-states
-description: Setiap layar punya state memuat, kosong, error, dan offline, serta tahan data ekstrem.
+description: Saat membangun layar UI -- pastikan setiap layar punya state memuat, kosong, error, dan offline, serta tahan data ekstrem.
 ---
 
 - Memuat: skeleton sesuai bentuk konten; bukan spinner di layar kosong.

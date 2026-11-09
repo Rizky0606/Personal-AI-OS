@@ -44,6 +44,7 @@ import { createTasksService } from './modules/tasks/service.js';
 import { createWorkerRelay } from './modules/worker/relay.js';
 import { createWorkerHub } from './modules/worker/routes.js';
 import { createRolesService } from './modules/roles/service.js';
+import { createSkillsService } from './modules/skills/service.js';
 import { createRouterComplete } from './modules/router/complete.js';
 import { createRoutingService } from './modules/router/service.js';
 import { createEventHub } from './modules/runs/hub.js';
@@ -76,6 +77,7 @@ async function main(): Promise<void> {
       error: (obj, msg) => app.log.error(obj, msg),
     },
   });
+  const skills = createSkillsService({ registry: () => roles.registry() });
   const boss = createBoss(config.DATABASE_URL, log);
   const hub = createEventHub();
   const teamStore = createTeamEventStore(db, hub);
@@ -232,6 +234,7 @@ async function main(): Promise<void> {
     store,
     runs,
     roles,
+    skills,
     research,
     schedules,
     projects,

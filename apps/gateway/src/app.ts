@@ -51,6 +51,8 @@ import { templateRoutes } from './modules/templates/routes.js';
 import type { TemplateService } from './modules/templates/service.js';
 import type { MemoryService } from './modules/memory/service.js';
 import { roleRoutes } from './modules/roles/routes.js';
+import { skillRoutes } from './modules/skills/routes.js';
+import type { SkillsService } from './modules/skills/service.js';
 import { searchRoutes } from './modules/search/routes.js';
 import type { SearchService } from './modules/search/service.js';
 import { spaceRoutes } from './modules/spaces/routes.js';
@@ -95,6 +97,7 @@ export interface AppDeps {
   runner?: Pick<Runner, 'isActive'>;
   store?: EventStore;
   roles: RolesService;
+  skills: SkillsService;
   research: ResearchService;
   schedules: ScheduleService;
   projects: ProjectsService;
@@ -131,6 +134,7 @@ export function buildApp({
   runner,
   store,
   roles,
+  skills,
   research,
   schedules,
   projects,
@@ -223,6 +227,7 @@ export function buildApp({
         await protectedScope.register(chatRoutes, { chat, runs });
         await protectedScope.register(fileRoutes, { files });
         await protectedScope.register(roleRoutes, { roles });
+        await protectedScope.register(skillRoutes, { skills });
         await protectedScope.register(researchRoutes, { research });
         await protectedScope.register(scheduleRoutes, { schedules });
         await protectedScope.register(projectRoutes, { projects });

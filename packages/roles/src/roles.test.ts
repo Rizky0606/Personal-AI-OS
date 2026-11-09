@@ -84,6 +84,13 @@ describe('isi agent dan skill di repo', () => {
     expect([...registry.skills.keys()].sort()).toEqual([...referenced].sort());
     for (const skill of registry.skills.values()) {
       expect(skill.description.length, skill.id).toBeGreaterThan(10);
+      expect(skill.description.length, `${skill.id} deskripsi > 200 karakter`).toBeLessThanOrEqual(
+        200,
+      );
+      expect(
+        skill.description,
+        `${skill.id}: deskripsi harus menyebut kapan dipakai (saat/sebelum/untuk/bila/...)`,
+      ).toMatch(/\b(saat|ketika|sebelum|setelah|bila|jika|untuk|khusus|di setiap)\b/i);
       expect(estimateTokens(skill.body), `${skill.id} terlalu panjang`).toBeLessThanOrEqual(450);
       const bullets = skill.body.split('\n').filter((l) => l.startsWith('- '));
       expect(bullets.length, `${skill.id} butuh butir checklist`).toBeGreaterThanOrEqual(4);

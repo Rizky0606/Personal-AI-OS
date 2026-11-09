@@ -1,6 +1,6 @@
 ---
 name: source-verification
-description: Memverifikasi klaim penting lewat sumber independen, utamakan sumber primer.
+description: Saat riset atau menulis klaim penting -- verifikasi lewat minimal 3 sumber independen, utamakan sumber primer.
 ---
 
 - Klaim penting didukung minimal 3 sumber yang independen satu sama lain (bukan salinan satu berita).

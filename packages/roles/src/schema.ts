@@ -20,6 +20,16 @@ export const SkillIdSchema = z
 
 const nonEmpty = z.string().trim().min(1);
 
+/** Deskripsi skill tampil di indeks (GET /skills) tanpa isi; harus singkat dan menyebut kapan dipakai. */
+export const SKILL_DESCRIPTION_MAX = 200;
+const WHEN_CUE = /\b(saat|ketika|sebelum|setelah|bila|jika|untuk|khusus|di setiap)\b/i;
+export const SkillDescriptionSchema = nonEmpty
+  .max(SKILL_DESCRIPTION_MAX, `maks ${SKILL_DESCRIPTION_MAX} karakter`)
+  .refine(WHEN_CUE.test.bind(WHEN_CUE), {
+    message:
+      'harus menyebut kapan skill ini dipakai (mis. "saat...", "sebelum...", "untuk...", "bila...")',
+  });
+
 /** Frontmatter `packages/roles/roles/<id>.md`. Nama field mengikuti format di dokumen (snake_case). */
 export const RoleFrontmatterSchema = z
   .strictObject({
@@ -39,9 +49,10 @@ export const RoleFrontmatterSchema = z
   });
 export type RoleFrontmatter = z.infer<typeof RoleFrontmatterSchema>;
 
-/** Frontmatter `packages/roles/skills/<id>/SKILL.md`. */
+/** Frontmatter `packages/roles/skills/<id>/SKILL.md`. `version` opsional (katalog P9); default "1". */
 export const SkillFrontmatterSchema = z.strictObject({
   name: SkillIdSchema,
-  description: nonEmpty,
+  description: SkillDescriptionSchema,
+  version: nonEmpty.default('1'),
 });
 export type SkillFrontmatter = z.infer<typeof SkillFrontmatterSchema>;

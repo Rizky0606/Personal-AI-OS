@@ -1,6 +1,6 @@
 ---
 name: script-structure
-description: 'Struktur naskah video pendek: hook 3 detik, satu ide per adegan, penutup dengan ajakan.'
+description: 'Saat menulis naskah video pendek: pakai hook 3 detik, satu ide per adegan, dan penutup dengan ajakan yang jelas.'
 ---
 
 - Hook dalam 3 detik pertama: janji, pertanyaan tajam, atau fakta mengejutkan, tanpa salam pembuka.

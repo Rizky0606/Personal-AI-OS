@@ -1,6 +1,6 @@
 ---
 name: fact-vs-opinion
-description: Memisahkan fakta, kesimpulan, dan opini dengan jelas.
+description: Saat menulis hasil riset atau analisis -- pisahkan fakta, kesimpulan, dan opini dengan jelas, jangan mencampurnya.
 ---
 
 - Tulis fakta (bisa dicek), kesimpulan (hasil penalaranmu), dan opini (pendapat pihak lain) sebagai hal yang berbeda.

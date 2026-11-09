@@ -231,6 +231,32 @@ export const RoleInfoSchema = z
   .meta({ id: 'RoleInfo' });
 export const RoleListSchema = itemsOf(RoleInfoSchema).meta({ id: 'RoleList' });
 
+/** Asal satu skill di katalog (P9): bawaan repo, folder data gateway (user), dipasang (installed), atau dibuat agent. */
+export const SkillSourceSchema = z.enum(['builtin', 'user', 'installed', 'agent']);
+export type SkillSource = z.infer<typeof SkillSourceSchema>;
+
+/** Indeks `GET /skills`: tanpa isi, agent memilih dari sini sebelum membuka skill tertentu. */
+export const SkillSummarySchema = z
+  .object({
+    id: z.string().min(1),
+    name: z.string().min(1),
+    /** Satu kalimat, maks 200 karakter, menyebut kapan skill ini dipakai. */
+    description: z.string().min(1).max(200),
+    version: z.string().min(1),
+    source: SkillSourceSchema,
+    /** sha256 isi skill (tanpa frontmatter); berubah bila isi berubah. */
+    checksum: z.string().regex(/^[a-f0-9]{64}$/),
+  })
+  .meta({ id: 'SkillSummary' });
+export type SkillSummary = z.infer<typeof SkillSummarySchema>;
+export const SkillListSchema = itemsOf(SkillSummarySchema).meta({ id: 'SkillList' });
+
+/** `GET /skills/:id`: indeks + isi lengkap (dipakai klien yang menampilkan isi, dan dasar sinkron ke Hermes). */
+export const SkillDetailSchema = SkillSummarySchema.extend({ body: z.string() }).meta({
+  id: 'SkillDetail',
+});
+export type SkillDetail = z.infer<typeof SkillDetailSchema>;
+
 /* Percakapan dan pesan */
 
 export const ListConversationsQuerySchema = z.object({

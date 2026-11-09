@@ -1,6 +1,6 @@
 ---
 name: safe-migrations
-description: 'Migrasi database yang aman: maju-mundur, bertahap, backfill terpisah.'
+description: 'Saat membuat migrasi database: tulis maju-mundur, bertahap, dan backfill data besar terpisah dari perubahan skema.'
 ---
 
 - Satu migrasi, satu tujuan; sertakan cara mundur atau jelaskan mengapa tidak bisa.

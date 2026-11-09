@@ -1,6 +1,6 @@
 ---
 name: citation
-description: Menutup setiap paragraf faktual dengan rujukan bernomor ke daftar sumber.
+description: Saat menulis laporan riset -- tutup setiap paragraf faktual dengan rujukan bernomor ke daftar sumber.
 ---
 
 - Setiap paragraf faktual diakhiri rujukan [n] yang menunjuk ke daftar sumber di akhir jawaban.

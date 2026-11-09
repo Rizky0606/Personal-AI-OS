@@ -1,6 +1,6 @@
 ---
 name: security-basics
-description: Pemeriksaan keamanan dasar untuk kode dan konfigurasi.
+description: Saat meninjau kode atau konfigurasi -- periksa dasar keamanan (secrets, input, auth, dependency) sebelum dianggap aman.
 ---
 
 - Rahasia: tidak ada kunci, token, atau kata sandi di kode, log, atau commit; .env tidak ikut.

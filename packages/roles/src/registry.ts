@@ -32,6 +32,7 @@ export interface Role {
 export interface Skill {
   id: string;
   description: string;
+  version: string;
   body: string;
   file: string;
 }
@@ -115,6 +116,7 @@ export function loadRegistry(dir: string = ROLES_PACKAGE_DIR): RolesRegistry {
       skills.set(entry, {
         id: entry,
         description: meta.description,
+        version: meta.version,
         body: parts.body,
         file: label,
       });

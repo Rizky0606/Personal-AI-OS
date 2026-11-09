@@ -1,6 +1,6 @@
 ---
 name: read-context-first
-description: Membaca konteks yang relevan sebelum menulis jawaban atau kode.
+description: Sebelum menjawab atau menulis kode -- baca dulu pesan sebelumnya, memori, atau file terkait di project.
 ---
 
 - Coding: baca AGENTS.md, struktur folder, dan file yang terkait permintaan sebelum mengubah apa pun.

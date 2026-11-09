@@ -11,7 +11,7 @@ import { createAuthEnv, type AuthEnv } from './testing/auth-env.js';
 /** Ada di kontrak tetapi sengaja belum dibuat (lampiran berkas ditunda; lihat docs/BACKLOG.md). */
 const DEFERRED: string[] = [];
 
-type Expected = 'public' | 'any' | 'app' | 'worker' | 'llm';
+type Expected = 'public' | 'any' | 'app' | 'worker' | 'llm' | 'app_or_worker';
 
 /** Route tanpa token (login dan pemantauan). Selain ini semuanya wajib login. */
 const PUBLIC = new Set([
@@ -22,11 +22,14 @@ const PUBLIC = new Set([
 ]);
 /** Route yang cukup login (scope apa pun): hanya mengakhiri sesi perangkat sendiri. */
 const ANY_SCOPE = new Set(['POST /v1/auth/logout']);
+/** Katalog skill (P9): dipakai klien app DAN worker (sinkron folder skill omp); bukan salah satu saja. */
+const APP_OR_WORKER = new Set(['GET /v1/skills', 'GET /v1/skills/:id']);
 
 function expectedScope(method: string, url: string): Expected {
   const key = `${method} ${url}`;
   if (PUBLIC.has(key)) return 'public';
   if (ANY_SCOPE.has(key)) return 'any';
+  if (APP_OR_WORKER.has(key)) return 'app_or_worker';
   if (url.startsWith('/llm/v1')) return 'llm';
   if (url.startsWith('/v1/worker/')) return 'worker';
   if (url === '/v1/worker/ws') return 'worker';
@@ -97,13 +100,28 @@ describe('audit auth dan scope', () => {
     for (const { method, url } of routes) {
       const key = `${method} ${url}`;
       const expected = expectedScope(method, url);
-      if (expected === 'public' || expected === 'any') continue;
+      if (expected === 'public' || expected === 'any' || expected === 'app_or_worker') continue;
       const forbidden = expected === 'app' ? worker : app;
       const res = await call(method, url, forbidden);
       if (res.statusCode !== 403)
         wrong.push(
           `${key} -> ${res.statusCode} dengan token ${expected === 'app' ? 'worker' : 'app'}`,
         );
+    }
+    expect(wrong).toEqual([]);
+  });
+
+  it('route app_or_worker (katalog skill): token app DAN token worker lolos, bukan 403', async () => {
+    const wrong: string[] = [];
+    for (const { method, url } of routes) {
+      if (expectedScope(method, url) !== 'app_or_worker') continue;
+      for (const [label, token] of [
+        ['app', app],
+        ['worker', worker],
+      ] as const) {
+        const res = await call(method, url, token);
+        if (res.statusCode === 403) wrong.push(`${method} ${url} -> 403 dengan token ${label}`);
+      }
     }
     expect(wrong).toEqual([]);
   });

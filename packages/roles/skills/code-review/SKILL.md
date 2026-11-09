@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: 'Review diff berurutan menurut dampak: benar, aman, teruji, terbaca.'
+description: Saat meninjau diff atau pull request -- urutkan temuan menurut dampak, yaitu benar, aman, teruji, terbaca.
 ---
 
 - Baca tujuan perubahan dulu (deskripsi, tugas), lalu diff secara utuh.

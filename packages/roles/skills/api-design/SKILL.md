@@ -1,6 +1,6 @@
 ---
 name: api-design
-description: 'Desain endpoint: validasi Zod di batas, kode status tepat, error RFC 9457, idempotensi.'
+description: 'Saat mendesain endpoint API baru: validasi dengan Zod di batas, kode status tepat, error RFC 9457, dan idempotensi untuk POST.'
 ---
 
 - Skema request dan response didefinisikan di packages/contracts; endpoint baru mengubah kontrak lebih dulu.

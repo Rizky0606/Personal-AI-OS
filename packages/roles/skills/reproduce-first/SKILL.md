@@ -1,6 +1,6 @@
 ---
 name: reproduce-first
-description: Mereproduksi bug lebih dulu, menulis tes gagal, baru memperbaiki.
+description: Saat memperbaiki bug -- reproduksi dulu, tulis tes yang gagal, baru perbaiki kodenya sampai tes itu lulus.
 ---
 
 - Kumpulkan pesan error, stack trace, langkah, dan lingkungan; minta yang kurang sekali saja.

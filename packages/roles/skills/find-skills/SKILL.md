@@ -1,6 +1,6 @@
 ---
 name: find-skills
-description: Mencari skill agent yang sudah ada (ekosistem skills.sh) yang cocok dengan topik percakapan, lalu merekomendasikannya; tidak memasang apa pun sendiri.
+description: Saat topik spesifik belum tertutup skill yang sudah dimuat -- cari skill yang cocok di ekosistem skills.sh dan rekomendasikan, tanpa memasang apa pun.
 ---
 
 Pakai bila topiknya spesifik (framework, pengujian, deploy, dokumentasi, desain, alur kerja) dan skill yang dimuat tidak menutupinya, atau pengguna bertanya "ada skill untuk X?". Lewati obrolan ringan dan topik yang sudah tertutup.

@@ -1,6 +1,6 @@
 ---
 name: clarify-once
-description: Bertanya paling banyak satu kali, hanya bila jawabannya mengubah hasil.
+description: Saat permintaan ambigu -- bertanya paling banyak satu kali, hanya bila jawabannya benar-benar mengubah hasil.
 ---
 
 - Tanya hanya bila ada dua tafsir yang menghasilkan jawaban berbeda dan tidak bisa dipilih dari konteks.

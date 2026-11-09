@@ -1,6 +1,6 @@
 ---
 name: diagnosing-bugs
-description: Mendiagnosis bug dengan hipotesis yang diuji, bukan menebak.
+description: Saat mendiagnosis bug -- buat hipotesis lalu uji satu per satu dengan bukti nyata, jangan menebak-nebak perbaikan.
 ---
 
 - Mulai dari gejala persis: pesan error, baris, input yang memicu; jangan menyimpulkan sebelum membaca kodenya.

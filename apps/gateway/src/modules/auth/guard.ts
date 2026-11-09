@@ -42,6 +42,22 @@ export function requireScope(scope: Scope): onRequestAsyncHookHandler {
   };
 }
 
+/** Sama seperti `requireScope`, tapi lolos bila token punya salah satu dari scope yang diizinkan. */
+export function requireAnyScope(...scopes: Scope[]): onRequestAsyncHookHandler {
+  return (req) => {
+    if (!scopes.some((s) => req.auth?.scopes.includes(s))) {
+      return Promise.reject(
+        new AppError(
+          403,
+          'insufficient_scope',
+          `Token ini tidak punya scope ${scopes.map((s) => `"${s}"`).join(' atau ')}.`,
+        ),
+      );
+    }
+    return Promise.resolve();
+  };
+}
+
 /** Konteks login dari request yang sudah melewati authenticateHook. */
 export function requireAuth(req: FastifyRequest): AuthContext {
   if (!req.auth) {

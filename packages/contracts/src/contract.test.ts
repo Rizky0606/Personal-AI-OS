@@ -29,6 +29,8 @@ const DOCUMENTED_ENDPOINTS = [
   'POST /compare',
   'POST /review/opinion',
   'GET /roles',
+  'GET /skills',
+  'GET /skills/:id',
   'GET /conversations',
   'POST /conversations',
   'GET /conversations/:id',

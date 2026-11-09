@@ -1,6 +1,6 @@
 ---
 name: plan-progress
-description: Rencana bertahap dengan tool todo untuk tugas 3 langkah atau lebih, agar kemajuan terlihat di panel Progres.
+description: Untuk tugas coding 3 langkah atau lebih -- tulis rencana bertahap dengan tool todo agar kemajuan terlihat di panel Progres.
 ---
 
 - Tugas yang butuh 3 langkah atau lebih (mengubah beberapa berkas, fitur baru, perbaikan bertahap): WAJIB buat rencana dengan tool `todo` sebelum mengerjakan apa pun.

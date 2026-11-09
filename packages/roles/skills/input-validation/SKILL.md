@@ -1,6 +1,6 @@
 ---
 name: input-validation
-description: Memvalidasi dan membersihkan semua input dari luar sebelum dipakai.
+description: Saat menerima input dari luar (request, file, env) -- validasi dan bersihkan dulu sebelum dipakai, jangan percaya begitu saja.
 ---
 
 - Anggap semua data dari luar tidak tepercaya: klien, webhook, file, env, keluaran model.

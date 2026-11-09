@@ -1,6 +1,6 @@
 ---
 name: stop-slop
-description: Menghindari frasa klise ala AI; tulis kalimat pendek, spesifik, dan sesuai suara pengguna.
+description: Saat menulis naskah, caption, atau konten lain -- hindari frasa klise ala AI, tulis kalimat pendek dan sesuai suara pengguna.
 ---
 
 - Buang pembuka dan penutup klise ("Tentu!", "Semoga membantu", "Dalam dunia yang terus berubah").

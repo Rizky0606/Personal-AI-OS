@@ -121,6 +121,10 @@ export const unusedRoles: AppDeps['roles'] = {
   },
   close: () => undefined,
 };
+export const unusedSkills: AppDeps['skills'] = {
+  list: () => [],
+  get: () => undefined,
+};
 export const unusedResearch: AppDeps['research'] = {
   start: unused('research.start'),
   create: unused('research.create'),

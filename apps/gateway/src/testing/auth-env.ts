@@ -45,6 +45,7 @@ import { createTasksService, type TasksService } from '../modules/tasks/service.
 import { createWorkerRelay, type WorkerRelay } from '../modules/worker/relay.js';
 import { createWorkerHub } from '../modules/worker/routes.js';
 import { createRolesService, type RolesService } from '../modules/roles/service.js';
+import { createSkillsService } from '../modules/skills/service.js';
 import { createEventHub, type EventHub } from '../modules/runs/hub.js';
 import { createRunObserver } from '../modules/runs/observer.js';
 import { createRunner, type Runner } from '../modules/runs/runner.js';
@@ -385,6 +386,7 @@ export async function createAuthEnv(
     store,
     runs,
     roles,
+    skills: createSkillsService({ registry: () => roles.registry() }),
     research,
     schedules,
     projects,

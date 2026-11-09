@@ -1,6 +1,6 @@
 ---
 name: react-practices
-description: 'Praktik React 19: state minimal, efek seperlunya, komponen kecil, dan performa yang terukur.'
+description: 'Saat menulis kode React 19: jaga state minimal, efek seperlunya, komponen kecil, dan performa yang terukur.'
 ---
 
 - Turunkan nilai saat render; jangan menyalin turunan ke state dan jangan memakai useEffect untuk sinkronisasi state.

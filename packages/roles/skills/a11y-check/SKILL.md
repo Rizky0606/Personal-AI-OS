@@ -1,6 +1,6 @@
 ---
 name: a11y-check
-description: 'Checklist aksesibilitas: label, fokus, urutan tab, kontras AA, target sentuh, dan warna bukan satu-satunya penanda.'
+description: 'Saat meninjau atau membangun UI: periksa label, fokus, urutan tab, kontras AA, target sentuh, dan status bukan hanya warna.'
 ---
 
 - Setiap kontrol punya label yang terbaca pembaca layar; tombol hanya-ikon wajib punya nama aksesibel.

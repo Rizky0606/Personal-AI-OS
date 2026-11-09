@@ -1,6 +1,6 @@
 ---
 name: ui-baseline
-description: 'Dasar UI: token design system, spasi kelipatan 4, hierarki, tipografi, gerak, dan larangan anti AI slop.'
+description: 'Saat menata tampilan UI: pakai token design system, spasi kelipatan 4, hierarki dan tipografi yang jelas, hindari AI slop.'
 ---
 
 Token dan warna

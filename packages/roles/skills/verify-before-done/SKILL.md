@@ -1,6 +1,6 @@
 ---
 name: verify-before-done
-description: Melarang klaim selesai tanpa bukti yang bisa diperiksa.
+description: Sebelum mengklaim tugas selesai -- jalankan bukti nyata (typecheck/tes untuk kode, sumber untuk klaim riset), jangan mengarang hasil.
 ---
 
 - Coding: jalankan typecheck, lint, dan tes yang terkait, lalu tulis hasilnya apa adanya.

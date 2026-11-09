@@ -1,6 +1,6 @@
 ---
 name: audience-voice
-description: Menyesuaikan tulisan dengan audiens dan suara pengguna.
+description: Saat menulis untuk audiens tertentu -- sesuaikan nada dan suara tulisan dengan audiens dan gaya pengguna.
 ---
 
 - Tentukan audiens, tujuan tulisan, dan platform sebelum menulis; tanyakan sekali bila salah satunya tidak jelas.

@@ -7,8 +7,11 @@ import {
   ModelListSchema,
   QuotaSchema,
   RoleListSchema,
+  SkillDetailSchema,
+  SkillListSchema,
 } from '../api-schemas.js';
 import { json, type Endpoint } from '../endpoint.js';
+import { z } from 'zod';
 
 export const catalogEndpoints: readonly Endpoint[] = [
   {
@@ -72,5 +75,26 @@ export const catalogEndpoints: readonly Endpoint[] = [
     auth: true,
     responses: [json(200, 'Daftar role', RoleListSchema)],
     errors: [401],
+  },
+  {
+    operationId: 'listSkills',
+    method: 'get',
+    path: '/skills',
+    tag: 'Skill',
+    summary: 'Katalog skill (indeks tanpa isi): id, name, description, version, source, checksum',
+    auth: true,
+    responses: [json(200, 'Daftar skill', SkillListSchema)],
+    errors: [401, 403],
+  },
+  {
+    operationId: 'getSkill',
+    method: 'get',
+    path: '/skills/{id}',
+    tag: 'Skill',
+    summary: 'Isi lengkap satu skill dari katalog',
+    auth: true,
+    params: z.object({ id: z.string().min(1) }),
+    responses: [json(200, 'Skill', SkillDetailSchema)],
+    errors: [401, 403, 404],
   },
 ];

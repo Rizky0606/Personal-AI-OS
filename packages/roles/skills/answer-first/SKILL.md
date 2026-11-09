@@ -1,6 +1,6 @@
 ---
 name: answer-first
-description: Menjawab langsung dengan inti di kalimat pertama, lalu detail seperlunya.
+description: Saat menjawab pertanyaan chat umum -- tulis inti jawaban di kalimat pertama, baru detail seperlunya setelah itu.
 ---
 
 - Kalimat pertama berisi jawaban atau keputusan; konteks dan alasan menyusul.

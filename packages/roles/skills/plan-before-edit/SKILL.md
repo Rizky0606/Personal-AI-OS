@@ -1,6 +1,6 @@
 ---
 name: plan-before-edit
-description: Menulis rencana bernomor singkat sebelum tugas yang besar atau ambigu.
+description: Sebelum tugas yang mengubah banyak file atau ambigu -- tulis rencana bernomor singkat dulu, maksimal satu pertanyaan klarifikasi.
 ---
 
 - Tugas lebih dari satu file, atau permintaan ambigu: tulis rencana bernomor 3–7 langkah sebelum mengubah apa pun.

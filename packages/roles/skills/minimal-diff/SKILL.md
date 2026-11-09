@@ -1,6 +1,6 @@
 ---
 name: minimal-diff
-description: Mengubah sesedikit mungkin dan mengikuti konvensi yang sudah ada.
+description: Saat mengubah kode -- ubah sesedikit mungkin, ikuti konvensi yang sudah ada, jangan refactor atau tambah dependensi yang tidak diminta.
 ---
 
 - Ubah hanya yang dibutuhkan permintaan; tanpa refactor, rename, atau format ulang yang tidak diminta.
