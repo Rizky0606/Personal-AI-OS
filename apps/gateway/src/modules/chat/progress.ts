@@ -10,13 +10,16 @@ import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import type { Database } from '../../db/client.js';
 import { files, messages, researchJobs, runEvents, runs } from '../../db/schema/index.js';
 
-type Used = ConversationProgress['used'];
+// Bentuk respons menjadikan openedSkills/pinnedSkills opsional (data lama); di sini selalu terisi.
+type Used = ConversationProgress['used'] & { openedSkills: string[]; pinnedSkills: string[] };
 
-const empty = (): ConversationProgress => ({
+const empty = (): Omit<ConversationProgress, 'used'> & { used: Used } => ({
   plan: null,
   outputs: [],
   used: {
     skills: [],
+    openedSkills: [],
+    pinnedSkills: [],
     engine: null,
     model: null,
     memory: { read: 0, items: [] },
@@ -94,6 +97,13 @@ export async function conversationProgress(
     if (event.type === 'tool.started') tools.add(event.name);
     else if (event.type === 'context.used') {
       for (const skill of event.skills) if (!used.skills.includes(skill)) used.skills.push(skill);
+      // Event lama di DB belum punya openedSkills/pinnedSkills (payload mentah, bukan hasil parse ulang).
+      for (const skill of event.openedSkills ?? []) {
+        if (!used.openedSkills.includes(skill)) used.openedSkills.push(skill);
+      }
+      for (const skill of event.pinnedSkills ?? []) {
+        if (!used.pinnedSkills.includes(skill)) used.pinnedSkills.push(skill);
+      }
       for (const file of event.attachments)
         if (!used.attachments.some((a) => a.fileId === file.fileId)) used.attachments.push(file);
       // Engine, model, dan memori mengikuti run terbaru.

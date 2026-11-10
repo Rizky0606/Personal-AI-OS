@@ -43,6 +43,7 @@ const input = (over = {}) => ({
   model: 'combo/code',
   projectId: PROJECT,
   role: 'frontend',
+  skillIds: [],
   ...over,
 });
 
@@ -65,7 +66,7 @@ describe('createWorkerRelayAdapter', () => {
         runId: RUN,
         projectId: PROJECT,
         prompt: 'tambahkan tes',
-        bundle: { role: 'frontend', systemPrompt: '# Peran' },
+        bundle: { role: 'frontend', systemPrompt: '# Peran', skillIds: [] },
         model: 'combo/code',
       },
     ]);

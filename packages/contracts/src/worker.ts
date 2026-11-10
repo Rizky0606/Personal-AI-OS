@@ -20,8 +20,12 @@ export const RunStartCommandSchema = z.object({
   runId: IdSchema,
   projectId: IdSchema,
   prompt: z.string().min(1),
-  /** Bundel role dan skill yang sudah dirakit gateway menjadi satu system prompt. */
-  bundle: z.object({ role: RoleIdSchema, systemPrompt: z.string() }),
+  /** Bundel role + indeks skill; IDs katalog untuk worker, tanpa isi skill. */
+  bundle: z.object({
+    role: RoleIdSchema,
+    systemPrompt: z.string(),
+    skillIds: z.array(z.string().min(1).max(80)).max(40).default([]),
+  }),
   model: z.string().min(1),
   /** Lanjutan dari run sebelumnya (revisi setelah komentar review): memakai worktree run itu. */
   continueFromRunId: IdSchema.optional(),

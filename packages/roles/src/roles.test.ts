@@ -292,6 +292,83 @@ describe('bundel system prompt', () => {
   });
 });
 
+describe('skill tersedia lewat indeks, bukan ditempel utuh (P9)', () => {
+  it('skillNamePrefix mengubah nama di baris indeks (Hermes: aios-<id>) tanpa mengubah id yang dilaporkan', () => {
+    const bundle = buildBundle(registry, 'project', {
+      suggestedSkills: ['ui-baseline'],
+      skillNamePrefix: 'aios-',
+    });
+    expect(bundle.offeredSkills).toEqual(['ui-baseline']);
+    expect(bundle.systemPrompt).toContain(
+      `- aios-ui-baseline: ${registry.skills.get('ui-baseline')!.description}`,
+    );
+    expect(bundle.systemPrompt).not.toContain('\n- ui-baseline:');
+  });
+
+  it('suggestedSkills hanya muncul sebagai baris indeks (id + deskripsi), isi tidak ditempel', () => {
+    const bundle = buildBundle(registry, 'project', {
+      suggestedSkills: ['ui-baseline', 'a11y-check'],
+    });
+    expect(bundle.skills).not.toContain('ui-baseline');
+    expect(bundle.skills).not.toContain('a11y-check');
+    expect(bundle.offeredSkills.sort()).toEqual(['a11y-check', 'ui-baseline']);
+    expect(bundle.systemPrompt).not.toContain(registry.skills.get('ui-baseline')!.body);
+    expect(bundle.systemPrompt).toContain('# Skill tersedia (buka bila relevan');
+    expect(bundle.systemPrompt).toContain(
+      `- ui-baseline: ${registry.skills.get('ui-baseline')!.description}`,
+    );
+    expect(bundle.systemPrompt).toContain(
+      `- a11y-check: ${registry.skills.get('a11y-check')!.description}`,
+    );
+  });
+
+  it('skill yang sama di extraSkills (pilihan manual) menang: ditempel utuh, tidak masuk indeks', () => {
+    const bundle = buildBundle(registry, 'project', {
+      extraSkills: ['ui-baseline'],
+      suggestedSkills: ['ui-baseline', 'a11y-check'],
+    });
+    expect(bundle.skills).toContain('ui-baseline');
+    expect(bundle.systemPrompt).toContain(registry.skills.get('ui-baseline')!.body);
+    expect(bundle.offeredSkills).toEqual(['a11y-check']);
+  });
+
+  it('skill milik agent sendiri (role.skills) tidak pernah diturunkan jadi indeks', () => {
+    const bundle = buildBundle(registry, 'project', {
+      suggestedSkills: ['find-skills', 'ui-baseline'],
+    });
+    expect(bundle.skills).toContain('find-skills');
+    expect(bundle.systemPrompt).toContain(registry.skills.get('find-skills')!.body);
+    expect(bundle.offeredSkills).toEqual(['ui-baseline']);
+  });
+
+  it('eagerSkillPacks: fallback mesin tanpa indeks, suggestedSkills ditempel utuh seperti extraSkills', () => {
+    const bundle = buildBundle(registry, 'project', {
+      suggestedSkills: ['ui-baseline', 'a11y-check'],
+      eagerSkillPacks: true,
+    });
+    expect(bundle.offeredSkills).toEqual([]);
+    expect(bundle.systemPrompt).not.toContain('# Skill tersedia');
+    expect(bundle.skills).toContain('ui-baseline');
+    expect(bundle.skills).toContain('a11y-check');
+    expect(bundle.systemPrompt).toContain(registry.skills.get('ui-baseline')!.body);
+  });
+
+  it('skill tak dikenal di suggestedSkills diabaikan (tidak masuk indeks maupun error)', () => {
+    const bundle = buildBundle(registry, 'project', { suggestedSkills: ['skill-hantu'] });
+    expect(bundle.offeredSkills).toEqual([]);
+    expect(bundle.systemPrompt).not.toContain('skill-hantu');
+  });
+
+  it('indeks tidak dihitung ke anggaran skill (hanya deskripsi pendek)', () => {
+    const base = buildBundle(registry, 'project');
+    const withIndex = buildBundle(registry, 'project', {
+      suggestedSkills: SKILL_PACKS.flatMap((p) => p.skills),
+    });
+    expect(withIndex.tokens.skills).toBe(base.tokens.skills);
+    expect(withIndex.tokens.total).toBeGreaterThan(base.tokens.total);
+  });
+});
+
 describe('validasi saat memuat', () => {
   const dirs: string[] = [];
   /** Salinan isi repo yang boleh dirusak. */

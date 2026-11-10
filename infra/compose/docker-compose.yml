@@ -64,6 +64,8 @@ services:
     environment:
       OUTBOX_DIR: /outbox
       OUTBOX_HOST_DIR: ${AIOS_OUTBOX:-/home/ubuntu/aios-outbox}
+      # Fallback per mesin: isi paket skill kata kunci ditempel utuh (mis. hermes,dsh). Kosong = hanya indeks.
+      SKILL_PACKS_EAGER_ENGINES: ${SKILL_PACKS_EAGER_ENGINES:-}
     volumes:
       - '${AIOS_OUTBOX:-/home/ubuntu/aios-outbox}:/outbox:ro'
       # Rumah dan folder kerja dsh (engine dsh, opsional; lihat docs/RUNBOOK_DSH.md). Terpisah dari data lain.

@@ -392,7 +392,7 @@ describe('sesi gateway lewat worker', () => {
         runId: RUN,
         projectId: PROJECT,
         prompt: 'halo',
-        bundle: { role: 'frontend', systemPrompt: 'x' },
+        bundle: { role: 'frontend', systemPrompt: 'x', skillIds: [] },
         model: 'combo/code',
       }),
     );

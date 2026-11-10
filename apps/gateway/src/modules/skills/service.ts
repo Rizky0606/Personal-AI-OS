@@ -14,6 +14,7 @@ export interface SkillsService {
 }
 
 const checksumOf = (body: string): string => createHash('sha256').update(body).digest('hex');
+const cache = new Map<string, { checksum: string; detail: SkillDetail }>();
 
 export function createSkillsService(deps: {
   registry: () => RolesRegistry;
@@ -26,33 +27,31 @@ export function createSkillsService(deps: {
     body: string;
     source: Exclude<SkillSource, 'builtin'>;
   }>;
+  userDir?: string;
 }): SkillsService {
   const { registry, userSkills } = deps;
 
+  const detail = (skill: {
+    id: string;
+    name: string;
+    description: string;
+    version: string;
+    source: SkillSource;
+    body: string;
+  }): SkillDetail => {
+    const checksum = checksumOf(skill.body);
+    const cached = cache.get(skill.id);
+    if (cached?.checksum === checksum) return cached.detail;
+    const result = { ...skill, checksum };
+    cache.set(skill.id, { checksum, detail: result });
+    return result;
+  };
   const all = (): Map<string, SkillDetail> => {
     const out = new Map<string, SkillDetail>();
-    for (const skill of registry().skills.values()) {
-      out.set(skill.id, {
-        id: skill.id,
-        name: skill.id,
-        description: skill.description,
-        version: skill.version,
-        source: 'builtin',
-        checksum: checksumOf(skill.body),
-        body: skill.body,
-      });
-    }
-    for (const extra of userSkills?.() ?? []) {
-      out.set(extra.id, {
-        id: extra.id,
-        name: extra.name,
-        description: extra.description,
-        version: extra.version,
-        source: extra.source,
-        checksum: checksumOf(extra.body),
-        body: extra.body,
-      });
-    }
+    for (const skill of registry().skills.values())
+      out.set(skill.id, detail({ ...skill, name: skill.id, source: 'builtin' }));
+    for (const extra of userSkills?.() ?? []) out.set(extra.id, detail(extra));
+    for (const id of cache.keys()) if (!out.has(id)) cache.delete(id);
     return out;
   };
 

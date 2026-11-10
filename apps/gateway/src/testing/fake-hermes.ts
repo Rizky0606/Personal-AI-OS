@@ -7,6 +7,8 @@ export interface FakeStream {
   delta(text: string): void;
   reasoning(text: string): void;
   usage(promptTokens: number, completionTokens: number): void;
+  /** Event bernama `hermes.tool.progress` seperti stream Hermes asli (payload apa adanya). */
+  toolProgress(payload: Record<string, unknown>): void;
   finish(reason?: string): void;
   done(): void;
   /** Mengakhiri koneksi tanpa [DONE]. */
@@ -68,6 +70,10 @@ export async function startFakeHermes(): Promise<FakeHermes> {
         usage: (p, c) => {
           head();
           res.write(sse({ choices: [], usage: { prompt_tokens: p, completion_tokens: c } }));
+        },
+        toolProgress: (payload) => {
+          head();
+          res.write(`event: hermes.tool.progress\ndata: ${JSON.stringify(payload)}\n\n`);
         },
         finish: (reason = 'stop') => {
           head();

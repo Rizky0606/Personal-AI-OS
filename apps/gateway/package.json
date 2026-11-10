@@ -15,7 +15,9 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx --env-file-if-exists=.env src/db/migrate.ts",
     "owner:init": "tsx --env-file-if-exists=.env src/cli/owner-init.ts",
-    "push:test": "tsx --env-file-if-exists=.env src/cli/push-test.ts"
+    "push:test": "tsx --env-file-if-exists=.env src/cli/push-test.ts",
+    "skills:sync-hermes": "tsx --env-file-if-exists=.env src/cli/sync-hermes-skills.ts",
+    "eval:skills": "tsx --env-file-if-exists=.env src/cli/eval-skills.ts"
   },
   "dependencies": {
     "@aios/adapters": "workspace:*",

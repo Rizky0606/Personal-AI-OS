@@ -146,6 +146,8 @@ describe('GET /conversations/:id/progress', () => {
       outputs: [],
       used: {
         skills: [],
+        openedSkills: [],
+        pinnedSkills: [],
         engine: null,
         model: null,
         memory: { read: 0, items: [] },

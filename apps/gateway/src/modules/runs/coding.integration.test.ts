@@ -126,7 +126,7 @@ const statusOf = async (id: string) => (await getRun(id)).status;
 const problem = (res: { json(): unknown }) => ProblemSchema.parse(res.json());
 
 describe('skill di run coding', () => {
-  it('skill spesialis dipilih dari kata kunci dan masuk ke bundel yang dikirim ke worker', async () => {
+  it('skill spesialis dipilih dari kata kunci: ditawarkan di indeks, ID-nya ikut protokol worker, isinya tidak ditempel', async () => {
     const { fake, conversationId } = await setup('Worker Skill');
     const run = await startRun(
       conversationId,
@@ -134,10 +134,18 @@ describe('skill di run coding', () => {
     );
 
     await until(() => fake.command('run.start') !== undefined, 'run.start di worker');
-    const { systemPrompt } = fake.command('run.start')!.bundle;
-    expect(systemPrompt).toContain('## ui-baseline');
-    expect(systemPrompt).toContain('## diagnosing-bugs');
-    expect(systemPrompt).not.toContain('## api-design');
+    const { systemPrompt, skillIds } = fake.command('run.start')!.bundle;
+    expect(systemPrompt).toContain('# Skill tersedia');
+    expect(systemPrompt).toContain('- ui-baseline:');
+    expect(systemPrompt).toContain('- diagnosing-bugs:');
+    expect(systemPrompt).not.toContain('- api-design:');
+    // Isi skill khusus tidak ditempel; worker mengunduhnya lewat katalog berdasarkan ID.
+    expect(systemPrompt).not.toContain('## ui-baseline');
+    expect(systemPrompt).not.toContain('## diagnosing-bugs');
+    expect(skillIds).toEqual(expect.arrayContaining(['ui-baseline', 'diagnosing-bugs']));
+    expect(skillIds).not.toContain('api-design');
+    // Skill inti tetap ditempel utuh.
+    expect(systemPrompt).toContain('## scope-guard');
     const reason = (await env.get(`/runs/${run.id}/events`, desktop)).body;
     expect(reason).toContain('Agent project dengan skill');
     fake.emit(run.id, { type: 'run.completed', summary: 's' });

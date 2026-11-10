@@ -36,8 +36,13 @@ export interface Bundle {
   roleId: string;
   /** Pesan sistem lengkap untuk mesin agent. */
   systemPrompt: string;
-  /** Skill yang disuntik, berurutan: inti dulu, lalu khusus. */
+  /** Skill yang isinya ditempel utuh, berurutan: inti dulu, lalu milik agent/manual. */
   skills: string[];
+  /**
+   * Skill yang hanya ditawarkan lewat indeks (id + deskripsi), TANPA isi ditempel (P9: agent memilih sendiri
+   * dari indeks, lihat ROLES_AND_SKILLS.md "Paket skill"). Kosong bila `eagerSkillPacks` dipakai.
+   */
+  offeredSkills: string[];
   /** Skill khusus yang dilewati karena anggaran skill habis. */
   omittedSkills: string[];
   tokens: { rules: number; role: number; skills: number; total: number };
@@ -47,14 +52,34 @@ export interface Bundle {
 export interface BundleOptions {
   skillsBudget?: number;
   bundleBudget?: number;
-  /** Skill spesialis tambahan untuk permintaan ini (hasil `selectSkills`), setelah skill milik agent. */
+  /** Skill spesialis tambahan untuk permintaan ini (pilihan manual pengguna): isinya DITEMPEL UTUH. */
   extraSkills?: readonly string[];
+  /**
+   * Skill paket kata kunci (P9): hanya ditawarkan lewat indeks (id + deskripsi) di bagian baru
+   * "Skill tersedia", TIDAK ditempel utuh secara bawaan -- agent memilih sendiri mana yang relevan.
+   * Skill yang sama juga ada di `extraSkills` (mis. pilihan manual pengguna) tetap ditempel utuh;
+   * daftar ini hanya menurunkan status skill yang BELUM diminta eksplisit.
+   */
+  suggestedSkills?: readonly string[];
+  /**
+   * Fallback P9 untuk mesin tanpa dukungan indeks skill (mis. belum diaudit): `suggestedSkills`
+   * ditempel utuh juga, seperti perilaku sebelum P9. Default false.
+   */
+  eagerSkillPacks?: boolean;
+  /**
+   * Awalan nama skill di baris indeks. Nama yang ditampilkan harus sama dengan nama yang bisa dibuka mesin:
+   * omp membuka `skill://<id>` (tanpa awalan), Hermes membuka skill hasil sinkron bernama `aios-<id>`.
+   */
+  skillNamePrefix?: string;
 }
 
 /**
- * system prompt = aturan perilaku + isi role + skill inti + skill khusus.
- * Skill inti selalu masuk. Skill khusus masuk berurutan selama muat di anggaran skill;
- * yang tidak muat dilewati (dilaporkan di `omittedSkills`), bukan dipotong di tengah.
+ * system prompt = aturan perilaku + isi role + skill inti + skill khusus (ditempel utuh) + indeks skill
+ * yang ditawarkan (P9, hanya id+deskripsi). Skill inti selalu masuk utuh. Skill milik agent dan skill
+ * manual (`extraSkills`) masuk berurutan selama muat di anggaran skill; yang tidak muat dilewati
+ * (dilaporkan di `omittedSkills`), bukan dipotong di tengah. Skill `suggestedSkills` yang belum diminta
+ * eksplisit (tidak ada di `extraSkills`/skill milik agent) hanya masuk sebagai baris indeks, tidak
+ * dihitung ke anggaran skill (deskripsinya pendek, maks 200 karakter).
  */
 export function buildBundle(
   registry: RolesRegistry,
@@ -63,6 +88,9 @@ export function buildBundle(
     skillsBudget = SKILLS_TOKEN_BUDGET,
     bundleBudget = BUNDLE_TOKEN_BUDGET,
     extraSkills = [],
+    suggestedSkills = [],
+    eagerSkillPacks = false,
+    skillNamePrefix = '',
   }: BundleOptions = {},
 ): Bundle {
   const role = registry.roles.get(roleId);
@@ -77,6 +105,8 @@ export function buildBundle(
   };
 
   const included: string[] = [];
+  const offered: string[] = [];
+  const offeredIndex: string[] = [];
   const omitted: string[] = [];
   const core: string[] = [];
   const extra: string[] = [];
@@ -89,7 +119,25 @@ export function buildBundle(
     included.push(id);
     skillTokens += estimateTokens(text);
   }
-  for (const id of new Set([...role.skills, ...extraSkills])) {
+
+  const extraSet = new Set(extraSkills);
+  // Hanya "tawarkan lewat indeks" (bukan tempel utuh) bila BELUM diminta eksplisit sebagai skill milik
+  // agent atau pilihan manual (extraSkills); permintaan eksplisit selalu menang.
+  const indexOnly = eagerSkillPacks
+    ? new Set<string>()
+    : new Set(
+        suggestedSkills.filter(
+          (id) =>
+            !role.skills.includes(id) &&
+            !extraSet.has(id) &&
+            !(CORE_SKILLS as readonly string[]).includes(id),
+        ),
+      );
+  const candidates = eagerSkillPacks
+    ? new Set([...role.skills, ...extraSkills, ...suggestedSkills])
+    : new Set([...role.skills, ...extraSkills]);
+
+  for (const id of candidates) {
     if ((CORE_SKILLS as readonly string[]).includes(id)) continue;
     const text = section(id);
     if (!text) continue;
@@ -103,11 +151,21 @@ export function buildBundle(
     skillTokens += cost;
   }
 
+  for (const id of indexOnly) {
+    const skill = registry.skills.get(id);
+    if (!skill) continue;
+    offered.push(id);
+    offeredIndex.push(`- ${skillNamePrefix}${id}: ${skill.description}`);
+  }
+
   const parts = [
     rules,
     roleSection,
     `# Skill inti\n\n${core.join('\n\n')}`,
     ...(extra.length > 0 ? [`# Skill khusus\n\n${extra.join('\n\n')}`] : []),
+    ...(offeredIndex.length > 0
+      ? [`# Skill tersedia (buka bila relevan dengan permintaan ini)\n${offeredIndex.join('\n')}`]
+      : []),
   ];
   const systemPrompt = parts.join('\n\n');
   const total = estimateTokens(systemPrompt);
@@ -116,6 +174,7 @@ export function buildBundle(
     roleId,
     systemPrompt,
     skills: included,
+    offeredSkills: offered,
     omittedSkills: omitted,
     tokens: {
       rules: estimateTokens(rules),

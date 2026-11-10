@@ -38,6 +38,11 @@ export interface StartRunInput {
   planOnly?: boolean | undefined;
   /** Folder kerja agent (worktree). Hanya omp; wajib di sana. */
   cwd?: string | undefined;
+  /** Skill IDs offered in tool-readable catalog index. */
+  skillIds?: readonly string[] | undefined;
+  /** Skill bodies fetched by worker for isolated omp installation. */
+  skills?:
+    readonly { id: string; description: string; checksum: string; body: string }[] | undefined;
   /** Folder berkas pendukung run di luar worktree (konfigurasi provider, system prompt). Hanya omp. */
   runDir?: string | undefined;
   /** Server MCP (HTTP) yang disediakan worker untuk run ini, mis. tool browser. Hanya omp. */

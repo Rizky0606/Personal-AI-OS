@@ -28,6 +28,8 @@ const input = (over: Partial<StartRunInput> = {}): StartRunInput => ({
   prompt: 'kerjakan tugas',
   systemPrompt: '# Peran: Uji\nJawab singkat.',
   model: 'mock-1',
+  skills: [],
+  skillIds: [],
   cwd: 'C:\\work\\repo',
   runDir,
   ...over,
@@ -87,13 +89,7 @@ describe('peluncuran omp', () => {
         'C:\\work\\repo',
       ]),
     );
-    for (const flag of [
-      '--no-session',
-      '--no-skills',
-      '--no-extensions',
-      '--model',
-      'aios/mock-1',
-    ]) {
+    for (const flag of ['--no-session', '--no-extensions', '--model', 'aios/mock-1']) {
       expect(launched.args).toContain(flag);
     }
     expect(launched.args).not.toContain('--auto-approve');
@@ -102,6 +98,9 @@ describe('peluncuran omp', () => {
     expect(promptFile.startsWith(runDir)).toBe(true);
     expect(await readFile(promptFile, 'utf8')).toBe('# Peran: Uji\nJawab singkat.');
     expect(launched.env.PI_CODING_AGENT_DIR).toBe(join(runDir, 'agent'));
+    const overlay = launched.args[launched.args.indexOf('--config') + 1] ?? '';
+    expect(overlay.startsWith(runDir)).toBe(true);
+    expect(await readFile(overlay, 'utf8')).toContain('customDirectories:');
   });
 
   it('server MCP run: mcp.json dan overlay ditulis di folder run (bukan worktree), tool tampil langsung, tunggu koneksi', async () => {
@@ -127,7 +126,9 @@ describe('peluncuran omp', () => {
     });
     const overlay = launched.args[launched.args.indexOf('--config') + 1] ?? '';
     expect(overlay.startsWith(runDir)).toBe(true);
-    expect(await readFile(overlay, 'utf8')).toBe('tools:\n  xdev: false\n');
+    expect(await readFile(overlay, 'utf8')).toBe(
+      `skills:\n  customDirectories:\n    - ${JSON.stringify(join(runDir, 'agent', 'skills'))}\ntools:\n  xdev: false\n`,
+    );
     expect(launched.env.OMP_MCP_STARTUP_TIMEOUT_MS).toBe('0');
   });
 
@@ -136,8 +137,48 @@ describe('peluncuran omp', () => {
     await collect(handle);
 
     await expect(readFile(join(runDir, 'agent', 'mcp.json'), 'utf8')).rejects.toThrow();
-    expect(launched.args).not.toContain('--config');
+    expect(launched.args).toContain('--config');
+    const overlay = launched.args[launched.args.indexOf('--config') + 1] ?? '';
+    expect(await readFile(overlay, 'utf8')).toContain('customDirectories:');
     expect(launched.env.OMP_MCP_STARTUP_TIMEOUT_MS).toBeUndefined();
+  });
+
+  it('skill: tanpa katalog --no-skills; dengan katalog hanya --skills=<id terpasang> dan SKILL.md ditulis di folder run', async () => {
+    const none = await launchReplay('text-only');
+    await collect(none.handle);
+    expect(none.launched.args).toContain('--no-skills');
+    expect(none.launched.args.some((a) => a.startsWith('--skills='))).toBe(false);
+
+    const skill = {
+      id: 'ui-baseline',
+      description: 'Saat menata UI: "kutip" aman.',
+      checksum: 'a'.repeat(64),
+      body: 'Isi.',
+    };
+    const some = await launchReplay('text-only', {
+      skills: [skill],
+      skillIds: ['ui-baseline', 'tidak-terpasang'],
+    });
+    await collect(some.handle);
+    expect(some.launched.args).not.toContain('--no-skills');
+    expect(some.launched.args).toContain('--skills=ui-baseline');
+
+    const file = await readFile(join(runDir, 'agent', 'skills', 'ui-baseline', 'SKILL.md'), 'utf8');
+    expect(file).toContain('name: ui-baseline');
+    expect(file).toContain(`description: ${JSON.stringify(skill.description)}`);
+    expect(file.trimEnd().endsWith('Isi.')).toBe(true);
+    const overlay = some.launched.args[some.launched.args.indexOf('--config') + 1] ?? '';
+    expect(await readFile(overlay, 'utf8')).toContain(
+      JSON.stringify(join(runDir, 'agent', 'skills')),
+    );
+  });
+
+  it('skill dengan id/checksum tidak valid ditolak sebelum menulis apa pun', async () => {
+    await expect(
+      launchReplay('text-only', {
+        skills: [{ id: '../../etc', description: 'x', checksum: 'a'.repeat(64), body: 'b' }],
+      }),
+    ).rejects.toMatchObject({ code: 'omp_skill_invalid' });
   });
 
   describe('pertanyaan agent (tool ask)', () => {
@@ -310,7 +351,7 @@ describe('peluncuran omp', () => {
     const off = await launchReplay('text-only');
     await collect(off.handle);
     expect(off.launched.args).toContain('--no-lsp');
-    expect(off.launched.args).not.toContain('--config');
+    expect(off.launched.args).toContain('--config');
 
     const on = await launchReplay('text-only', {
       lsp: true,
@@ -320,7 +361,7 @@ describe('peluncuran omp', () => {
     expect(on.launched.args).not.toContain('--no-lsp');
     const overlay = on.launched.args[on.launched.args.indexOf('--config') + 1] ?? '';
     expect(await readFile(overlay, 'utf8')).toBe(
-      'tools:\n  xdev: false\nlsp:\n  requestTimeout: 60\n',
+      `skills:\n  customDirectories:\n    - ${JSON.stringify(join(runDir, 'agent', 'skills'))}\ntools:\n  xdev: false\nlsp:\n  requestTimeout: 60\n`,
     );
   });
 

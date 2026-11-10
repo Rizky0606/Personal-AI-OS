@@ -381,11 +381,15 @@ export function createChatService(deps: {
         .update(messages)
         .set({ agentRole: result.agent })
         .where(eq(messages.id, args.assistantMessageId));
+      // P9: skill dari paket kata kunci hanya ditawarkan lewat indeks (tidak ditempel utuh) kecuali
+      // pengguna memintanya eksplisit lewat skills[] di composer -- itu tetap menang dan tetap ditempel.
+      const manual = new Set(args.skills ?? []);
       return {
         role: result.agent,
         confidence: 1,
         reason: describeDecision(result),
-        skills: result.skills,
+        skills: result.skills.filter((id) => manual.has(id)),
+        suggestedSkills: result.skills.filter((id) => !manual.has(id)),
       };
     };
   }

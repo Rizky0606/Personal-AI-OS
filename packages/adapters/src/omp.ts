@@ -181,13 +181,30 @@ export function createOmpAdapter(options: OmpAdapterOptions): AgentAdapter {
       }
       const model = input.model ?? 'default';
       const agentDir = join(runDir, 'agent');
+      const skillsDir = join(agentDir, 'skills');
       const systemFile = join(runDir, 'system.md');
       const overlayFile = join(runDir, 'overlay.yml');
-      await mkdir(agentDir, { recursive: true });
+      await mkdir(skillsDir, { recursive: true });
+      // Hanya folder ini yang dipasang ke overlay `skills.customDirectories`; skill dari provider lain di mesin
+      // pengguna (mis. ~/.claude) tidak ikut karena PI_CODING_AGENT_DIR terisolasi dan tanpa pencarian lain.
+      for (const skill of input.skills ?? []) {
+        if (!/^[a-z][a-z0-9-]*$/.test(skill.id) || !/^[a-f0-9]{64}$/.test(skill.checksum)) {
+          throw new AdapterError('omp_skill_invalid', 'Katalog skill worker tidak valid.');
+        }
+        await mkdir(join(skillsDir, skill.id), { recursive: true });
+        await writeFile(
+          join(skillsDir, skill.id, 'SKILL.md'),
+          `---\nname: ${skill.id}\ndescription: ${JSON.stringify(skill.description)}\n---\n\n${skill.body}\n`,
+        );
+      }
       await writeFile(join(agentDir, 'models.yml'), modelsYaml(options.llm, model));
       await writeFile(systemFile, input.systemPrompt ?? '');
       // Pengaturan per run lewat overlay di folder run (bukan di repo kerja).
-      const overlay: string[] = [];
+      const overlay: string[] = [
+        'skills:',
+        '  customDirectories:',
+        `    - ${JSON.stringify(skillsDir)}`,
+      ];
       // Server MCP per run (tool browser worker) di direktori agent terisolasi, bukan di repo kerja.
       if (input.mcpServers && Object.keys(input.mcpServers).length > 0) {
         const servers = Object.fromEntries(
@@ -217,8 +234,13 @@ export function createOmpAdapter(options: OmpAdapterOptions): AgentAdapter {
           '--cwd',
           cwd,
           '--no-session',
-          '--no-skills',
           '--no-extensions',
+          // Omp memuat skill provider lain secara otomatis (~/.claude, ~/.agents, .claude/ di repo; terbukti di
+          // omp.e2e), dan folder home dibaca dari sistem, bukan $HOME. Hanya id katalog yang terpasang yang boleh
+          // tampil; tanpa katalog, semua skill dimatikan.
+          ...((input.skills ?? []).length > 0
+            ? [`--skills=${(input.skills ?? []).map((s) => s.id).join(',')}`]
+            : ['--no-skills']),
           ...(input.lsp === true ? [] : ['--no-lsp']),
           '--no-title',
           '--append-system-prompt',

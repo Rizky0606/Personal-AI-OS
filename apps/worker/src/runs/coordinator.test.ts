@@ -111,7 +111,7 @@ const command = (over: Partial<StartCommand> = {}): StartCommand => ({
   runId: RUN,
   projectId: PROJECT,
   prompt: 'tambahkan tes untuk fungsi add',
-  bundle: { role: 'frontend', systemPrompt: '# Peran: Frontend' },
+  bundle: { role: 'frontend', systemPrompt: '# Peran: Frontend', skillIds: [] },
   model: 'combo/code',
   ...over,
 });
@@ -127,7 +127,13 @@ async function until(check: () => boolean, label: string, ms = 5000) {
   }
 }
 
-async function build(over: { maxRunMs?: number; setup?: ProjectSetupStore } = {}) {
+async function build(
+  over: {
+    maxRunMs?: number;
+    setup?: ProjectSetupStore;
+    skills?: ConstructorParameters<typeof RunCoordinator>[0]['skills'];
+  } = {},
+) {
   const allowed = new AllowList({ file: path.join(base, 'data', 'allowed.json'), forbidden: [] });
   await allowed.add(path.join(base, 'izin'));
   bindings = new ProjectBindings(path.join(base, 'data', 'projects.json'), allowed);
@@ -742,6 +748,88 @@ describe('RunCoordinator: hasil ditinjau', () => {
     await expect(fs.stat(b.root)).resolves.toBeDefined();
     expect(git(repo, 'branch', '--list', 'aios/*')).toContain(b.branch);
     expect(git(repo, 'branch', '--list', 'aios/*')).not.toContain(a.branch);
+  });
+});
+
+describe('RunCoordinator: skill katalog', () => {
+  const skill = {
+    id: 'ui-baseline',
+    description: 'Saat menata UI.',
+    checksum: 'a'.repeat(64),
+    body: 'isi skill',
+  };
+  const withIndex = (ids: string[]) =>
+    command({ bundle: { role: 'frontend', systemPrompt: '# Skill tersedia', skillIds: ids } });
+
+  it('skill yang ditawarkan diselesaikan lewat katalog lalu diteruskan ke adapter', async () => {
+    const resolved: string[][] = [];
+    await build({
+      skills: {
+        resolve: (ids) => {
+          resolved.push([...ids]);
+          return Promise.resolve([skill]);
+        },
+      },
+    });
+    coordinator.start(withIndex(['ui-baseline']));
+    await until(() => adapter.handles.length === 1, 'adapter dimulai');
+
+    expect(resolved).toEqual([['ui-baseline']]);
+    expect(adapter.inputs[0]!.skills).toEqual([skill]);
+    expect(adapter.inputs[0]!.skillIds).toEqual(['ui-baseline']);
+    adapter.handle.events.end();
+  });
+
+  it('read skill://<id> yang ada di indeks dilaporkan sebagai openedSkills sebelum penutup; id luar indeks diabaikan', async () => {
+    await build({ skills: { resolve: () => Promise.resolve([skill]) } });
+    coordinator.start(withIndex(['ui-baseline']));
+    await until(() => adapter.handles.length === 1, 'adapter dimulai');
+    const handle = adapter.handle;
+
+    handle.events.push({
+      type: 'tool.started',
+      toolCallId: 's1',
+      name: 'read',
+      target: 'skill://ui-baseline',
+    });
+    handle.events.push({
+      type: 'tool.started',
+      toolCallId: 's2',
+      name: 'read',
+      target: 'skill://skill-hantu',
+    });
+    handle.events.push({
+      type: 'tool.started',
+      toolCallId: 's3',
+      name: 'read',
+      target: 'src/a.ts',
+    });
+    handle.events.push({ type: 'run.completed', summary: 'selesai' });
+    await until(() => types().includes('run.completed'), 'penutup');
+
+    const used = events().filter((e) => e.type === 'context.used');
+    expect(used).toHaveLength(1);
+    expect(used[0]).toMatchObject({ openedSkills: ['ui-baseline'], engine: 'omp' });
+    expect(types().indexOf('context.used')).toBeLessThan(types().indexOf('run.completed'));
+    handle.events.end();
+  });
+
+  it('tanpa pembukaan skill tidak ada context.used dari worker', async () => {
+    await build({ skills: { resolve: () => Promise.resolve([skill]) } });
+    coordinator.start(withIndex(['ui-baseline']));
+    await until(() => adapter.handles.length === 1, 'adapter dimulai');
+    adapter.handle.events.push({ type: 'run.completed', summary: 'selesai' });
+    await until(() => types().includes('run.completed'), 'penutup');
+    expect(types()).not.toContain('context.used');
+    adapter.handle.events.end();
+  });
+
+  it('katalog gagal dimuat: run tetap berjalan tanpa skill (tidak menggagalkan run coding)', async () => {
+    await build({ skills: { resolve: () => Promise.reject(new Error('gateway offline')) } });
+    coordinator.start(withIndex(['ui-baseline']));
+    await until(() => adapter.handles.length === 1, 'adapter dimulai');
+    expect(adapter.inputs[0]!.skills).toEqual([]);
+    adapter.handle.events.end();
   });
 });
 

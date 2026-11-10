@@ -161,6 +161,48 @@ export class GatewayLink {
     this.socket.send(JSON.stringify({ type: 'run.event', runId, event }));
     return true;
   }
+  /** Katalog skill dari gateway (GET /skills) lewat token worker; null bila tidak ada sesi. */
+  async listSkills(): Promise<{ id: string; checksum: string }[]> {
+    const body = (await this.authedGet('/v1/skills')) as {
+      items: { id: string; checksum: string }[];
+    };
+    return body.items;
+  }
+
+  /** Isi satu skill katalog (GET /skills/:id) lewat token worker. */
+  async getSkill(id: string): Promise<{
+    id: string;
+    name: string;
+    description: string;
+    version: string;
+    checksum: string;
+    body: string;
+  }> {
+    return (await this.authedGet(`/v1/skills/${encodeURIComponent(id)}`)) as {
+      id: string;
+      name: string;
+      description: string;
+      version: string;
+      checksum: string;
+      body: string;
+    };
+  }
+
+  private async authedGet(path: string): Promise<unknown> {
+    const session = this.session;
+    if (!session) throw new Error('Gateway offline');
+    const token = await this.freshAccessToken();
+    if (!token) throw new Error('Token worker tidak berlaku');
+    const response = await (this.deps.fetch ?? fetch)(
+      `${session.serverUrl.replace(/\/$/, '')}${path}`,
+      {
+        headers: { authorization: `Bearer ${token}` },
+      },
+    );
+    if (!response.ok) throw new Error(`GET ${path} gagal: HTTP ${response.status}`);
+    return response.json();
+  }
+
   /** Uploads PNG bytes over authenticated HTTP. */
   async uploadArtifact(runId: string, bytes: Buffer): Promise<boolean> {
     const session = this.session;

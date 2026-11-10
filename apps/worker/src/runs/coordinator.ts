@@ -24,6 +24,7 @@ import type { ApprovalRules, RuleKind } from './rules.js';
 import { linkNodeModules } from '../preview/nodemodules.js';
 import { WorktreeError, type Worktree, type WorktreeManager } from './worktree.js';
 import { runSetup, type ProjectSetupStore } from './setup.js';
+import type { CatalogSkill } from '../skills/cache.js';
 
 type StartCommand = Extract<WorkerCommand, { type: 'run.start' }>;
 type ResolveCommand = Extract<WorkerCommand, { type: 'approval.resolve' }>;
@@ -49,7 +50,8 @@ export interface CoordinatorDeps {
   dataDir: string;
   /** Batas waktu satu run (SECURITY_OPS.md: 30 menit). */
   maxRunMs?: number;
-  maxConcurrentRuns?: number;
+  /** Katalog skill (cache + unduhan dari gateway) untuk skill yang ditawarkan di indeks run ini. */
+  skills?: { resolve(ids: readonly string[]): Promise<CatalogSkill[]> };
   log?: (message: string) => void;
 }
 
@@ -69,6 +71,8 @@ interface RunState {
    * makan waktu, dan menunggunya dulu membuka jendela balapan: klien bisa melihat run "selesai" lalu memanggil
    * accept/reject sebelum assertIdle() tahu run sudah tidak aktif (lihat review_apply_race di REPAIR_LOG P8).
    */
+  /** Run is scoped to this bundle's skill index; tracks IDs proven opened by omp read events. */
+  openedSkills: Set<string>;
   finished: boolean;
   /** Diff terakhir yang dikirim (JSON); event diff.updated hanya dikirim bila berubah. */
   diffKey: string;
@@ -142,6 +146,7 @@ export class RunCoordinator {
       pending: new Map(),
       silent: new Set(),
       outbox: [],
+      openedSkills: new Set(),
       cancelRequested: false,
       terminal: false,
       finished: false,
@@ -317,6 +322,16 @@ export class RunCoordinator {
           return undefined;
         });
 
+      // Skill yang ditawarkan di indeks dipasang ke folder skill milik run ini. Gagal memuat katalog tidak
+      // menggagalkan run coding: agent tetap jalan tanpa skill tambahan (dicatat di log worker).
+      let skills: CatalogSkill[] = [];
+      if (cmd.bundle.skillIds.length > 0 && this.deps.skills) {
+        try {
+          skills = await this.deps.skills.resolve(cmd.bundle.skillIds);
+        } catch (error) {
+          this.deps.log?.(`katalog skill tidak dimuat untuk run ${runId}: ${String(error)}`);
+        }
+      }
       run.handle = await this.deps.adapter.startRun({
         runId,
         messageId: uuidv7(),
@@ -330,6 +345,8 @@ export class RunCoordinator {
           ? { mcpServers: { [MCP_SERVER_NAME]: { url: run.mcp.url, headers: run.mcp.headers } } }
           : {}),
         model: cmd.model,
+        skills,
+        skillIds: [...cmd.bundle.skillIds],
         projectId: cmd.projectId,
         role: cmd.bundle.role,
         cwd: worktree.cwd,
@@ -401,6 +418,16 @@ export class RunCoordinator {
   }
 
   private async onEvent(runId: string, run: RunState, event: AgentEvent): Promise<void> {
+    // Pembukaan skill yang teramati dari tool baca omp (`read skill://<nama>`). Hanya id yang ada di indeks run
+    // ini yang dihitung; tidak mempengaruhi pencatatan langkah tool di bawah.
+    if (
+      event.type === 'tool.started' &&
+      event.name === 'read' &&
+      event.target?.startsWith('skill://')
+    ) {
+      const id = /^[a-z][a-z0-9-]*/.exec(event.target.slice('skill://'.length))?.[0];
+      if (id && run.cmd.bundle.skillIds.includes(id)) run.openedSkills.add(id);
+    }
     if (event.type === 'approval.requested') {
       // Mode rencana: agent hanya boleh membaca. Semua izin ditolak, termasuk aturan "izinkan selalu" project.
       if (run.cmd.planOnly) {
@@ -500,6 +527,22 @@ export class RunCoordinator {
     for (const piece of splitEvent(event)) {
       if (run.outbox.length >= OUTBOX_LIMIT) run.outbox.shift();
       run.outbox.push(piece);
+    }
+    if (event.type === 'run.completed' || event.type === 'error') {
+      const openedSkills = [...run.openedSkills];
+      if (openedSkills.length)
+        run.outbox.splice(Math.max(0, run.outbox.length - 1), 0, {
+          type: 'context.used',
+          runId,
+          role: run.cmd.bundle.role,
+          engine: 'omp',
+          model: run.cmd.model,
+          skills: [],
+          openedSkills,
+          pinnedSkills: [],
+          memory: { read: 0 },
+          attachments: [],
+        });
     }
     this.flush(runId, run);
   }

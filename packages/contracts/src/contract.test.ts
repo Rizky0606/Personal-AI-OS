@@ -254,7 +254,7 @@ describe('protokol worker', () => {
       runId: ID_A,
       projectId: ID_B,
       prompt: 'Ubah tombol',
-      bundle: { role: 'frontend', systemPrompt: '...' },
+      bundle: { role: 'frontend', systemPrompt: '...', skillIds: [] },
       model: 'coding-main',
     };
     expect(WorkerCommandSchema.safeParse(start).success).toBe(true);

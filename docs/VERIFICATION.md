@@ -70,6 +70,12 @@ Rekomendasi untuk adapter (belum diuji): gateway menyimpan satu ID sesi per perc
 - Pesan `system` atau field `instructions` dari klien **ditumpuk di atas** system prompt inti Hermes. Tool, memori, dan skill Hermes tetap aktif. Ini cocok dengan rencana "role dan skill disuntik sebagai pesan sistem" di ARCHITECTURE.md.
 - Skill dijalankan di sisi server. Klien tidak mengeksekusi tool call. Daftar skill: `GET /v1/skills`; daftar toolset: `GET /v1/toolsets`. Tidak ada parameter request untuk memilih skill tertentu yang terdokumentasi. Skill khusus project harus dikirim sebagai teks di pesan sistem, atau dipasang di folder skill Hermes (`~/.hermes`).
 
+### Verifikasi skill katalog di Hermes 0.22.5 (P9, instance nyata di mesin pengembangan)
+
+- **Sinkron.** Skill di `~/.hermes/skills/aios/<id>/SKILL.md` dengan nama `aios-<id>` ditemukan fungsi penemuan Hermes sendiri (`tools.skills_tool.find_all_skills`): 29/29 terlihat, kategori `aios`. Hermes **tidak perlu restart**: sesi baru yang dibuat setelah sinkron langsung dapat membuka `aios-citation`.
+- **`GET /v1/skills` rusak di build ini.** Menjawab `500 {"message":"Failed to enumerate skills"}` untuk siapa pun, bahkan sebelum ada skill `aios-`. Penyebab (dari `~/.hermes/logs/errors.log`): `gateway/platforms/api_server.py` memanggil `find_all_skills(skip_disabled=False, include_editorial=True)` tetapi `tools/skills_tool.py` build yang sama tidak punya parameter `include_editorial` (`TypeError`). Itu bug di Hermes, bukan di repo ini; kami tidak menambal sumber Hermes. Verifikasi memakai fungsi penemuan yang sama secara langsung. `pnpm skills:sync-hermes --verify` akan gagal sampai Hermes diperbaiki/diperbarui; penulisan berkasnya tidak terpengaruh.
+- **Pembukaan skill terlihat di stream.** Rekaman nyata `packages/adapters/fixtures/hermes/skill-view-aios.sse`: `event: hermes.tool.progress` dengan `{"tool":"skill_view","label":"aios-citation","status":"running"}` lalu `completed`. Adapter memetakannya ke `tool.started` (`name: skill_view`, `target: aios-citation`). Rekaman P5 sebelumnya tidak memuat pembukaan skill karena belum ada skill katalog yang terpasang.
+
 ### Contoh request (dari dokumentasi, belum dijalankan)
 
 ```bash
@@ -235,7 +241,7 @@ Direkam ulang dengan omp sungguhan dan server OpenAI-compatible tiruan; transkri
 - **`abort`**: `message_end` dengan `stopReason:"aborted"`, `agent_end`, lalu `response` untuk `abort`, lalu `prompt_result status:"aborted"`.
 - **Format approval**: `title` = `Allow tool: <nama>\n<detail>` dengan detail `Command: <perintah>` (bash) atau `Path: <path>\nContent:\n<isi>` (write); opsi `["Approve","Approve <tool> for this session","Deny"]`. `tool_execution_start` mendahului `select`. Setelah "Approve bash for this session", panggilan bash berikutnya tidak lagi meminta izin (tanpa `extension_ui_request`). Jawaban Deny menghasilkan `tool_execution_end isError:true` dengan teks "Tool call denied by user".
 - `tool_execution_update.partialResult.content` berisi teks **kumulatif** (bukan potongan baru); adapter mengirim hanya tambahannya sebagai `tool.output`.
-- **Peluncuran**: `omp.exe` ada di `~/.bun/bin`; pembungkus `.cmd` tidak bisa dijalankan tanpa shell. Worker mencari `omp.exe` di PATH (atau `AIOS_OMP_PATH`). Flag yang terbukti jalan bersama: `--mode rpc --approval-mode always-ask --cwd <dir> --no-session --no-skills --no-extensions --no-lsp --no-title --append-system-prompt <berkas> --model aios/<id>` dengan `PI_CODING_AGENT_DIR` terisolasi berisi `models.yml`. Tidak ada berkas `.omp` yang muncul di repo kerja maupun worktree. (Sejak 2026-10-28 adapter memakai `--mode rpc-ui`, lihat bagian Tool `ask`.)
+- **Peluncuran**: `omp.exe` ada di `~/.bun/bin`; pembungkus `.cmd` tidak bisa dijalankan tanpa shell. Worker mencari `omp.exe` di PATH (atau `AIOS_OMP_PATH`). Flag yang terbukti jalan bersama: `--mode rpc --approval-mode always-ask --cwd <dir> --no-session --no-skills (sejak P9: hanya bila katalog kosong; selain itu `--skills=<id terpasang>`) --no-extensions --no-lsp --no-title --append-system-prompt <berkas> --model aios/<id>` dengan `PI_CODING_AGENT_DIR` terisolasi berisi `models.yml`. Tidak ada berkas `.omp` yang muncul di repo kerja maupun worktree. (Sejak 2026-10-28 adapter memakai `--mode rpc-ui`, lihat bagian Tool `ask`.)
 
 
 
@@ -271,6 +277,14 @@ Diuji dengan omp sungguhan dan server MCP HTTP buatan worker:
 - **Dua pengaturan wajib** supaya tool terlihat oleh model: (1) `tools.xdev: false` lewat `--config overlay.yml`; bawaannya `true` menyembunyikan tool MCP di balik perangkat `xd://` sehingga tidak ada di daftar tool permintaan LLM; (2) env `OMP_MCP_STARTUP_TIMEOUT_MS=0`, karena jendela bawaan 250 ms bisa terlewat dan tool baru terdaftar di latar belakang.
 - **Approval**: tool MCP juga meminta izin pada `always-ask`. Judulnya `Allow tool: mcp__…` dengan detail `Arguments:\n{json}`; tidak ada baris `Command:`. Adapter menaruh nama tool di baris pertama detail supaya worker bisa mengenalinya.
 - **Gambar**: hasil tool bisa berisi blok `image` (base64), tetapi `models.yml` yang kita tulis mendeklarasikan `input: [text]`, jadi model hanya menerima teks. Karena itu tool screenshot juga mengembalikan laporan tata letak berbentuk teks (elemen di luar viewport, gulir mendatar, isi terpotong). Mengaktifkan input gambar bergantung pada kemampuan model di 9Router dan belum dilakukan.
+
+### Skill katalog dan isolasi (P9, omp 18.12.6, Linux ARM64, diuji dengan omp sungguhan)
+
+Diukur lewat blok `<skills>` di system prompt yang diterima server LLM tiruan (`apps/worker/src/skills/omp-isolation.e2e.test.ts`):
+
+- Menghapus `--no-skills` dan hanya memakai overlay `skills.customDirectories` **tidak cukup**: skill nyata milik pengguna (`pinrule`, `agent-reach`) dan skill di repo kerja (`.claude/skills/`) ikut tampil. Mengganti `HOME` juga tidak membantu karena omp membaca folder home dari sistem (bukan `$HOME`).
+- Yang bekerja: `--skills=<id,id>` (filter nama) bersama `customDirectories`; prompt lalu hanya memuat skill katalog. Tanpa skill katalog dipakai `--no-skills`, dan blok `<skills>` kosong.
+- Pembukaan skill terlihat sebagai `tool_execution_start` tool `read` dengan target `skill://<nama>` (dipetakan adapter menjadi `tool.started` `name: read`, `target: skill://<nama>`).
 
 ### Yang TIDAK didukung / tidak ada
 

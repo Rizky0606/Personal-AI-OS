@@ -833,6 +833,26 @@
                 },
                 "maxItems": 40
               },
+              "openedSkills": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 80
+                },
+                "maxItems": 40,
+                "default": []
+              },
+              "pinnedSkills": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 80
+                },
+                "maxItems": 40,
+                "default": []
+              },
               "memory": {
                 "type": "object",
                 "properties": {
@@ -2015,6 +2035,26 @@
                 },
                 "maxItems": 40
               },
+              "openedSkills": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 80
+                },
+                "maxItems": 40,
+                "default": []
+              },
+              "pinnedSkills": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 80
+                },
+                "maxItems": 40,
+                "default": []
+              },
               "memory": {
                 "type": "object",
                 "properties": {
@@ -2579,6 +2619,16 @@
                   },
                   "systemPrompt": {
                     "type": "string"
+                  },
+                  "skillIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 80
+                    },
+                    "maxItems": 40,
+                    "default": []
                   }
                 },
                 "required": [
@@ -4005,6 +4055,18 @@
             "type": "object",
             "properties": {
               "skills": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "openedSkills": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "pinnedSkills": {
                 "type": "array",
                 "items": {
                   "type": "string"

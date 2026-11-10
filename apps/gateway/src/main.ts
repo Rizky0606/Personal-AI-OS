@@ -120,6 +120,12 @@ async function main(): Promise<void> {
     workerAdapter: createWorkerRelayAdapter({ relay: workerRelay }),
     ...(dsh ? { dsh } : {}),
     roles,
+    eagerSkillEngines: new Set(
+      (config.SKILL_PACKS_EAGER_ENGINES ?? '')
+        .split(',')
+        .map((e) => e.trim())
+        .filter(Boolean),
+    ),
     memory,
     projectRules: projects,
     ...(outbox ? { outbox } : {}),

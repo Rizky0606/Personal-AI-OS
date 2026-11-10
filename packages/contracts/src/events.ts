@@ -256,7 +256,12 @@ export const ContextUsedEventSchema = z.object({
   role: RoleIdSchema,
   engine: z.string().min(1).max(40),
   model: z.string().max(120).nullable(),
+  /** Skill yang dimuat ke system prompt (kompatibel dengan klien lama); sama dengan `pinnedSkills`. */
   skills: z.array(z.string().min(1).max(80)).max(40),
+  /** Skill yang benar-benar dibuka agent saat run (omp: `read skill://<nama>`). Hermes: kosong bila pembukaan tak terekam. */
+  openedSkills: z.array(z.string().min(1).max(80)).max(40).default([]),
+  /** Skill yang ditempel utuh: skill inti, milik agent, dan pilihan manual composer. */
+  pinnedSkills: z.array(z.string().min(1).max(80)).max(40).default([]),
   memory: z.object({
     read: z.number().int().nonnegative(),
     items: z

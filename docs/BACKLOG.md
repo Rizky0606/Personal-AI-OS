@@ -814,18 +814,24 @@ Cabang `fix/p4b-mesin-dipaksa` (dari ujung P7). Commit: `413d66e` (bug #1), `079
 
 ## Temuan P9 (katalog skill dan pemilihan oleh agent)
 
-Cabang `fix/p9-katalog-skill` (dari ujung P8, `9ad1808`). Commit `c7dfc5c` (task 1-2, fondasi). CI hijau setelah 2× rerun job `e2e-desktop` yang kena flake `shell.spec.ts` "satu judul per layar" yang sudah tercatat di atas (bukan temuan baru, tidak terkait perubahan sesi ini).
+Cabang `fix/p9-katalog-skill` (dari ujung P8, `9ad1808`). Commit `c7dfc5c` (task 1-2, fondasi); task 3-8 belum dikomit.
 
-- [x] **Task 2 (deskripsi skill) selesai.** Ke-29 skill bawaan (27 + 2 protokol internal `orca-lead`/`plan-progress`) ditulis ulang agar semua menyebut jelas kapan dipakai, maks 200 karakter. Validasi otomatis (`SkillDescriptionSchema`) + tes baru di `roles.test.ts` memeriksa seluruh registry (46/46 lulus).
-- [x] **Task 1 (katalog) fondasi selesai, bagian "P10" belum.** Kontrak `SkillSummarySchema`/`SkillListSchema`/`SkillDetailSchema` (additive); modul gateway `modules/skills/` (`GET /skills`, `GET /skills/:id`, scope `app` ATAU `worker` lewat `requireAnyScope` baru); `source` saat ini selalu `builtin` -- pemuat skill dari folder data gateway (`user`) **belum ada**, disiapkan lewat parameter opsional `userSkills` di `createSkillsService` tapi tidak pernah dipanggil. Checksum = sha256 isi (body), bukan metadata. 6/6 tes integrasi baru lulus.
-- [ ] **Task 3 (omp: hapus `--no-skills`, overlay folder worker terisolasi) belum dikerjakan.**
-- [ ] **Task 4 (sinkron ke `~/.hermes/skills/aios/`) belum dikerjakan.**
-- [ ] **Task 5 (keyword pack jadi indeks, bukan tempel utuh secara bawaan; `SKILL_PACKS` jadi cadangan) belum dikerjakan.** Saat ini `SKILL_PACKS` masih menempel isi penuh secara bawaan seperti sebelum P9 (lihat `packages/roles/src/agents.ts` + `apps/gateway/src/modules/router/service.ts`).
-- [ ] **Task 6 (`context.used` memisahkan `skills.opened` dari `skills.pinned`) belum dikerjakan.** `ContextUsedEventSchema.skills` (P2B) masih satu daftar flat.
-- [ ] **Task 7 (`pnpm eval:skills`, 20 pesan contoh) belum dikerjakan.**
-- [ ] **Task 8 (tes gabungan: overlay omp tanpa skill luar, sinkron hanya `aios/`, fallback kata kunci saat dinyalakan) belum dikerjakan** -- menunggu task 3-5 selesai dulu.
+- [x] **Task 1 katalog.** `GET /skills`, `GET /skills/:id` (scope `app` atau `worker`), checksum sha256 isi, sumber `builtin`. Pemuat folder data gateway (`user`) tetap hook `userSkills` yang belum dipanggil: itu cakupan P10.
+- [x] **Task 2 deskripsi.** 29 skill bawaan (27 + `orca-lead`/`plan-progress`) satu kalimat, maks. 200 karakter, menyebut kapan dipakai; divalidasi skema.
+- [x] **Task 3 omp.** `--no-skills` dihapus; worker mengunduh ke cache sendiri (`skills-cache`, unduh ulang hanya bila checksum berubah, isi diverifikasi), overlay `customDirectories` ke folder run. **Temuan:** overlay saja membocorkan skill pengguna dan repo; wajib `--skills=<id terpasang>` (atau `--no-skills` bila kosong). Bukti: `omp-isolation.e2e.test.ts` (omp sungguhan).
+- [x] **Task 4 Hermes.** `pnpm skills:sync-hermes [--dry-run] [--verify]` (eksplisit, bukan otomatis), hanya menulis `~/.hermes/skills/aios/`, nama `aios-<id>`. Hermes tidak perlu restart (terverifikasi dengan sesi nyata). Sinkron sungguhan sudah dijalankan di mesin ini: 29 skill; hapus `~/.hermes/skills/aios/` untuk menariknya.
+- [x] **Task 5 peran paket kata kunci.** Skill inti, milik agent, dan pilihan manual tetap ditempel utuh; skill paket kata kunci hanya indeks. Fallback per mesin lewat `SKILL_PACKS_EAGER_ENGINES` (juga di compose). Nama di indeks mengikuti mesin (`aios-<id>` di Hermes). Empat tes lama yang mengunci perilaku "ditempel utuh" diperbarui ke kontrak baru (kini juga memeriksa `bundle.skillIds` dan bahwa isi tidak ditempel).
+- [x] **Task 6 skill dibuka.** `context.used.openedSkills`/`pinnedSkills` (additive; `skills` tetap berarti "dimuat ke prompt"). omp: `read skill://` di worker; Hermes: `skill_view` pada `aios-<id>` (terlihat di stream nyata, fixture `skill-view-aios.sse`). Tanpa bukti tidak dilaporkan.
+- [x] **Task 7 evaluasi.** `pnpm eval:skills`: 20 pesan, menjalankan mesin sungguhan bila tersedia, dilewati dengan alasan bila tidak; validitas set uji dicek offline. Dijalankan sungguhan ke Hermes pada 2 pesan riset: **0/2 tepat**, dan itu temuan: indeks memakai nama tanpa `aios-` (sudah diperbaiki), tetapi ketepatan pemilihan setelah perbaikan itu **belum diukur ulang**.
+- [x] **Task 8 tes.** Katalog, cache checksum, sinkron Hermes (hanya `aios/`, symlink ditolak), overlay omp tanpa skill luar (omp asli), `openedSkills` di `context.used` dan panel Progres (Hermes), fallback per mesin.
 
-**Dua tes lama yang disesuaikan** (bukan dilemahkan; kategori baru untuk route yang memang sengaja multi-scope): `security.audit.integration.test.ts` (kategori `app_or_worker`), `contract.test.ts` + `docs/API_CONTRACT.md` (route baru didaftarkan, bukan dihapus dari pemeriksaan).
+**Hasil regresi akhir (Linux ARM64, Postgres 16 sekali-pakai):** typecheck semua paket bersih; contracts 151, roles 53, adapters 116 (+1 skip), worker 295, desktop 923, gateway 680 lulus. Satu kelompok gagal tanpa konfigurasi lingkungan: 3 tes `research/render.test.ts`. Penyebab (dibuktikan): tes memilih browser dari daftar kandidat dan di Ubuntu `/usr/bin/chromium-browser` hanyalah stub snap ("requires the chromium snap to be installed"); dengan `TEST_BROWSER_PATH` mengarah ke Chromium Playwright, kelima tes render lulus. Bukan masalah kode dan tidak terkait P9 (`modules/research` tidak diubah). Tes e2e Playwright (`e2e/`) **tidak dijalankan**.
 
+**Perlu keputusan / tindak lanjut:**
+- [ ] **Hermes 0.22.5: `GET /v1/skills` selalu 500** (`api_server.py` memanggil `find_all_skills(include_editorial=True)`, parameter itu tidak ada di `skills_tool.py` build yang sama). Bug di Hermes; `skills:sync-hermes --verify` gagal sampai Hermes diperbarui. Verifikasi dilakukan lewat fungsi penemuan yang sama (29/29 terlihat).
+- [ ] Ukur ulang ketepatan pemilihan skill (`pnpm eval:skills`, 20 pesan) di Hermes dan omp setelah perbaikan nama indeks. omp perlu `AIOS_EVAL_OMP_*`.
+- [ ] Pembukaan skill Hermes belum ditampilkan di UI desktop (hanya di data progres); UI membaca `skills`.
+- [ ] Tes gateway default memakai Postgres tertanam yang gagal di mesin ini (`libicuuc.so.60`, hanya ICU 74 terpasang). Jalankan dengan `TEST_DATABASE_URL` ke Postgres 16 sistem: role harus superuser (atau cluster sendiri), karena `DROP DATABASE ... WITH (FORCE)` di teardown ditolak untuk role biasa saat autovacuum menyentuh database tes.
+- [ ] Skill `user` dari folder data gateway (P10): belum ada pemuat.
 
-
+**Dua tes lama yang disesuaikan sebelumnya** (kategori `app_or_worker`): `security.audit.integration.test.ts`, `contract.test.ts` + `docs/API_CONTRACT.md`.

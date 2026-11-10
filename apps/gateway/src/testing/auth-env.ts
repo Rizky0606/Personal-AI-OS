@@ -162,6 +162,8 @@ export async function createAuthEnv(
     /** Folder kiriman berkas buatan agent (sama untuk gateway dan agent di tes). */
     outboxDir?: string;
     hermesIdleMs?: number;
+    /** Mesin yang memakai fallback lama (isi paket skill ditempel utuh); default kosong = hanya indeks. */
+    eagerSkillEngines?: ReadonlySet<string>;
     /** Engine dsh ke proses ACP palsu (testing/fake-dsh.mjs); tanpa ini dsh tidak tersedia. */
     dsh?: DshDeps['config'];
     heartbeatMs?: number;
@@ -236,6 +238,7 @@ export async function createAuthEnv(
     }),
     ...(dsh ? { dsh } : {}),
     roles,
+    ...(options.eagerSkillEngines ? { eagerSkillEngines: options.eagerSkillEngines } : {}),
     memory,
     projectRules: projects,
     ...(outbox ? { outbox } : {}),

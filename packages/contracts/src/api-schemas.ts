@@ -839,6 +839,10 @@ export const ConversationProgressSchema = z
     outputs: z.array(ProgressOutputSchema).max(PROGRESS_OUTPUTS_MAX),
     used: z.object({
       skills: z.array(z.string()),
+      /** Skill yang benar-benar dibuka agent (omp `read skill://`); kosong/absen bila tidak teramati. */
+      openedSkills: z.array(z.string()).optional(),
+      /** Skill yang ditempel utuh (inti, milik agent, pilihan manual). Absen pada data lama. */
+      pinnedSkills: z.array(z.string()).optional(),
       engine: z.string().nullable(),
       model: z.string().nullable(),
       memory: z.object({

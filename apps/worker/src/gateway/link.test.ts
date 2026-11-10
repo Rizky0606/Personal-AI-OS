@@ -82,6 +82,40 @@ describe('GatewayLink: sambung dan kirim', () => {
   });
 });
 
+describe('GatewayLink: skill fetch', () => {
+  it('authenticated worker downloads details and receives checksum/body', async () => {
+    const current = session();
+    const { link } = makeLink({
+      fetch: (url, init) => {
+        const target = typeof url === 'string' ? url : url instanceof URL ? url.href : url.url;
+        expect(target).toBe(`${gateway.url}/v1/skills/demo-skill`);
+        expect((init?.headers as Record<string, string>).authorization).toBe(
+          `Bearer ${current.accessToken}`,
+        );
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              id: 'demo-skill',
+              name: 'Demo',
+              description: 'Use during tests.',
+              version: '1',
+              checksum: 'a'.repeat(64),
+              body: 'body',
+            }),
+            { status: 200 },
+          ),
+        );
+      },
+    });
+    link.setSession(current);
+    await until(() => link.state === 'connected', 'connected');
+    await expect(link.getSkill('demo-skill')).resolves.toMatchObject({
+      checksum: 'a'.repeat(64),
+      body: 'body',
+    });
+  });
+});
+
 describe('GatewayLink: artifact upload', () => {
   it('mengunggah PNG lewat HTTP terautentikasi dengan metadata run', async () => {
     const body = Buffer.from('89504e470d0a1a0a', 'hex');

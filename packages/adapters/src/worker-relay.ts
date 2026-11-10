@@ -136,7 +136,11 @@ export function createWorkerRelayAdapter(options: WorkerRelayOptions): AgentAdap
           runId: input.runId,
           projectId,
           prompt: input.prompt,
-          bundle: { role: input.role ?? 'general', systemPrompt: input.systemPrompt ?? '' },
+          bundle: {
+            role: input.role ?? 'general',
+            systemPrompt: input.systemPrompt ?? '',
+            skillIds: [...(input.skillIds ?? [])],
+          },
           model: input.model ?? 'default',
           ...(input.continueFromRunId ? { continueFromRunId: input.continueFromRunId } : {}),
           ...(input.planOnly ? { planOnly: true } : {}),

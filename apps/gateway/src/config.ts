@@ -46,6 +46,11 @@ const EnvSchema = z.object({
   OUTBOX_DIR: optionalString,
   /** Folder yang sama seperti terlihat agent di host (mis. /home/ubuntu/aios-outbox). */
   OUTBOX_HOST_DIR: optionalString,
+  /**
+   * Fallback per mesin: daftar mesin (dipisah koma, mis. `hermes,dsh`) yang masih menempel utuh isi paket skill
+   * kata kunci, bukan hanya indeks. Kosong (bawaan) = semua mesin memilih sendiri dari indeks.
+   */
+  SKILL_PACKS_EAGER_ENGINES: optionalString,
   /** Combo 9Router kecil untuk mengurai jadwal dari bahasa alami. */
   SCHEDULE_MODEL: withDefault(z.string().min(1), 'router-fast'),
   /** Combo 9Router kecil untuk memecah ide menjadi kartu kanban. */

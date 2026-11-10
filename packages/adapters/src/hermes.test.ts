@@ -491,7 +491,13 @@ describe('adapter Hermes: cancel', () => {
       res.end();
     });
     const adapter = createHermesAdapter({ baseUrl: hermes.url });
-    const first = await adapter.startRun({ runId: RUN_ID, messageId: MESSAGE_ID, prompt: 'x' });
+    const first = await adapter.startRun({
+      runId: RUN_ID,
+      messageId: MESSAGE_ID,
+      prompt: 'x',
+      skills: [],
+      skillIds: [],
+    });
     await first.cancel();
     expect(await drain(first.events)).toEqual([]);
 
@@ -509,7 +515,13 @@ describe('adapter Hermes: cancel', () => {
 
   it('steer dan approval belum didukung: ditolak dengan kode unsupported', async () => {
     const adapter = createHermesAdapter({ baseUrl: 'http://127.0.0.1:1' });
-    const handle = await adapter.startRun({ runId: RUN_ID, messageId: MESSAGE_ID, prompt: 'x' });
+    const handle = await adapter.startRun({
+      runId: RUN_ID,
+      messageId: MESSAGE_ID,
+      prompt: 'x',
+      skills: [],
+      skillIds: [],
+    });
     await expect(handle.steer('x')).rejects.toMatchObject({ code: 'unsupported' });
     await expect(handle.resolveApproval('a', 'allow')).rejects.toMatchObject({
       code: 'unsupported',

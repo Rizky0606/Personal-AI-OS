@@ -19,11 +19,19 @@ let nine: MockServer;
 let token: string;
 let projectId: string;
 
-/** Pesan sistem run chat di server: bundel agent (dengan skill tambahan) lalu aturan berkas untuk pemilik. */
-const serverPrompt = (extraSkills: string[] = []) =>
-  [env.roles.bundle('general', extraSkills).systemPrompt, SUGGEST_RULE, SERVER_FILES_RULE].join(
-    '\n\n',
-  );
+/**
+ * Pesan sistem run chat di server: bundel agent lalu aturan berkas untuk pemilik. `extraSkills` = pilihan manual
+ * (ditempel utuh); `suggested` = skill paket kata kunci (hanya indeks, bernama aios-<id> di Hermes).
+ */
+const serverPrompt = (extraSkills: string[] = [], suggested: string[] = []) =>
+  [
+    env.roles.bundle('general', extraSkills, {
+      suggestedSkills: suggested,
+      skillNamePrefix: 'aios-',
+    }).systemPrompt,
+    SUGGEST_RULE,
+    SERVER_FILES_RULE,
+  ].join('\n\n');
 
 beforeAll(async () => {
   hermes = await startFakeHermes();
@@ -120,7 +128,7 @@ describe('agent tetap tanpa router', () => {
     expect(systemOf()).toBe(serverPrompt());
   });
 
-  it('skill spesialis dipilih dari kata kunci pesan dan ikut masuk ke system prompt', async () => {
+  it('skill spesialis dipilih dari kata kunci pesan dan ditawarkan lewat indeks (isinya tidak ditempel)', async () => {
     const conv = await conversation();
     const { run } = await send(
       conv.id,
@@ -133,10 +141,14 @@ describe('agent tetap tanpa router', () => {
       role: 'general',
       reason: 'Agent umum dengan skill source-verification, citation, fact-vs-opinion.',
     });
-    expect(systemOf()).toBe(serverPrompt(['source-verification', 'citation', 'fact-vs-opinion']));
+    expect(systemOf()).toBe(
+      serverPrompt([], ['source-verification', 'citation', 'fact-vs-opinion']),
+    );
+    expect(systemOf()).toContain('- aios-citation:');
+    expect(systemOf()).not.toContain('## citation\n');
   });
 
-  it('skills menambah dan skillsOff mencabut skill; skill tak dikenal diabaikan', async () => {
+  it('skills menambah (ditempel utuh) dan skillsOff mencabut; sisanya tetap indeks; skill tak dikenal diabaikan', async () => {
     const conv = await conversation();
     const { run } = await send(conv.id, 'Tolong riset dan bandingkan dua framework', {
       skills: ['stop-slop', 'skill-hantu'],
@@ -144,8 +156,12 @@ describe('agent tetap tanpa router', () => {
     });
     await settle(run.id);
 
-    expect(systemOf()).toBe(serverPrompt(['source-verification', 'fact-vs-opinion', 'stop-slop']));
+    expect(systemOf()).toBe(
+      serverPrompt(['stop-slop'], ['source-verification', 'fact-vs-opinion']),
+    );
+    expect(systemOf()).toContain('## stop-slop\n');
     expect(systemOf()).not.toContain('## citation\n');
+    expect(systemOf()).not.toContain('- aios-citation:');
   });
 
   it('percakapan Android dengan project tetap agent umum; paket skill kode tidak ikut', async () => {

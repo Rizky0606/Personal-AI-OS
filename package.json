@@ -12,9 +12,11 @@
     "lint": "eslint . && prettier --check .",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
+    "eval:skills": "pnpm --filter @aios/gateway eval:skills --",
     "format": "prettier --write .",
     "shots": "pnpm --filter @aios/e2e shots",
-    "shots:compare": "pnpm --filter @aios/e2e shots:compare"
+    "shots:compare": "pnpm --filter @aios/e2e shots:compare",
+    "skills:sync-hermes": "pnpm --filter @aios/gateway skills:sync-hermes --"
   },
   "devDependencies": {
     "@aios/config": "workspace:*",

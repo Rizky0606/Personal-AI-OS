@@ -14,7 +14,7 @@ Aplikasi punya **dua agent tetap**. Yang membedakannya hanya ada tidaknya projec
 
 ## Paket skill: skill spesialis dipilih dari kata kunci
 
-`selectSkills` memeriksa teks pesan terhadap pola kata kunci (`SKILL_PACKS`) dan memuat skill dari paket yang cocok, berurutan, tanpa duplikat. Paket `frontend` dan `backend` hanya untuk agent `project`.
+`selectSkills` memeriksa teks pesan terhadap pola kata kunci (`SKILL_PACKS`) dan memilih skill dari paket yang cocok, berurutan, tanpa duplikat. Paket `frontend` dan `backend` hanya untuk agent `project`.
 
 | Paket | Skill | Contoh kata kunci |
 | --- | --- | --- |
@@ -28,6 +28,26 @@ Aplikasi punya **dua agent tetap**. Yang membedakannya hanya ada tidaknya projec
 Pola sengaja lebar: skill tambahan yang tidak perlu hanya memakai token, sedangkan skill yang hilang menurunkan mutu. Pengguna dapat menambah atau mencabut skill per pesan lewat `skills[]` dan `skillsOff[]` di `POST /conversations/:id/messages` (menang atas kata kunci); skill yang tidak dikenal dibuang. Anggaran skill per run tetap sekitar 4.000 token: skill yang tidak muat dilewati utuh (dilaporkan sebagai `omittedSkills`), skill inti tidak pernah dibuang.
 
 Keputusan (agent dan skill) tersimpan di `routing_decisions` dan tampil sebagai event `route.decided` (`reason`: "Agent project dengan skill …").
+
+**Sejak P9 paket kata kunci tidak lagi menempel isi skill secara bawaan.** Skill dari paket yang cocok hanya *ditawarkan*: system prompt memuat bagian `# Skill tersedia` berisi satu baris `- <nama>: <deskripsi>` per skill, dan agent memilih sendiri mana yang dibuka. Yang tetap ditempel utuh: skill inti (`CORE_SKILLS`), skill milik agent, dan pilihan manual pengguna di composer (`skills[]`). Karena indeks hanya menampilkan deskripsi, setiap deskripsi skill wajib satu kalimat, maks. 200 karakter, dan menyebut KAPAN skill dipakai (divalidasi `SkillDescriptionSchema`).
+
+Cara agent membuka skill berbeda per mesin, dan nama di indeks mengikutinya:
+
+| Mesin | Nama di indeks | Cara membuka | Teramati |
+| --- | --- | --- | --- |
+| omp (worker) | `<id>` | tool `read skill://<id>` | ya, dari event `tool.started` di worker |
+| Hermes (server) | `aios-<id>` | tool `skill_view` | ya, dari `hermes.tool.progress` (terverifikasi di Hermes 0.22.5) |
+
+**Fallback per mesin.** `SKILL_PACKS_EAGER_ENGINES` (env gateway, daftar dipisah koma, mis. `hermes,dsh`) mengembalikan perilaku lama untuk mesin itu saja: isi paket ditempel utuh, tanpa indeks. Kosong (bawaan) = semua mesin memakai indeks. Pilihan manual composer selalu menempel isi, apa pun pengaturannya.
+
+## Katalog skill (P9)
+
+Gateway memegang satu katalog: skill bawaan repo (`source: builtin`) ditambah skill tambahan dari folder data gateway (`user`/`installed`/`agent`, dipakai P10). Tiap entri punya `id, name, description, version, source, checksum` (sha256 isi tanpa frontmatter). `GET /skills` mengembalikan indeks tanpa isi dan `GET /skills/:id` isi lengkap; keduanya butuh scope `app` atau `worker`.
+
+- **omp.** Worker mengunduh isi skill yang ditawarkan ke cache miliknya (`<dataDir>/skills-cache`, bukan repo kerja dan bukan folder skill pengguna). Isi hanya diunduh bila checksum di indeks berubah, dan wajib cocok dengan checksum yang diumumkan. Setiap run memasang skill ke `<runDir>/agent/skills` dan mendaftarkan HANYA folder itu lewat `skills.customDirectories`. Omp memuat skill provider lain (`~/.claude`, `~/.agents`, `.claude/` di repo) dan membaca folder home dari sistem, bukan `$HOME`, sehingga flag wajib: `--skills=<id terpasang>`, atau `--no-skills` bila katalog kosong. Terbukti dengan omp sungguhan: `apps/worker/src/skills/omp-isolation.e2e.test.ts` memeriksa blok `<skills>` di prompt yang diterima model.
+- **Hermes.** Sinkron ke Hermes SENGAJA langkah eksplisit, tidak berjalan otomatis: `pnpm skills:sync-hermes [--dry-run] [--verify]`. Skill ditulis ke `~/.hermes/skills/aios/<id>/SKILL.md` dengan nama `aios-<id>` (env `HERMES_SKILLS_DIR` mengganti akar). Hanya folder `aios/` yang disentuh; folder di dalamnya yang bukan buatan kita dibiarkan, dan symlink ditolak. Hermes tidak perlu restart: penemuan skill memakai tanda tangan berkas (TTL 30 dtk), dan sesi baru langsung melihat skill baru (terverifikasi dengan sesi nyata). Jalankan ulang perintah itu setiap skill katalog berubah.
+- **Skill yang dibuka.** `context.used.openedSkills` hanya berisi skill yang benar-benar teramati dibuka (omp: `read skill://`, Hermes: `skill_view` pada `aios-<id>`). Tanpa bukti tidak dilaporkan. Dipisah dari `pinnedSkills` (yang ditempel utuh). `skills` tetap berarti "skill yang dimuat ke prompt" agar klien lama tidak berubah.
+- **Evaluasi murah.** `pnpm eval:skills [--from=N] [--limit=N] [--engine=hermes|omp|all]` menjalankan 20 pesan contoh (umum, coding, riset, menulis, video) ke mesin sungguhan dan melaporkan skill yang dibuka per pesan. Bukan tes CI. Mesin yang tidak tersedia dilewati dengan alasan: Hermes perlu `HERMES_API_KEY` dan skill sudah disinkron; omp perlu `AIOS_EVAL_OMP_BASE_URL`, `AIOS_EVAL_OMP_API_KEY`, `AIOS_EVAL_OMP_MODEL`. Validitas set uji itu sendiri dicek offline oleh `eval-skills.test.ts`.
 
 ## Format file agent
 

@@ -21,6 +21,7 @@ import { ApprovalRules } from './runs/rules.js';
 import { ProjectSetupStore } from './runs/setup.js';
 import { WorktreeManager } from './runs/worktree.js';
 import { WORKER_VERSION } from './version.js';
+import { createSkillCache } from './skills/cache.js';
 
 export interface WorkerOptions {
   /** Token lokal sekali pakai untuk koneksi pertama dari desktop. */
@@ -167,6 +168,10 @@ export async function startWorker(options: WorkerOptions): Promise<RunningWorker
     terminal,
     send: (runId, event) => link.sendEvent(runId, event),
     dataDir: options.dataDir,
+    skills: createSkillCache(nodePath.join(options.dataDir, 'skills-cache'), {
+      list: () => link.listSkills(),
+      get: (id) => link.getSkill(id),
+    }),
     log,
     ...(options.maxRunMs ? { maxRunMs: options.maxRunMs } : {}),
   });

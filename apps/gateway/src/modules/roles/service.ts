@@ -20,8 +20,20 @@ export interface RolesService {
   get(id: string): Role | undefined;
   /** Registri saat ini (berubah bila hot-reload); dipakai router. */
   registry(): RolesRegistry;
-  /** System prompt untuk agent itu: aturan perilaku + agent + skill inti + skill khusus (milik agent dan `extraSkills`). */
-  bundle(roleId: string, extraSkills?: readonly string[]): Bundle;
+  /**
+   * System prompt untuk agent itu: aturan perilaku + agent + skill inti + skill khusus (milik agent dan
+   * `extraSkills`, ditempel utuh). `suggestedSkills` (P9, paket kata kunci) hanya masuk sebagai indeks
+   * kecuali `eagerSkillPacks` (fallback mesin tanpa dukungan indeks).
+   */
+  bundle(
+    roleId: string,
+    extraSkills?: readonly string[],
+    options?: {
+      suggestedSkills?: readonly string[];
+      eagerSkillPacks?: boolean;
+      skillNamePrefix?: string;
+    },
+  ): Bundle;
   close(): void;
 }
 
@@ -102,8 +114,8 @@ export function createRolesService(options: RolesServiceOptions = {}): RolesServ
     registry: () => registry,
     has: (id) => registry.roles.has(id),
     get: (id) => registry.roles.get(id),
-    bundle: (roleId, extraSkills) =>
-      buildBundle(registry, roleId, extraSkills ? { extraSkills } : {}),
+    bundle: (roleId, extraSkills, options) =>
+      buildBundle(registry, roleId, { ...(extraSkills ? { extraSkills } : {}), ...options }),
     close() {
       clearTimeout(timer);
       for (const w of watchers) w.close();

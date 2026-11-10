@@ -22,6 +22,7 @@ import { and, count, eq, inArray, notInArray } from 'drizzle-orm';
 import type { Database } from '../../db/client.js';
 import { approvals, messages, projects, runs } from '../../db/schema/index.js';
 import { uuidv7 } from '../../lib/uuidv7.js';
+import { HERMES_SKILL_PREFIX } from '../skills/hermes-sync.js';
 import type { EventHub } from './hub.js';
 import type { RunObserver } from './observer.js';
 import type { EventStore } from './store.js';
@@ -33,8 +34,13 @@ export interface ResolvedRole {
   role: string;
   confidence: number;
   reason: string;
-  /** Skill spesialis yang dimuat untuk run ini (hasil pemilihan kata kunci), di luar skill inti dan skill agent. */
+  /** Skill spesialis yang dimuat (full isi) untuk run ini: milik agent + pilihan manual pengguna. */
   skills?: readonly string[];
+  /**
+   * Skill paket kata kunci (P9): hanya ditawarkan lewat indeks di system prompt, bukan ditempel utuh,
+   * kecuali mesinnya terdaftar di `SKILL_PACKS_EAGER_ENGINES` (fallback per mesin).
+   */
+  suggestedSkills?: readonly string[];
 }
 
 /**
@@ -117,12 +123,24 @@ export interface RunnerDeps {
   dsh?: { adapter: AgentAdapter; prepareWorkdir(runId: string): Promise<string> };
   /** Diberi tahu tiap status atau diff run berubah (kartu kanban mengikuti run). */
   observer?: RunObserver;
+  /** Mesin (hermes/omp/dsh/...) yang memakai fallback lama: isi paket skill kata kunci ditempel utuh. */
+  eagerSkillEngines?: ReadonlySet<string>;
   /** Bundel role (aturan perilaku + role + skill) yang disuntik sebagai pesan sistem. */
   roles: {
     bundle(
       roleId: string,
       extraSkills?: readonly string[],
-    ): { systemPrompt: string; skills?: readonly string[] };
+      options?: {
+        suggestedSkills?: readonly string[];
+        eagerSkillPacks?: boolean;
+        skillNamePrefix?: string;
+      },
+    ): {
+      systemPrompt: string;
+      skills?: readonly string[];
+      offeredSkills?: readonly string[];
+      skillIds?: readonly string[];
+    };
     get(roleId: string): { engine: string; model?: string } | undefined;
   };
   /** Memori pemilik (W17) yang ditambahkan ke pesan sistem setiap run; tanpa ini tidak ada memori. */
@@ -231,8 +249,15 @@ export function createRunner(deps: RunnerDeps): Runner {
     runId: string,
     planOnly = false,
     skills: readonly string[] = [],
-  ): Promise<{ prompt: string; skills: readonly string[] }> {
-    const bundled = deps.roles.bundle(roleId, skills);
+    suggestedSkills: readonly string[] = [],
+    eagerSkillPacks = false,
+    skillNamePrefix = '',
+  ): Promise<{ prompt: string; skills: readonly string[]; skillIds: readonly string[] }> {
+    const bundled = deps.roles.bundle(roleId, skills, {
+      suggestedSkills,
+      eagerSkillPacks,
+      skillNamePrefix,
+    });
     const bundle = bundled.systemPrompt;
     const extra = async (name: string, load: () => Promise<string> | undefined) => {
       try {
@@ -261,7 +286,7 @@ export function createRunner(deps: RunnerDeps): Runner {
     ]
       .filter(Boolean)
       .join('\n\n');
-    return { prompt, skills: bundled.skills ?? [] };
+    return { prompt, skills: bundled.skills ?? [], skillIds: bundled.offeredSkills ?? [] };
   }
 
   /** Run coding memakai riwayat percakapan penuh; chat Hermes hanya riwayat sesi baru (bila ada). */
@@ -299,6 +324,8 @@ export function createRunner(deps: RunnerDeps): Runner {
       engine: string;
       model: string | null;
       skills: readonly string[];
+      openedSkills?: readonly string[];
+      pinnedSkills: readonly string[];
       attachments: { fileId: string; name: string; mime: string }[];
     }) => {
       let memory: { read: number; items: { id: string; title: string }[] } = { read: 0, items: [] };
@@ -314,6 +341,8 @@ export function createRunner(deps: RunnerDeps): Runner {
         engine: ctx.engine,
         model: ctx.model,
         skills: [...ctx.skills],
+        openedSkills: [...(ctx.openedSkills ?? [])],
+        pinnedSkills: [...ctx.pinnedSkills],
         memory: { read: memory.read, ...(memory.items.length ? { items: memory.items } : {}) },
         attachments: ctx.attachments.slice(0, 20),
       });
@@ -511,6 +540,11 @@ export function createRunner(deps: RunnerDeps): Runner {
         const model = run.model ?? (coding ? deps.roles.get(chosenRole)?.model : undefined);
         const prompt = await enrichedPrompt(input, ctl.abort.signal);
         // Dihitung per run: perubahan role (mode dev) dan memori berlaku pada run berikutnya.
+        const engineName = useDsh
+          ? 'dsh'
+          : coding
+            ? 'omp'
+            : (deps.roles.get(chosenRole)?.engine ?? 'hermes');
         const system = await systemPromptFor(
           chosenRole,
           input.projectId ?? null,
@@ -518,25 +552,41 @@ export function createRunner(deps: RunnerDeps): Runner {
           run.id,
           planOnly,
           decision.skills,
+          decision.suggestedSkills,
+          // Fallback per mesin (SKILL_PACKS_EAGER_ENGINES): isi paket ditempel utuh, bukan indeks.
+          deps.eagerSkillEngines?.has(engineName) === true,
+          // Hermes membuka skill hasil sinkron bernama `aios-<id>`; omp membuka `skill://<id>`.
+          engineName === 'hermes' ? HERMES_SKILL_PREFIX : '',
         );
-        await emitContextUsed({
+        // `skills` tetap berarti "skill yang dimuat ke prompt" (kompatibel dengan klien lama); `pinnedSkills`
+        // menamai himpunan yang sama secara eksplisit; `openedSkills` hanya diisi dari pembukaan yang teramati.
+        const contextBase = {
           runId: run.id,
           role: chosenRole,
-          engine: useDsh
-            ? 'dsh'
-            : coding
-              ? 'omp'
-              : (deps.roles.get(chosenRole)?.engine ?? 'hermes'),
+          engine: engineName,
           model: model ?? null,
           skills: system.skills,
+          pinnedSkills: system.skills,
           attachments: input.attachments ?? [],
-        });
+        };
+        await emitContextUsed({ ...contextBase, openedSkills: [] });
+        // Skill yang terbukti dibuka agent (kumulatif). Sumber: laporan worker untuk omp (`read skill://`) dan
+        // tool `skill_view` yang terlihat di stream Hermes. Tidak ada sumber lain: tanpa bukti tidak dilaporkan.
+        const openedSkills = new Set<string>();
+        const reportOpened = async (ids: Iterable<string>) => {
+          const before = openedSkills.size;
+          for (const id of ids) openedSkills.add(id);
+          if (openedSkills.size > before) {
+            await emitContextUsed({ ...contextBase, openedSkills: [...openedSkills] });
+          }
+        };
         let handle: RunHandle | undefined;
         try {
           handle = await startAdapter.startRun({
             runId: run.id,
             messageId: input.assistantMessageId,
             prompt,
+            skillIds: [...system.skillIds],
             systemPrompt: system.prompt,
             sessionId: input.sessionId,
             ...(await historyFor(input, coding || useDsh)),
@@ -585,6 +635,21 @@ export function createRunner(deps: RunnerDeps): Runner {
             }
           }
           if (event.type === 'message.completed' && event.usage) usage = event.usage;
+          if (event.type === 'context.used') {
+            // Laporan worker (skill yang benar-benar dibuka agent). Digabung ke context.used milik gateway
+            // supaya engine, model, dan memori tidak tertimpa; event mentah worker tidak disimpan.
+            await reportOpened(event.openedSkills);
+            continue;
+          }
+          if (
+            event.type === 'tool.started' &&
+            engineName === 'hermes' &&
+            event.name === 'skill_view'
+          ) {
+            // Skill katalog di Hermes bernama `aios-<id>` (lihat hermes-sync); skill bawaan Hermes tidak dihitung.
+            const id = /^aios-([a-z][a-z0-9-]*)$/.exec(event.target ?? '')?.[1];
+            if (id) await reportOpened([id]);
+          }
           if (event.type === 'error') {
             failure = { code: event.code, message: event.message, retryable: event.retryable };
             continue;
