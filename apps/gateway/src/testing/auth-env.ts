@@ -45,6 +45,8 @@ import { createTasksService, type TasksService } from '../modules/tasks/service.
 import { createWorkerRelay, type WorkerRelay } from '../modules/worker/relay.js';
 import { createWorkerHub } from '../modules/worker/routes.js';
 import { createRolesService, type RolesService } from '../modules/roles/service.js';
+import { createHermesSkillSource } from '../modules/skills/hermes-skills.js';
+import { createInstallService } from '../modules/skills/install-service.js';
 import { createSkillManager } from '../modules/skills/manager.js';
 import { createSkillsService } from '../modules/skills/service.js';
 import { createEventHub, type EventHub } from '../modules/runs/hub.js';
@@ -137,6 +139,12 @@ export async function createAuthEnv(
     streamIdleMs?: number;
     /** Dipanggil setelah katalog skill berubah (meniru sinkron ke Hermes di tes). */
     onSkillChange?: () => Promise<'off' | 'ok' | 'failed'>;
+    /** Unduhan skill dari luar dan folder skill Hermes untuk tes; tanpa ini tidak ada jaringan. */
+    skillInstall?: {
+      fetchImpl?: Parameters<typeof createInstallService>[0]['fetchImpl'];
+      hermesRoot?: string;
+      hermesFetch?: typeof fetch;
+    };
     /** Menyalakan layanan riset sungguhan (pg-boss) di database tes. */
     research?: {
       searxngUrl: string;
@@ -405,6 +413,20 @@ export async function createAuthEnv(
     roles,
     skills,
     skillManager,
+    skillInstaller: createInstallService({
+      skills,
+      manager: skillManager,
+      fetchImpl:
+        options.skillInstall?.fetchImpl ??
+        (() => Promise.reject(new Error('tes: unduhan skill tidak diizinkan tanpa fetchImpl'))),
+      hermes: createHermesSkillSource({
+        url: 'http://127.0.0.1:1',
+        root: options.skillInstall?.hermesRoot,
+        fetchImpl:
+          options.skillInstall?.hermesFetch ??
+          (() => Promise.reject(new Error('tes: Hermes tidak tersedia'))),
+      }),
+    }),
     research,
     schedules,
     projects,

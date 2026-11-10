@@ -87,6 +87,9 @@ export function slugifySkillId(name: string): string {
   return /^[a-z]/.test(slug) ? slug : `skill-${slug}`.slice(0, 64).replace(/-+$/g, '');
 }
 
+/** Id yang bentrok dengan rute `/skills/<kata>`. */
+const RESERVED_IDS = new Set(['scan', 'install', 'hermes']);
+
 const findingErrors = (scan: SkillScan) =>
   scan.findings.slice(0, 10).map((f) => ({
     path: f.line === 0 ? 'deskripsi' : `baris ${f.line}`,
@@ -195,6 +198,8 @@ export function createSkillManager(deps: {
           'skill_id_invalid',
           'Id skill harus huruf kecil, angka, dan tanda hubung, diawali huruf (maks 64 karakter).',
         );
+      if (RESERVED_IDS.has(id))
+        throw new AppError(422, 'skill_id_reserved', `Id "${id}" dicadangkan untuk rute katalog.`);
       checkBody(input.body);
       if (builtinIds().has(id))
         throw new AppError(409, 'skill_id_taken', `Id "${id}" dipakai skill bawaan.`);

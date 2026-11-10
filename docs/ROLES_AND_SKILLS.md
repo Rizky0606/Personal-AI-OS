@@ -138,3 +138,11 @@ Skill tambahan (`user`, `installed`, `agent`) disimpan di Postgres (`catalog_ski
 - **Sampai ke agent:** skill aktif untuk suatu mesin yang `pinned` ditempel utuh seperti skill milik role; yang tidak `pinned` ditawarkan lewat indeks "Skill tersedia" (maks. 40 baris), dan pilihan manual di composer menempelkan isinya utuh. Di Hermes namanya `aios-<id>` (hasil sinkron), di omp `skill://<id>`.
 - **Sinkron ke Hermes:** bila `HERMES_SKILLS_DIR` diisi, setiap perubahan katalog menyalin skill aktif untuk mesin `hermes` ke `<folder>/aios/`. Kosong = tidak ada sinkron otomatis (tetap bisa `pnpm skills:sync-hermes`, yang dengan `DATABASE_URL` ikut menyalin skill tambahan; tanpa `DATABASE_URL` ia tidak menghapus apa pun dari `aios/`).
 - **Pemindai** (`scanner.ts`, aturan saja, bukan jaminan keamanan): prompt injection (Inggris/Indonesia), menyembunyikan tindakan dari pengguna, pengiriman data keluar, perintah merusak, eksekusi kode unduhan, membaca rahasia, karakter tak terlihat (zero-width/bidi), blok base64 panjang. Hasil `safe` / `warning` / `dangerous` dengan baris yang ditandai.
+
+### Pasang dari luar dan impor dari Hermes (P10)
+
+Gateway mengunduh `SKILL.md` dari id skills.sh atau URL GitHub, hanya dari `github.com`, `raw.githubusercontent.com`, dan `skills.sh`, maks. 64 KB, teks saja. Alurnya: **pratinjau** (isi lengkap, hasil pemindai, diff terhadap versi terpasang) lalu **pasang** dengan checksum yang dilihat pengguna. Berbahaya diblokir; peringatan butuh konfirmasi eksplisit. Trust awal `community`; pengguna menaikkannya ke `trusted` lewat `PATCH`.
+
+Keterbatasan yang disengaja: hanya `SKILL.md` yang diambil. Folder `scripts/` dan berkas eksekusi tidak diunduh dan tidak pernah dijalankan (domain yang diizinkan tidak mencakup API GitHub untuk mendaftar isi folder), jadi skill yang bergantung pada skrip hanya membawa petunjuknya; pratinjau memberi tanda bila isi merujuk skrip.
+
+Tab "Skill Hermes" hanya baca. Daftar dari `GET /v1/skills` Hermes; pada Hermes 0.22.5 endpoint itu menjawab 500, sehingga gateway membaca folder `HERMES_SKILLS_DIR` (tanpa menulis, tanpa mengikuti symlink, `aios/` dikecualikan). Isi hanya bisa diimpor dari folder.

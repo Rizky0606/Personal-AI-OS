@@ -1,5 +1,10 @@
 import {
   CreateSkillRequestSchema,
+  HermesSkillListSchema,
+  ImportHermesSkillRequestSchema,
+  InstallSkillRequestSchema,
+  PreviewSkillInstallRequestSchema,
+  SkillInstallPreviewSchema,
   RestoreSkillRequestSchema,
   ScanSkillRequestSchema,
   SetSkillStatusRequestSchema,
@@ -15,6 +20,7 @@ import type { FastifyPluginCallback } from 'fastify';
 import { z } from 'zod';
 import { AppError } from '../../errors.js';
 import { requireAnyScope, requireScope } from '../auth/guard.js';
+import type { InstallService } from './install-service.js';
 import type { SkillChange, SkillManager } from './manager.js';
 import type { SkillsService } from './service.js';
 
@@ -31,7 +37,12 @@ const ListQuery = z.object({
 export const skillRoutes: FastifyPluginCallback<{
   skills: SkillsService;
   manager?: SkillManager;
-}> = (app, { skills, manager: optionalManager }, done) => {
+  installer?: InstallService;
+}> = (app, { skills, manager: optionalManager, installer: optionalInstaller }, done) => {
+  const inst = (): InstallService => {
+    if (!optionalInstaller) throw unavailable();
+    return optionalInstaller;
+  };
   const unavailable = () => new AppError(503, 'skills_unavailable', 'Pengelola skill tidak aktif.');
   const m = (): SkillManager => {
     if (!optionalManager) throw unavailable();
@@ -57,6 +68,26 @@ export const skillRoutes: FastifyPluginCallback<{
   app.post('/skills/scan', { onRequest: requireScope('app') }, (req) => {
     const input = ScanSkillRequestSchema.parse(req.body);
     return SkillScanSchema.parse(m().scan(input));
+  });
+
+  app.post('/skills/install/preview', { onRequest: requireScope('app') }, async (req) =>
+    SkillInstallPreviewSchema.parse(
+      await inst().preview(PreviewSkillInstallRequestSchema.parse(req.body).source),
+    ),
+  );
+
+  app.post('/skills/install', { onRequest: requireScope('app') }, async (req, reply) => {
+    const change = await inst().install(InstallSkillRequestSchema.parse(req.body));
+    return reply.code(201).send(saved(change));
+  });
+
+  app.get('/skills/hermes', { onRequest: requireScope('app') }, async () =>
+    HermesSkillListSchema.parse(await inst().listHermes()),
+  );
+
+  app.post('/skills/hermes/import', { onRequest: requireScope('app') }, async (req, reply) => {
+    const change = await inst().importHermes(ImportHermesSkillRequestSchema.parse(req.body));
+    return reply.code(201).send(saved(change));
   });
 
   app.get<{ Params: { id: string } }>(

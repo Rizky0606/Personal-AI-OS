@@ -44,6 +44,8 @@ import { createTasksService } from './modules/tasks/service.js';
 import { createWorkerRelay } from './modules/worker/relay.js';
 import { createWorkerHub } from './modules/worker/routes.js';
 import { createRolesService } from './modules/roles/service.js';
+import { createHermesSkillSource } from './modules/skills/hermes-skills.js';
+import { createInstallService } from './modules/skills/install-service.js';
 import { createSkillManager } from './modules/skills/manager.js';
 import { createSkillsService } from './modules/skills/service.js';
 import { hermesSkillsFor, syncHermesSkills } from './modules/skills/hermes-sync.js';
@@ -99,6 +101,15 @@ async function main(): Promise<void> {
     overrides: () => skillManager.overrides(),
   });
   skillRef.current = skills;
+  const skillInstaller = createInstallService({
+    skills,
+    manager: skillManager,
+    hermes: createHermesSkillSource({
+      url: config.HERMES_URL,
+      apiKey: config.HERMES_API_KEY,
+      root: config.HERMES_SKILLS_DIR,
+    }),
+  });
   const boss = createBoss(config.DATABASE_URL, log);
   const hub = createEventHub();
   const teamStore = createTeamEventStore(db, hub);
@@ -278,6 +289,7 @@ async function main(): Promise<void> {
     roles,
     skills,
     skillManager,
+    skillInstaller,
     research,
     schedules,
     projects,

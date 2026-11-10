@@ -353,6 +353,79 @@ export const SkillVersionSchema = z
   .meta({ id: 'SkillVersion' });
 export const SkillVersionListSchema = itemsOf(SkillVersionSchema).meta({ id: 'SkillVersionList' });
 
+/* Pasang dari luar dan impor dari Hermes (P10). Hanya gateway yang mengunduh; klien hanya mengirim sumbernya. */
+
+/** id skills.sh (pemilik/repo@skill), URL skills.sh, atau URL GitHub ke folder/berkas SKILL.md. */
+export const PreviewSkillInstallRequestSchema = z
+  .object({ source: z.string().trim().min(1).max(500) })
+  .meta({ id: 'PreviewSkillInstallRequest' });
+export const SkillInstallPreviewSchema = z
+  .object({
+    source: z.object({
+      kind: z.enum(['skills.sh', 'github', 'raw']),
+      input: z.string(),
+      /** URL SKILL.md yang benar-benar diunduh. */
+      url: z.string(),
+    }),
+    candidate: z.object({
+      id: z.string(),
+      name: z.string(),
+      description: z.string().max(200),
+      body: z.string(),
+      checksum: z.string().regex(/^[a-f0-9]{64}$/),
+      /** Deskripsi asal >200 karakter dan dipotong. */
+      descriptionTrimmed: z.boolean(),
+      /** Isi merujuk skrip/berkas eksekusi: TIDAK diunduh dan tidak pernah dijalankan. */
+      mentionsScripts: z.boolean(),
+    }),
+    scan: SkillScanSchema,
+    /** Versi terpasang dengan id yang sama (untuk diff); null bila skill baru. */
+    existing: z
+      .object({
+        id: z.string(),
+        version: z.string(),
+        source: SkillSourceSchema,
+        body: z.string(),
+      })
+      .nullable(),
+    /** install = baru; update = memperbarui skill terpasang dari sumber ini; conflict = id dipakai skill lain. */
+    action: z.enum(['install', 'update', 'conflict']),
+    installable: z.boolean(),
+    reason: z.string().optional(),
+  })
+  .meta({ id: 'SkillInstallPreview' });
+export type SkillInstallPreview = z.infer<typeof SkillInstallPreviewSchema>;
+export const InstallSkillRequestSchema = z
+  .object({
+    source: z.string().trim().min(1).max(500),
+    /** Checksum isi yang dilihat pengguna di pratinjau; ditolak 409 bila isi di sumber sudah berubah. */
+    checksum: z.string().regex(/^[a-f0-9]{64}$/),
+    acknowledge: z.boolean().optional(),
+  })
+  .meta({ id: 'InstallSkillRequest' });
+
+export const HermesSkillSchema = z
+  .object({
+    name: z.string(),
+    description: z.string(),
+    /** Sudah ada di katalog sebagai skill terpasang dari Hermes. */
+    imported: z.boolean(),
+    /** Isi bisa dibaca dari folder skill Hermes sehingga bisa diimpor. */
+    importable: z.boolean(),
+  })
+  .meta({ id: 'HermesSkill' });
+export const HermesSkillListSchema = z
+  .object({
+    items: z.array(HermesSkillSchema),
+    /** api = dari GET /v1/skills Hermes; folder = dibaca dari folder skill Hermes; none = tidak ada sumber. */
+    via: z.enum(['api', 'folder', 'none']),
+    note: z.string().optional(),
+  })
+  .meta({ id: 'HermesSkillList' });
+export const ImportHermesSkillRequestSchema = z
+  .object({ name: z.string().min(1).max(200), acknowledge: z.boolean().optional() })
+  .meta({ id: 'ImportHermesSkillRequest' });
+
 /* Percakapan dan pesan */
 
 export const ListConversationsQuerySchema = z.object({
