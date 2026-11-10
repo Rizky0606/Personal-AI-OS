@@ -827,6 +827,10 @@ Cabang `fix/p9-katalog-skill` (dari ujung P8, `9ad1808`). Commit `c7dfc5c` (task
 
 **Hasil regresi akhir (Linux ARM64, Postgres 16 sekali-pakai):** typecheck semua paket bersih; contracts 151, roles 53, adapters 116 (+1 skip), worker 295, desktop 923, gateway 680 lulus. Satu kelompok gagal tanpa konfigurasi lingkungan: 3 tes `research/render.test.ts`. Penyebab (dibuktikan): tes memilih browser dari daftar kandidat dan di Ubuntu `/usr/bin/chromium-browser` hanyalah stub snap ("requires the chromium snap to be installed"); dengan `TEST_BROWSER_PATH` mengarah ke Chromium Playwright, kelima tes render lulus. Bukan masalah kode dan tidak terkait P9 (`modules/research` tidak diubah). Tes e2e Playwright (`e2e/`) **tidak dijalankan**.
 
+**CI GitHub (branch `fix/p9-katalog-skill`):** run `c0bbe13` gagal (job `check` di langkah `pnpm typecheck`: fixture `e2e/harness/fakes.ts` belum memuat `openedSkills`/`pinnedSkills`; saya hanya mengetik 6 paket secara lokal dan melewatkan `e2e`; `e2e-desktop` juga merah, log CI butuh login sehingga penyebabnya tidak terbaca). Run `3637214` (perbaikan fixture): `check`, `e2e-desktop`, `gateway-image` sukses pada percobaan ke-1. Pelajaran: sebelum push jalankan `pnpm typecheck` dan `pnpm test` utuh, bukan per paket.
+
+**e2e lokal (chromium, mesin pengembangan):** 37 lulus, 2 merah. `shell.spec` "satu judul per layar" (flake yang sudah tercatat). `team.spec` (omp sungguhan) lulus 1 dari 3 di kode P9 dan **0 dari 3 di kode sebelum P9 (`ae87171`)**, selalu macet di "Tambah tes pertama": bukan regresi P9, penyebab flake belum diketahui (sampel 3 run per sisi).
+
 **Perlu keputusan / tindak lanjut:**
 - [ ] **Hermes 0.22.5: `GET /v1/skills` selalu 500** (`api_server.py` memanggil `find_all_skills(include_editorial=True)`, parameter itu tidak ada di `skills_tool.py` build yang sama). Bug di Hermes; `skills:sync-hermes --verify` gagal sampai Hermes diperbarui. Verifikasi dilakukan lewat fungsi penemuan yang sama (29/29 terlihat).
 - [ ] Ukur ulang ketepatan pemilihan skill (`pnpm eval:skills`, 20 pesan) di Hermes dan omp setelah perbaikan nama indeks. omp perlu `AIOS_EVAL_OMP_*`.
