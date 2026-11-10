@@ -281,6 +281,8 @@ export async function startFakes(): Promise<Fakes> {
           engine: 'hermes',
           model: 'combo/general',
           skills: ['plan-progress', 'answer-first'],
+          openedSkills: [],
+          pinnedSkills: ['plan-progress', 'answer-first'],
           memory: { read: PLAN_MEMORY.length, items: PLAN_MEMORY },
           attachments: [
             { fileId: hooks.upload.fileId, name: hooks.upload.name, mime: hooks.upload.mime },
