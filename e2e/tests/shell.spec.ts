@@ -259,10 +259,24 @@ test('satu judul per layar: tiap bagian punya tepat satu judul, tanpa judul kedu
   await login(page);
   const main = page.getByRole('main');
   const assertSingleTitle = async () => {
-    const h1 = main.getByRole('heading', { level: 1 });
-    await expect(h1).toHaveCount(1);
-    const title = (await h1.textContent())!.trim();
-    await expect(main.getByRole('heading', { name: title, exact: true })).toHaveCount(1);
+    // Satu cuplikan DOM: bila h1 dibaca lalu DOM ditanya lagi, layar bisa bertukar di antaranya
+    // (View Transitions) dan judul lama dihitung 0.
+    await expect
+      .poll(() =>
+        main.evaluate((el) => {
+          const heads = Array.from(el.querySelectorAll('h1,h2,h3,h4,h5,h6,[role="heading"]'));
+          const h1s = el.querySelectorAll('h1');
+          const title = h1s.length === 1 ? (h1s[0]!.textContent ?? '').trim() : '';
+          return {
+            h1: h1s.length,
+            same:
+              title === ''
+                ? -1
+                : heads.filter((h) => (h.textContent ?? '').trim() === title).length,
+          };
+        }),
+      )
+      .toEqual({ h1: 1, same: 1 });
   };
 
   for (const key of ['1', '2', '3', '4', '5', '6']) {
