@@ -29,6 +29,11 @@ const EnvSchema = z.object({
     .describe('rahasia utama autentikasi'),
   HERMES_URL: withDefault(httpUrl, 'http://127.0.0.1:8642'),
   HERMES_API_KEY: optionalString,
+  /**
+   * Folder skill Hermes (mis. ~/.hermes/skills). Bila diisi, setiap perubahan katalog skill menyalin skill
+   * yang aktif untuk mesin hermes ke `<folder>/aios/`; hanya subfolder aios/ yang ditulis. Kosong = mati.
+   */
+  HERMES_SKILLS_DIR: optionalString,
   NINEROUTER_URL: withDefault(httpUrl, 'http://127.0.0.1:20128/v1'),
   NINEROUTER_API_KEY: optionalString,
   SEARXNG_URL: withDefault(httpUrl, 'http://127.0.0.1:8888'),

@@ -3803,6 +3803,51 @@
           "checksum": {
             "type": "string",
             "pattern": "^[a-f0-9]{64}$"
+          },
+          "trust": {
+            "type": "string",
+            "enum": [
+              "official",
+              "trusted",
+              "community"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "disabled",
+              "archived"
+            ]
+          },
+          "engines": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "hermes",
+                "omp",
+                "dsh"
+              ]
+            }
+          },
+          "pinned": {
+            "type": "boolean"
+          },
+          "editable": {
+            "type": "boolean"
+          },
+          "origin": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
           }
         },
         "required": [
@@ -3847,6 +3892,51 @@
             "type": "string",
             "pattern": "^[a-f0-9]{64}$"
           },
+          "trust": {
+            "type": "string",
+            "enum": [
+              "official",
+              "trusted",
+              "community"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "disabled",
+              "archived"
+            ]
+          },
+          "engines": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "hermes",
+                "omp",
+                "dsh"
+              ]
+            }
+          },
+          "pinned": {
+            "type": "boolean"
+          },
+          "editable": {
+            "type": "boolean"
+          },
+          "origin": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
           "body": {
             "type": "string"
           }
@@ -3859,6 +3949,341 @@
           "source",
           "checksum",
           "body"
+        ]
+      },
+      "SkillSaveResult": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "builtin",
+              "user",
+              "installed",
+              "agent"
+            ]
+          },
+          "checksum": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "trust": {
+            "type": "string",
+            "enum": [
+              "official",
+              "trusted",
+              "community"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "disabled",
+              "archived"
+            ]
+          },
+          "engines": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "hermes",
+                "omp",
+                "dsh"
+              ]
+            }
+          },
+          "pinned": {
+            "type": "boolean"
+          },
+          "editable": {
+            "type": "boolean"
+          },
+          "origin": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "scan": {
+            "$ref": "#/components/schemas/SkillScan"
+          },
+          "hermesSync": {
+            "type": "string",
+            "enum": [
+              "off",
+              "ok",
+              "failed"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "version",
+          "source",
+          "checksum",
+          "body",
+          "scan",
+          "hermesSync"
+        ]
+      },
+      "SkillScan": {
+        "type": "object",
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "safe",
+              "warning",
+              "dangerous"
+            ]
+          },
+          "findings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "rule": {
+                  "type": "string"
+                },
+                "severity": {
+                  "type": "string",
+                  "enum": [
+                    "warning",
+                    "danger"
+                  ]
+                },
+                "line": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "excerpt": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "rule",
+                "severity",
+                "line",
+                "excerpt",
+                "message"
+              ]
+            }
+          }
+        },
+        "required": [
+          "verdict",
+          "findings"
+        ]
+      },
+      "CreateSkillRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{0,63}$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1
+          },
+          "engines": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "hermes",
+                "omp",
+                "dsh"
+              ]
+            },
+            "minItems": 1
+          },
+          "pinned": {
+            "type": "boolean"
+          },
+          "acknowledge": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "description",
+          "body"
+        ]
+      },
+      "ScanSkillRequest": {
+        "type": "object",
+        "properties": {
+          "body": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "body"
+        ]
+      },
+      "UpdateSkillRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1
+          },
+          "engines": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "hermes",
+                "omp",
+                "dsh"
+              ]
+            },
+            "minItems": 1
+          },
+          "pinned": {
+            "type": "boolean"
+          },
+          "trust": {
+            "type": "string",
+            "enum": [
+              "trusted",
+              "community"
+            ]
+          },
+          "acknowledge": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SetSkillStatusRequest": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "disabled",
+              "archived"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "SkillVersionList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SkillVersion"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "SkillVersion": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "changedBy": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "version",
+          "name",
+          "description",
+          "body",
+          "changedBy",
+          "createdAt"
+        ]
+      },
+      "RestoreSkillRequest": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          }
+        },
+        "required": [
+          "version"
         ]
       },
       "ConversationPage": {
@@ -8166,10 +8591,37 @@
         "tags": [
           "Skill"
         ],
-        "summary": "Katalog skill (indeks tanpa isi): id, name, description, version, source, checksum",
+        "summary": "Katalog skill (indeks tanpa isi): id, name, description, version, source, checksum. Tanpa query hanya yang aktif; `include=all` (scope app) juga yang nonaktif dan diarsipkan; `engine` menyaring menurut mesin",
         "security": [
           {
             "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "active",
+                "all"
+              ]
+            },
+            "required": false,
+            "name": "include",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "hermes",
+                "omp",
+                "dsh"
+              ]
+            },
+            "required": false,
+            "name": "engine",
+            "in": "query"
           }
         ],
         "responses": {
@@ -8195,6 +8647,99 @@
           },
           "403": {
             "description": "Token tidak punya scope yang dibutuhkan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createSkill",
+        "tags": [
+          "Skill"
+        ],
+        "summary": "Buat skill buatan pengguna (versi 1). Dipindai dulu: berbahaya butuh `acknowledge`, peringatan dikembalikan di `scan`. Memicu sinkron ke Hermes bila dikonfigurasi",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSkillRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Skill dibuat",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillSaveResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Permintaan tidak valid",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Belum login atau token tidak berlaku",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token tidak punya scope yang dibutuhkan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Konflik dengan status saat ini",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Tidak bisa diproses",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -8272,6 +8817,572 @@
           },
           "404": {
             "description": "Tidak ditemukan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateSkill",
+        "tags": [
+          "Skill"
+        ],
+        "summary": "Ubah skill buatan/terpasang/usulan agent: perubahan isi atau deskripsi membuat versi baru. Skill bawaan repo ditolak (409)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSkillRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Skill diperbarui",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillSaveResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Permintaan tidak valid",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Belum login atau token tidak berlaku",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token tidak punya scope yang dibutuhkan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tidak ditemukan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Konflik dengan status saat ini",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Tidak bisa diproses",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteSkill",
+        "tags": [
+          "Skill"
+        ],
+        "summary": "Hapus permanen (hanya source user/installed/agent; bawaan repo ditolak 409)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Dihapus"
+          },
+          "401": {
+            "description": "Belum login atau token tidak berlaku",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token tidak punya scope yang dibutuhkan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tidak ditemukan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Konflik dengan status saat ini",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/skills/scan": {
+      "post": {
+        "operationId": "scanSkill",
+        "tags": [
+          "Skill"
+        ],
+        "summary": "Pindai isi skill dengan aturan (tanpa model, tanpa menyimpan)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScanSkillRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Hasil pemindai",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillScan"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Permintaan tidak valid",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Belum login atau token tidak berlaku",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token tidak punya scope yang dibutuhkan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Tidak bisa diproses",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/skills/{id}/status": {
+      "post": {
+        "operationId": "setSkillStatus",
+        "tags": [
+          "Skill"
+        ],
+        "summary": "Aktifkan, nonaktifkan, atau arsipkan skill. Skill bawaan boleh dinonaktifkan, kecuali skill inti (409); bawaan tidak bisa diarsipkan",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetSkillStatusRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Status diubah",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillSaveResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Belum login atau token tidak berlaku",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token tidak punya scope yang dibutuhkan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tidak ditemukan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Konflik dengan status saat ini",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/skills/{id}/versions": {
+      "get": {
+        "operationId": "listSkillVersions",
+        "tags": [
+          "Skill"
+        ],
+        "summary": "Riwayat versi skill (isi lengkap tiap versi, terbaru dulu)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Riwayat versi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillVersionList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Belum login atau token tidak berlaku",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token tidak punya scope yang dibutuhkan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tidak ditemukan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/skills/{id}/restore": {
+      "post": {
+        "operationId": "restoreSkillVersion",
+        "tags": [
+          "Skill"
+        ],
+        "summary": "Kembalikan skill ke isi versi sebelumnya (menjadi versi baru, riwayat tidak dihapus)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestoreSkillRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Skill dikembalikan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillSaveResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Permintaan tidak valid",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Belum login atau token tidak berlaku",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token tidak punya scope yang dibutuhkan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tidak ditemukan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Konflik dengan status saat ini",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Tidak bisa diproses",
             "content": {
               "application/problem+json": {
                 "schema": {

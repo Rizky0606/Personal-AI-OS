@@ -44,7 +44,9 @@ import { createTasksService } from './modules/tasks/service.js';
 import { createWorkerRelay } from './modules/worker/relay.js';
 import { createWorkerHub } from './modules/worker/routes.js';
 import { createRolesService } from './modules/roles/service.js';
+import { createSkillManager } from './modules/skills/manager.js';
 import { createSkillsService } from './modules/skills/service.js';
+import { hermesSkillsFor, syncHermesSkills } from './modules/skills/hermes-sync.js';
 import { createRouterComplete } from './modules/router/complete.js';
 import { createRoutingService } from './modules/router/service.js';
 import { createEventHub } from './modules/runs/hub.js';
@@ -77,7 +79,26 @@ async function main(): Promise<void> {
       error: (obj, msg) => app.log.error(obj, msg),
     },
   });
-  const skills = createSkillsService({ registry: () => roles.registry() });
+  const skillRef: { current?: ReturnType<typeof createSkillsService> } = {};
+  const skillManager = createSkillManager({
+    db,
+    registry: () => roles.registry(),
+    log,
+    onChange: config.HERMES_SKILLS_DIR
+      ? async () => {
+          const root = config.HERMES_SKILLS_DIR!;
+          await syncHermesSkills(hermesSkillsFor(skillRef.current!), { root });
+          return 'ok';
+        }
+      : undefined,
+  });
+  await skillManager.load();
+  const skills = createSkillsService({
+    registry: () => roles.registry(),
+    extras: () => skillManager.extras(),
+    overrides: () => skillManager.overrides(),
+  });
+  skillRef.current = skills;
   const boss = createBoss(config.DATABASE_URL, log);
   const hub = createEventHub();
   const teamStore = createTeamEventStore(db, hub);
@@ -120,6 +141,21 @@ async function main(): Promise<void> {
     workerAdapter: createWorkerRelayAdapter({ relay: workerRelay }),
     ...(dsh ? { dsh } : {}),
     roles,
+    catalogSkills: (engine) =>
+      skills.list({ engine }).flatMap((entry) => {
+        if (entry.source === 'builtin') return [];
+        const detail = skills.get(entry.id);
+        return detail
+          ? [
+              {
+                id: detail.id,
+                description: detail.description,
+                body: detail.body,
+                pinned: detail.pinned === true,
+              },
+            ]
+          : [];
+      }),
     eagerSkillEngines: new Set(
       (config.SKILL_PACKS_EAGER_ENGINES ?? '')
         .split(',')
@@ -241,6 +277,7 @@ async function main(): Promise<void> {
     runs,
     roles,
     skills,
+    skillManager,
     research,
     schedules,
     projects,

@@ -7,6 +7,7 @@ import {
   AGENT_BEHAVIOR_RULES,
   BUNDLE_TOKEN_BUDGET,
   CORE_SKILLS,
+  MAX_CATALOG_INDEX,
   ROLES_PACKAGE_DIR,
   RegistryError,
   SKILL_PACKS,
@@ -480,5 +481,58 @@ describe('validasi saat memuat', () => {
   it('splitFrontmatter menerima CRLF dan BOM', () => {
     const text = '﻿---\r\nname: x\r\n---\r\nisi\r\nbaris dua';
     expect(splitFrontmatter(text)).toEqual({ data: { name: 'x' }, body: 'isi\r\nbaris dua' });
+  });
+});
+
+describe('skill katalog tambahan (P10)', () => {
+  const registry = loadRegistry();
+  const mine = {
+    id: 'naskah-video-anak',
+    description: 'Saat menulis naskah video anak.',
+    body: 'ISI-NASKAH-UNIK',
+    pinned: false,
+  };
+
+  it('tidak disematkan: hanya masuk indeks (dengan awalan mesin), isi tidak ditempel', () => {
+    const bundle = buildBundle(registry, 'general', {
+      catalogSkills: [mine],
+      skillNamePrefix: 'aios-',
+    });
+    expect(bundle.offeredSkills).toContain('naskah-video-anak');
+    expect(bundle.systemPrompt).toContain(
+      '- aios-naskah-video-anak: Saat menulis naskah video anak.',
+    );
+    expect(bundle.systemPrompt).not.toContain('ISI-NASKAH-UNIK');
+    expect(bundle.skills).not.toContain('naskah-video-anak');
+  });
+
+  it('disematkan (pinned): isi ditempel utuh dan tidak dobel di indeks', () => {
+    const bundle = buildBundle(registry, 'general', { catalogSkills: [{ ...mine, pinned: true }] });
+    expect(bundle.systemPrompt).toContain('ISI-NASKAH-UNIK');
+    expect(bundle.skills).toContain('naskah-video-anak');
+    expect(bundle.offeredSkills).not.toContain('naskah-video-anak');
+  });
+
+  it('dipilih manual lewat extraSkills: isi ditempel utuh', () => {
+    const bundle = buildBundle(registry, 'general', {
+      catalogSkills: [mine],
+      extraSkills: ['naskah-video-anak'],
+    });
+    expect(bundle.systemPrompt).toContain('ISI-NASKAH-UNIK');
+    expect(bundle.skills).toContain('naskah-video-anak');
+  });
+
+  it('tanpa katalog tambahan hasilnya sama persis dengan sebelum P10', () => {
+    expect(buildBundle(registry, 'general', { catalogSkills: [] })).toEqual(
+      buildBundle(registry, 'general'),
+    );
+  });
+
+  it('indeks katalog dibatasi', () => {
+    const many = Array.from({ length: 80 }, (_, i) => ({ ...mine, id: `skill-x-${i}` }));
+    const bundle = buildBundle(registry, 'general', { catalogSkills: many });
+    expect(bundle.offeredSkills.filter((id) => id.startsWith('skill-x-'))).toHaveLength(
+      MAX_CATALOG_INDEX,
+    );
   });
 });

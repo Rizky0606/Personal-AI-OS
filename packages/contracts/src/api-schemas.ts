@@ -235,6 +235,17 @@ export const RoleListSchema = itemsOf(RoleInfoSchema).meta({ id: 'RoleList' });
 export const SkillSourceSchema = z.enum(['builtin', 'user', 'installed', 'agent']);
 export type SkillSource = z.infer<typeof SkillSourceSchema>;
 
+/** Sumber skill yang disimpan di database gateway (skill bawaan repo tetap dari berkas). */
+export const SkillUserSourceSchema = z.enum(['user', 'installed', 'agent']);
+export const SkillTrustSchema = z.enum(['official', 'trusted', 'community']);
+export const SkillStatusSchema = z.enum(['active', 'disabled', 'archived']);
+export const SkillEngineSchema = z.enum(['hermes', 'omp', 'dsh']);
+export type SkillTrust = z.infer<typeof SkillTrustSchema>;
+export type SkillStatus = z.infer<typeof SkillStatusSchema>;
+export type SkillEngine = z.infer<typeof SkillEngineSchema>;
+export const SKILL_ID_PATTERN = /^[a-z][a-z0-9-]{0,63}$/;
+export const SKILL_BODY_MAX_BYTES = 64 * 1024;
+
 /** Indeks `GET /skills`: tanpa isi, agent memilih dari sini sebelum membuka skill tertentu. */
 export const SkillSummarySchema = z
   .object({
@@ -246,6 +257,17 @@ export const SkillSummarySchema = z
     source: SkillSourceSchema,
     /** sha256 isi skill (tanpa frontmatter); berubah bila isi berubah. */
     checksum: z.string().regex(/^[a-f0-9]{64}$/),
+    /** P10 (halaman Skill). Absen pada klien/data lama; skill bawaan: official, active, semua mesin. */
+    trust: SkillTrustSchema.optional(),
+    status: SkillStatusSchema.optional(),
+    engines: z.array(SkillEngineSchema).optional(),
+    pinned: z.boolean().optional(),
+    /** false untuk skill bawaan repo: isinya tidak bisa diubah dari UI (hanya dinonaktifkan). */
+    editable: z.boolean().optional(),
+    /** Asal pemasangan (URL atau id skills.sh) bila dipasang dari luar. */
+    origin: z.string().nullable().optional(),
+    createdAt: z.string().optional(),
+    updatedAt: z.string().optional(),
   })
   .meta({ id: 'SkillSummary' });
 export type SkillSummary = z.infer<typeof SkillSummarySchema>;
@@ -256,6 +278,80 @@ export const SkillDetailSchema = SkillSummarySchema.extend({ body: z.string() })
   id: 'SkillDetail',
 });
 export type SkillDetail = z.infer<typeof SkillDetailSchema>;
+
+/** Hasil pemindai aturan (tanpa model): aman, peringatan (butuh konfirmasi), atau berbahaya (diblokir). */
+export const SkillScanFindingSchema = z.object({
+  rule: z.string(),
+  severity: z.enum(['warning', 'danger']),
+  /** Nomor baris (mulai 1) di isi skill; 0 bila berlaku untuk seluruh isi. */
+  line: z.number().int().nonnegative(),
+  excerpt: z.string(),
+  message: z.string(),
+});
+export const SkillScanSchema = z
+  .object({
+    verdict: z.enum(['safe', 'warning', 'dangerous']),
+    findings: z.array(SkillScanFindingSchema),
+  })
+  .meta({ id: 'SkillScan' });
+export type SkillScan = z.infer<typeof SkillScanSchema>;
+
+const SkillTextFields = {
+  name: z.string().trim().min(1).max(80),
+  description: z.string().trim().min(1).max(200),
+  body: z.string().min(1),
+};
+export const CreateSkillRequestSchema = z
+  .object({
+    /** Dibuat dari nama bila kosong. */
+    id: z.string().regex(SKILL_ID_PATTERN).optional(),
+    ...SkillTextFields,
+    engines: z.array(SkillEngineSchema).min(1).optional(),
+    pinned: z.boolean().optional(),
+    /** Setuju melanjutkan walau pemindai memberi peringatan. */
+    acknowledge: z.boolean().optional(),
+  })
+  .meta({ id: 'CreateSkillRequest' });
+export const UpdateSkillRequestSchema = z
+  .object({
+    name: SkillTextFields.name.optional(),
+    description: SkillTextFields.description.optional(),
+    body: SkillTextFields.body.optional(),
+    engines: z.array(SkillEngineSchema).min(1).optional(),
+    pinned: z.boolean().optional(),
+    trust: z.enum(['trusted', 'community']).optional(),
+    acknowledge: z.boolean().optional(),
+  })
+  .meta({ id: 'UpdateSkillRequest' });
+export const ScanSkillRequestSchema = z
+  .object({ body: z.string(), description: z.string().optional() })
+  .meta({ id: 'ScanSkillRequest' });
+export const SetSkillStatusRequestSchema = z
+  .object({ status: SkillStatusSchema })
+  .meta({ id: 'SetSkillStatusRequest' });
+export const RestoreSkillRequestSchema = z
+  .object({ version: z.number().int().positive() })
+  .meta({ id: 'RestoreSkillRequest' });
+
+/** Hasil simpan: skill + hasil pemindai + status sinkron ke folder skill Hermes (`off` bila tidak dikonfigurasi). */
+export const SkillSaveResultSchema = SkillDetailSchema.extend({
+  scan: SkillScanSchema,
+  hermesSync: z.enum(['off', 'ok', 'failed']),
+}).meta({ id: 'SkillSaveResult' });
+export type SkillSaveResult = z.infer<typeof SkillSaveResultSchema>;
+
+export const SkillVersionSchema = z
+  .object({
+    version: z.number().int().positive(),
+    name: z.string(),
+    description: z.string(),
+    body: z.string(),
+    /** Siapa/apa yang mengubah: user, agent, import, atau restore:v<N>. */
+    changedBy: z.string(),
+    createdAt: z.string(),
+  })
+  .meta({ id: 'SkillVersion' });
+export const SkillVersionListSchema = itemsOf(SkillVersionSchema).meta({ id: 'SkillVersionList' });
 
 /* Percakapan dan pesan */
 

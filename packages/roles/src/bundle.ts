@@ -49,6 +49,9 @@ export interface Bundle {
   overBudget: boolean;
 }
 
+/** Batas baris indeks dari skill katalog tambahan di satu prompt. */
+export const MAX_CATALOG_INDEX = 40;
+
 export interface BundleOptions {
   skillsBudget?: number;
   bundleBudget?: number;
@@ -71,6 +74,12 @@ export interface BundleOptions {
    * omp membuka `skill://<id>` (tanpa awalan), Hermes membuka skill hasil sinkron bernama `aios-<id>`.
    */
   skillNamePrefix?: string;
+  /**
+   * Skill tambahan dari katalog gateway (P10: buatan pengguna, terpasang, usulan agent) yang AKTIF untuk mesin
+   * ini. Yang `pinned` ditempel utuh (seperti skill milik role, selama muat di anggaran); sisanya hanya
+   * ditawarkan lewat indeks. Pilihan manual (`extraSkills`) menempelkan isinya utuh seperti skill bawaan.
+   */
+  catalogSkills?: readonly { id: string; description: string; body: string; pinned: boolean }[];
 }
 
 /**
@@ -91,6 +100,7 @@ export function buildBundle(
     suggestedSkills = [],
     eagerSkillPacks = false,
     skillNamePrefix = '',
+    catalogSkills = [],
   }: BundleOptions = {},
 ): Bundle {
   const role = registry.roles.get(roleId);
@@ -99,8 +109,9 @@ export function buildBundle(
   const rules = `# Aturan perilaku agent\n${AGENT_BEHAVIOR_RULES.map((r) => `- ${r}`).join('\n')}`;
   const roleSection = `# Peran: ${role.name}\n${role.body}`;
 
+  const catalogById = new Map(catalogSkills.map((s) => [s.id, s] as const));
   const section = (id: string) => {
-    const skill = registry.skills.get(id);
+    const skill = registry.skills.get(id) ?? catalogById.get(id);
     return skill ? `## ${id}\n${skill.body}` : undefined;
   };
 
@@ -133,9 +144,10 @@ export function buildBundle(
             !(CORE_SKILLS as readonly string[]).includes(id),
         ),
       );
+  const pinnedCatalog = catalogSkills.filter((s) => s.pinned).map((s) => s.id);
   const candidates = eagerSkillPacks
-    ? new Set([...role.skills, ...extraSkills, ...suggestedSkills])
-    : new Set([...role.skills, ...extraSkills]);
+    ? new Set([...role.skills, ...extraSkills, ...pinnedCatalog, ...suggestedSkills])
+    : new Set([...role.skills, ...extraSkills, ...pinnedCatalog]);
 
   for (const id of candidates) {
     if ((CORE_SKILLS as readonly string[]).includes(id)) continue;
@@ -156,6 +168,15 @@ export function buildBundle(
     if (!skill) continue;
     offered.push(id);
     offeredIndex.push(`- ${skillNamePrefix}${id}: ${skill.description}`);
+  }
+  // Skill katalog yang belum tertempel utuh ditawarkan lewat indeks (dibatasi supaya prompt tidak membengkak).
+  let offeredFromCatalog = 0;
+  for (const skill of catalogSkills) {
+    if (included.includes(skill.id) || offered.includes(skill.id)) continue;
+    if (offeredFromCatalog >= MAX_CATALOG_INDEX) break;
+    offeredFromCatalog++;
+    offered.push(skill.id);
+    offeredIndex.push(`- ${skillNamePrefix}${skill.id}: ${skill.description}`);
   }
 
   const parts = [

@@ -1,4 +1,4 @@
-import type { ResearchPlanSchema } from '@aios/contracts';
+import type { ResearchPlanSchema, SkillEngine } from '@aios/contracts';
 import { type SQL, sql } from 'drizzle-orm';
 import {
   bigint,
@@ -6,6 +6,7 @@ import {
   doublePrecision,
   index,
   integer,
+  primaryKey,
   pgTable,
   text,
   timestamp,
@@ -23,6 +24,9 @@ import {
   scheduleNotify,
   scheduleRunStatus,
   scheduleTarget,
+  skillSource,
+  skillStatus,
+  skillTrust,
 } from './enums.js';
 
 /** Kolom `tsvector` untuk full-text search; diisi Postgres sendiri (kolom generated). */
@@ -220,3 +224,58 @@ export const spaceChunks = pgTable(
     index('space_chunks_tsv_idx').using('gin', t.tsv),
   ],
 );
+
+/*
+ * Katalog skill tambahan (P10). Skill bawaan repo tetap dari berkas dan TIDAK ada di sini; `skill_overrides`
+ * hanya mencatat skill bawaan yang dinonaktifkan. Id skill adalah teks (sama dengan nama folder/`skill://`).
+ */
+export const catalogSkills = pgTable(
+  'catalog_skills',
+  {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    description: text('description').notNull(),
+    body: text('body').notNull(),
+    source: skillSource('source').notNull(),
+    trust: skillTrust('trust').notNull().default('community'),
+    status: skillStatus('status').notNull().default('active'),
+    engines: text('engines')
+      .array()
+      .$type<SkillEngine[]>()
+      .notNull()
+      .default(sql`ARRAY['hermes','omp','dsh']::text[]`),
+    pinned: boolean('pinned').notNull().default(false),
+    /** URL atau id skills.sh asal pemasangan; null untuk buatan sendiri. */
+    origin: text('origin'),
+    /** Nomor versi terbaru di `catalog_skill_versions`. */
+    version: integer('version').notNull().default(1),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index('catalog_skills_status_idx').on(t.status)],
+);
+
+/** Isi lengkap tiap versi skill; versi tidak pernah diubah atau dihapus selain ikut skill-nya. */
+export const catalogSkillVersions = pgTable(
+  'catalog_skill_versions',
+  {
+    skillId: text('skill_id')
+      .notNull()
+      .references(() => catalogSkills.id, { onDelete: 'cascade' }),
+    version: integer('version').notNull(),
+    name: text('name').notNull(),
+    description: text('description').notNull(),
+    body: text('body').notNull(),
+    /** user, agent, import, atau restore:v<N>. */
+    changedBy: text('changed_by').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.skillId, t.version] })],
+);
+
+/** Skill bawaan repo yang dinonaktifkan pengguna (isinya tetap dari berkas). */
+export const skillOverrides = pgTable('skill_overrides', {
+  skillId: text('skill_id').primaryKey(),
+  status: skillStatus('status').notNull(),
+  updatedAt: updatedAt(),
+});

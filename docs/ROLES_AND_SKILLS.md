@@ -128,3 +128,13 @@ Aturan ini berlaku untuk agent yang berjalan di aplikasi (bukan agent yang memba
 - Tidak pernah membaca atau mengirim file `.env`, kunci SSH, atau folder di luar project tanpa izin eksplisit.
 
 Run yang berjalan di server (Hermes, bukan run coding di worker) juga mendapat aturan "Berkas untuk pemilik" (`SERVER_FILES_RULE` di `apps/gateway/src/modules/runs/runner.ts`): pemilik tidak bisa mengakses sistem berkas server, jadi agent tidak membuat berkas atau arsip hasil di server dan tidak menjawab dengan path server, melainkan menulis isi setiap berkas sebagai blok kode berpath agar aplikasi bisa menawarkan Unduh ZIP.
+
+## Halaman Skill: penyimpanan dan pengelolaan (P10)
+
+Skill tambahan (`user`, `installed`, `agent`) disimpan di Postgres (`catalog_skills`, riwayat isi di `catalog_skill_versions`); skill bawaan repo tetap dari berkas dan hanya bisa dinonaktifkan (`skill_overrides`). Skill inti tidak bisa dinonaktifkan.
+
+- **Versi:** mengubah nama, deskripsi, atau isi membuat versi baru; mengembalikan versi lama juga membuat versi baru (riwayat tidak dihapus). Mengubah mesin, `pinned`, atau `trust` tidak membuat versi.
+- **Status:** `active` dipakai agent; `disabled` dan `archived` hilang dari indeks agent dan dari worker (worker mendapat 404), tetapi tetap tampil di halaman Skill.
+- **Sampai ke agent:** skill aktif untuk suatu mesin yang `pinned` ditempel utuh seperti skill milik role; yang tidak `pinned` ditawarkan lewat indeks "Skill tersedia" (maks. 40 baris), dan pilihan manual di composer menempelkan isinya utuh. Di Hermes namanya `aios-<id>` (hasil sinkron), di omp `skill://<id>`.
+- **Sinkron ke Hermes:** bila `HERMES_SKILLS_DIR` diisi, setiap perubahan katalog menyalin skill aktif untuk mesin `hermes` ke `<folder>/aios/`. Kosong = tidak ada sinkron otomatis (tetap bisa `pnpm skills:sync-hermes`, yang dengan `DATABASE_URL` ikut menyalin skill tambahan; tanpa `DATABASE_URL` ia tidak menghapus apa pun dari `aios/`).
+- **Pemindai** (`scanner.ts`, aturan saja, bukan jaminan keamanan): prompt injection (Inggris/Indonesia), menyembunyikan tindakan dari pengguna, pengiriman data keluar, perintah merusak, eksekusi kode unduhan, membaca rahasia, karakter tak terlihat (zero-width/bidi), blok base64 panjang. Hasil `safe` / `warning` / `dangerous` dengan baris yang ditandai.

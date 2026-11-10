@@ -46,7 +46,7 @@ const nameOf = (text: string): string | undefined =>
  */
 export async function syncHermesSkills(
   skills: readonly HermesSyncSkill[],
-  options: { root: string; dryRun?: boolean },
+  options: { root: string; dryRun?: boolean; prune?: boolean },
 ): Promise<HermesSyncResult> {
   const root = resolve(options.root);
   const target = join(root, HERMES_SKILL_FOLDER);
@@ -101,7 +101,7 @@ export async function syncHermesSkills(
   }
 
   const present = await readdir(target, { withFileTypes: true }).catch(() => []);
-  for (const entry of present) {
+  for (const entry of options.prune === false ? [] : present) {
     if (wanted.has(entry.name) || !entry.isDirectory()) continue;
     const file = join(target, entry.name, 'SKILL.md');
     const text = await readFile(file, 'utf8').catch(() => undefined);
@@ -113,4 +113,24 @@ export async function syncHermesSkills(
     result.removed.push(entry.name);
   }
   return result;
+}
+
+/** Skill katalog yang harus ada di Hermes: aktif dan mesin `hermes` termasuk di daftar mesinnya. */
+export function hermesSkillsFor(catalog: {
+  list(options?: { engine?: 'hermes' }): { id: string }[];
+  get(id: string): { id: string; description: string; version: string; body: string } | undefined;
+}): HermesSyncSkill[] {
+  return catalog.list({ engine: 'hermes' }).flatMap((entry) => {
+    const detail = catalog.get(entry.id);
+    return detail
+      ? [
+          {
+            id: detail.id,
+            description: detail.description,
+            version: detail.version,
+            body: detail.body,
+          },
+        ]
+      : [];
+  });
 }

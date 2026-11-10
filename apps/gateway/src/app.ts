@@ -52,6 +52,7 @@ import type { TemplateService } from './modules/templates/service.js';
 import type { MemoryService } from './modules/memory/service.js';
 import { roleRoutes } from './modules/roles/routes.js';
 import { skillRoutes } from './modules/skills/routes.js';
+import type { SkillManager } from './modules/skills/manager.js';
 import type { SkillsService } from './modules/skills/service.js';
 import { searchRoutes } from './modules/search/routes.js';
 import type { SearchService } from './modules/search/service.js';
@@ -98,6 +99,8 @@ export interface AppDeps {
   store?: EventStore;
   roles: RolesService;
   skills: SkillsService;
+  /** Pengelola skill tambahan (P10); tanpa ini route pengubah skill menjawab 503. */
+  skillManager?: SkillManager;
   research: ResearchService;
   schedules: ScheduleService;
   projects: ProjectsService;
@@ -135,6 +138,7 @@ export function buildApp({
   store,
   roles,
   skills,
+  skillManager,
   research,
   schedules,
   projects,
@@ -227,7 +231,7 @@ export function buildApp({
         await protectedScope.register(chatRoutes, { chat, runs });
         await protectedScope.register(fileRoutes, { files });
         await protectedScope.register(roleRoutes, { roles });
-        await protectedScope.register(skillRoutes, { skills });
+        await protectedScope.register(skillRoutes, { skills, manager: skillManager });
         await protectedScope.register(researchRoutes, { research });
         await protectedScope.register(scheduleRoutes, { schedules });
         await protectedScope.register(projectRoutes, { projects });

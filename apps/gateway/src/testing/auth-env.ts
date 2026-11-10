@@ -45,6 +45,7 @@ import { createTasksService, type TasksService } from '../modules/tasks/service.
 import { createWorkerRelay, type WorkerRelay } from '../modules/worker/relay.js';
 import { createWorkerHub } from '../modules/worker/routes.js';
 import { createRolesService, type RolesService } from '../modules/roles/service.js';
+import { createSkillManager } from '../modules/skills/manager.js';
 import { createSkillsService } from '../modules/skills/service.js';
 import { createEventHub, type EventHub } from '../modules/runs/hub.js';
 import { createRunObserver } from '../modules/runs/observer.js';
@@ -134,6 +135,8 @@ export async function createAuthEnv(
     /** API key gateway untuk 9Router tiruan. */
     ninerouterKey?: string;
     streamIdleMs?: number;
+    /** Dipanggil setelah katalog skill berubah (meniru sinkron ke Hermes di tes). */
+    onSkillChange?: () => Promise<'off' | 'ok' | 'failed'>;
     /** Menyalakan layanan riset sungguhan (pg-boss) di database tes. */
     research?: {
       searxngUrl: string;
@@ -199,6 +202,17 @@ export async function createAuthEnv(
   });
 
   const roles = createRolesService();
+  const skillManager = createSkillManager({
+    db,
+    registry: () => roles.registry(),
+    onChange: options.onSkillChange,
+  });
+  await skillManager.load();
+  const skills = createSkillsService({
+    registry: () => roles.registry(),
+    extras: () => skillManager.extras(),
+    overrides: () => skillManager.overrides(),
+  });
   const hub = createEventHub(now);
   const store = createEventStore(db, hub);
   const projects = createProjectsService({ db });
@@ -389,7 +403,8 @@ export async function createAuthEnv(
     store,
     runs,
     roles,
-    skills: createSkillsService({ registry: () => roles.registry() }),
+    skills,
+    skillManager,
     research,
     schedules,
     projects,

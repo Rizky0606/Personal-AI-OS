@@ -5,6 +5,7 @@ import {
   buildBundle,
   loadRegistry,
   type Bundle,
+  type BundleOptions,
   type Role,
   type RolesRegistry,
 } from '@aios/roles';
@@ -32,6 +33,7 @@ export interface RolesService {
       suggestedSkills?: readonly string[];
       eagerSkillPacks?: boolean;
       skillNamePrefix?: string;
+      catalogSkills?: BundleOptions['catalogSkills'];
     },
   ): Bundle;
   close(): void;

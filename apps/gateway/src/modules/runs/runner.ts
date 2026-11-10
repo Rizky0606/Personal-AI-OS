@@ -18,6 +18,7 @@ import {
   type SteerMode,
   type Usage,
 } from '@aios/contracts';
+import type { BundleOptions } from '@aios/roles';
 import { and, count, eq, inArray, notInArray } from 'drizzle-orm';
 import type { Database } from '../../db/client.js';
 import { approvals, messages, projects, runs } from '../../db/schema/index.js';
@@ -125,6 +126,8 @@ export interface RunnerDeps {
   observer?: RunObserver;
   /** Mesin (hermes/omp/dsh/...) yang memakai fallback lama: isi paket skill kata kunci ditempel utuh. */
   eagerSkillEngines?: ReadonlySet<string>;
+  /** Skill katalog tambahan (P10) yang aktif untuk satu mesin; tidak termasuk skill bawaan repo. */
+  catalogSkills?: (engine: 'hermes' | 'omp' | 'dsh') => NonNullable<BundleOptions['catalogSkills']>;
   /** Bundel role (aturan perilaku + role + skill) yang disuntik sebagai pesan sistem. */
   roles: {
     bundle(
@@ -134,6 +137,7 @@ export interface RunnerDeps {
         suggestedSkills?: readonly string[];
         eagerSkillPacks?: boolean;
         skillNamePrefix?: string;
+        catalogSkills?: BundleOptions['catalogSkills'];
       },
     ): {
       systemPrompt: string;
@@ -252,11 +256,13 @@ export function createRunner(deps: RunnerDeps): Runner {
     suggestedSkills: readonly string[] = [],
     eagerSkillPacks = false,
     skillNamePrefix = '',
+    catalogSkills: NonNullable<BundleOptions['catalogSkills']> = [],
   ): Promise<{ prompt: string; skills: readonly string[]; skillIds: readonly string[] }> {
     const bundled = deps.roles.bundle(roleId, skills, {
       suggestedSkills,
       eagerSkillPacks,
       skillNamePrefix,
+      catalogSkills,
     });
     const bundle = bundled.systemPrompt;
     const extra = async (name: string, load: () => Promise<string> | undefined) => {
@@ -557,6 +563,7 @@ export function createRunner(deps: RunnerDeps): Runner {
           deps.eagerSkillEngines?.has(engineName) === true,
           // Hermes membuka skill hasil sinkron bernama `aios-<id>`; omp membuka `skill://<id>`.
           engineName === 'hermes' ? HERMES_SKILL_PREFIX : '',
+          deps.catalogSkills?.(engineName as 'hermes' | 'omp' | 'dsh') ?? [],
         );
         // `skills` tetap berarti "skill yang dimuat ke prompt" (kompatibel dengan klien lama); `pinnedSkills`
         // menamai himpunan yang sama secara eksplisit; `openedSkills` hanya diisi dari pembukaan yang teramati.

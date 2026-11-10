@@ -12,28 +12,41 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { loadRegistry } from '@aios/roles';
+import { createDb } from '../db/client.js';
+import { createSkillManager } from '../modules/skills/manager.js';
 import { createSkillsService } from '../modules/skills/service.js';
-import { syncHermesSkills, HERMES_SKILL_PREFIX } from '../modules/skills/hermes-sync.js';
+import {
+  hermesSkillsFor,
+  syncHermesSkills,
+  HERMES_SKILL_PREFIX,
+} from '../modules/skills/hermes-sync.js';
 
 const args = new Set(process.argv.slice(2));
 const root = process.env.HERMES_SKILLS_DIR ?? join(homedir(), '.hermes', 'skills');
 
-const catalog = createSkillsService({ registry: () => loadRegistry() });
-const skills = catalog.list().flatMap((entry) => {
-  const detail = catalog.get(entry.id);
-  return detail
-    ? [
-        {
-          id: detail.id,
-          description: detail.description,
-          version: detail.version,
-          body: detail.body,
-        },
-      ]
-    : [];
+// Dengan DATABASE_URL, skill tambahan (P10) ikut disalin. Tanpa itu hanya skill bawaan yang diketahui, jadi
+// folder aios/ TIDAK dipangkas: skill tambahan yang sudah ada di sana jangan sampai terhapus.
+const databaseUrl = process.env.DATABASE_URL;
+const connection = databaseUrl ? createDb(databaseUrl) : undefined;
+const manager = connection
+  ? createSkillManager({ db: connection.db, registry: () => loadRegistry() })
+  : undefined;
+await manager?.load();
+const catalog = createSkillsService({
+  registry: () => loadRegistry(),
+  extras: () => manager?.extras() ?? [],
+  overrides: () => manager?.overrides() ?? new Map(),
 });
+const skills = hermesSkillsFor(catalog);
 
-const result = await syncHermesSkills(skills, { root, dryRun: args.has('--dry-run') });
+const result = await syncHermesSkills(skills, {
+  root,
+  dryRun: args.has('--dry-run'),
+  prune: connection !== undefined,
+});
+if (!connection)
+  console.log('Tanpa DATABASE_URL: hanya skill bawaan disalin, tidak ada yang dihapus dari aios/.');
+await connection?.close();
 console.log(
   `${args.has('--dry-run') ? '[dry-run] ' : ''}${root}/aios: ` +
     `${result.written.length} ditulis, ${result.unchanged.length} sama, ${result.removed.length} dihapus, ` +

@@ -11,6 +11,9 @@ import {
   ResearchStatusSchema,
   RunKindSchema,
   RunStatusSchema,
+  SkillStatusSchema,
+  SkillTrustSchema,
+  SkillUserSourceSchema,
   ScheduleNotifySchema,
   ScheduleRunStatusSchema,
   ScheduleTargetSchema,
@@ -57,3 +60,7 @@ export const leadReviewDecision = pgEnum(
 );
 export const researchDepth = pgEnum('research_depth', values(ResearchDepthSchema.options));
 export const researchStatus = pgEnum('research_status', values(ResearchStatusSchema.options));
+
+export const skillSource = pgEnum('skill_source', values(SkillUserSourceSchema.options));
+export const skillTrust = pgEnum('skill_trust', values(SkillTrustSchema.options));
+export const skillStatus = pgEnum('skill_status', values(SkillStatusSchema.options));
