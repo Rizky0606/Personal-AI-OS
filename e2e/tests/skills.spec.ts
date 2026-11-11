@@ -91,3 +91,45 @@ test('skill: tab Pasang menolak domain di luar daftar izin; tab Hermes tampil', 
       .first(),
   ).toBeVisible();
 });
+
+test('skill: pasang dari sumber nyata (skills.sh), pratinjau, pasang, perbarui tanpa perubahan, hapus', async ({
+  page,
+}) => {
+  test.skip(process.env.E2E_LIVE_NET !== '1', 'butuh internet: jalankan dengan E2E_LIVE_NET=1');
+  await prepare(page);
+  await login(page);
+  await page.goto('/#/skills');
+  await page.getByRole('tab', { name: 'Pasang' }).click();
+
+  await page.getByLabel('Sumber').fill('anthropics/skills@skill-creator');
+  await page.getByRole('button', { name: 'Pratinjau' }).click();
+  const card = page.getByRole('region', { name: 'Isi yang akan dipasang' });
+  await expect(card.getByRole('heading', { name: 'skill-creator' })).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(card.getByText(/Aman:/)).toBeVisible();
+  await expect(card.getByText(/skrip tidak diunduh dan tidak pernah dijalankan/)).toBeVisible();
+  await card.getByRole('button', { name: 'Pasang', exact: true }).click();
+
+  // Terpasang: muncul di Skill saya sebagai skill terpasang berkepercayaan komunitas.
+  await page.getByRole('tab', { name: 'Skill saya' }).click();
+  const row = page.getByRole('button', { name: /^skill-creator/ });
+  await expect(row).toBeVisible({ timeout: 15_000 });
+  await expect(row).toContainText('Terpasang');
+  await expect(row).toContainText('Komunitas');
+
+  // Pasang lagi: kini pembaruan, dan tidak ada perubahan terhadap versi terpasang.
+  await page.getByRole('tab', { name: 'Pasang' }).click();
+  await page.getByLabel('Sumber').fill('anthropics/skills@skill-creator');
+  await page.getByRole('button', { name: 'Pratinjau' }).click();
+  await expect(page.getByText('Isi sama dengan versi terpasang.')).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole('button', { name: 'Perbarui', exact: true })).toBeEnabled();
+
+  // Bersihkan.
+  await page.getByRole('tab', { name: 'Skill saya' }).click();
+  await row.click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('button', { name: 'Hapus permanen' }).click();
+  await page.getByRole('dialog').last().getByRole('button', { name: 'Hapus', exact: true }).click();
+  await expect(row).toBeHidden();
+});

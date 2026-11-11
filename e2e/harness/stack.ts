@@ -166,6 +166,10 @@ export async function startStack(): Promise<Stack> {
 
   const env: AuthEnv = await createAuthEnv(databaseUrl, {
     ...(dsh ? { dsh } : {}),
+    // Opt-in: pemasangan skill dari internet nyata (tes yang memakainya dilewati bila tidak diaktifkan).
+    ...(process.env.E2E_LIVE_NET === '1'
+      ? { skillInstall: { fetchImpl: (url: string, init?: RequestInit) => fetch(url, init) } }
+      : {}),
     ninerouterUrl: `${fakes.ninerouterUrl}/v1`,
     hermesUrl: fakes.hermesUrl,
     research: { searxngUrl: fakes.searxngUrl },
