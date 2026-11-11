@@ -1,6 +1,8 @@
 import {
   CreateSkillRequestSchema,
   HermesSkillListSchema,
+  HermesSkillPreviewSchema,
+  PreviewHermesSkillRequestSchema,
   ImportHermesSkillRequestSchema,
   InstallSkillRequestSchema,
   PreviewSkillInstallRequestSchema,
@@ -83,6 +85,12 @@ export const skillRoutes: FastifyPluginCallback<{
 
   app.get('/skills/hermes', { onRequest: requireScope('app') }, async () =>
     HermesSkillListSchema.parse(await inst().listHermes()),
+  );
+
+  app.post('/skills/hermes/preview', { onRequest: requireScope('app') }, async (req) =>
+    HermesSkillPreviewSchema.parse(
+      await inst().previewHermes(PreviewHermesSkillRequestSchema.parse(req.body)),
+    ),
   );
 
   app.post('/skills/hermes/import', { onRequest: requireScope('app') }, async (req, reply) => {

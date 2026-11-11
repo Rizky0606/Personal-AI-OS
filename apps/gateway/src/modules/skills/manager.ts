@@ -44,9 +44,19 @@ export interface SkillManager {
   scan(input: { body: string; description?: string }): SkillScan;
   create(
     input: CreateInput,
-    options?: { source?: NewSkillSource; origin?: string; actor?: SkillActor },
+    options?: {
+      source?: NewSkillSource;
+      origin?: string;
+      actor?: SkillActor;
+      ownerFolder?: boolean;
+    },
   ): Promise<SkillChange>;
-  update(id: string, patch: UpdateInput, actor?: SkillActor): Promise<SkillChange>;
+  update(
+    id: string,
+    patch: UpdateInput,
+    actor?: SkillActor,
+    options?: { ownerFolder?: boolean },
+  ): Promise<SkillChange>;
   setStatus(id: string, status: SkillStatus): Promise<SkillChange>;
   restore(id: string, version: number): Promise<SkillChange>;
   remove(id: string): Promise<{ hermesSync: HermesSyncState }>;
@@ -152,12 +162,18 @@ export function createSkillManager(deps: {
   };
 
   /** Berbahaya: diblokir untuk skill dari luar/agent, dan butuh `acknowledge` untuk skill buatan sendiri. */
-  const gate = (source: NewSkillSource, scan: SkillScan, acknowledge: boolean | undefined) => {
-    if (scan.verdict === 'dangerous' && (source !== 'user' || !acknowledge)) {
+  const gate = (
+    source: NewSkillSource,
+    scan: SkillScan,
+    acknowledge: boolean | undefined,
+    /** Impor dari folder Hermes milik pemilik: `dangerous` boleh disetujui eksplisit (setelah pratinjau). */
+    ownerFolder = false,
+  ) => {
+    if (scan.verdict === 'dangerous' && ((source !== 'user' && !ownerFolder) || !acknowledge)) {
       throw new AppError(
         422,
         'skill_scan_blocked',
-        source === 'user'
+        source === 'user' || ownerFolder
           ? 'Pemindai menemukan isi berbahaya. Periksa baris yang ditandai; kirim ulang dengan acknowledge bila memang disengaja.'
           : 'Pemindai menemukan isi berbahaya; skill dari luar/agent diblokir.',
         findingErrors(scan),
@@ -190,7 +206,7 @@ export function createSkillManager(deps: {
     scan: (input) => scanSkill(input),
     sync,
 
-    async create(input, { source = 'user', origin, actor = 'user' } = {}) {
+    async create(input, { source = 'user', origin, actor = 'user', ownerFolder = false } = {}) {
       const id = input.id ?? slugifySkillId(input.name);
       if (!SKILL_ID_PATTERN.test(id))
         throw new AppError(
@@ -204,7 +220,7 @@ export function createSkillManager(deps: {
       if (builtinIds().has(id))
         throw new AppError(409, 'skill_id_taken', `Id "${id}" dipakai skill bawaan.`);
       const scan = scanSkill({ body: input.body, description: input.description });
-      gate(source, scan, input.acknowledge);
+      gate(source, scan, input.acknowledge, ownerFolder);
       const engines: SkillEngine[] = input.engines ?? [...ALL_ENGINES];
       try {
         await db.transaction(async (tx) => {
@@ -240,7 +256,7 @@ export function createSkillManager(deps: {
       return done(id, scan);
     },
 
-    async update(id, patch, actor = 'user') {
+    async update(id, patch, actor = 'user', { ownerFolder = false } = {}) {
       const row = await mustGetRow(id);
       const next = {
         name: patch.name ?? row.name,
@@ -251,7 +267,7 @@ export function createSkillManager(deps: {
         next.name !== row.name || next.description !== row.description || next.body !== row.body;
       if (patch.body !== undefined) checkBody(patch.body);
       const scan = scanSkill({ body: next.body, description: next.description });
-      if (contentChanged) gate(row.source, scan, patch.acknowledge);
+      if (contentChanged) gate(row.source, scan, patch.acknowledge, ownerFolder);
       await db.transaction(async (tx) => {
         const version = contentChanged ? row.version + 1 : row.version;
         if (contentChanged) {

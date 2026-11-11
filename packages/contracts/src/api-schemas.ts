@@ -422,6 +422,34 @@ export const HermesSkillListSchema = z
     note: z.string().optional(),
   })
   .meta({ id: 'HermesSkillList' });
+export const PreviewHermesSkillRequestSchema = z
+  .object({ name: z.string().min(1).max(200) })
+  .meta({ id: 'PreviewHermesSkillRequest' });
+/** Pratinjau impor Hermes: isi lengkap + hasil pemindai, supaya persetujuan (acknowledge) diberikan dengan melihat isinya. */
+export const HermesSkillPreviewSchema = z
+  .object({
+    candidate: z.object({
+      id: z.string(),
+      name: z.string(),
+      description: z.string(),
+      body: z.string(),
+      checksum: z.string().regex(/^[a-f0-9]{64}$/),
+      mentionsScripts: z.boolean(),
+    }),
+    scan: SkillScanSchema,
+    /** Versi terpasang dengan id yang sama (untuk diff); null bila skill baru. */
+    existing: z
+      .object({ id: z.string(), version: z.string(), source: SkillSourceSchema, body: z.string() })
+      .nullable(),
+    action: z.enum(['install', 'update', 'conflict']),
+    /** false bila tidak bisa diimpor sama sekali (bentrok id, isi membawa frontmatter kedua). */
+    importable: z.boolean(),
+    reason: z.string().optional(),
+    /** Pemindai memberi peringatan/bahaya: impor butuh `acknowledge` setelah pengguna melihat temuan. */
+    needsAcknowledge: z.boolean(),
+  })
+  .meta({ id: 'HermesSkillPreview' });
+export type HermesSkillPreview = z.infer<typeof HermesSkillPreviewSchema>;
 export const ImportHermesSkillRequestSchema = z
   .object({ name: z.string().min(1).max(200), acknowledge: z.boolean().optional() })
   .meta({ id: 'ImportHermesSkillRequest' });

@@ -375,9 +375,23 @@ export const copy = {
       notImportable: 'Isi tidak bisa dibaca',
       importedToast: 'Skill Hermes diimpor.',
       refresh: 'Muat ulang',
-      acknowledgeTitle: 'Pemindai memberi peringatan',
-      acknowledgeBody: 'Isi skill ini memicu peringatan pemindai. Impor tetap dilanjutkan?',
-      acknowledgeConfirm: 'Impor',
+      check: 'Periksa',
+      review: {
+        title: (name: string) => `Periksa skill Hermes: ${name}`,
+        description:
+          'Isi skill ini akan disalin ke katalog dan dibaca agent. Baca isi dan temuan pemindai sebelum menyetujui.',
+        body: 'Isi skill',
+        scriptsNote:
+          'Isi merujuk skrip. Impor hanya menyalin teks SKILL.md; tidak ada yang dijalankan.',
+        updateNote: 'Skill ini sudah diimpor; impor akan memperbarui isinya menjadi versi baru.',
+        acknowledgeWarn: 'Saya sudah membaca peringatan di atas dan tetap ingin mengimpor.',
+        acknowledgeDanger:
+          'Pemindai menandai isi ini BERBAHAYA. Saya sudah membaca temuannya, mengenali skill ini dari folder Hermes saya, dan tetap ingin mengimpor.',
+        loadFailed: 'Pratinjau tidak bisa dimuat.',
+        cancel: 'Batal',
+        confirm: 'Impor',
+        close: 'Tutup',
+      },
     },
   },
   spaces: {

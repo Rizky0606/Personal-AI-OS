@@ -133,3 +133,59 @@ test('skill: pasang dari sumber nyata (skills.sh), pratinjau, pasang, perbarui t
   await page.getByRole('dialog').last().getByRole('button', { name: 'Hapus', exact: true }).click();
   await expect(row).toBeHidden();
 });
+
+test('skill Hermes: periksa isi dan temuan, persetujuan eksplisit untuk yang berbahaya, impor langsung untuk yang aman', async ({
+  page,
+}) => {
+  await prepare(page);
+  await login(page);
+  await page.goto('/#/skills');
+  await page.getByRole('tab', { name: 'Skill Hermes' }).click();
+  await expect(page.getByText('Dibaca dari folder skill Hermes')).toBeVisible();
+  for (const name of ['hermes-aman', 'hermes-jahat', 'hermes-dobel']) {
+    await expect(page.getByText(name, { exact: true })).toBeVisible();
+  }
+
+  // Aman: impor langsung, tanpa dialog.
+  await page.getByRole('button', { name: 'Impor hermes-aman' }).click();
+  await expect(page.getByText('Skill Hermes diimpor.')).toBeVisible();
+  await expect(page.getByRole('dialog')).toBeHidden();
+
+  // Berbahaya: Periksa menampilkan isi dan temuan; impor mati sampai persetujuan dicentang.
+  await page.getByRole('button', { name: 'Periksa hermes-jahat' }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByText(/Berbahaya:/)).toBeVisible();
+  await expect(dialog.getByText(/rm -rf \//).first()).toBeVisible();
+  const confirm = dialog.getByRole('button', { name: 'Impor', exact: true });
+  await expect(confirm).toBeDisabled();
+  await dialog.getByRole('checkbox', { name: /BERBAHAYA/ }).check();
+  await expect(confirm).toBeEnabled();
+  await confirm.click();
+  await expect(dialog).toBeHidden();
+  await expect(
+    page.getByRole('listitem').filter({ hasText: 'hermes-jahat' }).getByText('Sudah diimpor'),
+  ).toBeVisible();
+
+  // Frontmatter kedua: alasan tampil, tidak ada kotak persetujuan, impor mati.
+  await page.getByRole('button', { name: 'Periksa hermes-dobel' }).click();
+  await expect(dialog.getByText(/frontmatter kedua/).first()).toBeVisible();
+  await expect(dialog.getByRole('checkbox')).toHaveCount(0);
+  await expect(dialog.getByRole('button', { name: 'Impor', exact: true })).toBeDisabled();
+  await dialog.getByRole('button', { name: 'Batal' }).click();
+
+  // Terpasang di katalog sebagai skill terpasang berkepercayaan komunitas; bersihkan.
+  await page.getByRole('tab', { name: 'Skill saya' }).click();
+  for (const name of ['hermes-jahat', 'hermes-aman']) {
+    const row = page.getByRole('button', { name: new RegExp(`^${name}`) });
+    await expect(row).toContainText('Terpasang');
+    await expect(row).toContainText('Komunitas');
+    await row.click();
+    await dialog.getByRole('button', { name: 'Hapus permanen' }).click();
+    await page
+      .getByRole('dialog')
+      .last()
+      .getByRole('button', { name: 'Hapus', exact: true })
+      .click();
+    await expect(row).toBeHidden();
+  }
+});

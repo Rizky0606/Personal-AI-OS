@@ -71,7 +71,12 @@ describe.skipIf(!live)('pasang skill dari sumber nyata', () => {
     );
     expect(res.statusCode, res.body).toBe(201);
     const saved = SkillSaveResultSchema.parse(res.json());
-    expect(saved).toMatchObject({ id: SKILL, source: 'installed', trust: 'community', status: 'active' });
+    expect(saved).toMatchObject({
+      id: SKILL,
+      source: 'installed',
+      trust: 'community',
+      status: 'active',
+    });
     expect(saved.checksum).toBe(p.candidate.checksum);
 
     const detail = SkillDetailSchema.parse((await env.get(`/skills/${SKILL}`, app)).json());

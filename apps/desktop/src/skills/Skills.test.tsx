@@ -1,4 +1,9 @@
-import type { SkillInstallPreview, SkillSaveResult, SkillSummary } from '@aios/contracts';
+import type {
+  HermesSkillPreview,
+  SkillInstallPreview,
+  SkillSaveResult,
+  SkillSummary,
+} from '@aios/contracts';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -295,25 +300,119 @@ describe('SkillsScreen: Pasang', () => {
 });
 
 describe('SkillsScreen: Skill Hermes', () => {
-  it('mengimpor; peringatan pemindai meminta konfirmasi lalu mengulang dengan acknowledge', async () => {
-    const user = userEvent.setup();
+  const finding = {
+    rule: 'destructive-command',
+    severity: 'danger' as const,
+    line: 2,
+    excerpt: 'rm -rf /',
+    message: 'Perintah merusak',
+  };
+  const hermesPreview = (over: Partial<HermesSkillPreview> = {}): HermesSkillPreview => ({
+    candidate: {
+      id: 'ringkas',
+      name: 'ringkas',
+      description: 'Meringkas.',
+      body: 'baris satu\njalankan rm -rf /',
+      checksum: 'c'.repeat(64),
+      mentionsScripts: false,
+    },
+    scan: { verdict: 'safe', findings: [] },
+    existing: null,
+    action: 'install',
+    importable: true,
+    needsAcknowledge: false,
+    ...over,
+  });
+  const listed = () =>
     api.listHermesSkills.mockResolvedValue({
       via: 'folder',
       items: [
         { name: 'ringkas', description: 'Meringkas.', imported: false, importable: true },
         { name: 'lama', description: 'Sudah.', imported: true, importable: true },
+        { name: 'rusak', description: 'Tak terbaca.', imported: false, importable: false },
       ],
     });
-    api.importHermesSkill
-      .mockRejectedValueOnce(new ApiProblem(422, 'skill_scan_confirm', 'Peringatan.'))
-      .mockResolvedValueOnce(saved());
+  async function openHermes() {
+    const user = userEvent.setup();
+    listed();
     await renderScreen(<SkillsScreen />);
     await user.click(screen.getByRole('tab', { name: t.tabs.hermes }));
     expect(await screen.findByText(t.hermes.via.folder)).toBeInTheDocument();
+    return user;
+  }
+
+  it('impor langsung untuk skill aman; yang sudah diimpor dan tak terbaca tidak punya tombol impor', async () => {
+    api.importHermesSkill.mockResolvedValue(saved());
+    const user = await openHermes();
     expect(screen.getByText(t.hermes.imported)).toBeInTheDocument();
+    expect(screen.getByText(t.hermes.notImportable)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: `${t.hermes.import} ringkas` }));
-    await user.click(await screen.findByRole('button', { name: t.hermes.acknowledgeConfirm }));
+    await waitFor(() => expect(api.importHermesSkill).toHaveBeenCalledWith('ringkas', false));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('peringatan: impor membuka dialog Periksa dengan isi dan temuan; baru bisa setelah dicentang', async () => {
+    api.importHermesSkill
+      .mockRejectedValueOnce(new ApiProblem(422, 'skill_scan_confirm', 'Peringatan.'))
+      .mockResolvedValueOnce(saved());
+    api.previewHermesSkill.mockResolvedValue(
+      hermesPreview({
+        scan: { verdict: 'warning', findings: [{ ...finding, severity: 'warning' }] },
+        needsAcknowledge: true,
+      }),
+    );
+    const user = await openHermes();
+    await user.click(screen.getByRole('button', { name: `${t.hermes.import} ringkas` }));
+    const dialog = await screen.findByRole('dialog');
+    expect(await within(dialog).findByText(/jalankan rm -rf/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Perintah merusak/)).toBeInTheDocument();
+    const confirm = within(dialog).getByRole('button', { name: t.hermes.review.confirm });
+    expect(confirm).toBeDisabled();
+    await user.click(
+      within(dialog).getByRole('checkbox', { name: t.hermes.review.acknowledgeWarn }),
+    );
+    await user.click(confirm);
     await waitFor(() => expect(api.importHermesSkill).toHaveBeenLastCalledWith('ringkas', true));
     expect(api.importHermesSkill).toHaveBeenCalledWith('ringkas', false);
+  });
+
+  it('berbahaya: Periksa menampilkan temuan, persetujuan bernada keras, impor dengan acknowledge', async () => {
+    api.importHermesSkill.mockResolvedValue(saved());
+    api.previewHermesSkill.mockResolvedValue(
+      hermesPreview({
+        scan: { verdict: 'dangerous', findings: [finding] },
+        needsAcknowledge: true,
+      }),
+    );
+    const user = await openHermes();
+    await user.click(screen.getByRole('button', { name: `${t.hermes.check} ringkas` }));
+    const dialog = await screen.findByRole('dialog');
+    expect(await within(dialog).findByText(/Berbahaya:/)).toBeInTheDocument();
+    const confirm = within(dialog).getByRole('button', { name: t.hermes.review.confirm });
+    expect(confirm).toBeDisabled();
+    await user.click(
+      within(dialog).getByRole('checkbox', { name: t.hermes.review.acknowledgeDanger }),
+    );
+    expect(confirm).toBeEnabled();
+    await user.click(confirm);
+    await waitFor(() => expect(api.importHermesSkill).toHaveBeenCalledWith('ringkas', true));
+  });
+
+  it('tidak bisa diimpor (frontmatter kedua): alasan tampil dan tombol impor mati tanpa kotak persetujuan', async () => {
+    api.previewHermesSkill.mockResolvedValue(
+      hermesPreview({
+        importable: false,
+        reason: 'Isi skill membawa frontmatter kedua.',
+        needsAcknowledge: true,
+        scan: { verdict: 'warning', findings: [{ ...finding, severity: 'warning' }] },
+      }),
+    );
+    const user = await openHermes();
+    await user.click(screen.getByRole('button', { name: `${t.hermes.check} ringkas` }));
+    const dialog = await screen.findByRole('dialog');
+    expect(await within(dialog).findByText(/frontmatter kedua/)).toBeInTheDocument();
+    expect(within(dialog).queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: t.hermes.review.confirm })).toBeDisabled();
+    expect(api.importHermesSkill).not.toHaveBeenCalled();
   });
 });

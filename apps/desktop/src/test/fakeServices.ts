@@ -52,6 +52,7 @@ export const api: FakeApi = {
   previewSkillInstall: fn<'previewSkillInstall'>(),
   installSkill: fn<'installSkill'>(),
   listHermesSkills: fn<'listHermesSkills'>(),
+  previewHermesSkill: fn<'previewHermesSkill'>(),
   importHermesSkill: fn<'importHermesSkill'>(),
   registerWorker: fn<'registerWorker'>(),
   listProjects: fn<'listProjects'>(),

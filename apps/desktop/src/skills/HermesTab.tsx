@@ -5,8 +5,8 @@ import { useOnline } from '../app/hooks';
 import { api } from '../app/services';
 import { copy } from '../copy';
 import { Button } from '../ui/Button';
-import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { StateView, type ViewState } from '../ui/StateView';
+import { HermesReviewDialog } from './HermesReviewDialog';
 import { needsAcknowledge } from './skillErrors';
 import { useSkillActions } from './useSkillActions';
 
@@ -16,7 +16,7 @@ const t = copy.skillsPage.hermes;
 export function HermesTab() {
   const online = useOnline();
   const { busy, run } = useSkillActions();
-  const [pending, setPending] = useState<string | null>(null);
+  const [reviewing, setReviewing] = useState<string | null>(null);
   const list = useQuery({ queryKey: ['skillHermes'], queryFn: () => api.listHermesSkills() });
   const items = list.data?.items ?? [];
 
@@ -32,19 +32,18 @@ export function HermesTab() {
         ? 'empty'
         : 'content';
 
-  async function importSkill(name: string, acknowledge: boolean) {
-    const done = await run(
+  /** Impor langsung; bila pemindai meminta persetujuan, buka dialog Periksa agar isinya terlihat dulu. */
+  async function importSkill(name: string) {
+    await run(
       `import:${name}`,
-      () => api.importHermesSkill(name, acknowledge),
+      () => api.importHermesSkill(name, false),
       t.importedToast,
       (err) => {
-        // Peringatan pemindai: minta persetujuan eksplisit, bukan toast galat.
-        if (!needsAcknowledge(err) || acknowledge) return false;
-        setPending(name);
+        if (!needsAcknowledge(err)) return false;
+        setReviewing(name);
         return true;
       },
     );
-    if (done) setPending(null);
   }
 
   return (
@@ -80,13 +79,22 @@ export function HermesTab() {
                 <span className="truncate text-ui font-medium text-text">{skill.name}</span>
                 <span className="truncate text-meta text-text-2">{skill.description}</span>
               </span>
+              {skill.importable ? (
+                <Button
+                  aria-label={`${t.check} ${skill.name}`}
+                  disabled={!online || busy !== null}
+                  onClick={() => setReviewing(skill.name)}
+                >
+                  {t.check}
+                </Button>
+              ) : null}
               {skill.imported ? (
                 <span className="text-meta text-text-2">{t.imported}</span>
               ) : skill.importable ? (
                 <Button
                   aria-label={`${t.import} ${skill.name}`}
                   disabled={!online || busy !== null}
-                  onClick={() => void importSkill(skill.name, false)}
+                  onClick={() => void importSkill(skill.name)}
                 >
                   {busy === `import:${skill.name}` ? t.importing : t.import}
                 </Button>
@@ -97,18 +105,7 @@ export function HermesTab() {
           ))}
         </ul>
       </StateView>
-      <ConfirmDialog
-        open={pending !== null}
-        onOpenChange={(open) => {
-          if (!open) setPending(null);
-        }}
-        title={t.acknowledgeTitle}
-        body={t.acknowledgeBody}
-        confirmLabel={t.acknowledgeConfirm}
-        cancelLabel={copy.skillsPage.editor.cancel}
-        busy={busy !== null}
-        onConfirm={() => pending && void importSkill(pending, true)}
-      />
+      <HermesReviewDialog name={reviewing} onClose={() => setReviewing(null)} />
     </div>
   );
 }

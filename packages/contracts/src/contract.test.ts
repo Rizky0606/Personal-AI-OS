@@ -103,6 +103,7 @@ const DOCUMENTED_ENDPOINTS = [
   'POST /skills/install/preview',
   'POST /skills/install',
   'GET /skills/hermes',
+  'POST /skills/hermes/preview',
   'POST /skills/hermes/import',
   'PATCH /skills/:id',
   'DELETE /skills/:id',

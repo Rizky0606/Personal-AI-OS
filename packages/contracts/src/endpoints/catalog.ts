@@ -9,6 +9,8 @@ import {
   RoleListSchema,
   CreateSkillRequestSchema,
   HermesSkillListSchema,
+  HermesSkillPreviewSchema,
+  PreviewHermesSkillRequestSchema,
   ImportHermesSkillRequestSchema,
   InstallSkillRequestSchema,
   PreviewSkillInstallRequestSchema,
@@ -173,6 +175,18 @@ export const catalogEndpoints: readonly Endpoint[] = [
     auth: true,
     responses: [json(200, 'Skill Hermes', HermesSkillListSchema)],
     errors: [401, 403],
+  },
+  {
+    operationId: 'previewHermesSkill',
+    method: 'post',
+    path: '/skills/hermes/preview',
+    tag: 'Skill',
+    summary:
+      'Pratinjau impor satu skill Hermes (hanya baca): isi lengkap, hasil pemindai, aksi (install/update/conflict), dan apakah butuh `acknowledge`. Tidak menyimpan apa pun',
+    auth: true,
+    body: PreviewHermesSkillRequestSchema,
+    responses: [json(200, 'Pratinjau', HermesSkillPreviewSchema)],
+    errors: [400, 401, 403, 404, 422],
   },
   {
     operationId: 'importHermesSkill',

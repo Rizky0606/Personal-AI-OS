@@ -1,8 +1,14 @@
-import type { HermesSkillListSchema, SkillInstallPreview } from '@aios/contracts';
+import type {
+  HermesSkillListSchema,
+  HermesSkillPreview,
+  SkillInstallPreview,
+} from '@aios/contracts';
 import type { z } from 'zod';
 import { AppError } from '../../errors.js';
 import {
+  checksumOfBody,
   fetchSkill,
+  mentionsScripts,
   resolveSource,
   type FetchLike,
   type FetchedSkill,
@@ -25,7 +31,12 @@ export interface InstallService {
   install(input: { source: string; checksum: string; acknowledge?: boolean }): Promise<SkillChange>;
   listHermes(): Promise<HermesSkillList>;
   importHermes(input: { name: string; acknowledge?: boolean }): Promise<SkillChange>;
+  /** Hanya baca: isi + hasil pemindai satu skill Hermes, supaya `acknowledge` diberikan dengan melihat isinya. */
+  previewHermes(input: { name: string }): Promise<HermesSkillPreview>;
 }
+
+/** Sama dengan pemeriksaan isi di manager: isi katalog tidak boleh diawali blok frontmatter. */
+const NESTED_FRONTMATTER = /^\s*---\s*\r?\n/;
 
 export function createInstallService(deps: {
   skills: SkillsService;
@@ -82,6 +93,8 @@ export function createInstallService(deps: {
     candidate: { id: string; name: string; description: string; body: string },
     origin: string,
     acknowledge: boolean | undefined,
+    /** Hanya impor dari folder Hermes milik pemilik yang boleh menyetujui temuan `dangerous`. */
+    ownerFolder = false,
   ): Promise<SkillChange> =>
     action === 'update'
       ? manager.update(
@@ -93,6 +106,7 @@ export function createInstallService(deps: {
             acknowledge,
           },
           'import',
+          { ownerFolder },
         )
       : manager.create(
           {
@@ -102,7 +116,7 @@ export function createInstallService(deps: {
             body: candidate.body,
             acknowledge,
           },
-          { source: 'installed', origin, actor: 'import' },
+          { source: 'installed', origin, actor: 'import', ownerFolder },
         );
 
   return {
@@ -188,7 +202,46 @@ export function createInstallService(deps: {
         throw new AppError(422, 'skill_id_invalid', 'Nama skill tidak bisa dijadikan id.');
       const decided = plan(candidate.id, origin);
       if (decided.action === 'conflict') throw new AppError(409, 'skill_id_taken', decided.reason);
-      return apply(decided.action, candidate, origin, acknowledge);
+      return apply(decided.action, candidate, origin, acknowledge, true);
+    },
+
+    async previewHermes({ name }) {
+      if (!hermes?.readable)
+        throw new AppError(
+          422,
+          'hermes_folder_unconfigured',
+          'Isi skill Hermes dibaca dari folder skill-nya; isi HERMES_SKILLS_DIR.',
+        );
+      const skill = await hermes.read(name);
+      if (!skill)
+        throw new AppError(404, 'hermes_skill_not_found', `Skill Hermes "${name}" tidak ada.`);
+      const id = slugifySkillId(skill.name);
+      if (id === '')
+        throw new AppError(422, 'skill_id_invalid', 'Nama skill tidak bisa dijadikan id.');
+      const decided = plan(id, `hermes:${name}`);
+      const scan = scanSkill({ body: skill.body, description: skill.description });
+      const reason =
+        decided.action === 'conflict'
+          ? decided.reason
+          : NESTED_FRONTMATTER.test(skill.body)
+            ? 'Isi skill membawa frontmatter kedua (--- ... ---); aturan katalog menolaknya dan isi tidak diubah otomatis.'
+            : undefined;
+      return {
+        candidate: {
+          id,
+          name: skill.name,
+          description: skill.description,
+          body: skill.body,
+          checksum: checksumOfBody(skill.body),
+          mentionsScripts: mentionsScripts(skill.body),
+        },
+        scan,
+        existing: decided.existing,
+        action: decided.action,
+        importable: reason === undefined,
+        ...(reason ? { reason } : {}),
+        needsAcknowledge: scan.verdict !== 'safe',
+      };
     },
   };
 }

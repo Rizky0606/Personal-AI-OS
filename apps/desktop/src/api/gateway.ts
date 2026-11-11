@@ -47,6 +47,7 @@ import {
   TaskBreakdownResponseSchema,
   TaskSchema,
   HermesSkillListSchema,
+  HermesSkillPreviewSchema,
   SkillDetailSchema,
   SkillInstallPreviewSchema,
   SkillListSchema,
@@ -446,6 +447,8 @@ export function createGatewayApi(call: Call) {
         body: { source, checksum, ...(acknowledge ? { acknowledge: true } : {}) },
       }),
     listHermesSkills: () => get('/skills/hermes', HermesSkillListSchema),
+    previewHermesSkill: (name: string) =>
+      get('/skills/hermes/preview', HermesSkillPreviewSchema, { method: 'POST', body: { name } }),
     importHermesSkill: (name: string, acknowledge: boolean) =>
       get('/skills/hermes/import', SkillSaveResultSchema, {
         method: 'POST',

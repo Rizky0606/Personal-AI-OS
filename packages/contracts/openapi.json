@@ -4374,6 +4374,116 @@
           "importable"
         ]
       },
+      "HermesSkillPreview": {
+        "type": "object",
+        "properties": {
+          "candidate": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "body": {
+                "type": "string"
+              },
+              "checksum": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "mentionsScripts": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "description",
+              "body",
+              "checksum",
+              "mentionsScripts"
+            ]
+          },
+          "scan": {
+            "$ref": "#/components/schemas/SkillScan"
+          },
+          "existing": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string",
+                "enum": [
+                  "builtin",
+                  "user",
+                  "installed",
+                  "agent"
+                ]
+              },
+              "body": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "version",
+              "source",
+              "body"
+            ]
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "install",
+              "update",
+              "conflict"
+            ]
+          },
+          "importable": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "needsAcknowledge": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "candidate",
+          "scan",
+          "existing",
+          "action",
+          "importable",
+          "needsAcknowledge"
+        ]
+      },
+      "PreviewHermesSkillRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
       "ImportHermesSkillRequest": {
         "type": "object",
         "properties": {
@@ -9592,6 +9702,101 @@
           },
           "403": {
             "description": "Token tidak punya scope yang dibutuhkan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/skills/hermes/preview": {
+      "post": {
+        "operationId": "previewHermesSkill",
+        "tags": [
+          "Skill"
+        ],
+        "summary": "Pratinjau impor satu skill Hermes (hanya baca): isi lengkap, hasil pemindai, aksi (install/update/conflict), dan apakah butuh `acknowledge`. Tidak menyimpan apa pun",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewHermesSkillRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Pratinjau",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HermesSkillPreview"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Permintaan tidak valid",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Belum login atau token tidak berlaku",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token tidak punya scope yang dibutuhkan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tidak ditemukan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Tidak bisa diproses",
             "content": {
               "application/problem+json": {
                 "schema": {
