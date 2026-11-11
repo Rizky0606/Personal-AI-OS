@@ -15,15 +15,21 @@ export interface HermesSkillEntry {
 }
 
 const MAX_DEPTH = 3;
-const MAX_ENTRIES = 300;
+/** Folder Hermes nyata bisa memuat ratusan skill (444 di mesin pengembangan); batas ini hanya pagar pengaman. */
+const MAX_ENTRIES = 2000;
 
 async function scanFolder(
   root: string,
-): Promise<Map<string, { description: string; file: string }>> {
-  const out = new Map<string, { description: string; file: string }>();
+): Promise<Map<string, { description: string; file: string }> & { truncated?: boolean }> {
+  const out: Map<string, { description: string; file: string }> & { truncated?: boolean } =
+    new Map();
   const base = resolve(root);
   const walk = async (dir: string, depth: number): Promise<void> => {
-    if (depth > MAX_DEPTH || out.size >= MAX_ENTRIES) return;
+    if (depth > MAX_DEPTH) return;
+    if (out.size >= MAX_ENTRIES) {
+      out.truncated = true;
+      return;
+    }
     const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
     for (const entry of entries) {
       if (entry.isSymbolicLink()) continue;
@@ -113,10 +119,20 @@ export function createHermesSkillSource(deps: {
           items: [...folder].map(([name, v]) => ({ name, description: v.description })),
           via: 'folder',
           readable,
-          note:
-            api === undefined
-              ? 'GET /v1/skills Hermes gagal; dibaca dari folder skill Hermes.'
-              : undefined,
+          ...(folder.truncated || api === undefined
+            ? {
+                note: [
+                  api === undefined
+                    ? 'GET /v1/skills Hermes gagal; dibaca dari folder skill Hermes.'
+                    : '',
+                  folder.truncated
+                    ? `Daftar dipotong di ${MAX_ENTRIES} skill; sisanya tidak ditampilkan.`
+                    : '',
+                ]
+                  .filter(Boolean)
+                  .join(' '),
+              }
+            : {}),
         };
       return {
         items: [],

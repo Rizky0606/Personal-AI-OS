@@ -155,3 +155,5 @@ Rute `/skills` (tautan "Skill" di kaki sidebar, di atas Pengaturan; tanpa pintas
 - **Pasang:** pratinjau (isi, pemindai, diff baris terhadap versi terpasang, catatan skrip tidak diunduh) lalu pasang dengan checksum pratinjau. Berbahaya: tombol mati tanpa jalan pintas. Peringatan: butuh centang. 409 checksum menyuruh pratinjau ulang.
 - **Skill Hermes:** hanya baca, dengan asal data (`api`/`folder`/`none`) dan tombol Impor; peringatan pemindai meminta konfirmasi lalu mengulang dengan `acknowledge`.
 
+Catatan tab Skill Hermes: folder dibaca sampai 2000 skill (pagar pengaman); bila terpotong, `note` memberi tahu. Skill Hermes yang isinya membawa frontmatter kedua ditolak saat impor (422 `skill_body_has_frontmatter`) dan skill yang dinilai `dangerous` oleh pemindai tidak bisa diimpor sama sekali.
+
