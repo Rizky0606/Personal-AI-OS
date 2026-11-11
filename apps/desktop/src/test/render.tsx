@@ -26,6 +26,7 @@ const PATHS = [
   '/quota',
   '/status',
   '/compare',
+  '/skills',
 ];
 
 /**

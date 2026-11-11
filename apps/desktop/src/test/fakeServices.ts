@@ -40,6 +40,19 @@ export const fakeRealtime = {
 const fn = <K extends keyof GatewayApi>() => vi.fn() as unknown as FakeApi[K];
 
 export const api: FakeApi = {
+  listSkills: fn<'listSkills'>(),
+  getSkill: fn<'getSkill'>(),
+  createSkill: fn<'createSkill'>(),
+  updateSkill: fn<'updateSkill'>(),
+  deleteSkill: fn<'deleteSkill'>(),
+  setSkillStatus: fn<'setSkillStatus'>(),
+  listSkillVersions: fn<'listSkillVersions'>(),
+  restoreSkillVersion: fn<'restoreSkillVersion'>(),
+  scanSkill: fn<'scanSkill'>(),
+  previewSkillInstall: fn<'previewSkillInstall'>(),
+  installSkill: fn<'installSkill'>(),
+  listHermesSkills: fn<'listHermesSkills'>(),
+  importHermesSkill: fn<'importHermesSkill'>(),
   registerWorker: fn<'registerWorker'>(),
   listProjects: fn<'listProjects'>(),
   createProject: fn<'createProject'>(),
@@ -234,6 +247,7 @@ export function resetApi(): void {
   api.listRuns.mockResolvedValue([]);
   api.listMemories.mockResolvedValue([]);
   api.listPromptTemplates.mockResolvedValue([]);
+  api.listSkills.mockResolvedValue([]);
   api.listSpaces.mockResolvedValue([]);
   api.search.mockResolvedValue([]);
   api.listSpaceDocuments.mockResolvedValue([]);

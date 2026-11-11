@@ -14,6 +14,7 @@ const SCREENS: { name: string; hash: string }[] = [
   { name: 'Jadwal', hash: '#/schedules' },
   { name: 'Riset', hash: '#/research' },
   { name: 'Ruang', hash: '#/spaces' },
+  { name: 'Skill', hash: '#/skills' },
   { name: 'Pengaturan', hash: '#/settings' },
   { name: 'Kuota', hash: '#/quota' },
   { name: 'Pembanding model', hash: '#/compare' },

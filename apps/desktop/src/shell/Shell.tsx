@@ -66,6 +66,8 @@ function sectionFor(pathname: string): Section {
     return { title: copy.quota.title, list: <InfoNote message={copy.quota.empty} /> };
   if (pathname.startsWith('/compare'))
     return { title: copy.compare.title, list: <InfoNote message={copy.compare.intro} /> };
+  if (pathname.startsWith('/skills'))
+    return { title: copy.nav.skills, list: <InfoNote message={copy.skillsPage.sidebar} /> };
   if (pathname.startsWith('/settings'))
     return { title: copy.nav.settings, list: <InfoNote message={copy.settings.shortcuts} /> };
   if (pathname.startsWith('/dev'))

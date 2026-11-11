@@ -6,12 +6,21 @@ import {
   MessageSquare,
   Search,
   Settings,
+  Sparkles,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { copy } from '../copy';
 
 export interface NavItem {
-  to: '/' | '/kanban' | '/workspace' | '/schedules' | '/research' | '/spaces' | '/settings';
+  to:
+    | '/'
+    | '/kanban'
+    | '/workspace'
+    | '/schedules'
+    | '/research'
+    | '/spaces'
+    | '/skills'
+    | '/settings';
   label: string;
   icon: ReactNode;
 }
@@ -37,6 +46,13 @@ export const isActive = (to: string, pathname: string): boolean => {
 };
 
 export const isNavActive = isActive;
+
+/** Skill: tautan di kaki sidebar, tanpa pintasan angka (urutan Ctrl+1..6 tidak berubah). */
+export const skillsItem: NavItem = {
+  to: '/skills',
+  label: copy.nav.skills,
+  icon: <Sparkles {...ICON} />,
+};
 
 /** Pengaturan: tautan di kaki sidebar. */
 export const settingsItem: NavItem = {

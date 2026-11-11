@@ -836,6 +836,15 @@ Cabang `fix/p9-katalog-skill` (dari ujung P8, `9ad1808`). Commit `c7dfc5c` (task
 - [ ] Ukur ulang ketepatan pemilihan skill (`pnpm eval:skills`, 20 pesan) di Hermes dan omp setelah perbaikan nama indeks. omp perlu `AIOS_EVAL_OMP_*`.
 - [ ] Pembukaan skill Hermes belum ditampilkan di UI desktop (hanya di data progres); UI membaca `skills`.
 - [ ] Tes gateway default memakai Postgres tertanam yang gagal di mesin ini (`libicuuc.so.60`, hanya ICU 74 terpasang). Jalankan dengan `TEST_DATABASE_URL` ke Postgres 16 sistem: role harus superuser (atau cluster sendiri), karena `DROP DATABASE ... WITH (FORCE)` di teardown ditolak untuk role biasa saat autovacuum menyentuh database tes.
-- [ ] Skill `user` dari folder data gateway (P10): belum ada pemuat.
+- [x] Skill `user` (P10): disimpan di Postgres (bukan folder data) dan dikelola dari halaman Skill desktop (irisan 1-3).
 
 **Dua tes lama yang disesuaikan sebelumnya** (kategori `app_or_worker`): `security.audit.integration.test.ts`, `contract.test.ts` + `docs/API_CONTRACT.md`.
+
+## Temuan P10 irisan 3 (layar Skill desktop)
+
+- [x] Klien API, layar `/skills` (3 tab), tautan sidebar, entri palet perintah, 13 tes komponen + 2 tes diff. `pnpm typecheck` 12/12 paket, eslint bersih, tes desktop 936 lulus (sebelumnya 923).
+- [x] e2e terhadap gateway nyata (Postgres 16 sekali-pakai, chromium): `E2E_BROWSER=chromium TEST_DATABASE_URL=... pnpm exec playwright test`; bangun bundel dulu dengan `pnpm --filter @aios/e2e build:app` (menjalankan `playwright` langsung memakai bundel lama). `e2e/tests/skills.spec.ts` 3 lulus; `a11y.spec.ts` diperluas ke `/skills` dan lulus terang/gelap; shell dan keyboard lulus.
+- **Temuan e2e (2 bug nyata, diperbaiki):** (1) dialog skill dibuka ulang cepat memakai kembali state form lama (isi versi lama + Simpan aktif); form kini di-key menurut id, versi, checksum. (2) axe `label-content-name-mismatch`: `aria-label` tombol buka skill tidak memuat teks yang terlihat; label dihapus.
+- [ ] Belum diverifikasi: jalur Pasang sukses dari sumber nyata (github.com/skills.sh; e2e hanya menguji penolakan domain, jalur sukses diuji di integrasi gateway dengan sumber palsu), impor Hermes dengan `HERMES_SKILLS_DIR` terisi, dan Android (tanpa layar Skill). Suite e2e penuh tidak dijalankan ulang (yang dijalankan: skills, a11y, shell, keyboard).
+- Catatan: `e2e/.stack.json` berubah tiap run e2e; jangan ikut di-commit.
+

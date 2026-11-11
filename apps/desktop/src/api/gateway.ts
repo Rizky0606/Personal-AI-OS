@@ -1,4 +1,5 @@
 import type {
+  CreateSkillRequestSchema,
   ModelInfoSchema,
   QuestionAnswer,
   QueueName,
@@ -45,6 +46,16 @@ import {
   SendMessageResponseSchema,
   TaskBreakdownResponseSchema,
   TaskSchema,
+  HermesSkillListSchema,
+  SkillDetailSchema,
+  SkillInstallPreviewSchema,
+  SkillListSchema,
+  SkillSaveResultSchema,
+  SkillScanSchema,
+  SkillVersionListSchema,
+  type SkillEngine,
+  type SkillStatus,
+  type UpdateSkillRequestSchema,
   type CreateProjectRequestSchema,
   type CreateScheduleRequestSchema,
   type CreateTaskRequestSchema,
@@ -99,6 +110,11 @@ export type CreateTaskInput = z.input<typeof CreateTaskRequestSchema>;
 export type UpdateTaskInput = z.input<typeof UpdateTaskRequestSchema>;
 export type TaskProposal = z.infer<typeof TaskBreakdownResponseSchema>['items'][number];
 export type WorkerRegistration = z.infer<typeof LoginResponseSchema>;
+
+export type CreateSkillInput = z.input<typeof CreateSkillRequestSchema>;
+export type UpdateSkillInput = z.input<typeof UpdateSkillRequestSchema>;
+export type HermesSkillList = z.infer<typeof HermesSkillListSchema>;
+export type SkillVersion = z.infer<typeof SkillVersionListSchema>['items'][number];
 
 export const PAGE_SIZE = 50;
 
@@ -387,6 +403,54 @@ export function createGatewayApi(call: Call) {
     runScheduleNow: (id: string) => get(`/schedules/${id}/run-now`, RunSchema, { method: 'POST' }),
     listScheduleRuns: (id: string, before?: string) =>
       get(`/schedules/${id}/runs${query({ before, limit: PAGE_SIZE })}`, ScheduleRunPageSchema),
+
+    /** Katalog lengkap (aktif, nonaktif, arsip) untuk halaman Skill. */
+    listSkills: async (engine?: SkillEngine) =>
+      (await get(`/skills${query({ include: 'all', engine })}`, SkillListSchema)).items,
+    getSkill: (id: string) => get(`/skills/${encodeURIComponent(id)}`, SkillDetailSchema),
+    createSkill: (input: CreateSkillInput) =>
+      get('/skills', SkillSaveResultSchema, { method: 'POST', body: input }),
+    updateSkill: (id: string, patch: UpdateSkillInput) =>
+      get(`/skills/${encodeURIComponent(id)}`, SkillSaveResultSchema, {
+        method: 'PATCH',
+        body: patch,
+      }),
+    deleteSkill: async (id: string) => {
+      await call(`/skills/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    },
+    setSkillStatus: (id: string, status: SkillStatus) =>
+      get(`/skills/${encodeURIComponent(id)}/status`, SkillSaveResultSchema, {
+        method: 'POST',
+        body: { status },
+      }),
+    listSkillVersions: async (id: string) =>
+      (await get(`/skills/${encodeURIComponent(id)}/versions`, SkillVersionListSchema)).items,
+    restoreSkillVersion: (id: string, version: number) =>
+      get(`/skills/${encodeURIComponent(id)}/restore`, SkillSaveResultSchema, {
+        method: 'POST',
+        body: { version },
+      }),
+    scanSkill: (body: string, description?: string) =>
+      get('/skills/scan', SkillScanSchema, {
+        method: 'POST',
+        body: { body, ...(description ? { description } : {}) },
+      }),
+    previewSkillInstall: (source: string) =>
+      get('/skills/install/preview', SkillInstallPreviewSchema, {
+        method: 'POST',
+        body: { source },
+      }),
+    installSkill: (source: string, checksum: string, acknowledge: boolean) =>
+      get('/skills/install', SkillSaveResultSchema, {
+        method: 'POST',
+        body: { source, checksum, ...(acknowledge ? { acknowledge: true } : {}) },
+      }),
+    listHermesSkills: () => get('/skills/hermes', HermesSkillListSchema),
+    importHermesSkill: (name: string, acknowledge: boolean) =>
+      get('/skills/hermes/import', SkillSaveResultSchema, {
+        method: 'POST',
+        body: { name, ...(acknowledge ? { acknowledge: true } : {}) },
+      }),
 
     createResearch: (question: string, depth: ResearchDepth) =>
       get('/research', ResearchJobSchema, { method: 'POST', body: { question, depth } }),

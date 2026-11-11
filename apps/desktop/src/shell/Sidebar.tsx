@@ -8,7 +8,7 @@ import { IconButton } from '../ui/IconButton';
 import { PlateGroup } from '../ui/PlateGroup';
 import { Tooltip } from '../ui/Tooltip';
 import { ISLAND } from './island';
-import { NAV_ITEMS, isActive, settingsItem, type NavItem } from './navItems';
+import { NAV_ITEMS, isActive, settingsItem, skillsItem, type NavItem } from './navItems';
 import { SidebarStatus } from './SidebarStatus';
 
 export interface SidebarProps {
@@ -168,6 +168,7 @@ export function Sidebar({ title, action, children, showExpand = true }: SidebarP
         )}
       >
         <SidebarStatus collapsed={collapsed} />
+        <NavLink item={skillsItem} collapsed={collapsed} />
         <NavLink item={settingsItem} collapsed={collapsed} />
       </div>
     </aside>

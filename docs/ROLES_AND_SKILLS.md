@@ -146,3 +146,12 @@ Gateway mengunduh `SKILL.md` dari id skills.sh atau URL GitHub, hanya dari `gith
 Keterbatasan yang disengaja: hanya `SKILL.md` yang diambil. Folder `scripts/` dan berkas eksekusi tidak diunduh dan tidak pernah dijalankan (domain yang diizinkan tidak mencakup API GitHub untuk mendaftar isi folder), jadi skill yang bergantung pada skrip hanya membawa petunjuknya; pratinjau memberi tanda bila isi merujuk skrip.
 
 Tab "Skill Hermes" hanya baca. Daftar dari `GET /v1/skills` Hermes; pada Hermes 0.22.5 endpoint itu menjawab 500, sehingga gateway membaca folder `HERMES_SKILLS_DIR` (tanpa menulis, tanpa mengikuti symlink, `aios/` dikecualikan). Isi hanya bisa diimpor dari folder.
+
+### Layar desktop (P10 irisan 3)
+
+Rute `/skills` (tautan "Skill" di kaki sidebar, di atas Pengaturan; tanpa pintasan Ctrl+angka sehingga `NAV_ROUTES` tetap). Tiga tab di `apps/desktop/src/skills/`:
+
+- **Skill saya:** seluruh katalog (aktif, nonaktif, arsip) dengan saringan sumber dan sakelar aktif. Skill bawaan dibuka hanya baca. Editor skill buatan/terpasang: nama, deskripsi, isi, mesin, sematkan, trust, pindai, simpan, arsip, hapus, dan riwayat versi dengan pengembalian. Bila pemindai menahan simpan (`skill_scan_blocked`/`skill_scan_confirm`), temuan tampil di dialog dan simpan baru bisa setelah kotak persetujuan dicentang.
+- **Pasang:** pratinjau (isi, pemindai, diff baris terhadap versi terpasang, catatan skrip tidak diunduh) lalu pasang dengan checksum pratinjau. Berbahaya: tombol mati tanpa jalan pintas. Peringatan: butuh centang. 409 checksum menyuruh pratinjau ulang.
+- **Skill Hermes:** hanya baca, dengan asal data (`api`/`folder`/`none`) dan tombol Impor; peringatan pemindai meminta konfirmasi lalu mengulang dengan `acknowledge`.
+

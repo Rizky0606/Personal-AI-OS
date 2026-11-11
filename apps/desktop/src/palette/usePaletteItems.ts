@@ -48,6 +48,7 @@ export function usePaletteItems(open: boolean, close: () => void): PaletteItem[]
         | '/workspace'
         | '/schedules'
         | '/research'
+        | '/skills'
         | '/settings'
         | '/quota'
         | '/compare'
@@ -120,6 +121,13 @@ export function usePaletteItems(open: boolean, close: () => void): PaletteItem[]
         label: copy.nav.research,
         hint: shortcutHint('/research'),
         run: go('/research'),
+      },
+      {
+        id: 'go-skills',
+        group: 'go',
+        label: copy.nav.skills,
+        keywords: 'skill kemampuan agent pasang impor hermes',
+        run: go('/skills'),
       },
       {
         id: 'go-settings',

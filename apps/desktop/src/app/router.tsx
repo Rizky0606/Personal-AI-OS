@@ -8,6 +8,7 @@ import {
 import { GeneralChatRoute, ProjectChatRoute } from '../workspace/ProjectRoutes';
 import { CompareScreen } from '../compare/CompareScreen';
 import { StatusScreen } from '../status/StatusScreen';
+import { SkillsScreen } from '../skills/SkillsScreen';
 import { QuotaScreen } from '../quota/QuotaScreen';
 import { KanbanScreen } from '../kanban/KanbanScreen';
 import { WorkspaceScreen } from '../workspace/WorkspaceScreen';
@@ -98,6 +99,7 @@ const routes = [
   }),
   createRoute({ getParentRoute: () => rootRoute, path: '/spaces', component: SpacesScreen }),
   createRoute({ getParentRoute: () => rootRoute, path: '/spaces/$spaceId', component: SpaceRoute }),
+  createRoute({ getParentRoute: () => rootRoute, path: '/skills', component: SkillsScreen }),
   createRoute({ getParentRoute: () => rootRoute, path: '/settings', component: SettingsScreen }),
   createRoute({ getParentRoute: () => rootRoute, path: '/quota', component: QuotaScreen }),
   createRoute({ getParentRoute: () => rootRoute, path: '/status', component: StatusScreen }),
