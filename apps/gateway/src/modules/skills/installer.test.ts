@@ -176,6 +176,44 @@ describe('parseSkillMd', () => {
     expect(parseSkillMd(folded).description).toBe('Saat menulis naskah anak.');
   });
 
+  it('skalar polos bertingkat (YAML): nilai di baris-baris menjorok, seperti skill Vercel nyata', () => {
+    // Persis frontmatter vercel-labs/agent-skills (composition-patterns, react-native-skills): nilai
+    // `description:` kosong di baris kuncinya dan lanjut di baris-baris berikutnya yang menjorok.
+    const real = [
+      '---',
+      'name: vercel-composition-patterns',
+      'description:',
+      '  React composition patterns that scale. Use when refactoring components with',
+      '  boolean prop proliferation, building flexible component libraries.',
+      'license: MIT',
+      'metadata:',
+      '  author: vercel',
+      "  version: '1.0.0'",
+      '---',
+      '# Isi',
+    ].join('\n');
+    const parsed = parseSkillMd(real);
+    expect(parsed.name).toBe('vercel-composition-patterns');
+    expect(parsed.description).toBe(
+      'React composition patterns that scale. Use when refactoring components with boolean prop proliferation, building flexible component libraries.',
+    );
+    expect(parsed.body).toBe('# Isi');
+  });
+
+  it('nilai di baris kunci yang berlanjut ke baris menjorok digabung; blok bersarang tidak bocor', () => {
+    const text = [
+      '---',
+      'name: x',
+      'description: Saat menulis naskah',
+      '  anak dengan cermat.',
+      'metadata:',
+      '  description: bukan yang ini',
+      '---',
+      'isi',
+    ].join('\n');
+    expect(parseSkillMd(text).description).toBe('Saat menulis naskah anak dengan cermat.');
+  });
+
   it('deskripsi >200 karakter dipotong dan ditandai', () => {
     const long = `---\nname: x\ndescription: ${'kata '.repeat(80)}\n---\nisi`;
     const parsed = parseSkillMd(long);

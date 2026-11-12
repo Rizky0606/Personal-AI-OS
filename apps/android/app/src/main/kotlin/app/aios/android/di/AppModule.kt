@@ -12,6 +12,9 @@ import app.aios.android.data.Connectivity
 import app.aios.android.data.ConnectivityObserver
 import app.aios.android.data.api.ChatApi
 import app.aios.android.data.api.MemoryApi
+import app.aios.android.data.api.SkillApi
+import app.aios.android.data.skills.RemoteSkillRepository
+import app.aios.android.data.skills.SkillRepository
 import app.aios.android.data.api.SpaceApi
 import app.aios.android.data.api.ScheduleApi
 import app.aios.android.data.memory.MemoryRepository
@@ -237,6 +240,15 @@ object AppModule {
     @Provides
     @Singleton
     fun memoryRepository(api: MemoryApi): MemoryRepository = RemoteMemoryRepository(api)
+
+    @Provides
+    @Singleton
+    fun skillApi(@Named("authed") client: OkHttpClient, json: Json): SkillApi =
+        retrofit(client, json).create(SkillApi::class.java)
+
+    @Provides
+    @Singleton
+    fun skillRepository(api: SkillApi): SkillRepository = RemoteSkillRepository(api)
 
     @Provides
     @Singleton

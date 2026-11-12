@@ -77,6 +77,7 @@ import app.aios.android.ui.components.FloatingNavBar
 import app.aios.android.ui.components.Hairline
 import app.aios.android.ui.components.NavBarItem
 import app.aios.android.ui.memory.MemoryScreen
+import app.aios.android.ui.skills.SkillsScreen
 import app.aios.android.ui.spaces.SpaceDetailScreen
 import app.aios.android.ui.spaces.SpaceListScreen
 import app.aios.android.ui.settings.SettingsScreen
@@ -95,6 +96,7 @@ private object Routes {
     const val SPACE_DETAIL = "spaces/{id}"
     const val SETTINGS = "settings"
     const val MEMORY = "settings/memory"
+    const val SKILLS = "settings/skills"
 }
 
 private data class Tab(val route: String, @StringRes val label: Int, @DrawableRes val icon: Int)
@@ -331,10 +333,12 @@ fun MainScreen(online: Boolean, sessionKey: String, link: AppLink?, onLinkConsum
                     composable(Routes.SETTINGS) {
                         SettingsScreen(
                             onOpenCatalog = { nav.navigate(DebugFeatures.ROUTE) },
-                            onOpenMemory = { nav.navigate(Routes.MEMORY) }
+                            onOpenMemory = { nav.navigate(Routes.MEMORY) },
+                            onOpenSkills = { nav.navigate(Routes.SKILLS) }
                         )
                     }
                     composable(Routes.MEMORY) { MemoryScreen(online = online, snackbar = snackbar) }
+                    composable(Routes.SKILLS) { SkillsScreen(online = online, snackbar = snackbar) }
                     debugRoutes()
                 }
             }
@@ -359,6 +363,7 @@ private fun titleFor(route: String): Int = when (route) {
     Routes.SPACES, Routes.SPACE_DETAIL -> R.string.nav_spaces
     Routes.SETTINGS -> R.string.settings_title
     Routes.MEMORY -> R.string.memory_title
+    Routes.SKILLS -> R.string.skills_title
     DebugFeatures.ROUTE -> R.string.catalog_title
     else -> R.string.nav_chat
 }

@@ -199,6 +199,49 @@ function replyHermes(text: string) {
   });
 }
 
+describe('Orkestrator Orca: status tim selama perencanaan', () => {
+  it('tim tidak pernah dilaporkan selesai/gagal di jendela antara Lead selesai dan rencana tersimpan', async () => {
+    // Regresi flake e2e team.spec: sebelum rencana tersimpan, status diturunkan dari run Lead pertama; begitu
+    // run itu 'completed' API melaporkan tim 'completed' padahal orkestrator belum membuat satu tugas pun,
+    // dan klien yang mengambil detail di jendela itu terjebak pada "Tim selesai." tanpa tugas.
+    const { fake, projectId } = await setupProject('orca-jendela');
+    replyHermes(PLAN_ONE_TASK);
+    const created = await env.post(
+      '/teams',
+      { projectId, prompt: 'Tambahkan tes untuk fungsi tambah.', limits: limitsWith() },
+      desktop,
+    );
+    expect(created.statusCode, created.body).toBe(201);
+    const team = TeamDetailSchema.parse(created.json());
+
+    const seen: string[] = [];
+    const deadline = Date.now() + 8000;
+    let snapshot = await getTeam(team.id);
+    // Pantau rapat (2 ms) sampai tugas pertama tercatat; semua status yang terlihat sebelumnya dikumpulkan.
+    while (snapshot.assignments.length === 0) {
+      seen.push(snapshot.status);
+      if (Date.now() > deadline)
+        throw new Error(`tugas tak kunjung tercatat; status: ${seen.join(',')}`);
+      await sleep(2);
+      snapshot = await getTeam(team.id);
+    }
+    expect(seen.length).toBeGreaterThan(0);
+    expect(seen.filter((s) => s !== 'running' && s !== 'queued')).toEqual([]);
+    expect(snapshot.status).toBe('running');
+
+    // Bersihkan: lepas Worker (slot Worker global hanya satu, tes berikutnya menunggu slot itu).
+    await until(() => fake.all('run.start').length >= 1, 'run.start Worker');
+    const workerCmd = fake.all('run.start')[0]!;
+    const cancelled = await env.post(`/teams/${team.id}/cancel`, {}, desktop);
+    expect(cancelled.statusCode, cancelled.body).toBe(200);
+    await until(
+      async () => (await getRun(workerCmd.runId)).status === 'cancelled',
+      'Worker cancelled',
+    );
+    expect((await getTeam(team.id)).status).toBe('cancelled');
+  });
+});
+
 describe('Orkestrator Orca: siklus hidup dasar', () => {
   it('rencana satu tugas -> Worker selesai -> Lead accept -> tim completed, hasil tidak digabung', async () => {
     const { fake, projectId } = await setupProject('orca-sukses');

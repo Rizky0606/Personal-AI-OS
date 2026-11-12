@@ -222,7 +222,20 @@ export function parseSkillMd(text: string): ParsedSkillMd {
       while (i + 1 < lines.length && /^\s+\S|^\s*$/.test(lines[i + 1]!))
         block.push(lines[++i]!.trim());
       fields.set(key, block.join(rest.trim().startsWith('>') ? ' ' : '\n').trim());
-    } else fields.set(key, unquote(rest));
+    } else {
+      // Skalar polos YAML: nilai boleh lanjut di baris-baris berikutnya yang menjorok (juga bila baris kunci
+      // kosong, gaya vercel-labs/agent-skills). Digabung dengan spasi; blok bersarang (`metadata:`) ikut
+      // tertelan ke kuncinya sendiri sehingga isinya tidak bocor menjadi kunci tingkat atas.
+      const continuation: string[] = [];
+      while (i + 1 < lines.length && /^\s+\S/.test(lines[i + 1]!))
+        continuation.push(lines[++i]!.trim());
+      fields.set(
+        key,
+        continuation.length === 0
+          ? unquote(rest)
+          : [rest.trim(), ...continuation].filter(Boolean).join(' '),
+      );
+    }
   }
   const name = fields.get('name')?.trim();
   const description = (fields.get('description') ?? '').replace(/\s+/g, ' ').trim();

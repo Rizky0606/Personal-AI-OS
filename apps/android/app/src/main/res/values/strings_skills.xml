@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Skill (P10): daftar dan aktif/nonaktif -->
+    <string name="skills_title">Skill</string>
+    <string name="skills_settings_item">Skill</string>
+    <string name="skills_settings_supporting">Skill yang bisa dipakai agent; aktifkan atau nonaktifkan</string>
+    <string name="skills_intro">Skill yang bisa dipakai agent. Nonaktifkan untuk menyimpannya tanpa dipakai. Membuat, memasang, dan mengubah skill dilakukan dari aplikasi Windows.</string>
+    <string name="skills_empty">Belum ada skill.</string>
+    <string name="skills_toggle">Pakai skill: %1$s</string>
+    <string name="skills_version">v%1$s</string>
+    <string name="skills_pinned">Disematkan</string>
+    <string name="skills_source_builtin">Bawaan</string>
+    <string name="skills_source_user">Buatan sendiri</string>
+    <string name="skills_source_installed">Terpasang</string>
+    <string name="skills_source_agent">Usulan agent</string>
+    <string name="skills_status_active">Aktif</string>
+    <string name="skills_status_disabled">Nonaktif</string>
+    <string name="skills_status_archived">Diarsipkan</string>
+    <string name="skills_core_locked">Skill inti tidak bisa dinonaktifkan.</string>
+    <string name="skills_changed">Status skill diubah.</string>
+</resources>

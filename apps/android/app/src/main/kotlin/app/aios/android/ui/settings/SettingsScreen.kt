@@ -41,6 +41,7 @@ import app.aios.ui.tokens.Tokens
 fun SettingsScreen(
     onOpenCatalog: () -> Unit,
     onOpenMemory: () -> Unit,
+    onOpenSkills: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val session by viewModel.session.collectAsStateWithLifecycle()
@@ -91,6 +92,16 @@ fun SettingsScreen(
                 supporting = stringResource(R.string.memory_settings_supporting),
                 showDivider = false,
                 onClick = onOpenMemory
+            )
+        }
+
+        Section(R.string.skills_title)
+        Group {
+            AiosListItem(
+                title = stringResource(R.string.skills_settings_item),
+                supporting = stringResource(R.string.skills_settings_supporting),
+                showDivider = false,
+                onClick = onOpenSkills
             )
         }
 

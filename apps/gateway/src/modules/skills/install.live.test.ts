@@ -98,6 +98,42 @@ describe.skipIf(!live)('pasang skill dari sumber nyata', () => {
     expect(res.statusCode).toBe(409);
   }, 30_000);
 
+  it('skill Vercel dengan description YAML bertingkat (dulu skill_source_invalid) kini terbaca', async () => {
+    for (const source of [
+      'vercel-labs/agent-skills@composition-patterns',
+      'vercel-labs/agent-skills@react-native-skills',
+    ]) {
+      const res = await preview(source);
+      expect(res.statusCode, `${source}: ${res.body}`).toBe(200);
+      const p = SkillInstallPreviewSchema.parse(res.json());
+      expect(p.candidate.description.length, source).toBeGreaterThan(20);
+      expect(p.candidate.description.length, source).toBeLessThanOrEqual(200);
+      expect(p.candidate.body.length, source).toBeGreaterThan(200);
+    }
+  }, 60_000);
+
+  it('peringatan pemindai pada skill pihak ketiga nyata: ditolak tanpa persetujuan, terpasang dengan acknowledge', async (ctx) => {
+    const source = 'vercel-labs/agent-skills@vercel-cli-with-tokens';
+    const p = SkillInstallPreviewSchema.parse((await preview(source)).json());
+    // Isi di sumber bisa berubah; tes ini hanya bermakna selama pemindai masih memberi peringatan.
+    if (p.scan.verdict !== 'warning') ctx.skip();
+    expect(p.installable).toBe(true);
+    expect(p.scan.findings.length).toBeGreaterThan(0);
+
+    const body = { source, checksum: p.candidate.checksum };
+    const refused = await env.post('/skills/install', body, app);
+    expect(refused.statusCode).toBe(422);
+    expect(refused.json<{ code: string }>().code).toBe('skill_scan_confirm');
+
+    const ok = await env.post('/skills/install', { ...body, acknowledge: true }, app);
+    expect(ok.statusCode, ok.body).toBe(201);
+    expect(SkillSaveResultSchema.parse(ok.json())).toMatchObject({
+      id: p.candidate.id,
+      source: 'installed',
+      trust: 'community',
+    });
+  }, 60_000);
+
   it('sumber yang tidak ada: 404; domain asing: 422', async () => {
     expect((await preview(`${REPO}@skill-yang-tidak-ada-xyz`)).statusCode).toBe(404);
     expect((await preview('https://example.com/SKILL.md')).statusCode).toBe(422);

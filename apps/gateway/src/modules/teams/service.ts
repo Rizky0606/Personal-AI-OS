@@ -100,11 +100,15 @@ export function createTeamsService(deps: {
     // Setelah Lead menghasilkan rencana, orkestrator (orchestrator.ts) menjadi satu-satunya penulis
     // status tim (lewat `teams.status`) karena percakapan Lead berlanjut multi-giliran (rencana ->
     // tinjauan per tugas) sehingga status run Lead yang PERTAMA ('completed' begitu rencana selesai)
-    // tidak lagi mewakili status tim secara keseluruhan. Sebelum ada rencana (jalur lama/tanpa
-    // orkestrator), status tetap diturunkan dari status run Lead agar perilaku lama tidak berubah.
+    // tidak lagi mewakili status tim secara keseluruhan. Itu berlaku SEJAK tim dibuat bila orkestrator
+    // terpasang (`enqueue`): bila baru setelah rencana tersimpan, ada jendela (sampai satu siklus polling)
+    // antara run Lead 'completed' dan rencana tersimpan di mana API melaporkan tim 'completed' tanpa satu
+    // tugas pun, dan klien yang mengambil detail di jendela itu terjebak pada "Tim selesai.". Hanya jalur
+    // lama tanpa orkestrator yang menurunkan status dari status run Lead.
+    const orchestrated = enqueue !== undefined;
     const status = row.cancelRequestedAt
       ? 'cancelled'
-      : row.plan
+      : row.plan || orchestrated
         ? row.status
         : leadRun
           ? teamStatus(leadRun.status)
