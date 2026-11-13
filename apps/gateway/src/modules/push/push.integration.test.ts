@@ -151,6 +151,37 @@ describe('push untuk schedule.result', () => {
   });
 });
 
+describe('push untuk laporan mingguan kurator skill', () => {
+  it('hanya topik skill_report yang dikirim, hanya judul dan type; isi ringkasan tidak ikut', async () => {
+    env.hub.publishLive('user', {
+      type: 'notification',
+      title: 'Laporan skill mingguan',
+      body: 'Paling sering dibuka: RAHASIA-RINGKASAN (3x).',
+      level: 'info',
+      topic: 'skill_report',
+    });
+    await env.push.idle();
+    expect(fcm.sent.map((m) => m.token).sort()).toEqual([phone.token, tablet.token].sort());
+    for (const m of fcm.sent) {
+      expect(m.notification).toEqual({ title: 'Laporan skill mingguan' });
+      expect(m.data).toEqual({ type: 'skills.report' });
+    }
+    expect(JSON.stringify(fcm.sent)).not.toContain('RAHASIA-RINGKASAN');
+
+    // Notifikasi biasa dan usulan skill tidak memicu push.
+    fcm.sent.length = 0;
+    env.hub.publishLive('user', { type: 'notification', title: 'Kartu gagal', level: 'error' });
+    env.hub.publishLive('user', {
+      type: 'notification',
+      title: 'Agent mengusulkan skill: X',
+      level: 'info',
+      topic: 'skill_proposal',
+    });
+    await env.push.idle();
+    expect(fcm.sent).toEqual([]);
+  });
+});
+
 describe('push untuk research.completed', () => {
   it('judul "Riset selesai: ..." dan ID riset/run saja; isi laporan tidak ikut', async () => {
     const [run] = await db()

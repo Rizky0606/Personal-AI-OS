@@ -9,7 +9,7 @@ import {
   type SkillVersionListSchema,
   type UpdateSkillRequestSchema,
 } from '@aios/contracts';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNotNull } from 'drizzle-orm';
 import type { z } from 'zod';
 import type { Database } from '../../db/client.js';
 import { catalogSkillVersions, catalogSkills, skillOverrides } from '../../db/schema/index.js';
@@ -63,6 +63,10 @@ export interface SkillManager {
   versions(id: string): Promise<SkillVersions>;
   /** Sinkron manual ke Hermes (dipakai setelah impor massal). */
   sync(): Promise<HermesSyncState>;
+  /** Kurator (P11): tandai usang (`at`) atau hapus tandanya (`null`). Tidak membuat versi dan tidak menyinkron. */
+  markStale(id: string, at: Date | null): Promise<void>;
+  /** Skill terbukti dibuka agent: tanda usangnya dihapus. Mengembalikan jumlah yang tandanya dihapus. */
+  clearStale(ids: readonly string[]): Promise<number>;
 }
 
 type Row = typeof catalogSkills.$inferSelect;
@@ -81,6 +85,8 @@ const toExtra = (row: Row): CatalogExtra => ({
   origin: row.origin,
   createdAt: row.createdAt.toISOString(),
   updatedAt: row.updatedAt.toISOString(),
+  staleAt: row.staleAt?.toISOString() ?? null,
+  restoredAt: row.restoredAt?.toISOString() ?? null,
 });
 
 /** Id dari nama: huruf kecil, tanpa aksen, pemisah `-`, selalu diawali huruf, maks 64 karakter. */
@@ -98,9 +104,9 @@ export function slugifySkillId(name: string): string {
 }
 
 /** Id yang bentrok dengan rute `/skills/<kata>`. */
-const RESERVED_IDS = new Set(['scan', 'install', 'hermes']);
+const RESERVED_IDS = new Set(['scan', 'install', 'hermes', 'proposals', 'curator']);
 
-const findingErrors = (scan: SkillScan) =>
+export const findingErrors = (scan: SkillScan) =>
   scan.findings.slice(0, 10).map((f) => ({
     path: f.line === 0 ? 'deskripsi' : `baris ${f.line}`,
     message: `${f.message} "${f.excerpt}"`,
@@ -112,8 +118,11 @@ export function createSkillManager(deps: {
   /** Dipanggil setelah setiap perubahan; mengembalikan hasil sinkron ke Hermes. Tidak ada = `off`. */
   onChange?: () => Promise<HermesSyncState>;
   log?: { warn(obj: object, msg: string): void };
+  /** Jam (ms epoch); default `Date.now`. Tes kurator memajukannya. */
+  now?: () => number;
 }): SkillManager {
   const { db, registry, onChange, log } = deps;
+  const now = deps.now ?? Date.now;
   const core = new Set<string>(CORE_SKILLS);
   let rows: CatalogExtra[] = [];
   let off = new Map<string, SkillStatus>();
@@ -321,11 +330,34 @@ export function createSkillManager(deps: {
         return done(id, { verdict: 'safe', findings: [] });
       }
       const row = await mustGetRow(id);
+      // Dipulihkan dari arsip: umur skill dihitung ulang supaya kurator tidak mengarsipkannya lagi seketika.
+      const restored = row.status === 'archived' && status === 'active';
       await db
         .update(catalogSkills)
-        .set({ status, updatedAt: new Date() })
+        .set({
+          status,
+          updatedAt: new Date(),
+          ...(restored ? { restoredAt: new Date(now()), staleAt: null } : {}),
+        })
         .where(eq(catalogSkills.id, id));
       return done(id, scanSkill({ body: row.body, description: row.description }));
+    },
+
+    async markStale(id, at) {
+      await mustGetRow(id);
+      await db.update(catalogSkills).set({ staleAt: at }).where(eq(catalogSkills.id, id));
+      await refresh();
+    },
+
+    async clearStale(ids) {
+      if (ids.length === 0) return 0;
+      const cleared = await db
+        .update(catalogSkills)
+        .set({ staleAt: null })
+        .where(and(inArray(catalogSkills.id, [...ids]), isNotNull(catalogSkills.staleAt)))
+        .returning({ id: catalogSkills.id });
+      if (cleared.length > 0) await refresh();
+      return cleared.length;
     },
 
     async restore(id, version) {

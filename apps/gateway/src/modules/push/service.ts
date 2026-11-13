@@ -155,6 +155,13 @@ export function createPushService(deps: {
               log?.warn({ err }, 'push schedule.result gagal'),
             ),
           );
+        } else if (ev.type === 'notification' && ev.topic === 'skill_report') {
+          // Laporan mingguan kurator skill (P11): hanya judul; ringkasannya dibaca di halaman Skill.
+          track(
+            deliver({ title: clip(ev.title, TITLE_MAX), data: { type: 'skills.report' } }).catch(
+              (err: unknown) => log?.warn({ err }, 'push laporan skill gagal'),
+            ),
+          );
         } else if (ev.type === 'research.completed') {
           track(
             onResearchCompleted(ev).catch((err: unknown) =>

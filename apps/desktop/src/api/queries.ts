@@ -1,5 +1,6 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { api } from '../app/services';
+import type { ProposalQuery } from './gateway';
 
 const MINUTES = 60_000;
 
@@ -93,6 +94,14 @@ export const useSpaceConversations = (spaceId: string) =>
   useQuery({
     queryKey: ['spaceConversations', spaceId],
     queryFn: async () => (await api.listSpaceConversations(spaceId)).items,
+  });
+
+/** Usulan skill dari agent/Hermes (P11). Diambil ulang saat run selesai dan saat ada notifikasi usulan. */
+export const useSkillProposals = (params: ProposalQuery = {}) =>
+  useQuery({
+    queryKey: ['skillProposals', params.status ?? 'pending', params.conversationId ?? null],
+    queryFn: () => api.listSkillProposals(params),
+    enabled: params.conversationId !== '',
   });
 
 export const useMemories = () => useQuery({ queryKey: ['memories'], queryFn: api.listMemories });

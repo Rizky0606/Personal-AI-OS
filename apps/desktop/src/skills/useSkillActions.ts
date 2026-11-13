@@ -16,6 +16,9 @@ export function useSkillActions() {
       Promise.all([
         queryClient.invalidateQueries({ queryKey: ['skills'] }),
         queryClient.invalidateQueries({ queryKey: ['skillHermes'] }),
+        queryClient.invalidateQueries({ queryKey: ['skillProposals'] }),
+        queryClient.invalidateQueries({ queryKey: ['skillCurator'] }),
+        queryClient.invalidateQueries({ queryKey: ['progress'] }),
       ]),
     [queryClient],
   );

@@ -93,6 +93,7 @@ export function MySkillsTab() {
                     {skill.trust ? <span>{t.trust[skill.trust]}</span> : null}
                     <span>{t.version(skill.version)}</span>
                     {skill.pinned ? <span>{t.pinnedBadge}</span> : null}
+                    {skill.staleSince ? <span title={t.staleHint}>{t.stale}</span> : null}
                     {status !== 'active' ? <span>{t.status[status]}</span> : null}
                   </span>
                 </button>

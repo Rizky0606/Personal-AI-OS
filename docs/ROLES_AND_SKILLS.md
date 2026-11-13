@@ -62,7 +62,7 @@ engine: omp # omp | hermes | research
 model: coding-main # nama combo di 9Router
 fallback_model: coding-cheap
 approval: ask # ask | auto-safe (baca saja otomatis)
-skills: [scope-guard, read-context-first, plan-before-edit, verify-before-done, minimal-diff, rich-answers]
+skills: [scope-guard, read-context-first, plan-before-edit, verify-before-done, minimal-diff, rich-answers, propose-skill]
 ---
 
 # Peran
@@ -85,6 +85,7 @@ Registri menolak file yang tidak valid (gateway gagal start, atau di mode dev pe
 | `plan-before-edit` | Tugas lebih dari satu file atau ambigu: rencana bernomor 3–7 langkah dulu, maksimal satu pertanyaan klarifikasi |
 | `verify-before-done` | Coding: jalankan typecheck, lint, tes terkait, sebutkan hasilnya. Riset: setiap klaim punya sumber. Dilarang mengklaim selesai tanpa bukti |
 | `minimal-diff` | Ubah sesedikit mungkin, ikuti konvensi yang ada, tanpa refactor yang tidak diminta, tanpa dependensi baru tanpa alasan |
+| `propose-skill` | (P11) Setelah tugas 5 langkah atau lebih, atau setelah pengguna mengoreksi cara kerja, agent BOLEH menulis satu blok `aios-skill-proposal` berisi usulan skill. Hanya prosedur yang bisa dipakai ulang (bukan fakta pribadi atau isi percakapan), tanpa rahasia, maksimal satu per jawaban; ragu = jangan usulkan |
 
 ## Skill khusus (contoh isi)
 
@@ -156,4 +157,28 @@ Rute `/skills` (tautan "Skill" di kaki sidebar, di atas Pengaturan; tanpa pintas
 - **Skill Hermes:** hanya baca, dengan asal data (`api`/`folder`/`none`), tombol **Periksa** dan tombol Impor. Impor langsung bila pemindai menilai `safe`. Bila pemindai meminta persetujuan (peringatan atau berbahaya), dialog Periksa terbuka: isi lengkap, temuan beserta barisnya, catatan skrip, lalu kotak persetujuan (bernada keras untuk `dangerous`) yang harus dicentang sebelum tombol Impor aktif. Skill yang tidak bisa diimpor (id bentrok, isi membawa frontmatter kedua) menampilkan alasannya dan tombol Impor mati.
 
 Catatan tab Skill Hermes: folder dibaca sampai 2000 skill (pagar pengaman); bila terpotong, `note` memberi tahu. Skill Hermes yang isinya membawa frontmatter kedua ditolak saat impor (422 `skill_body_has_frontmatter`; isi tidak diubah otomatis). **Keputusan pemilik (P10):** hanya impor dari folder Hermes milik pemilik sendiri yang boleh menyetujui temuan `dangerous` dengan `acknowledge` (setelah melihat isi lewat `POST /skills/hermes/preview`). Pasang dari luar (github.com/skills.sh) dan skill usulan agent tetap tidak bisa melewati `dangerous`. Alasannya: pemindai berbasis aturan menandai skill yang *membahas* hal berbahaya (mis. daftar `deny: Bash(rm -rf *)`, contoh "Ignore previous instructions"), dan skill di folder Hermes sendiri berasal dari pemilik.
+
+## Usulan skill dan kurator (P11)
+
+**Usulan dari agent.** Skill inti `propose-skill` mengajarkan blok berpagar `aios-skill-proposal` (JSON `{ kind: new|patch, targetId?, name, description, body, reason }`). Gateway mengurainya saat jawaban selesai (`modules/skills/proposals.ts`, pola yang sama dengan `parseBlock` orkestrator tim; catatan: blok `aios-ui` diurai di sisi klien, bukan gateway), menyimpannya sebagai usulan `pending` lewat pemindai P10, dan **membuang semua blok dari teks jawaban yang disimpan** (klien juga menyaringnya saat jawaban masih mengalir). Aturan:
+
+- blok rusak (JSON tidak valid, skema gagal, patch tanpa `targetId`, isi berfrontmatter) tidak membuat usulan dan tidak merusak jawaban; pagar yang tidak ditutup dibiarkan karena tidak bisa dibatasi dengan pasti;
+- blok berisi rahasia (kunci pribadi, kunci AWS/GitHub/`sk-`/Slack/Google, JWT, Bearer panjang, URL berkredensial, penugasan kata sandi/token literal) ditolak; log hanya memuat nama aturan, tidak pernah nilainya;
+- maksimal satu usulan per jawaban (blok kedua dibuang) dan 3 usulan agent per 24 jam (jendela bergulir; sisanya dibuang dengan log, blok tetap dibuang dari teks);
+- usulan `patch` hanya untuk skill tambahan yang ada (bukan bawaan repo).
+
+**Usulan dari Hermes.** Pemantau (tiap 15 menit lewat pg-boss) membandingkan daftar skill Hermes (di luar `aios/`) dengan yang pernah terlihat (`skill_hermes_seen`). Run pertama hanya mencatat dasar. Skill baru menjadi usulan "Hermes membuat skill baru"; menyetujuinya menjalankan alur impor P10 (isi dibaca dari folder saat ditinjau, tanpa suntingan, berbahaya boleh dengan persetujuan eksplisit).
+
+**Tampilan.** Di jawaban: kartu "Agent mengusulkan skill: <nama>" dengan tombol Tinjau (tidak ada aksi pengaktifan di kartu). Di panel Progres, bagian Output: kartu "Usulan skill". Halaman Skill, tab **Usulan agent** (jumlah menunggu di label tab): isi lengkap, alasan, hasil pindai, untuk patch diff terhadap versi aktif; aksi **Setujui** (menjadi skill source `agent`, aktif, langsung disinkron ke Hermes), **Edit lalu setujui** (pindai ulang dulu), **Tolak** (alasan opsional). Pemindai berlaku seperti skill dari luar: usulan agent yang berbahaya tidak bisa disetujui apa adanya (harus disunting sampai bersih), peringatan butuh centang. **Tidak ada jalur yang mengaktifkan usulan tanpa persetujuan.**
+
+**Kurator mingguan** (`modules/skills/curator.ts`, Senin 03:00 UTC lewat pg-boss; bisa dijalankan dari tab Usulan agent):
+
+| Skill | Perlakuan |
+| --- | --- |
+| source `agent`, tidak dibuka 30 hari | ditandai usang (`staleSince`, chip "Usang") |
+| source `agent`, tidak dibuka 90 hari | diarsipkan (status `archived`; bisa dipulihkan, umurnya dihitung ulang) |
+| source `user` | hanya ditandai usang, tidak pernah diarsipkan otomatis |
+| `pinned`, bawaan repo, `installed` (dipasang dari luar), nonaktif/arsip | tidak disentuh |
+
+Umur = waktu terbaru dari dibuat, dipulihkan, atau dibuka agent (bukti `read skill://` di omp atau `skill_view` di Hermes, dicatat di `skill_opens`); dibuka lagi menghapus tanda usang. **Kurator tidak pernah menghapus.** Saran gabung: pasangan skill aktif dengan kemiripan kata deskripsi (Jaccard, tanpa model dan tanpa dependensi) ≥ 0,6, minimal satu bisa diubah pemilik; tidak pernah digabung otomatis. Laporan mingguan (disimpan di `skill_curator_reports`, dibaca lewat `GET /skills/curator/report`) memuat paling sering dibuka (7 hari), belum pernah dibuka (umur ≥ 7 hari), usulan menunggu, yang baru ditandai/diarsipkan, dan saran gabung; dikirim sebagai event `notification` (`topic: skill_report`) dan push Android (judul saja).
 

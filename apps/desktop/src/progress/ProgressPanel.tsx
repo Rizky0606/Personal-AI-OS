@@ -4,6 +4,7 @@ import { WifiOff } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { apiErrorMessage } from '../api/errors';
 import { useConversation, useTeam } from '../api/queries';
+import { useOpenProposal } from '../skills/useOpenProposal';
 import { api } from '../app/services';
 import { ArtifactLightbox, type LightboxFile } from '../chat/ArtifactLightbox';
 import { useProgressView } from '../chat/useProgressView';
@@ -92,9 +93,12 @@ export function ProgressPanel() {
           ? 'content'
           : 'empty';
 
+  const openProposal = useOpenProposal();
+
   async function openOutput(output: ProgressOutput) {
     if (output.kind === 'image') return setLightbox(output);
     if (output.kind === 'diff') return openReview(output.runId);
+    if (output.kind === 'skill_proposal') return openProposal(output.proposalId);
     if (output.kind === 'research')
       return void navigate({
         to: '/research/$researchId',

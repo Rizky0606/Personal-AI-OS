@@ -8,7 +8,14 @@ import {
 } from '@aios/contracts';
 import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import type { Database } from '../../db/client.js';
-import { files, messages, researchJobs, runEvents, runs } from '../../db/schema/index.js';
+import {
+  files,
+  messages,
+  researchJobs,
+  runEvents,
+  runs,
+  skillProposals,
+} from '../../db/schema/index.js';
 
 // Bentuk respons menjadikan openedSkills/pinnedSkills opsional (data lama); di sini selalu terisi.
 type Used = ConversationProgress['used'] & { openedSkills: string[]; pinnedSkills: string[] };
@@ -197,6 +204,30 @@ export async function conversationProgress(
         at: iso(job.at),
         researchId: job.id,
         title: job.question.slice(0, 300),
+      });
+
+  // Usulan skill dari agent di percakapan ini (P11): kartu "Usulan skill" di bagian Output.
+  const proposals = await db
+    .select({
+      id: skillProposals.id,
+      runId: skillProposals.runId,
+      name: skillProposals.name,
+      kind: skillProposals.kind,
+      status: skillProposals.status,
+      at: skillProposals.createdAt,
+    })
+    .from(skillProposals)
+    .where(inArray(skillProposals.runId, runIds));
+  for (const p of proposals)
+    if (p.runId)
+      outputs.push({
+        kind: 'skill_proposal',
+        runId: p.runId,
+        at: iso(p.at),
+        proposalId: p.id,
+        name: p.name.slice(0, 80),
+        proposalKind: p.kind,
+        status: p.status,
       });
 
   // Beberapa output bisa punya cap waktu yang persis sama (event dicatat di detik/milidetik yang sama di

@@ -104,7 +104,6 @@ export function RunActivity({ activity, onApproval, output, artifacts = [] }: Ru
       ) : null}
       <button
         type="button"
-        aria-label={ui.toggle}
         aria-expanded={open}
         onClick={toggle}
         onKeyDown={(event) => {
@@ -155,6 +154,8 @@ export function RunActivity({ activity, onApproval, output, artifacts = [] }: Ru
             open && 'rotate-180',
           )}
         />
+        {/* Nama tombol memuat teks yang terlihat (WCAG 2.5.3) lalu aksinya, bukan aksi saja. */}
+        <span className="sr-only">{ui.toggle}</span>
       </button>
       {artifacts.length > 0 && !open ? <ArtifactPreviews artifacts={artifacts} /> : null}
       {open ? (

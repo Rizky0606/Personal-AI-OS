@@ -22,6 +22,14 @@ export function handleUserEvent(event: ServerEvent, queryClient: QueryClient): v
       break;
     }
     case 'notification':
+      // Usulan skill baru atau laporan kurator (P11): segarkan daftar usulan, katalog (tanda usang), dan laporan.
+      if (event.topic === 'skill_proposal') {
+        void queryClient.invalidateQueries({ queryKey: ['skillProposals'] });
+        void queryClient.invalidateQueries({ queryKey: ['progress'] });
+      } else if (event.topic === 'skill_report') {
+        void queryClient.invalidateQueries({ queryKey: ['skills'] });
+        void queryClient.invalidateQueries({ queryKey: ['skillCurator'] });
+      }
       if (event.level === 'info' && !useUiStore.getState().inAppToasts) break;
       useToastStore.getState().push(event.title, event.level === 'info' ? 'info' : 'danger');
       break;

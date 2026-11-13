@@ -25,6 +25,8 @@ export async function finishRun(run: LiveRun, { queryClient, release }: FinishDe
     ['research'],
     ['researchJob'],
     ['schedules'],
+    ['skillProposals'],
+    ['progress'],
   ];
   for (let attempt = 1; attempt <= RETRIES; attempt++) {
     await Promise.all(keys.map((queryKey) => queryClient.invalidateQueries({ queryKey })));

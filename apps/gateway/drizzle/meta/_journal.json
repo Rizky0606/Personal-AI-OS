@@ -120,6 +120,13 @@
       "when": 1794313931806,
       "tag": "0016_skill_catalog",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1794479537098,
+      "tag": "0017_skill_proposals_curator",
+      "breakpoints": true
     }
   ]
 }

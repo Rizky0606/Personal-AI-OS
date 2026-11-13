@@ -1,5 +1,5 @@
 import type { ProgressOutput } from '@aios/contracts';
-import { FileSearch, FileText, GitCompare, Image as ImageIcon } from 'lucide-react';
+import { FileSearch, FileText, GitCompare, Image as ImageIcon, Sparkles } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../app/services';
 import { copy } from '../copy';
@@ -11,16 +11,26 @@ export const outputKey = (o: ProgressOutput): string =>
     ? o.fileId
     : o.kind === 'diff'
       ? `diff-${o.runId}`
-      : `riset-${o.researchId}`;
+      : o.kind === 'skill_proposal'
+        ? `usulan-${o.proposalId}-${o.status}`
+        : `riset-${o.researchId}`;
 
 export const outputTitle = (o: ProgressOutput): string =>
   o.kind === 'image' || o.kind === 'file'
     ? o.name
     : o.kind === 'diff'
       ? copy.progress.diffTitle(o.files.length)
-      : o.title;
+      : o.kind === 'skill_proposal'
+        ? o.name
+        : o.title;
 
-const KIND_ICON = { image: ImageIcon, file: FileText, diff: GitCompare, research: FileSearch };
+const KIND_ICON = {
+  image: ImageIcon,
+  file: FileText,
+  diff: GitCompare,
+  research: FileSearch,
+  skill_proposal: Sparkles,
+};
 
 /** Pratinjau gambar kecil dari byte yang diambil lewat endpoint terautentikasi; gagal = ikon jenis. */
 function Thumb({ fileId, className }: { fileId: string; className: string }) {

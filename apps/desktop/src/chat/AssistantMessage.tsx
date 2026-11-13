@@ -16,7 +16,8 @@ import { RoleChip } from './RoleChip';
 import { AgentOrb, type OrbState } from './AgentOrb';
 import { RunActivity, type RunActivityProps } from './RunActivity';
 import type { ToolStepView } from './ToolStepRow';
-import type { ComponentProps } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
+import { stripSkillProposal } from './skillProposal';
 export type AssistantPart =
   | { type: 'text'; text: string }
   | ({ type: 'tool'; id: string } & ToolStepView)
@@ -42,6 +43,8 @@ export interface AssistantMessageProps {
   /** Mengirim saran lanjutan yang dipilih; hanya diberikan pada jawaban terakhir yang sudah selesai. */
   onSuggest?: ((text: string) => void) | undefined;
   onRichFollowUp?: ComponentProps<typeof Markdown>['onRichFollowUp'];
+  /** Isi tambahan setelah jawaban (mis. kartu usulan skill); hanya untuk jawaban tersimpan. */
+  footer?: ReactNode;
 }
 
 /** Tiga titik yang memudar bergiliran selama jawaban masih ditulis. */
@@ -121,6 +124,7 @@ export function AssistantMessage({
   onFork,
   onSuggest,
   onRichFollowUp,
+  footer,
 }: AssistantMessageProps) {
   // Blok kode di jawaban yang sudah selesai bisa diunduh sekaligus sebagai satu zip (struktur folder ikut path).
   const files = useMemo(
@@ -168,7 +172,7 @@ export function AssistantMessage({
           part.type === 'text' && part.text ? (
             <Markdown
               key={i}
-              source={splitSuggestions(part.text).body}
+              source={stripSkillProposal(splitSuggestions(part.text).body)}
               richBlockId={`assistant-${i}`}
               richReadOnly={streaming || !onRichFollowUp}
               onRichFollowUp={onRichFollowUp}
@@ -176,6 +180,7 @@ export function AssistantMessage({
           ) : null,
         )}
         {streaming ? <TypingDots /> : null}
+        {footer}
         <GeneratedFiles files={parts.flatMap((p) => (p.type === 'file' ? [p] : []))} />
         {!streaming && onSuggest && suggestions.length > 0 ? (
           <div role="group" aria-label={copy.chat.followUps} className="flex flex-wrap gap-2">

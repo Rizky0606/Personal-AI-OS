@@ -14,6 +14,7 @@ skills:
     verify-before-done,
     minimal-diff,
     rich-answers,
+    propose-skill,
     source-verification,
     citation,
     fact-vs-opinion,

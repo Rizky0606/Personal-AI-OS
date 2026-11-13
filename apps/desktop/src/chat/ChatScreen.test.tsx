@@ -55,7 +55,7 @@ describe('ChatScreen: memuat riwayat', () => {
     expect(await screen.findByText('Apa kabar?')).toBeInTheDocument();
     expect(screen.getByText('jelas').tagName).toBe('STRONG');
     // Langkah tool kini ringkasan terlipat di dalam jawaban; linimasa memuat langkah dan durasinya.
-    const row = screen.getByRole('button', { name: copy.runActivity.ui.toggle });
+    const row = screen.getByRole('button', { name: new RegExp(copy.runActivity.ui.toggle) });
     expect(row).toHaveTextContent('Selesai · 1 langkah');
     expect(screen.queryByText('1,2 dtk')).not.toBeInTheDocument();
     fireEvent.click(row);

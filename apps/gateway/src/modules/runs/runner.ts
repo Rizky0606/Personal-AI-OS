@@ -128,6 +128,20 @@ export interface RunnerDeps {
   eagerSkillEngines?: ReadonlySet<string>;
   /** Skill katalog tambahan (P10) yang aktif untuk satu mesin; tidak termasuk skill bawaan repo. */
   catalogSkills?: (engine: 'hermes' | 'omp' | 'dsh') => NonNullable<BundleOptions['catalogSkills']>;
+  /**
+   * Usulan skill (P11): mengurai blok `aios-skill-proposal` di jawaban yang selesai, menyimpan usulan pending,
+   * dan mengembalikan teks tanpa blok. Tidak pernah melempar.
+   */
+  proposals?: {
+    capture(input: {
+      text: string;
+      runId: string;
+      conversationId: string | null;
+      messageId: string;
+    }): Promise<string>;
+  };
+  /** Mencatat skill yang terbukti dibuka agent di satu run (sumber laporan kurator). Kegagalan hanya dicatat. */
+  skillOpened?: (runId: string, ids: readonly string[]) => Promise<void>;
   /** Bundel role (aturan perilaku + role + skill) yang disuntik sebagai pesan sistem. */
   roles: {
     bundle(
@@ -582,9 +596,20 @@ export function createRunner(deps: RunnerDeps): Runner {
         const openedSkills = new Set<string>();
         const reportOpened = async (ids: Iterable<string>) => {
           const before = openedSkills.size;
-          for (const id of ids) openedSkills.add(id);
+          const fresh: string[] = [];
+          for (const id of ids) {
+            if (!openedSkills.has(id)) fresh.push(id);
+            openedSkills.add(id);
+          }
           if (openedSkills.size > before) {
             await emitContextUsed({ ...contextBase, openedSkills: [...openedSkills] });
+            if (deps.skillOpened) {
+              await deps
+                .skillOpened(run.id, fresh)
+                .catch((err: unknown) =>
+                  log?.warn({ err, runId: run.id }, 'pencatatan skill dibuka gagal'),
+                );
+            }
           }
         };
         let handle: RunHandle | undefined;
@@ -670,6 +695,15 @@ export function createRunner(deps: RunnerDeps): Runner {
               } catch (err) {
                 log?.warn({ err, runId: run.id }, 'folder kiriman gagal dibaca');
               }
+            }
+            // Blok usulan skill (P11) dibuang dari jawaban yang disimpan dan diubah menjadi usulan pending.
+            if (deps.proposals) {
+              text = await deps.proposals.capture({
+                text,
+                runId: run.id,
+                conversationId: input.conversationId,
+                messageId: input.assistantMessageId,
+              });
             }
             await saveText();
             // Run coding berhenti di needs_review (menunggu tinjauan diff); run chat langsung selesai.

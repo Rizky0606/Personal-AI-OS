@@ -37,7 +37,7 @@ describe('baris aktivitas di dalam jawaban', () => {
         ]}
       />,
     );
-    expect(screen.queryByRole('button', { name: ui.toggle })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: new RegExp(ui.toggle) })).not.toBeInTheDocument();
     expect(screen.queryByText('read')).not.toBeInTheDocument();
     expect(screen.getByText('Isi jawaban.')).toBeInTheDocument();
   });
@@ -48,7 +48,7 @@ describe('baris aktivitas di dalam jawaban', () => {
       <AssistantMessage {...baseProps} parts={text} run={{ activity, now: 0 }} />,
     );
     const meta = container.querySelector('article header')!;
-    const row = screen.getByRole('button', { name: ui.toggle });
+    const row = screen.getByRole('button', { name: new RegExp(ui.toggle) });
     const body = screen.getByText('Isi jawaban.');
     expect(follows(meta, row)).toBe(true);
     expect(follows(row, body)).toBe(true);
@@ -97,7 +97,7 @@ describe('baris aktivitas di dalam jawaban', () => {
         'data-state',
         orbStateOf(activity.phase),
       );
-      const row = screen.getByRole('button', { name: ui.toggle });
+      const row = screen.getByRole('button', { name: new RegExp(ui.toggle) });
       if (activity.headline) expect(screen.getByText(activity.headline)).toBeInTheDocument();
       if (settled && activity.summary) expect(row).toHaveTextContent(activity.summary);
       else if (activity.current && activity.phase !== 'waiting_approval')
@@ -120,7 +120,9 @@ describe('baris aktivitas di dalam jawaban', () => {
           }}
         />,
       );
-      expect(screen.getByRole('button', { name: ui.toggle })).toHaveTextContent(ui.phase[phase]);
+      expect(screen.getByRole('button', { name: new RegExp(ui.toggle) })).toHaveTextContent(
+        ui.phase[phase],
+      );
       expect(screen.getByTestId('agent-orb')).toHaveAttribute('data-state', orbStateOf(phase));
       unmount();
     }
@@ -130,7 +132,7 @@ describe('baris aktivitas di dalam jawaban', () => {
     const user = userEvent.setup();
     const activity = runningActivity();
     render(<AssistantMessage {...baseProps} parts={text} streaming run={{ activity, now: 0 }} />);
-    await user.click(screen.getByRole('button', { name: ui.toggle }));
+    await user.click(screen.getByRole('button', { name: new RegExp(ui.toggle) }));
     const items = within(screen.getByRole('list', { name: ui.timeline })).getAllByRole('listitem');
     activity.steps.forEach((step, i) => {
       if (step.status === 'running') expect(items[i]).not.toHaveTextContent(DURATION);
@@ -147,14 +149,16 @@ describe('baris aktivitas di dalam jawaban', () => {
     const live = container.querySelectorAll('[aria-live]');
     expect(live).toHaveLength(activity.headline ? 1 : 0);
     if (activity.headline) expect(live[0]).toHaveTextContent(activity.headline);
-    expect(screen.getByRole('button', { name: ui.toggle }).closest('[aria-live]')).toBeNull();
+    expect(
+      screen.getByRole('button', { name: new RegExp(ui.toggle) }).closest('[aria-live]'),
+    ).toBeNull();
   });
 
   it('keyboard: Enter dan Spasi membuka dan menutup linimasa; fokus tetap di tombol', async () => {
     const user = userEvent.setup();
     const activity = runningActivity();
     render(<AssistantMessage {...baseProps} parts={text} streaming run={{ activity, now: 0 }} />);
-    const row = screen.getByRole('button', { name: ui.toggle });
+    const row = screen.getByRole('button', { name: new RegExp(ui.toggle) });
     expect(screen.queryByRole('list', { name: ui.timeline })).not.toBeInTheDocument();
 
     row.focus();
@@ -172,7 +176,7 @@ describe('baris aktivitas di dalam jawaban', () => {
     const activity = runningActivity();
     expect(activity.current).not.toBeNull();
     render(<AssistantMessage {...baseProps} parts={text} streaming run={{ activity, now: 0 }} />);
-    const row = screen.getByRole('button', { name: ui.toggle });
+    const row = screen.getByRole('button', { name: new RegExp(ui.toggle) });
     expect(row).toHaveTextContent(activity.current!.label);
     if (activity.current!.target) expect(row).toHaveTextContent(activity.current!.target);
     expect(row).toHaveTextContent(formatElapsed(activity.elapsedMs));
@@ -193,7 +197,7 @@ describe('baris aktivitas di dalam jawaban', () => {
         run={{ activity, now: 0, onApproval }}
       />,
     );
-    expect(screen.getByRole('button', { name: ui.toggle })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: new RegExp(ui.toggle) })).toHaveAttribute(
       'aria-expanded',
       'true',
     );
@@ -218,7 +222,7 @@ describe('jawaban lama: ringkasan dari data tersimpan', () => {
     const user = userEvent.setup();
     const activity = savedActivity(tools, timed('completed', '2026-11-02T10:01:05Z'));
     render(<AssistantMessage {...props} orb="done" run={{ activity, now: 0 }} />);
-    const row = screen.getByRole('button', { name: ui.toggle });
+    const row = screen.getByRole('button', { name: new RegExp(ui.toggle) });
     expect(row).toHaveTextContent('Selesai · 1 mnt 05 dtk · 2 langkah');
     expect(row).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByRole('list', { name: ui.timeline })).not.toBeInTheDocument();

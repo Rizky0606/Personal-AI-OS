@@ -53,6 +53,12 @@ export const api: FakeApi = {
   installSkill: fn<'installSkill'>(),
   listHermesSkills: fn<'listHermesSkills'>(),
   previewHermesSkill: fn<'previewHermesSkill'>(),
+  listSkillProposals: fn<'listSkillProposals'>(),
+  getSkillProposal: fn<'getSkillProposal'>(),
+  approveSkillProposal: fn<'approveSkillProposal'>(),
+  rejectSkillProposal: fn<'rejectSkillProposal'>(),
+  getSkillCuratorReport: fn<'getSkillCuratorReport'>(),
+  runSkillCurator: fn<'runSkillCurator'>(),
   importHermesSkill: fn<'importHermesSkill'>(),
   registerWorker: fn<'registerWorker'>(),
   listProjects: fn<'listProjects'>(),
@@ -249,6 +255,8 @@ export function resetApi(): void {
   api.listMemories.mockResolvedValue([]);
   api.listPromptTemplates.mockResolvedValue([]);
   api.listSkills.mockResolvedValue([]);
+  api.listSkillProposals.mockResolvedValue([]);
+  api.getSkillCuratorReport.mockResolvedValue(null);
   api.listSpaces.mockResolvedValue([]);
   api.search.mockResolvedValue([]);
   api.listSpaceDocuments.mockResolvedValue([]);

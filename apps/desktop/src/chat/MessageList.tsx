@@ -13,6 +13,7 @@ import { ErrorBanner } from '../ui/ErrorBanner';
 import { RememberDialog } from '../memory/RememberDialog';
 import { ApprovalPanel } from './ApprovalPanel';
 import { QuestionPanel } from './QuestionPanel';
+import { SkillProposalCards } from './SkillProposalCards';
 import { orbStateOf } from './AgentOrb';
 import { AssistantMessage, type AssistantPart } from './AssistantMessage';
 import { HandoffNote, isHandoffNote } from './HandoffNote';
@@ -304,6 +305,12 @@ export function MessageList({
               onFork={canModify && onForkMessage ? () => onForkMessage(message.id) : undefined}
               onSuggest={message.id === lastAssistantId ? onSuggest : undefined}
               onRichFollowUp={message.id === lastAssistantId ? onRichFollowUp : undefined}
+              footer={
+                <SkillProposalCards
+                  conversationId={message.conversationId}
+                  messageId={message.id}
+                />
+              }
             />
           ) : message.author === 'system' && isHandoffNote(messageText(message)) ? (
             <HandoffNote key={message.id} text={messageText(message)} />

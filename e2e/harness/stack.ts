@@ -189,6 +189,8 @@ export async function startStack(): Promise<Stack> {
     ...(dsh ? { dsh } : {}),
     // Folder skill Hermes sungguhan (tiga skill uji) agar tab Skill Hermes bisa diuji tanpa Hermes asli.
     // Opt-in internet: pemasangan skill dari sumber nyata (tes yang memakainya dilewati bila tidak aktif).
+    // Banyak skenario menghasilkan usulan skill; batas bawaan 3 per hari akan membuang yang ke-4 dan seterusnya.
+    skillProposalsPerDay: 100,
     skillInstall: {
       hermesRoot,
       ...(process.env.E2E_LIVE_NET === '1'
@@ -281,6 +283,13 @@ export async function startStack(): Promise<Stack> {
               () => false,
             ),
           });
+        }
+        if (url.pathname === '/skills-index') {
+          // Indeks skill yang dilihat worker/omp (scope worker): skill aktif untuk satu mesin.
+          const engine = url.searchParams.get('engine') ?? 'omp';
+          const worker = (await env.loginOk({ kind: 'worker' })).accessToken;
+          const res = await env.get(`/skills?engine=${engine}`, worker);
+          return send(res.json());
         }
         if (url.pathname === '/worker/start') return send(await startNewWorker());
         if (url.pathname === '/repo') return send({ path: makeRepo() });

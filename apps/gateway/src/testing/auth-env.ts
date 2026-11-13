@@ -46,7 +46,10 @@ import { createWorkerRelay, type WorkerRelay } from '../modules/worker/relay.js'
 import { createWorkerHub } from '../modules/worker/routes.js';
 import { createRolesService, type RolesService } from '../modules/roles/service.js';
 import { createHermesSkillSource } from '../modules/skills/hermes-skills.js';
+import { createSkillCurator, type SkillCurator } from '../modules/skills/curator.js';
 import { createInstallService } from '../modules/skills/install-service.js';
+import { createProposalService, type ProposalService } from '../modules/skills/proposal-service.js';
+import { createSkillUsage } from '../modules/skills/usage.js';
 import { createSkillManager } from '../modules/skills/manager.js';
 import { createSkillsService } from '../modules/skills/service.js';
 import { createEventHub, type EventHub } from '../modules/runs/hub.js';
@@ -103,6 +106,9 @@ export interface AuthEnv {
   files: FilesService;
   hub: EventHub;
   store: EventStore;
+  /** Usulan skill (P11) dan kurator; memakai jam palsu `clock`. */
+  skillProposals: ProposalService;
+  skillCurator: SkillCurator;
   /** Run chat terbaru yang sedang disiapkan atau berjalan (skenario E2E menyisipkan event ke sana); null bila tak ada. */
   activeRunId(): Promise<string | null>;
   /** Kode TOTP yang valid pada waktu sekarang menurut jam palsu. */
@@ -137,6 +143,8 @@ export async function createAuthEnv(
     /** API key gateway untuk 9Router tiruan. */
     ninerouterKey?: string;
     streamIdleMs?: number;
+    /** Batas usulan skill dari agent per hari (default 3; tes mengecilkannya). */
+    skillProposalsPerDay?: number;
     /** Dipanggil setelah katalog skill berubah (meniru sinkron ke Hermes di tes). */
     onSkillChange?: () => Promise<'off' | 'ok' | 'failed'>;
     /** Unduhan skill dari luar dan folder skill Hermes untuk tes; tanpa ini tidak ada jaringan. */
@@ -214,6 +222,7 @@ export async function createAuthEnv(
     db,
     registry: () => roles.registry(),
     onChange: options.onSkillChange,
+    now,
   });
   await skillManager.load();
   const skills = createSkillsService({
@@ -223,6 +232,33 @@ export async function createAuthEnv(
   });
   const hub = createEventHub(now);
   const store = createEventStore(db, hub);
+  const hermesSkillSource = createHermesSkillSource({
+    url: 'http://127.0.0.1:1',
+    root: options.skillInstall?.hermesRoot,
+    fetchImpl:
+      options.skillInstall?.hermesFetch ??
+      (() => Promise.reject(new Error('tes: Hermes tidak tersedia'))),
+  });
+  const skillInstaller = createInstallService({
+    skills,
+    manager: skillManager,
+    fetchImpl:
+      options.skillInstall?.fetchImpl ??
+      (() => Promise.reject(new Error('tes: unduhan skill tidak diizinkan tanpa fetchImpl'))),
+    hermes: hermesSkillSource,
+  });
+  const skillProposals = createProposalService({
+    db,
+    skills,
+    manager: skillManager,
+    installer: skillInstaller,
+    hermes: hermesSkillSource,
+    hub,
+    now,
+    ...(options.skillProposalsPerDay ? { dailyLimit: options.skillProposalsPerDay } : {}),
+  });
+  const skillCurator = createSkillCurator({ db, skills, manager: skillManager, hub, now });
+  const skillUsage = createSkillUsage({ db, skills, manager: skillManager, now });
   const projects = createProjectsService({ db });
   const workerHub = createWorkerHub();
   const workerRelay = createWorkerRelay({ hub: workerHub, projects });
@@ -248,6 +284,8 @@ export async function createAuthEnv(
     store,
     hub,
     observer,
+    proposals: skillProposals,
+    skillOpened: (runId, ids) => skillUsage.recordOpened(runId, ids),
     adapter: createHermesAdapter({
       baseUrl: options.hermesUrl ?? 'http://127.0.0.1:9',
       apiKey: options.hermesApiKey ?? 'kunci-hermes-uji',
@@ -413,20 +451,9 @@ export async function createAuthEnv(
     roles,
     skills,
     skillManager,
-    skillInstaller: createInstallService({
-      skills,
-      manager: skillManager,
-      fetchImpl:
-        options.skillInstall?.fetchImpl ??
-        (() => Promise.reject(new Error('tes: unduhan skill tidak diizinkan tanpa fetchImpl'))),
-      hermes: createHermesSkillSource({
-        url: 'http://127.0.0.1:1',
-        root: options.skillInstall?.hermesRoot,
-        fetchImpl:
-          options.skillInstall?.hermesFetch ??
-          (() => Promise.reject(new Error('tes: Hermes tidak tersedia'))),
-      }),
-    }),
+    skillInstaller,
+    skillProposals,
+    skillCurator,
     research,
     schedules,
     projects,
@@ -494,6 +521,8 @@ export async function createAuthEnv(
     },
     clock,
     totpSecret,
+    skillProposals,
+    skillCurator,
     runner,
     roles,
     research,

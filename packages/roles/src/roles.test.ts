@@ -1,4 +1,9 @@
-import { INITIAL_ROLE_IDS, RoleIdSchema } from '@aios/contracts';
+import {
+  INITIAL_ROLE_IDS,
+  RoleIdSchema,
+  SKILL_PROPOSAL_FENCE,
+  SkillProposalBlockSchema,
+} from '@aios/contracts';
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -109,6 +114,47 @@ describe('isi agent dan skill di repo', () => {
     ]) {
       expect(body, phrase).toContain(phrase);
     }
+  });
+});
+
+describe('skill inti propose-skill (usulan skill dari agent, P11)', () => {
+  const skill = registry.skills.get('propose-skill')!;
+
+  it('skill inti: dimuat untuk setiap agent tanpa kata kunci, dan bukan bagian paket mana pun', () => {
+    expect(CORE_SKILLS).toContain('propose-skill');
+    for (const id of registry.roles.keys()) {
+      const bundle = buildBundle(registry, id);
+      expect(bundle.skills, id).toContain('propose-skill');
+      expect(bundle.systemPrompt, id).toContain(skill.body);
+    }
+    for (const pack of SKILL_PACKS) expect(pack.skills, pack.id).not.toContain('propose-skill');
+  });
+
+  it('memuat aturan wajib: kapan boleh, hanya prosedur, tanpa rahasia, satu per jawaban, disetujui pengguna', () => {
+    expect(skill.description).toMatch(/5 langkah/);
+    expect(skill.description).toMatch(/mengoreksi/);
+    for (const rule of [
+      /BOLEH/,
+      /5 langkah atau lebih/,
+      /Ragu: jangan usulkan/,
+      /hanya prosedur yang bisa dipakai ulang/,
+      /BUKAN fakta pribadi/,
+      /JANGAN memuat rahasia/,
+      /Maksimal satu usulan per jawaban/,
+      /Pengguna yang menyetujui/,
+    ]) {
+      expect(skill.body, String(rule)).toMatch(rule);
+    }
+  });
+
+  it('pagar di skill sama dengan yang diurai gateway, dan contoh di dalamnya lolos skema gateway', () => {
+    const fence = new RegExp('```' + SKILL_PROPOSAL_FENCE + '\\s*\\n([\\s\\S]*?)```');
+    const example = fence.exec(skill.body)?.[1];
+    expect(example, 'contoh blok harus ada').toBeTruthy();
+    const parsed = SkillProposalBlockSchema.safeParse(JSON.parse(example!));
+    expect(parsed.success, JSON.stringify(parsed.error?.issues)).toBe(true);
+    // Contoh yang ditiru agent tidak boleh berisi yang akan ditolak gateway (rahasia, frontmatter).
+    expect(parsed.data?.body.startsWith('---')).toBe(false);
   });
 });
 

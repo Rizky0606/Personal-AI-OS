@@ -268,6 +268,8 @@ export const SkillSummarySchema = z
     origin: z.string().nullable().optional(),
     createdAt: z.string().optional(),
     updatedAt: z.string().optional(),
+    /** Kurator (P11): sejak kapan skill ditandai usang (tidak dibuka 30 hari); null/absen = tidak usang. */
+    staleSince: z.string().nullable().optional(),
   })
   .meta({ id: 'SkillSummary' });
 export type SkillSummary = z.infer<typeof SkillSummarySchema>;
@@ -453,6 +455,135 @@ export type HermesSkillPreview = z.infer<typeof HermesSkillPreviewSchema>;
 export const ImportHermesSkillRequestSchema = z
   .object({ name: z.string().min(1).max(200), acknowledge: z.boolean().optional() })
   .meta({ id: 'ImportHermesSkillRequest' });
+
+/* Usulan skill dari agent/Hermes dan kurator mingguan (P11). Hanya tambahan. */
+
+/** Pagar blok usulan di jawaban agent; gateway mengurainya lalu membuang blok dari teks yang ditampilkan. */
+export const SKILL_PROPOSAL_FENCE = 'aios-skill-proposal';
+export const SKILL_PROPOSAL_LIMITS = { reasonMax: 500, perDay: 3 } as const;
+export const SkillProposalKindSchema = z.enum(['new', 'patch']);
+export const SkillProposalOriginSchema = z.enum(['agent', 'hermes']);
+export const SkillProposalStatusSchema = z.enum(['pending', 'approved', 'rejected']);
+export type SkillProposalKind = z.infer<typeof SkillProposalKindSchema>;
+export type SkillProposalStatus = z.infer<typeof SkillProposalStatusSchema>;
+
+/** Isi blok `aios-skill-proposal` yang ditulis agent. Kunci tak dikenal diabaikan, bukan menggagalkan blok. */
+export const SkillProposalBlockSchema = z
+  .object({
+    kind: SkillProposalKindSchema,
+    targetId: z.string().regex(SKILL_ID_PATTERN).optional(),
+    name: z.string().trim().min(1).max(80),
+    description: z.string().trim().min(1).max(200),
+    body: z
+      .string()
+      .min(1)
+      .refine((v) => new TextEncoder().encode(v).length <= SKILL_BODY_MAX_BYTES, {
+        message: 'isi skill melebihi batas ukuran',
+      }),
+    reason: z.string().trim().min(1).max(SKILL_PROPOSAL_LIMITS.reasonMax),
+  })
+  .superRefine((value, ctx) => {
+    if (value.kind === 'patch' && !value.targetId) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['targetId'],
+        message: 'usulan patch wajib punya targetId',
+      });
+    }
+  })
+  .meta({ id: 'SkillProposalBlock' });
+export type SkillProposalBlock = z.infer<typeof SkillProposalBlockSchema>;
+
+/** Usulan tanpa isi (daftar): isi lengkap ada di detail. */
+export const SkillProposalSchema = z
+  .object({
+    id: IdSchema,
+    kind: SkillProposalKindSchema,
+    origin: SkillProposalOriginSchema,
+    /** Skill yang ditambal (kind = patch); null untuk skill baru. */
+    targetId: z.string().nullable(),
+    /** Nama skill di folder Hermes (origin = hermes); null untuk usulan agent. */
+    hermesName: z.string().nullable(),
+    name: z.string(),
+    description: z.string(),
+    reason: z.string(),
+    status: SkillProposalStatusSchema,
+    /** Hasil pemindai saat usulan disimpan; detail menghitung ulang saat dibuka. */
+    scan: SkillScanSchema,
+    conversationId: IdSchema.nullable(),
+    runId: IdSchema.nullable(),
+    messageId: IdSchema.nullable(),
+    createdAt: z.string(),
+    decidedAt: z.string().nullable(),
+    decisionNote: z.string().nullable(),
+    /** Skill yang dihasilkan setelah disetujui. */
+    resultSkillId: z.string().nullable(),
+  })
+  .meta({ id: 'SkillProposal' });
+export type SkillProposal = z.infer<typeof SkillProposalSchema>;
+export const SkillProposalListSchema = itemsOf(SkillProposalSchema).meta({
+  id: 'SkillProposalList',
+});
+
+/** Detail: isi lengkap, pemindai yang dihitung ulang, dan skill aktif yang ditambal (untuk diff). */
+export const SkillProposalDetailSchema = SkillProposalSchema.extend({
+  body: z.string(),
+  existing: z
+    .object({
+      id: z.string(),
+      name: z.string(),
+      description: z.string(),
+      version: z.string(),
+      source: SkillSourceSchema,
+      body: z.string(),
+    })
+    .nullable(),
+  /** false bila tidak bisa disetujui apa pun suntingannya (mis. target hilang atau bawaan repo). */
+  approvable: z.boolean(),
+  blockedReason: z.string().optional(),
+}).meta({ id: 'SkillProposalDetail' });
+export type SkillProposalDetail = z.infer<typeof SkillProposalDetailSchema>;
+
+/** Setujui; field isi bersifat opsional untuk "Edit lalu setujui". Tidak ada jalur lain yang mengaktifkan usulan. */
+export const ApproveSkillProposalRequestSchema = z
+  .object({
+    name: SkillTextFields.name.optional(),
+    description: SkillTextFields.description.optional(),
+    body: SkillTextFields.body.optional(),
+    acknowledge: z.boolean().optional(),
+  })
+  .meta({ id: 'ApproveSkillProposalRequest' });
+export const RejectSkillProposalRequestSchema = z
+  .object({ reason: z.string().trim().max(SKILL_PROPOSAL_LIMITS.reasonMax).optional() })
+  .meta({ id: 'RejectSkillProposalRequest' });
+
+const CuratorSkillRef = z.object({ id: z.string(), name: z.string() });
+export const SkillCuratorReportSchema = z
+  .object({
+    id: IdSchema,
+    generatedAt: z.string(),
+    windowDays: z.number().int().positive(),
+    /** Paling sering dibuka dalam `windowDays` terakhir. */
+    mostUsed: z.array(CuratorSkillRef.extend({ opens: z.number().int().positive() })),
+    /** Skill buatan/terpasang/usulan yang belum pernah dibuka (deskripsi mungkin kurang jelas). */
+    neverOpened: z.array(CuratorSkillRef),
+    /** Usulan yang masih menunggu keputusan. */
+    pendingProposals: z.number().int().nonnegative(),
+    /** Baru ditandai usang pada run ini (tidak dibuka 30 hari). */
+    markedStale: z.array(CuratorSkillRef.extend({ days: z.number().int().nonnegative() })),
+    /** Baru diarsipkan pada run ini (skill agent, 90 hari); bisa dipulihkan, tidak pernah dihapus. */
+    archived: z.array(CuratorSkillRef.extend({ days: z.number().int().nonnegative() })),
+    /** Saran gabung (deskripsi sangat mirip); tidak pernah digabung otomatis. */
+    mergeSuggestions: z.array(
+      z.object({ a: CuratorSkillRef, b: CuratorSkillRef, similarity: z.number().min(0).max(1) }),
+    ),
+    summary: z.string(),
+  })
+  .meta({ id: 'SkillCuratorReport' });
+export type SkillCuratorReport = z.infer<typeof SkillCuratorReportSchema>;
+export const SkillCuratorReportResponseSchema = z
+  .object({ report: SkillCuratorReportSchema.nullable() })
+  .meta({ id: 'SkillCuratorReportResponse' });
 
 /* Percakapan dan pesan */
 
@@ -1020,6 +1151,16 @@ export const ProgressOutputSchema = z
       at: TimestampSchema,
       researchId: IdSchema,
       title: z.string().max(300),
+    }),
+    /** Usulan skill dari agent di percakapan ini (P11); klien lama mengabaikan jenis yang tak dikenal. */
+    z.object({
+      kind: z.literal('skill_proposal'),
+      runId: IdSchema,
+      at: TimestampSchema,
+      proposalId: IdSchema,
+      name: z.string().max(80),
+      proposalKind: SkillProposalKindSchema,
+      status: SkillProposalStatusSchema,
     }),
   ])
   .meta({ id: 'ProgressOutput' });

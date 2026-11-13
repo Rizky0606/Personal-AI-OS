@@ -52,7 +52,9 @@ import type { TemplateService } from './modules/templates/service.js';
 import type { MemoryService } from './modules/memory/service.js';
 import { roleRoutes } from './modules/roles/routes.js';
 import { skillRoutes } from './modules/skills/routes.js';
+import type { SkillCurator } from './modules/skills/curator.js';
 import type { InstallService } from './modules/skills/install-service.js';
+import type { ProposalService } from './modules/skills/proposal-service.js';
 import type { SkillManager } from './modules/skills/manager.js';
 import type { SkillsService } from './modules/skills/service.js';
 import { searchRoutes } from './modules/search/routes.js';
@@ -103,6 +105,9 @@ export interface AppDeps {
   /** Pengelola skill tambahan (P10); tanpa ini route pengubah skill menjawab 503. */
   skillManager?: SkillManager;
   skillInstaller?: InstallService;
+  /** Usulan skill dari agent/Hermes dan kurator mingguan (P11); tanpa ini route-nya menjawab 503. */
+  skillProposals?: ProposalService;
+  skillCurator?: SkillCurator;
   research: ResearchService;
   schedules: ScheduleService;
   projects: ProjectsService;
@@ -142,6 +147,8 @@ export function buildApp({
   skills,
   skillManager,
   skillInstaller,
+  skillProposals,
+  skillCurator,
   research,
   schedules,
   projects,
@@ -238,6 +245,8 @@ export function buildApp({
           skills,
           manager: skillManager,
           installer: skillInstaller,
+          proposals: skillProposals,
+          curator: skillCurator,
         });
         await protectedScope.register(researchRoutes, { research });
         await protectedScope.register(scheduleRoutes, { schedules });

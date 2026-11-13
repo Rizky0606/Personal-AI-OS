@@ -58,7 +58,7 @@ describe('MessageList: baris aktivitas jawaban', () => {
     );
     await renderScreen(list([withTool(RUN_1)]));
 
-    const row = await screen.findByRole('button', { name: ui.toggle });
+    const row = await screen.findByRole('button', { name: new RegExp(ui.toggle) });
     expect(await screen.findByText('Selesai · 5 dtk · 2 langkah')).toBeInTheDocument();
     expect(row).toHaveAttribute('aria-expanded', 'false');
     expect(api.getRun).toHaveBeenCalledWith(RUN_1);
@@ -91,7 +91,7 @@ describe('MessageList: baris aktivitas jawaban', () => {
     await renderScreen(list([message({ author: 'assistant', runId: RUN_1, text: 'Halo.' })]));
 
     expect(await screen.findByText('Halo.')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: ui.toggle })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: new RegExp(ui.toggle) })).not.toBeInTheDocument();
     expect(api.getRun).not.toHaveBeenCalled();
     expect(screen.getByTestId('agent-orb')).toHaveAttribute('data-state', 'done');
   });
@@ -183,7 +183,7 @@ describe('MessageList: baris aktivitas jawaban', () => {
     );
     await renderScreen(list([], { live, now: Date.parse('2026-11-02T10:00:09Z') }));
 
-    const row = await screen.findByRole('button', { name: ui.toggle });
+    const row = await screen.findByRole('button', { name: new RegExp(ui.toggle) });
     expect(row).toHaveTextContent('Menjalankan perintah');
     expect(row).toHaveTextContent('pnpm test');
     expect(row).toHaveTextContent('9 dtk');

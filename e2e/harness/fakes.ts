@@ -57,6 +57,32 @@ export const ARTIFACT_PARTS = [
  */
 export const SCENARIO_RICH = '[skenario:kaya]';
 /**
+ * "[skenario:usulan-skill]" (P11): jawaban agent yang menyertakan satu blok aios-skill-proposal, dialirkan bertahap
+ * (blok terbelah di beberapa potongan supaya penyaring tampilan teruji). Teks jawabannya wajib tampil utuh dan
+ * blok TIDAK boleh terlihat; gateway mengubahnya menjadi usulan pending.
+ */
+export const SCENARIO_PROPOSAL = '[skenario:usulan-skill]';
+export const PROPOSAL_NAME = 'Rapikan changelog E2E';
+export const PROPOSAL_ID = 'rapikan-changelog-e2e';
+export const PROPOSAL_BODY =
+  '1. Baca commit sejak rilis terakhir.\n2. Kelompokkan: fitur, perbaikan, internal.\n3. Tulis satu baris per perubahan.';
+const PROPOSAL_JSON = JSON.stringify({
+  kind: 'new',
+  name: PROPOSAL_NAME,
+  description: 'Saat merapikan changelog rilis: kelompokkan perubahan per jenis.',
+  body: PROPOSAL_BODY,
+  reason: 'Langkah ini berulang tiga kali dan bisa dipakai ulang.',
+});
+export const PROPOSAL_PARTS = [
+  'Changelog sudah dirapikan. ',
+  'Saya mengusulkan skill dari langkah ini.\n\n',
+  '```aios-skill-',
+  'proposal\n',
+  PROPOSAL_JSON.slice(0, 60),
+  PROPOSAL_JSON.slice(60),
+  '\n```',
+];
+/**
  * "[skenario:screenshot]": mesin memancarkan artifact.created berupa PNG nyata (tangkapan layar) dan satu berkas SVG,
  * keduanya tersimpan lewat modul files gateway, lalu menjawab. Hanya di stack e2e.
  */
@@ -359,6 +385,16 @@ export async function startFakes(): Promise<Fakes> {
         console.error('[e2e] skenario screenshot gagal:', error);
         stream.end();
       }
+      return;
+    }
+    if (typeof last === 'string' && last.includes(SCENARIO_PROPOSAL)) {
+      for (const part of PROPOSAL_PARTS) {
+        stream.delta(part);
+        await sleep(150);
+      }
+      stream.usage(30, 40);
+      stream.finish();
+      stream.done();
       return;
     }
     if (typeof last === 'string' && last.includes(SCENARIO_RICH)) {

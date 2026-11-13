@@ -48,6 +48,11 @@ import {
   TaskSchema,
   HermesSkillListSchema,
   HermesSkillPreviewSchema,
+  SkillCuratorReportResponseSchema,
+  SkillCuratorReportSchema,
+  SkillProposalDetailSchema,
+  SkillProposalListSchema,
+  SkillProposalSchema,
   SkillDetailSchema,
   SkillInstallPreviewSchema,
   SkillListSchema,
@@ -113,6 +118,17 @@ export type TaskProposal = z.infer<typeof TaskBreakdownResponseSchema>['items'][
 export type WorkerRegistration = z.infer<typeof LoginResponseSchema>;
 
 export type CreateSkillInput = z.input<typeof CreateSkillRequestSchema>;
+/** Suntingan opsional saat menyetujui usulan skill ("Edit lalu setujui"). */
+export interface ApproveProposalInput {
+  name?: string | undefined;
+  description?: string | undefined;
+  body?: string | undefined;
+  acknowledge?: boolean | undefined;
+}
+export interface ProposalQuery {
+  status?: 'pending' | 'approved' | 'rejected' | 'all' | undefined;
+  conversationId?: string | undefined;
+}
 export type UpdateSkillInput = z.input<typeof UpdateSkillRequestSchema>;
 export type HermesSkillList = z.infer<typeof HermesSkillListSchema>;
 export type SkillVersion = z.infer<typeof SkillVersionListSchema>['items'][number];
@@ -447,6 +463,34 @@ export function createGatewayApi(call: Call) {
         body: { source, checksum, ...(acknowledge ? { acknowledge: true } : {}) },
       }),
     listHermesSkills: () => get('/skills/hermes', HermesSkillListSchema),
+    listSkillProposals: async (params: ProposalQuery = {}) =>
+      (
+        await get(
+          `/skills/proposals${query({ status: params.status, conversationId: params.conversationId })}`,
+          SkillProposalListSchema,
+        )
+      ).items,
+    getSkillProposal: (id: string) =>
+      get(`/skills/proposals/${encodeURIComponent(id)}`, SkillProposalDetailSchema),
+    approveSkillProposal: (id: string, input: ApproveProposalInput = {}) =>
+      get(`/skills/proposals/${encodeURIComponent(id)}/approve`, SkillSaveResultSchema, {
+        method: 'POST',
+        body: {
+          ...(input.name !== undefined ? { name: input.name } : {}),
+          ...(input.description !== undefined ? { description: input.description } : {}),
+          ...(input.body !== undefined ? { body: input.body } : {}),
+          ...(input.acknowledge ? { acknowledge: true } : {}),
+        },
+      }),
+    rejectSkillProposal: (id: string, reason?: string) =>
+      get(`/skills/proposals/${encodeURIComponent(id)}/reject`, SkillProposalSchema, {
+        method: 'POST',
+        body: reason?.trim() ? { reason: reason.trim() } : {},
+      }),
+    getSkillCuratorReport: async () =>
+      (await get('/skills/curator/report', SkillCuratorReportResponseSchema)).report,
+    runSkillCurator: () =>
+      get('/skills/curator/run', SkillCuratorReportSchema, { method: 'POST', body: {} }),
     previewHermesSkill: (name: string) =>
       get('/skills/hermes/preview', HermesSkillPreviewSchema, { method: 'POST', body: { name } }),
     importHermesSkill: (name: string, acknowledge: boolean) =>

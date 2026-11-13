@@ -44,10 +44,14 @@ import { createTasksService } from './modules/tasks/service.js';
 import { createWorkerRelay } from './modules/worker/relay.js';
 import { createWorkerHub } from './modules/worker/routes.js';
 import { createRolesService } from './modules/roles/service.js';
+import { createSkillCurator } from './modules/skills/curator.js';
 import { createHermesSkillSource } from './modules/skills/hermes-skills.js';
 import { createInstallService } from './modules/skills/install-service.js';
+import { startSkillJobs } from './modules/skills/jobs.js';
 import { createSkillManager } from './modules/skills/manager.js';
+import { createProposalService } from './modules/skills/proposal-service.js';
 import { createSkillsService } from './modules/skills/service.js';
+import { createSkillUsage } from './modules/skills/usage.js';
 import { hermesSkillsFor, syncHermesSkills } from './modules/skills/hermes-sync.js';
 import { createRouterComplete } from './modules/router/complete.js';
 import { createRoutingService } from './modules/router/service.js';
@@ -101,17 +105,35 @@ async function main(): Promise<void> {
     overrides: () => skillManager.overrides(),
   });
   skillRef.current = skills;
+  const hermesSkills = createHermesSkillSource({
+    url: config.HERMES_URL,
+    apiKey: config.HERMES_API_KEY,
+    root: config.HERMES_SKILLS_DIR,
+  });
   const skillInstaller = createInstallService({
     skills,
     manager: skillManager,
-    hermes: createHermesSkillSource({
-      url: config.HERMES_URL,
-      apiKey: config.HERMES_API_KEY,
-      root: config.HERMES_SKILLS_DIR,
-    }),
+    hermes: hermesSkills,
   });
   const boss = createBoss(config.DATABASE_URL, log);
   const hub = createEventHub();
+  const skillProposals = createProposalService({
+    db,
+    skills,
+    manager: skillManager,
+    installer: skillInstaller,
+    hermes: hermesSkills,
+    hub,
+    log: { ...log, info: (obj, msg) => app.log.info(obj, msg) },
+  });
+  const skillCurator = createSkillCurator({
+    db,
+    skills,
+    manager: skillManager,
+    hub,
+    log: { ...log, info: (obj, msg) => app.log.info(obj, msg) },
+  });
+  const skillUsage = createSkillUsage({ db, skills, manager: skillManager });
   const teamStore = createTeamEventStore(db, hub);
   const store = createEventStore(db, hub);
   const projects = createProjectsService({ db });
@@ -151,6 +173,8 @@ async function main(): Promise<void> {
     adapter: createHermesAdapter({ baseUrl: config.HERMES_URL, apiKey: config.HERMES_API_KEY }),
     workerAdapter: createWorkerRelayAdapter({ relay: workerRelay }),
     ...(dsh ? { dsh } : {}),
+    proposals: skillProposals,
+    skillOpened: (runId, ids) => skillUsage.recordOpened(runId, ids),
     roles,
     catalogSkills: (engine) =>
       skills.list({ engine }).flatMap((entry) => {
@@ -290,6 +314,8 @@ async function main(): Promise<void> {
     skills,
     skillManager,
     skillInstaller,
+    skillProposals,
+    skillCurator,
     research,
     schedules,
     projects,
@@ -344,6 +370,7 @@ async function main(): Promise<void> {
   await boss.start();
   await research.start();
   await schedules.start();
+  await startSkillJobs({ boss, curator: skillCurator, proposals: skillProposals, log });
   push.start();
   const recovered = await runner.recoverOrphans();
   if (recovered > 0) app.log.warn({ recovered }, 'run tertinggal ditandai gagal setelah restart');

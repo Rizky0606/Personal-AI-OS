@@ -48,19 +48,36 @@ test('tim Orca: rencana 2 tugas -> Worker mengerjakan berurutan -> Lead terima -
   await expect(panel.getByText('Lead')).toBeVisible();
   await expect(panel.getByText(TEAM_TASK_1)).toBeVisible({ timeout: 90_000 });
 
-  // omp sungguhan meminta izin menulis file (SECURITY_OPS.md: worker selalu --approval-mode
-  // always-ask) -- muncul di daftar "Izin menunggu" agregat yang baru dibangun (tugas 9). Izinkan
-  // supaya tugas pertama bisa selesai; Lead lalu menerima otomatis (TEAM_REVIEW_ACCEPT) dan tugas
-  // kedua dimulai, yang juga minta izin yang sama.
-  for (let i = 0; i < 2; i++) {
-    await panel.getByRole('button', { name: 'Izinkan sekali' }).click({ timeout: 60_000 });
-  }
+  // omp sungguhan meminta izin menulis file (SECURITY_OPS.md: worker selalu --approval-mode always-ask), satu kali
+  // per tugas, muncul di daftar "Izin menunggu" agregat. Izinkan sampai tim selesai, jangan menghitung klik: panel
+  // tim memoll tiap 2 detik sehingga tombol izin yang baru diklik masih terlihat sesaat dan klik berikutnya bisa
+  // mengenai tombol basi itu, bukan izin tugas kedua (terbukti dari snapshot halaman yang gagal di suite penuh).
+  const allow = panel.getByRole('button', { name: 'Izinkan sekali' });
+  let allowed = 0;
+  await expect
+    .poll(
+      async () => {
+        if ((await panel.getByText('Tim selesai.').count()) > 0) return true;
+        if ((await allow.count()) > 0) {
+          const clicked = await allow
+            .first()
+            .click({ timeout: 2_000 })
+            .then(() => true)
+            .catch(() => false);
+          if (clicked) allowed += 1;
+        }
+        return false;
+      },
+      { timeout: 180_000, intervals: [500] },
+    )
+    .toBe(true);
+  expect(allowed, 'tiap tugas meminta izin tulis sekurang-kurangnya sekali').toBeGreaterThanOrEqual(
+    2,
+  );
 
-  // Tugas kedua muncul setelah tugas pertama diterima Lead.
-  await expect(panel.getByText(TEAM_TASK_2)).toBeVisible({ timeout: 60_000 });
-
-  // Kedua tugas selesai, tim selesai seluruhnya.
-  await expect(panel.getByText('Tim selesai.')).toBeVisible({ timeout: 60_000 });
+  // Tugas kedua muncul setelah tugas pertama diterima Lead, dan kedua tugas selesai.
+  await expect(panel.getByText(TEAM_TASK_2)).toBeVisible();
+  await expect(panel.getByText('Tim selesai.')).toBeVisible();
   await expect(panel.getByRole('button', { name: 'Hentikan tim' })).toHaveCount(0);
 
   // Larangan keras: tidak pernah digabung otomatis ke branch kerja pengguna.

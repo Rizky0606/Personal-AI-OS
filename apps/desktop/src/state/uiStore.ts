@@ -89,6 +89,9 @@ interface UiState {
   /** Paket skill tambahan untuk pesan berikutnya (selain pilihan otomatis dari kata kunci); tidak disimpan. */
   skillPacks: string[];
   setSkillPacks: (ids: string[]) => void;
+  /** Halaman Skill dibuka langsung ke satu usulan (dari kartu di jawaban atau panel Progres); tidak disimpan. */
+  skillsFocus: { proposalId: string } | null;
+  setSkillsFocus: (focus: { proposalId: string } | null) => void;
   /** Model pilihan untuk pesan berikutnya; null = otomatis (router/combo). Diingat antar sesi. */
   model: string | null;
   setModel: (model: string | null) => void;
@@ -147,6 +150,8 @@ export const useUiStore = create<UiState>()(
       setWebSearch: (webSearch) => set({ webSearch }),
       skillPacks: [],
       setSkillPacks: (skillPacks) => set({ skillPacks }),
+      skillsFocus: null,
+      setSkillsFocus: (skillsFocus) => set({ skillsFocus }),
       agentSteps: [],
       setAgentSteps: (agentSteps) => set({ agentSteps }),
       progressSource: null,

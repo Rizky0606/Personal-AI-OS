@@ -342,6 +342,8 @@ export const NotificationEventSchema = z.object({
   title: z.string().min(1),
   body: z.string().optional(),
   level: z.enum(['info', 'warning', 'error']),
+  /** Penanda jenis (P11) agar push FCM hanya mengirim yang relevan; absen untuk notifikasi biasa. */
+  topic: z.enum(['skill_report', 'skill_proposal']).optional(),
 });
 
 export const UserEventSchema = z

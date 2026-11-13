@@ -1,4 +1,10 @@
-import type { ResearchPlanSchema, SkillEngine } from '@aios/contracts';
+import type {
+  ResearchPlanSchema,
+  SkillEngine,
+  SkillProposalKind,
+  SkillProposalStatus,
+  SkillScan,
+} from '@aios/contracts';
 import { type SQL, sql } from 'drizzle-orm';
 import {
   bigint,
@@ -249,6 +255,10 @@ export const catalogSkills = pgTable(
     origin: text('origin'),
     /** Nomor versi terbaru di `catalog_skill_versions`. */
     version: integer('version').notNull().default(1),
+    /** Kurator (P11): sejak kapan ditandai usang (tidak dibuka 30 hari); null = tidak usang. */
+    staleAt: timestamp('stale_at', { withTimezone: true }),
+    /** Terakhir dipulihkan dari arsip; menghitung ulang umur skill agar kurator tidak mengarsipkannya lagi. */
+    restoredAt: timestamp('restored_at', { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -279,3 +289,72 @@ export const skillOverrides = pgTable('skill_overrides', {
   status: skillStatus('status').notNull(),
   updatedAt: updatedAt(),
 });
+
+/**
+ * Usulan skill (P11): dari blok `aios-skill-proposal` di jawaban agent (origin `agent`) atau skill baru buatan
+ * Hermes di folder selain `aios/` (origin `hermes`, isi dibaca dari folder saat ditinjau). Tidak ada yang aktif
+ * sebelum pengguna menyetujui.
+ */
+export const skillProposals = pgTable(
+  'skill_proposals',
+  {
+    id: id(),
+    kind: text('kind').$type<SkillProposalKind>().notNull(),
+    origin: text('origin').$type<'agent' | 'hermes'>().notNull(),
+    targetId: text('target_id'),
+    hermesName: text('hermes_name'),
+    name: text('name').notNull(),
+    description: text('description').notNull(),
+    /** Kosong untuk usulan Hermes: isinya dibaca dari folder Hermes saat ditinjau. */
+    body: text('body').notNull().default(''),
+    reason: text('reason').notNull(),
+    status: text('status').$type<SkillProposalStatus>().notNull().default('pending'),
+    scan: jsonb('scan').$type<SkillScan>().notNull(),
+    conversationId: uuid('conversation_id').references(() => conversations.id, {
+      onDelete: 'set null',
+    }),
+    runId: uuid('run_id').references(() => runs.id, { onDelete: 'set null' }),
+    messageId: uuid('message_id').references(() => messages.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+    decisionNote: text('decision_note'),
+    resultSkillId: text('result_skill_id'),
+  },
+  (t) => [
+    index('skill_proposals_status_idx').on(t.status, t.createdAt),
+    index('skill_proposals_conversation_idx').on(t.conversationId),
+  ],
+);
+
+/** Nama skill Hermes yang sudah pernah terlihat; pembanding untuk mendeteksi skill baru buatan Hermes. */
+export const skillHermesSeen = pgTable('skill_hermes_seen', {
+  name: text('name').primaryKey(),
+  firstSeenAt: timestamp('first_seen_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Satu baris tiap skill yang terbukti dibuka agent dalam satu run (sumber laporan kurator). */
+export const skillOpens = pgTable(
+  'skill_opens',
+  {
+    skillId: text('skill_id').notNull(),
+    runId: uuid('run_id')
+      .notNull()
+      .references(() => runs.id, { onDelete: 'cascade' }),
+    openedAt: timestamp('opened_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.skillId, t.runId] }),
+    index('skill_opens_opened_idx').on(t.openedAt),
+  ],
+);
+
+/** Laporan mingguan kurator skill; yang terbaru dibaca halaman Skill. */
+export const skillCuratorReports = pgTable(
+  'skill_curator_reports',
+  {
+    id: id(),
+    createdAt: createdAt(),
+    report: jsonb('report').notNull(),
+  },
+  (t) => [index('skill_curator_reports_created_idx').on(t.createdAt)],
+);

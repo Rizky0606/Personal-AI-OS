@@ -1,6 +1,13 @@
 import {
+  ApproveSkillProposalRequestSchema,
   CreateSkillRequestSchema,
   HermesSkillListSchema,
+  RejectSkillProposalRequestSchema,
+  SkillCuratorReportResponseSchema,
+  SkillCuratorReportSchema,
+  SkillProposalDetailSchema,
+  SkillProposalListSchema,
+  SkillProposalSchema,
   HermesSkillPreviewSchema,
   PreviewHermesSkillRequestSchema,
   ImportHermesSkillRequestSchema,
@@ -22,9 +29,16 @@ import type { FastifyPluginCallback } from 'fastify';
 import { z } from 'zod';
 import { AppError } from '../../errors.js';
 import { requireAnyScope, requireScope } from '../auth/guard.js';
+import type { SkillCurator } from './curator.js';
 import type { InstallService } from './install-service.js';
 import type { SkillChange, SkillManager } from './manager.js';
+import type { ProposalService } from './proposal-service.js';
 import type { SkillsService } from './service.js';
+
+const ProposalListQuery = z.object({
+  status: z.enum(['pending', 'approved', 'rejected', 'all']).optional(),
+  conversationId: z.string().optional(),
+});
 
 const ListQuery = z.object({
   include: z.enum(['active', 'all']).optional(),
@@ -40,7 +54,27 @@ export const skillRoutes: FastifyPluginCallback<{
   skills: SkillsService;
   manager?: SkillManager;
   installer?: InstallService;
-}> = (app, { skills, manager: optionalManager, installer: optionalInstaller }, done) => {
+  proposals?: ProposalService;
+  curator?: SkillCurator;
+}> = (
+  app,
+  {
+    skills,
+    manager: optionalManager,
+    installer: optionalInstaller,
+    proposals: optionalProposals,
+    curator: optionalCurator,
+  },
+  done,
+) => {
+  const prop = (): ProposalService => {
+    if (!optionalProposals) throw unavailable();
+    return optionalProposals;
+  };
+  const cur = (): SkillCurator => {
+    if (!optionalCurator) throw unavailable();
+    return optionalCurator;
+  };
   const inst = (): InstallService => {
     if (!optionalInstaller) throw unavailable();
     return optionalInstaller;
@@ -91,6 +125,50 @@ export const skillRoutes: FastifyPluginCallback<{
     HermesSkillPreviewSchema.parse(
       await inst().previewHermes(PreviewHermesSkillRequestSchema.parse(req.body)),
     ),
+  );
+
+  app.get('/skills/proposals', { onRequest: requireScope('app') }, async (req) =>
+    SkillProposalListSchema.parse({
+      items: await prop().list(ProposalListQuery.parse(req.query)),
+    }),
+  );
+
+  app.get<{ Params: { id: string } }>(
+    '/skills/proposals/:id',
+    { onRequest: requireScope('app') },
+    async (req) => SkillProposalDetailSchema.parse(await prop().get(req.params.id)),
+  );
+
+  app.post<{ Params: { id: string } }>(
+    '/skills/proposals/:id/approve',
+    { onRequest: requireScope('app') },
+    async (req) =>
+      saved(
+        await prop().approve(
+          req.params.id,
+          ApproveSkillProposalRequestSchema.parse(req.body ?? {}),
+        ),
+      ),
+  );
+
+  app.post<{ Params: { id: string } }>(
+    '/skills/proposals/:id/reject',
+    { onRequest: requireScope('app') },
+    async (req) =>
+      SkillProposalSchema.parse(
+        await prop().reject(
+          req.params.id,
+          RejectSkillProposalRequestSchema.parse(req.body ?? {}).reason,
+        ),
+      ),
+  );
+
+  app.get('/skills/curator/report', { onRequest: requireScope('app') }, async () =>
+    SkillCuratorReportResponseSchema.parse({ report: await cur().latest() }),
+  );
+
+  app.post('/skills/curator/run', { onRequest: requireScope('app') }, async () =>
+    SkillCuratorReportSchema.parse(await cur().runOnce()),
   );
 
   app.post('/skills/hermes/import', { onRequest: requireScope('app') }, async (req, reply) => {

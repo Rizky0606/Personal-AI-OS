@@ -3,7 +3,8 @@ import { z } from 'zod';
 
 /**
  * Skill inti: dimuat untuk semua role (ROLES_AND_SKILLS.md). Lima pertama anti-melenceng; `rich-answers` mengatur
- * kapan jawaban memakai komponen aios-ui, berlaku di semua mesin yang jawabannya dirender klien.
+ * kapan jawaban memakai komponen aios-ui, berlaku di semua mesin yang jawabannya dirender klien; `propose-skill`
+ * (P11) mengatur kapan agent boleh mengusulkan skill (satu blok `aios-skill-proposal`, disetujui pengguna).
  */
 export const CORE_SKILLS = [
   'scope-guard',
@@ -12,6 +13,7 @@ export const CORE_SKILLS = [
   'verify-before-done',
   'minimal-diff',
   'rich-answers',
+  'propose-skill',
 ] as const;
 
 export const SkillIdSchema = z

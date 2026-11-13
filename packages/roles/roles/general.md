@@ -14,6 +14,7 @@ skills:
     verify-before-done,
     minimal-diff,
     rich-answers,
+    propose-skill,
     answer-first,
     clarify-once,
     find-skills,

@@ -34,6 +34,10 @@ export interface CatalogExtra {
   origin: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Kurator (P11): sejak kapan ditandai usang; null = tidak usang. */
+  staleAt: string | null;
+  /** Terakhir dipulihkan dari arsip; null bila tidak pernah. */
+  restoredAt: string | null;
 }
 
 export interface SkillListOptions {
@@ -98,6 +102,7 @@ export function createSkillsService(deps: {
         origin: extra.origin,
         createdAt: extra.createdAt,
         updatedAt: extra.updatedAt,
+        staleSince: extra.staleAt,
       });
     }
     return out;
