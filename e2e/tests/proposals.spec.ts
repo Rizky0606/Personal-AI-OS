@@ -111,8 +111,15 @@ for (const theme of ['light', 'dark'] as const) {
     await expect(card.getByText(`Agent mengusulkan skill: ${PROPOSAL_NAME}`)).toBeVisible({
       timeout: 30_000,
     });
-    const scan = async () =>
-      (
+    // Axe menilai kontras hanya setelah animasi selesai; tanpa ini hasilnya bergantung pada kecepatan mesin
+    // (lolos di lokal, gagal di CI yang lebih cepat).
+    const settle = () =>
+      page.evaluate(() =>
+        Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))),
+      );
+    const scan = async () => {
+      await settle();
+      return (
         await new AxeBuilder({ page })
           .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
           .analyze()
@@ -120,6 +127,7 @@ for (const theme of ['light', 'dark'] as const) {
         id: v.id,
         nodes: v.nodes.slice(0, 3).map((n) => `${n.target.join(' ')} :: ${n.html.slice(0, 260)}`),
       }));
+    };
     expect(await scan(), 'jawaban dengan kartu usulan').toEqual([]);
 
     await card.getByRole('button', { name: `Tinjau usulan skill ${PROPOSAL_NAME}` }).click();

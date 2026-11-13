@@ -148,7 +148,7 @@ test('skill Hermes: periksa isi dan temuan, persetujuan eksplisit untuk yang ber
 
   // Aman: impor langsung, tanpa dialog.
   await page.getByRole('button', { name: 'Impor hermes-aman' }).click();
-  await expect(page.getByText('Skill Hermes diimpor.')).toBeVisible();
+  await expect(page.getByText('Skill Hermes diimpor.').first()).toBeVisible();
   await expect(page.getByRole('dialog')).toBeHidden();
 
   // Berbahaya: Periksa menampilkan isi dan temuan; impor mati sampai persetujuan dicentang.
