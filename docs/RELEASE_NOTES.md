@@ -1,8 +1,8 @@
-# Catatan rilis — 1.1.0 (2026-11-08)
+# Catatan rilis — 1.1.0 (2026-11-15)
 
-## Status: belum siap dipublikasikan
+## Status: dipublikasikan sebagai tag `v1.1.0`
 
-Ini catatan kesiapan, bukan rilis yang sudah dipublikasikan. Kodenya **sudah digabung ke `main`** (`b26d61e`, 2026-11-13, sama dengan `origin/main`) dan mencakup sesi P1 sampai P11. Belum ada tag `v1.1.0` (tag terbaru `v1.0.44`) dan belum ada deploy ke VPS. Versi metadata: desktop `1.1.0`, Android default `1.1.0` (`versionCode` 1001000).
+Kodenya **sudah digabung ke `main`** (`b26d61e`, 2026-11-13) dan mencakup sesi P1 sampai P11; tag `v1.1.0` diterbitkan lewat `infra/scripts/release.mjs` (build rilis di GitHub Actions). Gateway dari `b26d61e` (tag otomatis `v1.0.46`) sudah di-deploy ke VPS pada 2026-11-15 setelah backup (snapshot restic `0bed8dcf`): migrasi 0011–0017 diterapkan, `/v1/readyz` ok (Postgres, Hermes, 9Router, SearXNG). Deploy otomatis VPS (`aios-deploy.service`) sebelumnya gagal `203/EXEC` karena `auto-deploy.sh` tanpa bit eksekusi; diperbaiki di rilis ini. Versi metadata: desktop `1.1.0`, Android default `1.1.0` (`versionCode` 1001000).
 
 ## Apa yang baru, dalam bahasa pengguna
 
@@ -31,7 +31,7 @@ Ini catatan kesiapan, bukan rilis yang sudah dipublikasikan. Kodenya **sudah dig
 
 - **dsh** (salah satu pilihan mesin) belum pernah benar-benar dicoba dengan program dsh sungguhan di mesin pengembangan mana pun — hanya diuji dengan tiruan. Jangan andalkan dsh untuk pekerjaan penting sampai ada verifikasi nyata.
 - **Hermes** (mesin percakapan umum) hanya pernah diverifikasi nyata sekali, di sesi terpisah sebelumnya; alur pengguna lengkap versi ini belum dicoba dengan Hermes sungguhan, hanya tiruan.
-- Deploy ke server, backup/restore data, dan uji beban di VPS produksi **belum pernah dijalankan** untuk versi ini.
+- Uji beban di VPS produksi **belum pernah dijalankan** untuk versi ini. (Deploy dan backup sudah: lihat Status.)
 - Instalasi Windows (aplikasi desktop) dan APK Android rilis (bertanda tangan) **belum dibuat** — hanya tersedia build debug untuk pengujian internal, disimpan di luar repo, belum pernah dibagikan.
 - **Skill** (P9–P11): ketepatan agent memilih skill belum diukur ulang setelah perbaikan nama skill; petunjuk "usulkan skill" belum diuji dengan model sungguhan; kurator mingguan dan pemantau skill Hermes belum pernah berjalan di server produksi (hanya pendaftaran jadwalnya yang diuji); Android belum punya layar usulan skill.
 
@@ -53,7 +53,7 @@ Disimpan di luar repo (`/home/ubuntu/.hermes/cache/scratch/p8-artifacts/`), buka
 | `desktop-dist-1.1.0.tar.gz` | Frontend desktop hasil build (`apps/desktop/dist`), bukan installer Tauri bertanda tangan | `fc04dc80a61a52735c96476ea68d8b25a783dfda5795891220b7d27a8a9abf18` |
 | `android-debug-1.1.0.apk` | APK debug Android (bukan rilis bertanda tangan) | `c0bc8da3cd9163141da5221a3cc7b9b272f8095176b4bf2fe8b58c9f0cd7e7e9` |
 
-## Deploy dan rollback (prosedur saja; belum dijalankan untuk versi ini)
+## Deploy dan rollback
 
 1. Tinjau ref/tag, migrasi, backup terbaru, readiness, ruang disk. Uji restore ke DB sementara; jangan gunakan DB produksi untuk tes.
 2. Deploy gateway di VPS hanya lewat `infra/scripts/deploy.sh --ref vX.Y.Z`; skrip membackup, membangun image arm64, menjalankan migrasi, menunggu `/v1/readyz`, lalu mengembalikan image sebelumnya bila langkah gagal.
@@ -61,4 +61,4 @@ Disimpan di luar repo (`/home/ubuntu/.hermes/cache/scratch/p8-artifacts/`), buka
 4. Bila data rusak, hentikan perubahan dan pulihkan snapshot melalui `infra/scripts/restore.sh` yang telah diuji. Verifikasi snapshot dan target database secara eksplisit; tindakan ini dapat mengubah data produksi.
 5. Setelah deploy, periksa `/v1/readyz`, login, chat ringkas, redaksi log, worker, dan antrean.
 
-**Tidak ada langkah publikasi, tag, atau deploy yang dijalankan untuk catatan ini.** Jangan jalankan `infra/scripts/release.mjs` atau `infra/scripts/deploy.sh` sampai blocker di atas (dsh/Hermes nyata, deploy/backup belum pernah dicoba) diselesaikan atau diterima secara sadar oleh pemilik.
+Deploy gateway `v1.0.46` (kode `b26d61e`) dijalankan dengan prosedur di atas pada 2026-11-15; blocker dsh/Hermes nyata di atas diterima secara sadar oleh pemilik untuk rilis ini.

@@ -2,7 +2,7 @@
 
 Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/); versi mengikuti [SemVer](https://semver.org/lang/id/).
 
-## [1.1.0] - 2026-11-08
+## [1.1.0] - belum dirilis
 
 Merangkum pekerjaan sesi P1 sampai P11 (dikerjakan di cabang `fix/*` dan `feat/*`; **sudah digabung ke `main`**, `b26d61e`, 2026-11-13). **Perombakan "Command Center" yang tercatat di sini sebelumnya sudah ditulis ulang total** menjadi shell "pulau" (lihat Diubah); catatan lama dihapus karena tidak lagi menggambarkan kode yang ada.
 
@@ -40,7 +40,7 @@ Merangkum pekerjaan sesi P1 sampai P11 (dikerjakan di cabang `fix/*` dan `feat/*
 ### Diketahui
 
 - dsh sebagai root belum terbukti bekerja ujung-ke-ujung di CI Docker/VPS produksi (hanya diverifikasi di satu mesin pengembangan Linux dengan kendala tata letak folder yang spesifik mesin itu). Hermes dan dsh **nyata** (bukan tiruan) belum pernah dicoba dalam alur pengguna lengkap sejak P5 (Hermes) dan sama sekali (dsh). Lihat `docs/BACKLOG.md` "Ringkasan status gerbang P8" untuk daftar lengkap blocker/penting/nanti.
-- Sudah digabung ke `main` (`b26d61e`), tetapi tag `v1.1.0` dan deploy VPS **belum dilakukan** (tag terbaru `v1.0.44`; lihat `docs/RELEASE_NOTES.md`).
+- Sudah digabung ke `main` (`b26d61e`). Gateway dari commit itu (tag otomatis `v1.0.46`) sudah di-deploy ke VPS pada 2026-11-15 setelah backup (snapshot restic `0bed8dcf`): migrasi 0011–0017 diterapkan, `/v1/readyz` ok. Tag `v1.1.0` diterbitkan oleh rilis ini (lihat `docs/RELEASE_NOTES.md`).
 - Skill (P9–P11): ketepatan pemilihan skill belum diukur ulang setelah perbaikan nama indeks; `propose-skill` belum diuji terhadap model sungguhan; kurator dan pemantau Hermes belum dijalankan terhadap pg-boss produksi; Android tanpa layar usulan. Lihat `docs/BACKLOG.md` "Temuan P9" sampai "Temuan P11".
 
 ## [1.0.3] - 2026-10-25
