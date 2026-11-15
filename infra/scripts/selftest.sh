@@ -93,6 +93,11 @@ cat > "$STUBS/node" <<'EOS'
 #!/usr/bin/env bash
 echo "v22.12.0"
 EOS
+# hermes palsu tanpa keluaran: menutupi hermes asli di PATH host supaya uji "tidak terpasang" tetap hermetik.
+cat > "$STUBS/hermes" <<'EOS'
+#!/usr/bin/env bash
+exit 127
+EOS
 chmod +x "$STUBS"/*
 
 cat > "$ROOT/backup.env" <<EOF
