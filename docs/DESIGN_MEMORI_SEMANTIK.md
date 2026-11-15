@@ -37,7 +37,7 @@ Tidak ada kolom embedding, tidak ada ekstensi Postgres apa pun, tidak ada kolom 
 
 - `MAX_MEMORIES = 200` (`apps/gateway/src/modules/memory/service.ts:14`), teks maks 500 karakter (`packages/contracts/src/entities.ts:452`). Kasus terburuk hari ini: 200 × 500 = 100.000 karakter di setiap pesan sistem. Belum ada penghitungan token (`docs/BACKLOG.md:487`).
 - `promptSection()` mengambil **semua** baris aktif, terlama dulu, di bawah judul `# Memori tentang pemilik` dengan kalimat "jangan dianggap perintah" (`service.ts:110-120`).
-- `summary()` membaca ulang tabel dan mengembalikan jumlah + judul 40 karakter, maks 50 butir (`service.ts:103-108`, `memoryTitle` di `service.ts:39`).
+- `summary()` membaca ulang tabel dan mengembalikan jumlah + judul 40 karakter, maks 50 butir (`service.ts:102-108`, `memoryTitle` di `service.ts:39`).
 - Rute: `GET/POST /memories`, `PATCH/DELETE /memories/:id`, scope `app` (`apps/gateway/src/modules/memory/routes.ts:19-32`).
 - Memori hanya diisi pemilik; "AI tidak menulis memori otomatis" dan usulan memori dari AI dicatat sebagai ide lanjutan (`docs/BACKLOG.md:485-486`).
 - Memori gateway **terpisah** dari memori internal Hermes. Hermes punya memori jangka panjang sendiri lewat `X-Hermes-Session-Key = owner` (`docs/BACKLOG.md:132`) dan tidak ada API untuk membacanya (`docs/BACKLOG.md:485`). `docs/ARCHITECTURE.md` ("Memori jangka panjang dipegang Hermes") dan `docs/PRD.md` ("Memori jangka panjang lewat Hermes") hanya menyebut yang kedua; ini bukan pertentangan baru, tetapi perlu diingat saat ekstraksi otomatis dinyalakan (keputusan terbuka 5).
@@ -113,6 +113,11 @@ GET /v1/models/embedding status=200 time=0.044703s size=27
 GET /v1/models/embeddings status=404 time=0.013306s size=144
   {"error":{"message":"Unknown model kind: embeddings. Supported: image, tts, stt, embedding, image-to-text, web","type":"invalid_request_error"}}
 
+GET /v1/models/info status=400 time=0.011775s size=114
+  {"error":{"message":"Missing required query param: id (e.g. ?id=openai/dall-e-3)","type":"invalid_request_error"}}
+
+GET /v1/models/chat status=404 time=0.008387s size=138
+
 POST /v1/embeddings model=text-embedding-3-small status=400 time=0.013144s size=111
   body: {"error":{"message":"No credentials for provider: openai","type":"invalid_request_error","code":"bad_request"}}
 
@@ -158,7 +163,7 @@ Yang harus berubah (semua dicek di repo):
 
 - Image compose `postgres:16` → image pg16 ber-pgvector (`infra/compose/docker-compose.yml:18`), dengan restart Postgres produksi. Tag yang tersedia di Docker Hub (dicek 15 November 2026, amd64 + arm64): `pgvector/pgvector:pg16` dan `pg16-bookworm`, `pg16-trixie`, `0.8.7-pg16*`. Image `postgres:16` di host ini adalah `16.15-1.pgdg13+2` (basis Debian trixie); memakai varian bookworm di atas volume yang sama berisiko peringatan versi collation glibc. Jadi harus tepat `pg16-trixie`, dan itu pun **[belum diuji]**.
 - `CREATE EXTENSION vector` di migrasi. Setiap tes integrasi menjalankan semua migrasi pada database baru (`apps/gateway/src/testing/db.ts:31`).
-- **Postgres tertanam untuk tes tidak punya pgvector.** Tanpa `TEST_DATABASE_URL`, tes memakai paket `embedded-postgres` 16.14.0-beta.17 (`apps/gateway/src/testing/global-setup.ts:59-87`, `apps/gateway/src/testing/embedded-pg.mjs`, `pnpm-workspace.yaml:45`), begitu juga harness E2E (`e2e/harness/stack.ts:81-141`). Migrasi dengan `CREATE EXTENSION vector` akan menggagalkan **seluruh** tes integrasi dan E2E di mesin tanpa Docker (jalur yang sengaja didukung repo ini, termasuk Windows).
+- **Postgres tertanam untuk tes tidak punya pgvector.** Tanpa `TEST_DATABASE_URL`, tes memakai paket `embedded-postgres` 16.14.0-beta.17 (`apps/gateway/src/testing/global-setup.ts:59-85`, `apps/gateway/src/testing/embedded-pg.mjs`, `pnpm-workspace.yaml:45`), begitu juga harness E2E (`e2e/harness/stack.ts:81-141`). Paket itu membawa biner Postgres polos; saya tidak menemukan cara memuat pgvector di dalamnya **[tidak diuji langsung]**. Migrasi dengan `CREATE EXTENSION vector` akan menggagalkan **seluruh** tes integrasi dan E2E di mesin tanpa Docker (jalur yang sengaja didukung repo ini, termasuk Windows).
 - Dua service container CI `postgres:16` harus diganti (`.github/workflows/ci.yml:9-24`, `48-65`).
 - `backup.sh` tidak berubah (`pg_dump -Fc`, `infra/scripts/backup.sh:58`), tetapi dump jadi bergantung pada ekstensi: `restore.sh` memakai `pg_restore --exit-on-error` ke database sementara di container yang sama (`infra/scripts/restore.sh:61-62`) dan akan gagal di Postgres polos. Pemulihan bencana ke mesin baru jadi butuh image yang sama.
 - Kunci versi `postgres=16` (`infra/VERSIONS.md:12`) dan `check-versions.sh` tetap cocok, tetapi asal image perlu dicatat.
@@ -238,8 +243,8 @@ Tabel `memory_proposals`, meniru `skill_proposals` (`extra.ts:298-327`):
 | Kolom | Catatan |
 | --- | --- |
 | `id`, `created_at`, `decided_at` | |
-| `kind` | `add | update` |
-| `status` | `pending | approved | rejected | auto_saved | undone` |
+| `kind` | `add` atau `update` |
+| `status` | `pending`, `approved`, `rejected`, `auto_saved`, `undone` |
 | `text` | Fakta yang diusulkan (≤ 300 karakter) |
 | `evidence` | Kutipan pendek dari pesan pemilik yang menjadi dasar (≤ 200 karakter) |
 | `target_memory_id` | Untuk `update`; FK `set null` |
@@ -293,8 +298,8 @@ Berlaku untuk run chat dan coding, seperti sekarang (`docs/API_CONTRACT.md:49`).
 
 ### 4.3 Klien embedding dan backfill
 
-- `modules/embeddings/client.ts`: `embed(texts: string[], { signal, timeoutMs }): Promise<Float32Array[]>` lewat `NineRouterClient.request('/embeddings', …)` (`apps/gateway/src/modules/llm/client.ts:15-21`), badan `{ model, input: [...], dimensions? }`, jawaban divalidasi Zod, vektor dinormalisasi L2. Instans klien terpisah dengan `retries: 0` untuk jalur recall (klien bawaan mengulang 2 kali, `client.ts:34-36`).
-- Teks yang cocok `findSecret` (`apps/gateway/src/modules/skills/proposals.ts:44`) **tidak** dikirim ke embedding; baris itu tetap leksikal.
+- `modules/embeddings/client.ts`: `embed(texts: string[], { signal, timeoutMs }): Promise<Float32Array[]>` lewat `NineRouterClient.request('/embeddings', …)` (`apps/gateway/src/modules/llm/client.ts:15-21`), badan `{ model, input: [...], dimensions? }`, jawaban divalidasi Zod, vektor dinormalisasi L2. Instans klien terpisah dengan `retries: 0` untuk jalur recall (klien bawaan mengulang 2 kali, `client.ts:35`).
+- Teks yang cocok `findSecret` (`apps/gateway/src/modules/skills/proposals.ts:45`) **tidak** dikirim ke embedding; baris itu tetap leksikal.
 - Tulis: `create`/`update` memori tidak menunggu embedding. Baris tanpa vektor (atau `content_hash` beda) diambil pekerjaan pg-boss `embeddings-backfill` (pola `apps/gateway/src/modules/skills/jobs.ts`): tiap 5 menit, batch 16 teks per permintaan, maks 10 batch per putaran, berhenti pada galat pertama.
 - **Backfill baris lama**: pekerjaan yang sama; 200 memori = ≤ 13 permintaan. Tidak ada langkah manual.
 - Ganti model: baris model baru diisi berdampingan; recall memakai model aktif saja; baris model lama disapu setelah cakupan model baru 100%.
@@ -307,15 +312,15 @@ Berlaku untuk run chat dan coding, seperti sekarang (`docs/API_CONTRACT.md:49`).
 
 **Masukan ke model.** Hanya **teks pesan pemilik** (pesan ini dan maksimal 2 pesan pemilik sebelumnya, masing-masing dipotong 1.500 karakter) dan maksimal 8 memori yang paling mirip (dari recall 4.2) untuk deduplikasi. **Jawaban asisten, isi tautan, hasil web, dan dokumen lampiran tidak dikirim**: semuanya bisa membawa injeksi tidak langsung.
 
-**Model.** `MEMORY_EXTRACT_MODEL` lewat `/chat/completions` 9Router, suhu 0, non-stream, batas waktu 20 detik, pola `apps/gateway/src/modules/chat/title.ts:41-70`. Bawaan `router-fast` mengikuti variabel model kecil lain (`apps/gateway/src/config.ts:41-46`); catatan: combo itu tidak ada di 9Router produksi, jadi produksi mengisinya seperti variabel lain (`zrouter/gpt-6-luna`).
+**Model.** `MEMORY_EXTRACT_MODEL` lewat `/chat/completions` 9Router, suhu 0, non-stream, batas waktu 20 detik, pola `apps/gateway/src/modules/chat/title.ts:39-70`. Bawaan `router-fast` mengikuti variabel model kecil lain (`apps/gateway/src/config.ts:41-46`); catatan: combo itu tidak ada di 9Router produksi, jadi produksi mengisinya seperti variabel lain (`zrouter/gpt-6-luna`).
 
 **Keluaran.** JSON yang divalidasi Zod: `{ facts: [{ action: 'add' | 'update', targetId?, text (≤ 300), evidence (≤ 200) }] }`, maksimal 3. Keluaran tidak sah = dibuang diam-diam (dicatat di log tanpa isi).
 
 **Penjaga, berurutan; gagal satu = fakta dibuang:**
 
 1. **Berpijak pada teks pemilik**: `evidence` harus ditemukan di teks pemilik yang dikirim (setelah spasi dan huruf besar/kecil diratakan). Ini memblokir fakta karangan model.
-2. **Pemindai injeksi**: `scanSkill({ body: text })` (`apps/gateway/src/modules/skills/scanner.ts:140`); temuan apa pun (`warning` atau `danger`) = buang. Fakta pendek tentang pemilik tidak punya alasan memuat pola itu.
-3. **Rahasia**: `findSecret(text)` (`proposals.ts:44`); ditambah aturan kecil untuk deret 13–19 digit (kartu) dan kode OTP. Yang dicatat di log hanya nama aturan, tidak pernah nilainya (kebijakan yang sama dengan `proposals.ts:25`).
+2. **Pemindai injeksi**: `scanSkill({ body: text })` (`apps/gateway/src/modules/skills/scanner.ts:145`); temuan apa pun (`warning` atau `danger`) = buang. Fakta pendek tentang pemilik tidak punya alasan memuat pola itu. Pemindai ini berbasis aturan dan "bukan jaminan keamanan" (`scanner.ts:3-9`); penjaga 1 dan pembatasan masukan ke teks pemilik adalah pertahanan utamanya.
+3. **Rahasia**: `findSecret(text)` (`proposals.ts:45`); ditambah aturan kecil untuk deret 13–19 digit (kartu) dan kode OTP. Yang dicatat di log hanya nama aturan, tidak pernah nilainya (kebijakan yang sama dengan `proposals.ts:24`).
 4. **Bentuk**: satu kalimat pernyataan tentang pemilik; ditolak bila diawali kata perintah kepada agent.
 5. **Duplikat**: dibandingkan dengan memori yang ada, usulan `pending`, dan usulan `rejected`/`undone` 90 hari terakhir: teks ternormalisasi sama, atau Jaccard kata kunci (`keywords`, `spaces/service.ts:80`) ≥ 0,8, atau kosinus ≥ 0,9 bila vektor ada.
 
@@ -334,7 +339,7 @@ Berlaku untuk run chat dan coding, seperti sekarang (`docs/API_CONTRACT.md:49`).
 
 | Perubahan | Detail |
 | --- | --- |
-| `MemorySchema` | `+ pinned: boolean` (slice 1); `+ source: 'owner' | 'extracted'`, `+ origin: { conversationId, messageId } | null` (slice 3). Server selalu mengisi; skema klien memberi bawaan agar fixture lama tetap sah |
+| `MemorySchema` | `+ pinned: boolean` (slice 1); `+ source` (`owner` atau `extracted`) dan `+ origin` (`{ conversationId, messageId }` atau null) (slice 3). Server selalu mengisi; skema klien memberi bawaan agar fixture lama tetap sah |
 | `CreateMemoryRequestSchema`, `UpdateMemoryRequestSchema` | `+ pinned?: boolean`; aturan "isi minimal satu" diperluas |
 | `GET /memories` | Bentuk tetap; hanya memori (usulan tidak pernah muncul di sini) |
 | `GET /memories/proposals?status=` | Daftar usulan, bawaan `pending`; meniru `/skills/proposals` (`apps/gateway/src/modules/skills/routes.ts:130-155`) |
@@ -394,7 +399,7 @@ Isi memori tetap tidak pernah keluar lewat event (`events.ts:248-252`). Catatan 
 | `EMBEDDING_MODEL` | kosong | Id model embedding di 9Router. Kosong = vektor mati, leksikal saja |
 | `EMBEDDING_DIMENSIONS` | kosong | Diteruskan sebagai `dimensions` bila model mendukung; saran ≤ 768 |
 | `EMBEDDING_QUERY_TIMEOUT_MS` | `800` | Batas embedding kueri di jalur recall |
-| `MEMORY_EXTRACT_MODE` | `off` | `off | propose | auto` |
+| `MEMORY_EXTRACT_MODE` | `off` | `off`, `propose`, atau `auto` |
 | `MEMORY_EXTRACT_MODEL` | `router-fast` | Model kecil pengekstrak |
 | `MEMORY_EXTRACT_DAILY_MAX` | `40` | Panggilan ekstraksi per 24 jam |
 | `SPACES_VECTOR` | `false` | Retrieval hibrida untuk ruang |
@@ -445,7 +450,7 @@ Urutan 1 → 2 → 4; slice 3 hanya butuh slice 1. Tiap slice bisa dirilis sendi
 Berguna sendiri: pesan sistem berhenti membengkak (kasus terburuk 100.000 karakter → ≤ 6.000), pemilik bisa menyematkan fakta inti, dan `context.used` melaporkan yang benar-benar dipakai. **Tanpa perubahan infra, env, atau panggilan model.**
 
 - Berkas: migrasi baru (`memories.pinned`, `tsv`, indeks GIN); `apps/gateway/src/db/schema/extra.ts`; `apps/gateway/src/modules/memory/{service,routes}.ts` + `recall.ts`; `apps/gateway/src/lib/retrieval.ts`; `apps/gateway/src/modules/runs/runner.ts`; `apps/gateway/src/modules/chat/{service,progress}.ts`; `apps/gateway/src/config.ts`; `apps/gateway/src/testing/stubs.ts`; `packages/contracts/src/{entities,api-schemas,events}.ts` + tes + OpenAPI; desktop `memory/MemorySection.tsx`, `progress/UsedSection.tsx`, `api/gateway.ts`, `copy.ts`; Android `MemoryApi.kt`, `MemoryRepository.kt`, `MemoryScreen.kt`, `MemoryViewModels.kt`, `ProgressSheet.kt`, `ProgressDto.kt`, `strings_memory.xml`; `apps/gateway/src/cli/eval-memory*.ts`; `docs/API_CONTRACT.md`, `docs/BACKLOG.md`, `CHANGELOG.md`.
-- Kriteria terima: (a) total karakter memori aktif ≤ anggaran → bagian memori sama persis dengan sekarang dan tes `memory.integration.test.ts:122` tetap lulus tanpa diubah; (b) di atas anggaran → panjang bagian ≤ anggaran, semua yang tersemat (sampai separuh anggaran) ada, sisanya menurut peringkat; (c) `context.used.memory.read` = jumlah butir yang disuntik dan `items` cocok; (d) satu pembacaan memori per run; (e) tidak ada permintaan ke 9Router dari jalur ini.
+- Kriteria terima: (a) total karakter memori aktif ≤ anggaran → bagian memori sama persis dengan sekarang dan tes `memory.integration.test.ts:123` tetap lulus tanpa diubah; (b) di atas anggaran → panjang bagian ≤ anggaran, semua yang tersemat (sampai separuh anggaran) ada, sisanya menurut peringkat; (c) `context.used.memory.read` = jumlah butir yang disuntik dan `items` cocok; (d) satu pembacaan memori per run; (e) tidak ada permintaan ke 9Router dari jalur ini.
 - Verifikasi: `pnpm --filter @aios/contracts test && pnpm --filter @aios/gateway test && pnpm --filter @aios/desktop test && pnpm typecheck && pnpm lint`; Android `cd apps/android && ./gradlew testDebugUnitTest`; `pnpm --filter @aios/gateway eval:memory`.
 
 ### Slice 2 — Embedding dan recall hibrida untuk memori
@@ -465,7 +470,7 @@ Berguna sendiri: pesan sistem berhenti membengkak (kasus terburuk 100.000 karakt
 
 - Prasyarat: slice 2 dan keputusan 4.
 - Berkas: `apps/gateway/src/modules/spaces/service.ts`; `modules/embeddings/*` (`chunk_id`, cache); `config.ts`; tes ruang; dokumen.
-- Kriteria terima: (a) `SPACES_VECTOR=false` → `contextFor` identik dengan sekarang (tes `spaces.integration.test.ts:165-193` lulus tanpa diubah); (b) nyala → pertanyaan parafrase menemukan potongan yang tidak cocok kata; format sitasi tetap; (c) dokumen baru langsung bisa dicari leksikal sebelum ter-embed; (d) menghapus dokumen/ruang menghapus vektornya; (e) cache tidak melewati batas memori.
+- Kriteria terima: (a) `SPACES_VECTOR=false` → `contextFor` identik dengan sekarang (tes `spaces.integration.test.ts:166-193` lulus tanpa diubah); (b) nyala → pertanyaan parafrase menemukan potongan yang tidak cocok kata; format sitasi tetap; (c) dokumen baru langsung bisa dicari leksikal sebelum ter-embed; (d) menghapus dokumen/ruang menghapus vektornya; (e) cache tidak melewati batas memori.
 - Verifikasi: `pnpm --filter @aios/gateway test`; `pnpm typecheck && pnpm lint`.
 
 ### Slice 5 (opsional) — Pencarian riwayat hibrida
@@ -484,7 +489,7 @@ Meng-embed pesan chat dan laporan riset untuk `GET /search`. Hanya bila slice 2 
 
 ## Lampiran — batas investigasi
 
-- Tidak ada perubahan di `/home/ubuntu/personal-ai-os`, `/srv`, atau container `aios-*`. Yang dibaca dari produksi: nama model dan URL 9Router di `gateway.env` (tanpa nilai rahasia), label compose container gateway, dan `PG_VERSION` image `postgres:16`.
-- 9Router: 5 GET dan 2 POST `/v1/embeddings`; basis data dan berkas terpasangnya hanya dibaca. Efek samping POST kedua ada di 2.3.
+- Checkout `/home/ubuntu/personal-ai-os` tidak diubah selain pendaftaran worktree dan branch `feat/memori-semantik` (`git worktree add`). Tidak ada perubahan di `/srv` atau container `aios-*`. Yang dibaca dari produksi: nama model dan URL 9Router di `gateway.env` (tanpa nilai rahasia), label compose dan pemakaian memori container (`docker inspect`, `docker ps`, `docker stats`), dan `PG_VERSION` image `postgres:16`. Postgres produksi tidak dikueri.
+- 9Router: 5 GET dan 2 POST `/v1/embeddings` (batas penugasan: maks 3 POST); basis data dan berkas terpasangnya hanya dibaca. Efek samping POST kedua ada di 2.3. Satu GET ke API tag Docker Hub untuk daftar tag pgvector.
 - Tidak diukur: jumlah baris produksi, latensi dan dimensi model embedding apa pun, latensi embedding lokal, mutu recall leksikal vs hibrida (itu tugas `pnpm eval:memory`).
 - Angka token memakai taksiran 4 karakter per token; repo belum punya penghitung token.
