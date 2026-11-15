@@ -35,6 +35,7 @@ Merangkum pekerjaan sesi P1 sampai P11 (dikerjakan di cabang `fix/*` dan `feat/*
 - Deretan perbaikan bug kecil P3 (lebar input `TextField`, label kuota sidebar, keterangan model dari data server, pemilih model dinonaktifkan untuk Hermes, xterm menunggu font siap) dan P4b (mesin dipaksa, chip agent di Topbar, `ProjectList` mati dihapus).
 - **Balapan status tim Orca** (gateway): tim dilaporkan `completed` sebelum rencana Lead tersimpan, sehingga panel berhenti memoll dan menampilkan "Tim selesai." tanpa tugas (penyebab flake `team.spec`).
 - Parser `SKILL.md` menolak skill publik yang `description`-nya ditulis sebagai skalar YAML bertingkat; daftar skill Hermes terpotong diam-diam di 300 entri (kini batas 2000 dan pemotongan diberitahukan).
+- **Deploy otomatis VPS tidak pernah berjalan**: `infra/scripts/auto-deploy.sh` tersimpan di git tanpa bit eksekusi (mode 100644), sehingga `aios-deploy.service` gagal `203/EXEC` setiap 10 menit sejak timer dipasang (2026-10-27). Mode diperbaiki menjadi 100755; `infra/scripts/selftest.sh` kini memeriksa bahwa setiap skrip yang dipanggil `ExecStart` unit di `infra/systemd/` bisa dieksekusi. Akibatnya, setelah perbaikan ini terpasang di VPS, timer benar-benar men-deploy tag rilis baru secara otomatis.
 
 ### Diketahui
 

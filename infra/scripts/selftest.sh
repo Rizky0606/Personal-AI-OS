@@ -287,6 +287,16 @@ rm -rf "$ROOT/ad-state"
 STUB_TAGS="v1.0.1" STUB_SUDO_FAIL=1 run_auto; code=$?
 [[ $code -eq 1 ]] && pass "backup tidak jalan: dibatalkan" || fail "kode keluar $code"
 expect_no_log '^deploy ' "tanpa backup tidak deploy"
+
+echo "systemd: skrip ExecStart bisa dieksekusi"
+# Unit memanggil skrip langsung (tanpa `bash`), jadi bit eksekusi wajib ada; tanpa itu systemd gagal 203/EXEC.
+# Uji di atas menjalankan skrip lewat `bash skrip.sh`, sehingga mode yang salah tidak terlihat di sana.
+for unit in "$HERE"/../systemd/*.service; do
+  script="$(sed -n 's#^ExecStart=[^ ]*/infra/scripts/\([^ ]*\).*#\1#p' "$unit")"
+  [[ -n "$script" ]] || continue
+  if [[ -x "$HERE/$script" ]]; then pass "$(basename "$unit") -> $script"; else fail "$(basename "$unit") -> $script tidak bisa dieksekusi (chmod +x)"; fi
+done
+
 echo "loadtest.mjs"
 if node --test "$HERE/make-latest-json.test.mjs" > "$ROOT/out.txt" 2>&1; then pass "latest.json updater"; else fail "uji make-latest-json"; cat "$ROOT/out.txt"; fi
 if node --test "$HERE/loadtest.test.mjs" > "$ROOT/out.txt" 2>&1; then pass "fungsi ringkasan CPU/memori"; else fail "uji fungsi loadtest"; cat "$ROOT/out.txt"; fi
