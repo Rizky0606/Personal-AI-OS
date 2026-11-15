@@ -40,3 +40,16 @@ Thumbs.db
 
 # Hasil pnpm shots:compare (dibuat ulang tiap dijalankan)
 docs/screenshots/_compare/
+
+# Perkakas agent lokal (Ruflo/Claude Code): konfigurasi, memori, dan data runtime per mesin, bukan bagian repo.
+# Petunjuk agent untuk repo ini ada di AGENTS.md; CLAUDE.md di sini hanya templat bawaan Ruflo.
+.claude/
+.claude-flow/
+.swarm/
+.agents/
+.mcp.json
+CLAUDE.md
+
+# Hasil pnpm e2e (dibuat ulang tiap dijalankan)
+e2e/.stack.json
+e2e/test-results/

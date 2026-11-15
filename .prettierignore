@@ -17,3 +17,9 @@ packages/ui-tokens/tokens.css
 packages/ui-tokens/Tokens.kt
 apps/gateway/drizzle
 infra/compose/searxng
+.claude
+.claude-flow
+.swarm
+.agents
+.mcp.json
+CLAUDE.md
