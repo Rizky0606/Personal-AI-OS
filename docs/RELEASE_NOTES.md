@@ -2,7 +2,7 @@
 
 ## Status: belum siap dipublikasikan
 
-Ini catatan kesiapan, bukan rilis yang sudah dipublikasikan. Belum ada tag `v1.1.0`, belum ada deploy ke VPS, dan belum digabung ke `main`. Versi metadata: desktop `1.1.0`, Android default `1.1.0` (`versionCode` 1001000).
+Ini catatan kesiapan, bukan rilis yang sudah dipublikasikan. Kodenya **sudah digabung ke `main`** (`b26d61e`, 2026-11-13, sama dengan `origin/main`) dan mencakup sesi P1 sampai P11. Belum ada tag `v1.1.0` (tag terbaru `v1.0.44`) dan belum ada deploy ke VPS. Versi metadata: desktop `1.1.0`, Android default `1.1.0` (`versionCode` 1001000).
 
 ## Apa yang baru, dalam bahasa pengguna
 
@@ -10,14 +10,22 @@ Ini catatan kesiapan, bukan rilis yang sudah dipublikasikan. Belum ada tag `v1.1
 - **Panel Progres**: saat agent bekerja, Anda bisa melihat rencananya (daftar langkah), hasil kerjanya (berkas, gambar, laporan), dan apa yang dia pakai (skill, memori, lampiran) — semua dalam satu panel, bisa dibuka ulang setelah selesai.
 - **Jawaban yang lebih kaya**: agent sekarang bisa menjawab dengan tabel, grafik sederhana, dan daftar langkah yang rapi, bukan hanya teks biasa.
 - **Bukti visual**: screenshot dan diagram yang dibuat agent muncul sebagai thumbnail yang bisa diklik untuk diperbesar.
-- **Kerja tim AI** (di dalam project): Anda bisa meminta agent membagi satu tugas besar jadi beberapa bagian dan mengerjakannya secara paralel — satu agent "ketua" merencanakan, agent "pekerja" mengerjakan. Anda tetap yang memutuskan apakah hasilnya dipakai.
+- **Kerja tim AI** (di dalam project): Anda bisa meminta agent membagi satu tugas besar jadi beberapa bagian — satu agent "ketua" merencanakan dan meninjau, agent "pekerja" mengerjakan bagian-bagian itu satu per satu (saat ini satu pekerja pada satu waktu). Anda tetap yang memutuskan apakah hasilnya dipakai.
 - **Pilihan mesin agent**: Anda bisa memaksa percakapan memakai mesin tertentu (otomatis, omp, Hermes, atau dsh — dsh masih berlabel "Pratinjau, belum diaudit").
 - Android mendapat panel izin yang lebih jelas dan panel Progres yang sama dengan desktop.
+- **Katalog skill** (P9): agent kini melihat daftar skill yang tersedia dan membuka sendiri yang ia perlukan, bukan dijejali semuanya. Panel Progres menunjukkan skill mana yang benar-benar dibuka.
+- **Halaman Skill di desktop** (P10): Anda bisa membuat skill sendiri, mengubahnya, menonaktifkan atau mengarsipkannya, melihat riwayat versi, dan memulihkan versi lama. Skill juga bisa dipasang dari skills.sh atau GitHub dan diimpor dari Hermes; isinya ditampilkan dan dipindai dulu sebelum dipasang, dan hanya teks petunjuknya yang diunduh (skrip tidak pernah diunduh atau dijalankan).
+- **Skill di Android** (P10): layar Skill di Pengaturan menampilkan daftar skill dengan sakelar aktif/nonaktif. Membuat, mengubah, memasang, dan impor tetap di desktop.
+- **Usulan skill dari agent** (P11): agent (dan Hermes) bisa mengusulkan skill baru atau perbaikan skill. Usulan tidak pernah aktif sendiri — Anda yang memilih Setujui, Edit lalu setujui, atau Tolak di desktop.
+- **Kurator skill mingguan** (P11): skill usulan agent yang tidak dibuka 30 hari ditandai usang dan setelah 90 hari diarsipkan (bisa dipulihkan); skill buatan Anda hanya ditandai; tidak ada yang pernah dihapus. Laporannya datang sebagai notifikasi.
 
 ## Yang diperbaiki
 
 - Bug langka: kadang setelah agent coding selesai bekerja, menerima atau menolak hasilnya bisa gagal diam-diam dan folder kerja sementaranya tidak terhapus. Sudah diperbaiki dan diuji ulang puluhan kali tanpa gagal.
 - Satu bug kecil di alat uji internal (tidak memengaruhi pengguna) ditemukan dan diperbaiki saat verifikasi menyeluruh sesi ini.
+- Panel kerja tim kadang menampilkan "Tim selesai." tanpa satu tugas pun lalu berhenti memperbarui diri. Penyebabnya di server (status tim dilaporkan selesai sebelum rencana tersimpan) dan sudah diperbaiki.
+- Skill publik yang sah kadang ditolak saat dipasang karena deskripsinya ditulis di beberapa baris; sekarang terbaca.
+- Daftar skill Hermes terpotong diam-diam di 300 skill; sekarang batasnya 2000 dan pemotongan diberitahukan.
 
 ## Yang BELUM bisa dipastikan (jangan anggap siap pakai untuk ini)
 
@@ -25,14 +33,16 @@ Ini catatan kesiapan, bukan rilis yang sudah dipublikasikan. Belum ada tag `v1.1
 - **Hermes** (mesin percakapan umum) hanya pernah diverifikasi nyata sekali, di sesi terpisah sebelumnya; alur pengguna lengkap versi ini belum dicoba dengan Hermes sungguhan, hanya tiruan.
 - Deploy ke server, backup/restore data, dan uji beban di VPS produksi **belum pernah dijalankan** untuk versi ini.
 - Instalasi Windows (aplikasi desktop) dan APK Android rilis (bertanda tangan) **belum dibuat** — hanya tersedia build debug untuk pengujian internal, disimpan di luar repo, belum pernah dibagikan.
+- **Skill** (P9–P11): ketepatan agent memilih skill belum diukur ulang setelah perbaikan nama skill; petunjuk "usulkan skill" belum diuji dengan model sungguhan; kurator mingguan dan pemantau skill Hermes belum pernah berjalan di server produksi (hanya pendaftaran jadwalnya yang diuji); Android belum punya layar usulan skill.
 
-## Bukti verifikasi (ringkas; detail lengkap di `docs/REPAIR_LOG.md` bagian "P8")
+## Bukti verifikasi (ringkas; detail lengkap di `docs/REPAIR_LOG.md` bagian "P8" dan `docs/BACKLOG.md` "Temuan P9" sampai "Temuan P11")
 
 - Build, pemeriksaan tipe, dan gaya kode: bersih dari clone baru.
 - Semua tes otomatis: dijalankan dua cara (sebagai pengguna biasa dan sebagai administrator sistem) — lulus, kecuali beberapa yang gagal karena keterbatasan mesin pengembangan ini sendiri (dicatat lengkap, bukan bug aplikasi).
 - Alur lengkap di aplikasi (login, chat, kerja tim, panel Progres, hentikan, muat ulang): diuji otomatis tiga kali berturut-turut, dua kali lulus sempurna.
 - Tampilan: dibandingkan dengan versi paling awal proyek ini secara otomatis; perubahan terlihat wajar sesuai fitur yang ditambahkan.
 - Pemeriksaan kode secara menyeluruh untuk memastikan tidak ada berkas kode yang ditulis tapi tidak pernah dipakai: tidak ditemukan.
+- Sesi skill (P9–P11), seperti dicatat di `docs/BACKLOG.md` "Temuan P11": pemeriksaan tipe 12 dari 12 paket, tes kontrak, gateway, dan desktop lulus, alur lengkap di aplikasi (e2e) lulus; pasang skill dari internet dan impor dari folder Hermes sungguhan dicoba nyata di mesin pengembangan.
 
 ## Paket dan checksum (disiapkan, TIDAK dipublikasikan)
 

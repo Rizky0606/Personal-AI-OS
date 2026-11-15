@@ -12,7 +12,7 @@ Produk ini adalah satu asisten AI pribadi dengan dua wajah: Windows untuk kerja 
 
 1. Satu akun, satu riwayat, satu memori untuk Windows dan Android.
 2. Tugas coding berjalan aman di folder project Windows, dengan hasil berupa diff yang bisa ditinjau.
-3. Setiap pesan otomatis diarahkan ke agent role yang tepat, tanpa perlu menulis `@role`.
+3. Agent dan skill ditentukan otomatis, tanpa memilih role dan tanpa menulis `@role`: dua agent tetap dipilih dari ada tidaknya project (chat per folder project di Windows = agent project, selain itu agent umum), dan skill spesialis ditawarkan dari paket kata kunci pesan atau dipilih dari katalog skill.
 4. Riset dan jadwal tetap berjalan di VPS walau aplikasi ditutup.
 
 ## Non-goals
@@ -81,7 +81,7 @@ Produk ini adalah satu asisten AI pribadi dengan dua wajah: Windows untuk kerja 
 ## Fitur server (dipakai keduanya)
 
 - Auth satu pemilik dengan perangkat terdaftar.
-- Router role otomatis dan registri role serta skill.
+- Dua agent tetap (umum dan project; agent peneliti hanya untuk fitur Riset) yang dipilih server dari ada tidaknya project dengan aturan tetap, tanpa router model; registri agent dan katalog skill (skill bawaan, buatan pengguna, terpasang dari luar, dan usulan agent), dengan skill spesialis dipilih dari paket kata kunci pesan atau manual per pesan.
 - Riwayat chat, kanban, jadwal, dan laporan riset sebagai sumber kebenaran.
 - Memori jangka panjang lewat Hermes.
 
@@ -94,7 +94,8 @@ Produk ini adalah satu asisten AI pribadi dengan dua wajah: Windows untuk kerja 
 
 ## Metrik keberhasilan
 
-- Routing benar minimal 90% pada set uji per role.
+- Pemilihan agent deterministik: chat per folder project di Windows selalu memakai agent project, selain itu agent umum (aturan tetap tanpa model, tercakup tes otomatis). Router role otomatis beserta target akurasi routing 90% sudah dihapus (`docs/BACKLOG.md` Fase 48).
+- Skill yang ditawarkan mengikuti paket kata kunci pesan dan pilihan pengguna; ketepatan skill yang benar-benar dibuka agent diukur dengan `pnpm eval:skills` (20 pesan contoh, bukan gerbang CI, belum ada ambang lulus).
 - Token pertama chat muncul di bawah 2 detik di jaringan normal.
 - Nol perubahan file di luar worktree tanpa persetujuan.
 - Reconnect otomatis setelah koneksi putus dalam 10 detik, tanpa langkah manual.

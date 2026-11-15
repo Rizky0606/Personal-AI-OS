@@ -4,7 +4,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/); ve
 
 ## [1.1.0] - 2026-11-08
 
-Merangkum pekerjaan sesi P1 sampai P8 (perbaikan berantai di cabang `fix/*`, belum digabung ke `main`). **Perombakan "Command Center" yang tercatat di sini sebelumnya sudah ditulis ulang total** menjadi shell "pulau" (lihat Diubah); catatan lama dihapus karena tidak lagi menggambarkan kode yang ada.
+Merangkum pekerjaan sesi P1 sampai P11 (dikerjakan di cabang `fix/*` dan `feat/*`; **sudah digabung ke `main`**, `b26d61e`, 2026-11-13). **Perombakan "Command Center" yang tercatat di sini sebelumnya sudah ditulis ulang total** menjadi shell "pulau" (lihat Diubah); catatan lama dihapus karena tidak lagi menggambarkan kode yang ada.
 
 ### Diubah
 
@@ -13,27 +13,34 @@ Merangkum pekerjaan sesi P1 sampai P8 (perbaikan berantai di cabang `fix/*`, bel
 - **Pemilihan mesin agent** (Otomatis/omp/Hermes/dsh) bisa dipaksa eksplisit per pesan lewat composer, dengan validasi konteks (omp butuh project, dsh tidak boleh di project).
 - **Palet Electric Slate** dan polish gerak (P0 sebelum rework P1) ditimpa oleh token shell pulau baru (radius, jarak, kontras); detail di `docs/DESIGN_SYSTEM.md`.
 - Hapus klaim role otomatis pada teks sambutan; hapus pemilih role manual (digantikan router otomatis lalu, akhirnya, dihapus total bersama skill paket per permintaan pemilik — lihat `docs/BACKLOG.md` Fase 48).
+- **Skill paket kata kunci tidak lagi ditempel utuh ke prompt** (P9): skill dari paket yang cocok hanya ditawarkan sebagai indeks (`# Skill tersedia`) dan agent membuka sendiri yang diperlukan (omp: `read skill://`, Hermes: `skill_view`); skill inti, milik agent, dan pilihan manual tetap ditempel. `SKILL_PACKS_EAGER_ENGINES` mengembalikan perilaku lama per mesin.
 
 ### Ditambah
 
 - **Panel Progres**: rencana (todo), hasil kerja (diff, berkas, gambar, laporan riset), dan konteks yang digunakan (skill, memori, lampiran) dalam satu panel tiga bagian; chip "Langkah N dari M" di Topbar.
 - **Jawaban kaya**: tabel, grafik, daftar langkah, dan angka penting lewat blok `aios-ui` (skill inti `rich-answers`, berlaku untuk semua role dan semua mesin).
 - **Thumbnail bukti**: screenshot dan SVG dari tool agent tampil sebagai thumbnail di baris aktivitas dan panel Progres; lightbox dengan Esc untuk menutup.
-- **Tim Orca (ORCA Lead → Worker)**: tombol "Kerjakan sebagai tim" di composer project; Lead (Hermes) merencanakan dan membagi tugas ke Worker (omp) paralel sampai batas tim; panel Progres menampilkan pohon Lead → tugas → Worker; persetujuan izin agregat dan tombol hentikan per-anggota/seluruh tim. Tidak ada auto-merge; pemilik memutuskan di luar tim.
+- **Tim Orca (ORCA Lead → Worker)**: tombol "Kerjakan sebagai tim" di composer project; Lead (Hermes) merencanakan, membagi tugas ke Worker (omp), dan meninjau hasilnya (terima, revisi, tolak). Tugas dikerjakan berurutan, satu Worker pada satu waktu (`maxWorkers` saat ini maksimal 1). Panel Progres menampilkan pohon Lead → tugas → Worker; persetujuan izin agregat dan tombol hentikan per-anggota/seluruh tim. Tidak ada auto-merge; pemilik memutuskan di luar tim.
 - **dsh** sebagai pilihan mesin pratinjau (label "Pratinjau", tooltip "belum diaudit"): butuh `DSH_COMMAND` dikonfigurasi di server, muncul di `GET /engines` bila jabat tangan ACP berhasil.
 - Rekaman nyata adapter Hermes (7 skenario, Hermes 0.22.5) menggantikan asumsi sebelumnya; dua temuan penting dicatat di `docs/ADAPTER_EVENTS.md`: Hermes tidak menghentikan tool yang berjalan saat koneksi diputus, dan `hermes.tool.progress` tidak pernah melapor gagal (galat masuk ke teks jawaban).
 - Android: panel izin baru (deskripsi lengkap, folder kerja, tiga tombol dengan target sentuh 48 dp, satu pengumuman TalkBack), panel Progres (fixture sama dengan desktop), cap build (`BuildConfig.BUILD_COMMIT`) di layar Tentang.
+- **Katalog skill** (P9): `GET /skills` dan `GET /skills/:id` dengan checksum; worker mengunduh skill yang ditawarkan ke cache sendiri dan omp hanya melihat skill itu; sinkron ke Hermes lewat langkah eksplisit `pnpm skills:sync-hermes`; `context.used` melaporkan `openedSkills`/`pinnedSkills` dan panel Progres menampilkan skill yang terbukti dibuka; evaluasi `pnpm eval:skills` (bukan tes CI).
+- **Skill pengguna** (P10): halaman Skill desktop (`/skills`: skill saya, pasang, Skill Hermes) untuk membuat, mengubah, menonaktifkan, mengarsipkan, menghapus, melihat riwayat versi, dan memulihkan; pasang dari skills.sh/GitHub dengan pratinjau, checksum terkunci, dan pemindai (hanya `SKILL.md` yang diunduh, tanpa skrip); impor dari folder Hermes dengan pratinjau. Android: layar Skill di Pengaturan (daftar dan aktif/nonaktif saja).
+- **Usulan skill dan kurator** (P11): agent mengusulkan skill baru atau tambalan lewat blok `aios-skill-proposal` (skill inti `propose-skill`), skill baru buatan Hermes terdeteksi sebagai usulan; usulan hanya menjadi skill setelah Setujui / Edit lalu setujui di desktop (maks. 1 per jawaban, 3 per 24 jam; rahasia ditolak). Kurator mingguan (Senin 03:00 UTC, bisa dijalankan manual) menandai skill `agent` yang tidak dibuka 30 hari, mengarsipkan setelah 90 hari, tidak pernah menghapus, dan mengirim laporan sebagai notifikasi.
 
 ### Diperbaiki
 
 - **Balapan `review.apply` vs run selesai** (worker): klien yang melihat run "selesai" lalu langsung menerima/menolak hasil bisa ditolak diam-diam (`run_active`) tanpa worktree pernah terhapus. Flag internal kini berubah serentak dengan event penutup, bukan menunggu pembersihan proses selesai.
 - Tes harness dsh (`dshTestIdentity`) yang salah mensimulasikan "bukan root" saat benar-benar dijalankan sebagai root di Linux (ditemukan saat verifikasi gerbang P8; tidak memengaruhi kode produksi).
 - Deretan perbaikan bug kecil P3 (lebar input `TextField`, label kuota sidebar, keterangan model dari data server, pemilih model dinonaktifkan untuk Hermes, xterm menunggu font siap) dan P4b (mesin dipaksa, chip agent di Topbar, `ProjectList` mati dihapus).
+- **Balapan status tim Orca** (gateway): tim dilaporkan `completed` sebelum rencana Lead tersimpan, sehingga panel berhenti memoll dan menampilkan "Tim selesai." tanpa tugas (penyebab flake `team.spec`).
+- Parser `SKILL.md` menolak skill publik yang `description`-nya ditulis sebagai skalar YAML bertingkat; daftar skill Hermes terpotong diam-diam di 300 entri (kini batas 2000 dan pemotongan diberitahukan).
 
 ### Diketahui
 
 - dsh sebagai root belum terbukti bekerja ujung-ke-ujung di CI Docker/VPS produksi (hanya diverifikasi di satu mesin pengembangan Linux dengan kendala tata letak folder yang spesifik mesin itu). Hermes dan dsh **nyata** (bukan tiruan) belum pernah dicoba dalam alur pengguna lengkap sejak P5 (Hermes) dan sama sekali (dsh). Lihat `docs/BACKLOG.md` "Ringkasan status gerbang P8" untuk daftar lengkap blocker/penting/nanti.
-- Belum digabung ke `main`; tag rilis dan deploy VPS **belum dilakukan** (lihat `docs/RELEASE_NOTES.md`).
+- Sudah digabung ke `main` (`b26d61e`), tetapi tag `v1.1.0` dan deploy VPS **belum dilakukan** (tag terbaru `v1.0.44`; lihat `docs/RELEASE_NOTES.md`).
+- Skill (P9–P11): ketepatan pemilihan skill belum diukur ulang setelah perbaikan nama indeks; `propose-skill` belum diuji terhadap model sungguhan; kurator dan pemantau Hermes belum dijalankan terhadap pg-boss produksi; Android tanpa layar usulan. Lihat `docs/BACKLOG.md` "Temuan P9" sampai "Temuan P11".
 
 ## [1.0.3] - 2026-10-25
 
