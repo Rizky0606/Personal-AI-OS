@@ -87,6 +87,8 @@ const MAX_TITLE_CHARS = 200;
 const MAX_HISTORY_MESSAGES = 100;
 /** Riwayat yang dikirim ke agent project; sama dengan batas `history` di kontrak run.start. */
 const PROJECT_HISTORY_MESSAGES = 40;
+/** Panjang teks untuk memilih memori: pesan ini ditambah pesan pemilik sebelumnya. */
+const RECALL_TEXT_MAX = 1000;
 
 export function createChatService(deps: {
   db: Database;
@@ -256,6 +258,30 @@ export function createChatService(deps: {
       .orderBy(desc(messages.id))
       .limit(PROJECT_HISTORY_MESSAGES);
     return historyFrom(rows.reverse());
+  }
+
+  /**
+   * Teks untuk memilih memori yang relevan: pesan pemilik ini, lalu pesan pemilik sebelumnya di percakapan yang sama
+   * supaya pesan susulan pendek ("yang itu saja") tetap punya kata kunci. Dokumen lampiran, konteks ruang, dan
+   * konteks tambahan tidak ikut.
+   */
+  async function recallTextFor(conversationId: string, beforeId: string, ownerText: string) {
+    const [previous] = await db
+      .select({ parts: messages.parts })
+      .from(messages)
+      .where(
+        and(
+          eq(messages.conversationId, conversationId),
+          eq(messages.author, 'user'),
+          lt(messages.id, beforeId),
+        ),
+      )
+      .orderBy(desc(messages.id))
+      .limit(1);
+    return [ownerText, previous ? textOf(previous.parts) : '']
+      .filter(Boolean)
+      .join('\n')
+      .slice(0, RECALL_TEXT_MAX);
   }
 
   async function sessionFor(
@@ -586,6 +612,10 @@ export function createChatService(deps: {
         ...(images.length ? { images } : {}),
         attachments: parts.flatMap((p) =>
           p.type === 'file' ? [{ fileId: p.fileId, name: p.name, mime: p.mime }] : [],
+        ),
+        // Gagal membaca pesan sebelumnya tidak boleh membatalkan run yang sudah tercatat.
+        recallText: await recallTextFor(conversationId, userMessage.id, routingText).catch(() =>
+          routingText.slice(0, RECALL_TEXT_MAX),
         ),
         projectId: conversation.projectId,
         ...(options?.continueFromRunId ? { continueFromRunId: options.continueFromRunId } : {}),

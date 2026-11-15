@@ -18,6 +18,7 @@ const memory = (over: Partial<Memory> = {}): Memory => ({
   id: '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f',
   text: 'Saya memakai Windows 11.',
   enabled: true,
+  pinned: false,
   createdAt: TS,
   updatedAt: TS,
   ...over,

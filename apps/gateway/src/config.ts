@@ -65,6 +65,19 @@ const EnvSchema = z.object({
   TASK_MODEL: withDefault(z.string().min(1), 'router-fast'),
   /** Batas run coding yang berjalan bersamaan per project; sisanya mengantre. */
   TASK_MAX_PARALLEL: withDefault(z.coerce.number().int().min(1).max(8), 2),
+  /**
+   * Anggaran baris fakta memori di pesan sistem (karakter; ±4 karakter per token). Selama semua memori aktif muat,
+   * semuanya disuntik; lebih dari itu dipilih per pesan. Kosong = bawaan 6000 (modules/memory/recall.ts).
+   */
+  MEMORY_RECALL_BUDGET_CHARS: z.preprocess(
+    blankToUndefined,
+    z.coerce.number().int().min(200).max(200_000).optional(),
+  ),
+  /** Maks fakta yang terpilih karena cocok kata dengan pesan, di luar yang tersemat. Kosong = bawaan 12. */
+  MEMORY_RECALL_TOP_K: z.preprocess(
+    blankToUndefined,
+    z.coerce.number().int().min(0).max(50).optional(),
+  ),
   /** File service account Firebase (JSON) untuk push FCM. Kosong = push dimatikan. Simpan di secrets/, bukan di repo. */
   FCM_SERVICE_ACCOUNT_FILE: optionalString,
   /** Batas waktu tiap cek dependensi di /readyz. */

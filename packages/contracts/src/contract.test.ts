@@ -1,8 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { endpoints } from './api.js';
+import { UpdateMemoryRequestSchema } from './api-schemas.js';
 import { PageQuerySchema, ProblemSchema } from './common.js';
-import { MessageSchema, RunSchema } from './entities.js';
+import { MemorySchema, MessageSchema, RunSchema } from './entities.js';
 import { ID_A, ID_B, ID_C, TS } from './fixtures.js';
 import { serializeOpenApiDocument } from './openapi/document.js';
 import {
@@ -323,6 +324,15 @@ describe('entitas', () => {
     expect(MessageSchema.safeParse(msg).success).toBe(true);
     expect(MessageSchema.safeParse({ ...msg, parts: [{ type: 'image' }] }).success).toBe(false);
     expect(MessageSchema.safeParse({ ...msg, author: 'tool' }).success).toBe(false);
+  });
+
+  it('Memory: jawaban server lama tanpa pinned tetap sah; PATCH boleh hanya pinned', () => {
+    const memory = { id: ID_A, text: 'Fakta', enabled: true, createdAt: TS, updatedAt: TS };
+    expect(MemorySchema.parse(memory).pinned).toBe(false);
+    expect(MemorySchema.parse({ ...memory, pinned: true }).pinned).toBe(true);
+    expect(UpdateMemoryRequestSchema.safeParse({ pinned: true }).success).toBe(true);
+    expect(UpdateMemoryRequestSchema.safeParse({}).success).toBe(false);
+    expect(UpdateMemoryRequestSchema.safeParse({ pinned: 'ya' }).success).toBe(false);
   });
 
   it('pagination: default 50, maksimum 100', () => {

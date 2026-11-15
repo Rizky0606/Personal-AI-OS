@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { memoryTitle } from './service.js';
+import { memoryTitle } from './recall.js';
 
 describe('memoryTitle (judul singkat fakta untuk context.used)', () => {
   it('fakta pendek utuh, huruf s dan titik tidak berubah', () => {

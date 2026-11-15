@@ -116,7 +116,13 @@ export async function conversationProgress(
       // Engine, model, dan memori mengikuti run terbaru.
       used.engine = event.engine;
       used.model = event.model;
-      used.memory = { read: event.memory.read, items: event.memory.items ?? [] };
+      // Event lama belum punya total/mode (payload mentah): field itu absen, bukan ditebak.
+      used.memory = {
+        read: event.memory.read,
+        ...(event.memory.total !== undefined ? { total: event.memory.total } : {}),
+        ...(event.memory.mode ? { mode: event.memory.mode } : {}),
+        items: event.memory.items ?? [],
+      };
     } else if (event.type === 'artifact.created') {
       seenFiles.add(event.fileId);
       outputs.push({

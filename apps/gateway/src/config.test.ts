@@ -43,6 +43,17 @@ describe('loadConfig', () => {
     });
   });
 
+  it('anggaran recall memori opsional: kosong = bawaan modul, angka dikonversi, nilai di luar batas ditolak', () => {
+    const blank = loadConfig({ ...base, MEMORY_RECALL_BUDGET_CHARS: '', MEMORY_RECALL_TOP_K: ' ' });
+    expect(blank.MEMORY_RECALL_BUDGET_CHARS).toBeUndefined();
+    expect(blank.MEMORY_RECALL_TOP_K).toBeUndefined();
+    expect(
+      loadConfig({ ...base, MEMORY_RECALL_BUDGET_CHARS: '4000', MEMORY_RECALL_TOP_K: '0' }),
+    ).toMatchObject({ MEMORY_RECALL_BUDGET_CHARS: 4000, MEMORY_RECALL_TOP_K: 0 });
+    expect(() => loadConfig({ ...base, MEMORY_RECALL_BUDGET_CHARS: '50' })).toThrow(ConfigError);
+    expect(() => loadConfig({ ...base, MEMORY_RECALL_TOP_K: '51' })).toThrow(ConfigError);
+  });
+
   it('dsh mati bila DSH_COMMAND kosong; bila diisi, folder kerja wajib dan UID/GID berpasangan', () => {
     expect(loadConfig(base).DSH_COMMAND).toBeUndefined();
     expect(() => loadConfig({ ...base, DSH_COMMAND: '/usr/local/bin/dsh' })).toThrow(

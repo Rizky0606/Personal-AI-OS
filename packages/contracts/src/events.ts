@@ -246,8 +246,19 @@ export const ArtifactCreatedEventSchema = z.object({
 export const CONTEXT_MEMORY_TITLE_MAX = 40;
 
 /**
+ * Cara memori dipilih untuk satu run: `all` = semua memori aktif muat di anggaran; `lexical` = tersemat + cocok
+ * kata + terbaru; `hybrid` = tersemat + gabungan cocok kata dan kemiripan makna.
+ */
+export const MemoryRecallModeSchema = z.enum(['all', 'lexical', 'hybrid']);
+export type MemoryRecallMode = z.infer<typeof MemoryRecallModeSchema>;
+
+/** Alasan satu fakta terpilih. Absen = ikut karena semua memori aktif disuntik (`mode: all`). */
+export const MemoryRecallViaSchema = z.enum(['pinned', 'lexical', 'vector', 'hybrid', 'recent']);
+export type MemoryRecallVia = z.infer<typeof MemoryRecallViaSchema>;
+
+/**
  * Konteks yang dipakai run, dikirim gateway sekali saat run mulai (setelah router memilih role dan skill, dan
- * setelah memori dibaca). Alat yang dipakai TIDAK ada di sini: klien menghitungnya dari `tool.started`. Isi memori
+ * setelah memori dipilih). Alat yang dipakai TIDAK ada di sini: klien menghitungnya dari `tool.started`. Isi memori
  * dan isi lampiran tidak pernah dikirim, hanya jumlah dan judul singkat fakta serta nama berkas.
  */
 export const ContextUsedEventSchema = z.object({
@@ -263,9 +274,19 @@ export const ContextUsedEventSchema = z.object({
   /** Skill yang ditempel utuh: skill inti, milik agent, dan pilihan manual composer. */
   pinnedSkills: z.array(z.string().min(1).max(80)).max(40).default([]),
   memory: z.object({
+    /** Fakta yang benar-benar disuntik ke pesan sistem run ini. */
     read: z.number().int().nonnegative(),
+    /** Jumlah memori aktif saat run mulai; `read` < `total` berarti sebagian tidak ikut. Absen pada event lama. */
+    total: z.number().int().nonnegative().optional(),
+    mode: MemoryRecallModeSchema.optional(),
     items: z
-      .array(z.object({ id: IdSchema, title: z.string().max(CONTEXT_MEMORY_TITLE_MAX + 1) }))
+      .array(
+        z.object({
+          id: IdSchema,
+          title: z.string().max(CONTEXT_MEMORY_TITLE_MAX + 1),
+          via: MemoryRecallViaSchema.optional(),
+        }),
+      )
       .max(50)
       .optional(),
   }),

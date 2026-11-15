@@ -10,6 +10,8 @@ import {
   canTransition,
   workerBranchFor,
   type AgentEvent,
+  type MemoryRecallMode,
+  type MemoryRecallVia,
   type MessagePart,
   type RunError,
   type QuestionAnswer,
@@ -74,6 +76,11 @@ export interface LaunchInput {
   images?: StartRunInput['images'];
   /** Berkas lampiran pesan ini (hanya metadata) untuk event `context.used`; isinya tidak lewat sini. */
   attachments?: { fileId: string; name: string; mime: string }[];
+  /**
+   * Teks untuk memilih memori yang relevan: pesan pemilik (dan pesan pemilik sebelumnya), tanpa dokumen lampiran,
+   * konteks ruang, atau konteks tambahan. Kosong = hanya memori tersemat dan terbaru yang bisa terpilih.
+   */
+  recallText?: string;
   /** Project percakapan ini; wajib untuk role yang berjalan di worker (omp). */
   projectId: string | null;
   /** Revisi setelah komentar review: melanjutkan worktree dan branch run ini. */
@@ -161,11 +168,20 @@ export interface RunnerDeps {
     };
     get(roleId: string): { engine: string; model?: string } | undefined;
   };
-  /** Memori pemilik (W17) yang ditambahkan ke pesan sistem setiap run; tanpa ini tidak ada memori. */
+  /**
+   * Memori pemilik (W17) untuk pesan sistem; tanpa ini tidak ada memori. Dipanggil SEKALI per run: `section` masuk
+   * ke pesan sistem dan `summary` (jumlah, cara pemilihan, judul singkat; bukan isi) ke setiap `context.used` run itu.
+   */
   memory?: {
-    promptSection(): Promise<string>;
-    /** Jumlah dan judul singkat fakta yang masuk ke konteks, untuk event `context.used` (bukan isinya). */
-    summary?(): Promise<{ read: number; items: { id: string; title: string }[] }>;
+    recall(input: { text: string }): Promise<{
+      section: string;
+      summary: {
+        read: number;
+        total: number;
+        mode: MemoryRecallMode;
+        items: { id: string; title: string; via?: MemoryRecallVia }[];
+      };
+    }>;
   };
   /** Folder kiriman: berkas buatan agent di server ditempel ke jawaban saat run chat selesai. */
   outbox?: {
@@ -240,6 +256,8 @@ interface Active {
   done: Promise<void>;
 }
 
+type ContextMemory = Extract<AgentEvent, { type: 'context.used' }>['memory'];
+
 const textOf = (events: Iterable<AgentEvent>) => {
   let text = '';
   for (const e of events) if (e.type === 'message.delta') text += e.text;
@@ -249,6 +267,29 @@ const textOf = (events: Iterable<AgentEvent>) => {
 export function createRunner(deps: RunnerDeps): Runner {
   const { db, store, hub, adapter, log } = deps;
   const active = new Map<string, Active>();
+
+  /**
+   * Memori untuk satu run, dipilih SEKALI: bagian pesan sistem dan isi `context.used` berasal dari pemilihan yang
+   * sama. Gagal memuat (mis. database bermasalah) tidak menggagalkan run: run berjalan tanpa memori.
+   */
+  async function recallMemory(text: string): Promise<{ section: string; used: ContextMemory }> {
+    if (!deps.memory) return { section: '', used: { read: 0 } };
+    try {
+      const { section, summary } = await deps.memory.recall({ text });
+      return {
+        section,
+        used: {
+          read: summary.read,
+          total: summary.total,
+          mode: summary.mode,
+          ...(summary.items.length ? { items: summary.items } : {}),
+        },
+      };
+    } catch (err) {
+      log?.warn({ err }, 'memori gagal dimuat; run berjalan tanpanya');
+      return { section: '', used: { read: 0 } };
+    }
+  }
 
   /**
    * Pesan sistem run: bundel role, memori pemilik, lalu aturan project (bila run di project). Bagian tambahan yang
@@ -271,6 +312,7 @@ export function createRunner(deps: RunnerDeps): Runner {
     eagerSkillPacks = false,
     skillNamePrefix = '',
     catalogSkills: NonNullable<BundleOptions['catalogSkills']> = [],
+    memory = '',
   ): Promise<{ prompt: string; skills: readonly string[]; skillIds: readonly string[] }> {
     const bundled = deps.roles.bundle(roleId, skills, {
       suggestedSkills,
@@ -287,7 +329,6 @@ export function createRunner(deps: RunnerDeps): Runner {
         return '';
       }
     };
-    const memory = await extra('memori', () => deps.memory?.promptSection());
     const rules = projectId
       ? await extra('aturan project', () => deps.projectRules?.rulesSection(projectId))
       : '';
@@ -334,10 +375,10 @@ export function createRunner(deps: RunnerDeps): Runner {
 
     const emit = (event: AgentEvent) => store.append(run.id, event);
 
-    /**
-     * Event `context.used`: skill yang dimuat, memori (jumlah dan judul singkat, bukan isi), dan lampiran (nama berkas).
-     * Gagal membaca ringkasan memori tidak menggagalkan run.
-     */
+    /** Memori yang disuntik run ini; diisi sekali sebelum pesan sistem disusun, dipakai semua `context.used`. */
+    let memoryUsed: ContextMemory = { read: 0 };
+
+    /** Event `context.used`: skill yang dimuat, memori (jumlah dan judul singkat, bukan isi), dan lampiran (nama berkas). */
     const emitContextUsed = async (ctx: {
       runId: string;
       role: string;
@@ -348,12 +389,6 @@ export function createRunner(deps: RunnerDeps): Runner {
       pinnedSkills: readonly string[];
       attachments: { fileId: string; name: string; mime: string }[];
     }) => {
-      let memory: { read: number; items: { id: string; title: string }[] } = { read: 0, items: [] };
-      try {
-        memory = (await deps.memory?.summary?.()) ?? memory;
-      } catch (err) {
-        log?.warn({ err }, 'ringkasan memori gagal dimuat; context.used tanpa memori');
-      }
       await emit({
         type: 'context.used',
         runId: ctx.runId,
@@ -363,7 +398,7 @@ export function createRunner(deps: RunnerDeps): Runner {
         skills: [...ctx.skills],
         openedSkills: [...(ctx.openedSkills ?? [])],
         pinnedSkills: [...ctx.pinnedSkills],
-        memory: { read: memory.read, ...(memory.items.length ? { items: memory.items } : {}) },
+        memory: memoryUsed,
         attachments: ctx.attachments.slice(0, 20),
       });
     };
@@ -565,6 +600,8 @@ export function createRunner(deps: RunnerDeps): Runner {
           : coding
             ? 'omp'
             : (deps.roles.get(chosenRole)?.engine ?? 'hermes');
+        // Memori dipilih sekali per run dari teks pemilik; pesan sistem dan `context.used` memakai hasil yang sama.
+        const memory = await recallMemory(input.recallText ?? '');
         const system = await systemPromptFor(
           chosenRole,
           input.projectId ?? null,
@@ -578,7 +615,9 @@ export function createRunner(deps: RunnerDeps): Runner {
           // Hermes membuka skill hasil sinkron bernama `aios-<id>`; omp membuka `skill://<id>`.
           engineName === 'hermes' ? HERMES_SKILL_PREFIX : '',
           deps.catalogSkills?.(engineName as 'hermes' | 'omp' | 'dsh') ?? [],
+          memory.section,
         );
+        memoryUsed = memory.used;
         // `skills` tetap berarti "skill yang dimuat ke prompt" (kompatibel dengan klien lama); `pinnedSkills`
         // menamai himpunan yang sama secara eksplisit; `openedSkills` hanya diisi dari pembukaan yang teramati.
         const contextBase = {
