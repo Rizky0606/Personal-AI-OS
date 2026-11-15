@@ -9191,7 +9191,7 @@
         "tags": [
           "Model"
         ],
-        "summary": "Engine yang bisa dipilih per pesan (saat ini dsh) dan ketersediaannya",
+        "summary": "Engine yang bisa dipilih per pesan (hermes, omp, dsh) dan ketersediaannya",
         "security": [
           {
             "bearerAuth": []

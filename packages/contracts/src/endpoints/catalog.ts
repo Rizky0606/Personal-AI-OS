@@ -52,7 +52,7 @@ export const catalogEndpoints: readonly Endpoint[] = [
     method: 'get',
     path: '/engines',
     tag: 'Model',
-    summary: 'Engine yang bisa dipilih per pesan (saat ini dsh) dan ketersediaannya',
+    summary: 'Engine yang bisa dipilih per pesan (hermes, omp, dsh) dan ketersediaannya',
     auth: true,
     responses: [json(200, 'Daftar engine', EngineListSchema)],
     errors: [401],

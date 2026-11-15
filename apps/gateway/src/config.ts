@@ -39,7 +39,10 @@ const EnvSchema = z.object({
   SEARXNG_URL: withDefault(httpUrl, 'http://127.0.0.1:8888'),
   /** Combo 9Router untuk model kecil. */
   TITLE_MODEL: withDefault(z.string().min(1), 'router-fast'),
-  /** Combo 9Router untuk router role (suhu 0, keluaran JSON). */
+  /**
+   * Combo 9Router model kecil untuk membuat kueri pencarian web (`webSearch`, suhu 0). Nama variabel
+   * peninggalan router role yang sudah dihapus (BACKLOG.md Fase 48); tidak ada lagi router model.
+   */
   ROUTER_MODEL: withDefault(z.string().min(1), 'router-fast'),
   /** Combo 9Router untuk perencanaan dan sintesis laporan riset. */
   RESEARCH_MODEL: withDefault(z.string().min(1), 'research-main'),
