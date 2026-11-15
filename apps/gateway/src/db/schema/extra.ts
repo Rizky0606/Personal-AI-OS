@@ -161,17 +161,25 @@ export const auditLog = pgTable(
   (t) => [index('audit_log_ts_idx').on(t.ts)],
 );
 
-/** Memori yang terlihat (W17): fakta tentang pemilik, disuntik ke pesan sistem setiap run bila aktif. */
+/**
+ * Memori yang terlihat (W17): fakta tentang pemilik. Yang aktif dipilih per pesan untuk pesan sistem (recall);
+ * yang tersemat selalu ikut. `tsv` dipakai pemeringkatan cocok kata, sama dengan `space_chunks`.
+ */
 export const memories = pgTable(
   'memories',
   {
     id: id(),
     text: text('text').notNull(),
     enabled: boolean('enabled').notNull().default(true),
+    pinned: boolean('pinned').notNull().default(false),
+    tsv: tsvector('tsv').generatedAlwaysAs((): SQL => sql`to_tsvector('simple', ${memories.text})`),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (t) => [index('memories_created_idx').on(t.createdAt)],
+  (t) => [
+    index('memories_created_idx').on(t.createdAt),
+    index('memories_tsv_idx').using('gin', t.tsv),
+  ],
 );
 
 /** Templat prompt (W27): prompt tersimpan yang dipanggil dengan `/nama` di composer. */
