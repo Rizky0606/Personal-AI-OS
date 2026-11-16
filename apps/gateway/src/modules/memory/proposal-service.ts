@@ -442,7 +442,8 @@ export function createMemoryProposalService(deps: {
               }),
         });
         log?.info({ conversationId, saved, mode }, 'ekstraksi memori selesai');
-        if (pendingIds.length > 0) push?.memoryProposals({ conversationId, proposalIds: pendingIds });
+        if (pendingIds.length > 0)
+          push?.memoryProposals({ conversationId, proposalIds: pendingIds });
       }
       return saved;
     },
