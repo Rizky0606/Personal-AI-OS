@@ -210,6 +210,10 @@ describe('buildActivity: aksi saat ini dan langkah', () => {
     expect(label('mcp__github__create_issue')).toBe('Menjalankan alat: mcp__github__create_issue');
     expect(label('mcp__aios_tools_web_search')).toBe('Mencari di web');
     expect(label('mcp__aios_tools__web_read')).toBe('Mencari di web');
+    expect(label('mcp__aios_tools_memory_list')).toBe('Membaca data AIOS');
+    expect(label('mcp__aios_tools_space_search')).toBe('Membaca data AIOS');
+    expect(label('mcp__aios_tools__task_list')).toBe('Membaca data AIOS');
+    expect(label('mcp__aios_tools_schedule_list')).toBe('Membaca data AIOS');
     expect(label('mcp__aios_tools_lain')).toBe('Menjalankan alat: mcp__aios_tools_lain');
     expect(label('')).toBe('Menjalankan alat');
   });

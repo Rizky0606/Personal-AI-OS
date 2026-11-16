@@ -115,6 +115,7 @@ private fun JsonObject.toView(): ProgressView {
 
 private fun toolGroupOf(name: String) = when (name) {
     "web" -> app.aios.android.ui.chat.activity.ToolGroup.Web
+    "data" -> app.aios.android.ui.chat.activity.ToolGroup.Data
     "browser" -> app.aios.android.ui.chat.activity.ToolGroup.Browser
     "terminal" -> app.aios.android.ui.chat.activity.ToolGroup.Terminal
     "files" -> app.aios.android.ui.chat.activity.ToolGroup.Files
@@ -230,5 +231,31 @@ class ProgressBuilderTest {
         assertEquals(ToolKind.Web, kindOf(" MCP__AIOS_TOOLS__WEB_READ "))
         assertEquals(null, kindOf("mcp__aios_tools_lain"))
         assertEquals(null, kindOf("mcp__github__x"))
+    }
+
+    @Test
+    fun toolDataAiosToolsMasukGrupDataSetelahWebBukanKonektor() {
+        val response = ConversationProgress(
+            used = app.aios.android.data.api.ProgressUsedDto(
+                tools = listOf(
+                    "bash",
+                    "mcp__aios_tools_task_list",
+                    "mcp__aios_tools__memory_list",
+                    "mcp__aios_tools_web_search"
+                )
+            )
+        )
+        val view = buildProgress(response, null, null, 0, texts)
+        assertEquals(listOf(ToolGroup.Web, ToolGroup.Data, ToolGroup.Terminal), view.used.tools)
+        assertEquals(emptyList<String>(), view.used.connectors)
+    }
+
+    @Test
+    fun jenisToolDataAiosToolsAdalahData() {
+        assertEquals(ToolKind.Data, kindOf("mcp__aios_tools_memory_list"))
+        assertEquals(ToolKind.Data, kindOf("mcp__aios_tools_space_search"))
+        assertEquals(ToolKind.Data, kindOf(" MCP__AIOS_TOOLS__TASK_LIST "))
+        assertEquals(ToolKind.Data, kindOf("mcp__aios_tools_schedule_list"))
+        assertEquals(null, kindOf("mcp__aios_tools_memory_propose"))
     }
 }

@@ -31,7 +31,7 @@ data class ProgressChip(
 )
 
 /** Jenis alat yang ditampilkan di "Digunakan dalam sesi ini". */
-enum class ToolGroup { Web, Browser, Terminal, Files, Subagent }
+enum class ToolGroup { Web, Data, Browser, Terminal, Files, Subagent }
 
 data class ProgressUsed(
     val uploads: List<Pair<String, String>> = emptyList(),
@@ -56,6 +56,7 @@ data class ProgressView(
 
 private val TOOL_GROUP: Map<ToolKind, ToolGroup> = mapOf(
     ToolKind.Web to ToolGroup.Web,
+    ToolKind.Data to ToolGroup.Data,
     ToolKind.Browser to ToolGroup.Browser,
     ToolKind.Command to ToolGroup.Terminal,
     ToolKind.Read to ToolGroup.Files,
@@ -65,6 +66,7 @@ private val TOOL_GROUP: Map<ToolKind, ToolGroup> = mapOf(
 )
 private val TOOL_GROUP_ORDER = listOf(
     ToolGroup.Web,
+    ToolGroup.Data,
     ToolGroup.Browser,
     ToolGroup.Terminal,
     ToolGroup.Files,
@@ -177,7 +179,7 @@ fun buildProgress(
     val groups = linkedSetOf<ToolGroup>()
     val connectors = mutableListOf<String>()
     for (name in toolNames) {
-        // Tool `aios_tools` milik sistem sendiri: dihitung ke grup alat (web), bukan konektor.
+        // Tool `aios_tools` milik sistem sendiri: dihitung ke grup alat (web atau data), bukan konektor.
         if (name.startsWith("mcp__") && aiosToolOf(name) == null) {
             connectors += name.split("__").getOrNull(1) ?: name
             continue

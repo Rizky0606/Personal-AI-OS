@@ -98,6 +98,28 @@ describe('buildProgress: aturan penggabungan', () => {
     expect(view.used.connectors).toEqual(['github']);
   });
 
+  it('tool data aios_tools masuk grup "Data AIOS" setelah web, bukan konektor', () => {
+    const base = response(['completed']);
+    const view = buildProgress(
+      {
+        ...base,
+        used: {
+          ...base.used,
+          tools: [
+            'bash',
+            'mcp__aios_tools_task_list',
+            'mcp__aios_tools__memory_list',
+            'mcp__aios_tools_web_search',
+          ],
+        },
+      },
+      undefined,
+      0,
+    );
+    expect(view.used.tools).toEqual(['web', 'data', 'terminal']);
+    expect(view.used.connectors).toEqual([]);
+  });
+
   it('chip bernomor dari langkah aktif; semua selesai: N dari N; di sela pembaruan: langkah berikutnya', () => {
     const chip = (s: Parameters<typeof plan>[0]) => buildProgress(response(s), undefined, 0).chip;
     expect(chip(['completed', 'completed', 'in_progress', 'pending'])).toEqual({

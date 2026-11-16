@@ -24,6 +24,7 @@ enum class ToolKind(val id: String) {
     Read("read"),
     Search("search"),
     Web("web"),
+    Data("data"),
     Browser("browser"),
     Subagent("subagent"),
     Plan("plan")
@@ -92,11 +93,12 @@ internal fun kindOf(name: String): ToolKind? {
     val key = name.trim().lowercase()
     TOOL_KINDS[key]?.let { return it }
     if (key.startsWith("browser_")) return ToolKind.Browser
-    if (aiosToolOf(key) != null) return ToolKind.Web
-    return null
+    val gatewayTool = aiosToolOf(key) ?: return null
+    return if (gatewayTool in AIOS_NETWORK_TOOLS) ToolKind.Web else ToolKind.Data
 }
 
-private val AIOS_TOOL_NAMES = setOf("web_search", "web_read")
+private val AIOS_NETWORK_TOOLS = setOf("web_search", "web_read")
+private val AIOS_TOOL_NAMES = AIOS_NETWORK_TOOLS + setOf("memory_list", "space_search", "task_list", "schedule_list")
 
 /**
  * Nama tool gateway (server MCP `aios_tools`) bila [name] salah satunya, selain itu null. omp menamai
