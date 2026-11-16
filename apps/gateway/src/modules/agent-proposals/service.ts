@@ -141,10 +141,10 @@ export function createAgentProposalService(deps: {
     if (edits.task) {
       throw new AppError(400, 'edit_kind_mismatch', 'Usulan ini jadwal, bukan kartu.');
     }
-    const { enabled: _enabled, ...scheduleEdits } = edits.schedule ?? {};
+    // `enabled` bukan bagian payload usulan: dibuang oleh parse (objek Zod non-strict) dan dipakai saat membuat jadwal.
     const schedule = ProposedScheduleSchema.parse({
       ...ProposedScheduleSchema.parse(row.payload),
-      ...scheduleEdits,
+      ...edits.schedule,
     });
     return { ...schedule, cron: checkScheduleCron(schedule.cron, schedule.timezone) };
   }
