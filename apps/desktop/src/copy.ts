@@ -885,7 +885,9 @@ export const copy = {
       connectors: 'Konektor',
       /** `total` = memori aktif; ditampilkan hanya bila sebagian tidak ikut. */
       memoryRead: (n: number, total?: number) =>
-        total !== undefined && total > n ? `Dibaca · ${n} dari ${total} fakta` : `Dibaca · ${n} fakta`,
+        total !== undefined && total > n
+          ? `Dibaca · ${n} dari ${total} fakta`
+          : `Dibaca · ${n} fakta`,
       memoryMode: {
         all: 'Semua memori aktif ikut',
         lexical: 'Dipilih: tersemat, cocok kata, terbaru',

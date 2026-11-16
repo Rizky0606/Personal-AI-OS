@@ -142,15 +142,7 @@ interface MemoryRowProps {
   onDelete: () => void;
 }
 
-function MemoryRow({
-  memory,
-  index,
-  disabled,
-  onToggle,
-  onPin,
-  onSave,
-  onDelete,
-}: MemoryRowProps) {
+function MemoryRow({ memory, index, disabled, onToggle, onPin, onSave, onDelete }: MemoryRowProps) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(memory.text);
   const m = copy.memory;
