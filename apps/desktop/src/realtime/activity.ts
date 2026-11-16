@@ -1,4 +1,4 @@
-import { AIOS_NETWORK_TOOLS, aiosToolOf } from '@aios/contracts';
+import { AIOS_NETWORK_TOOLS, AIOS_PROPOSE_TOOLS, aiosToolOf } from '@aios/contracts';
 import { copy } from '../copy';
 import { isSettled, type LiveRun, type ToolStep } from './liveRun';
 
@@ -116,9 +116,12 @@ export function toolKindOf(name: string): ToolKind | null {
   const key = name.trim().toLowerCase();
   if (Object.hasOwn(TOOL_KINDS, key)) return TOOL_KINDS[key] ?? null;
   if (key.startsWith('browser_')) return 'browser';
-  // Tool milik gateway (server MCP `aios_tools`), bukan konektor pihak ketiga: web atau baca data sistem.
+  // Tool milik gateway (server MCP `aios_tools`), bukan konektor pihak ketiga: web, baca data sistem, atau usulan.
   const gatewayTool = aiosToolOf(key);
-  if (gatewayTool) return AIOS_NETWORK_TOOLS.includes(gatewayTool) ? 'web' : 'data';
+  if (gatewayTool) {
+    if (AIOS_NETWORK_TOOLS.includes(gatewayTool)) return 'web';
+    return AIOS_PROPOSE_TOOLS.includes(gatewayTool) ? 'propose' : 'data';
+  }
   return null;
 }
 

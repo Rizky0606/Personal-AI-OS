@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { api } from '../app/services';
-import type { ProposalQuery } from './gateway';
+import type { AgentProposalQuery, ProposalQuery } from './gateway';
 
 const MINUTES = 60_000;
 
@@ -107,6 +107,18 @@ export const useSkillProposals = (params: ProposalQuery = {}) =>
 export const useMemories = () => useQuery({ queryKey: ['memories'], queryFn: api.listMemories });
 export const useMemoryProposals = () =>
   useQuery({ queryKey: ['memoryProposals'], queryFn: api.listMemoryProposals });
+
+/** Usulan kartu/jadwal dari agent; disegarkan oleh notifikasi `agent_proposal` (lihat userEvents). */
+export const useAgentProposals = (params: AgentProposalQuery = {}) =>
+  useQuery({
+    queryKey: [
+      'agentProposals',
+      params.status ?? 'pending',
+      params.kind ?? null,
+      params.projectId ?? null,
+    ],
+    queryFn: () => api.listAgentProposals(params),
+  });
 
 /** Run coding untuk Ruang Kerja; dimuat ulang tiap 5 detik selama ada run yang belum final. */
 export const useWorkspaceRuns = () =>

@@ -33,6 +33,9 @@ export function handleUserEvent(event: ServerEvent, queryClient: QueryClient): v
         // Usulan memori baru (mode propose) atau memori yang disimpan otomatis (mode auto).
         void queryClient.invalidateQueries({ queryKey: ['memoryProposals'] });
         void queryClient.invalidateQueries({ queryKey: ['memories'] });
+      } else if (event.topic === 'agent_proposal') {
+        // Usulan kartu atau jadwal baru dari agent (tool `task_propose`/`schedule_propose`).
+        void queryClient.invalidateQueries({ queryKey: ['agentProposals'] });
       }
       if (event.level === 'info' && !useUiStore.getState().inAppToasts) break;
       useToastStore.getState().push(event.title, event.level === 'info' ? 'info' : 'danger');

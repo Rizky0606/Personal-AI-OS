@@ -27,6 +27,9 @@ describe('toolKind', () => {
     expect(toolKind('mcp__aios_tools__web_read')).toBe('web');
     expect(toolKind('mcp__aios_tools_task_list')).toBe('data');
     expect(toolKind('mcp__aios_tools__space_search')).toBe('data');
+    expect(toolKind('mcp__aios_tools_task_propose')).toBe('propose');
+    expect(toolKind('mcp__aios_tools__schedule_propose')).toBe('propose');
+    expect(toolKind('mcp__aios_tools_memory_propose')).toBe('propose');
     expect(toolKind('mcp__github__create_issue')).toBe('other');
     expect(toolKind('baca_tautan')).toBe('web');
     expect(toolKind('bash')).toBe('command');

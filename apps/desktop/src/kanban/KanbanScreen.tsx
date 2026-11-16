@@ -3,6 +3,7 @@ import { Plus, Sparkles } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';
 import type { TaskProposal } from '../api/gateway';
+import { TaskProposals } from '../agentProposals/AgentProposals';
 import { useRoles, useTasks } from '../api/queries';
 import { useOnline } from '../app/hooks';
 import { copy } from '../copy';
@@ -99,6 +100,10 @@ function Board({ projectId, projectName }: { projectId: string; projectName: str
           </>
         }
       />
+      {/* Usulan kartu dari agent; pembungkus hilang bila tidak ada usulan. */}
+      <div className="shrink-0 px-6 pb-4 empty:hidden">
+        <TaskProposals projectId={projectId} />
+      </div>
       <StateView
         state={view}
         loadingLabel={copy.kanban.loading}
