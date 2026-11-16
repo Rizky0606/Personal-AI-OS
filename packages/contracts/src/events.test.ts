@@ -465,7 +465,12 @@ const userCases: Record<UserEvent['type'], Cases> = {
     valid: [
       { type: 'notification', title: 'Run selesai', level: 'info' },
       { type: 'notification', title: 'Kuota menipis', body: 'Sisa 10%', level: 'warning' },
-      { type: 'notification', title: 'Usulan memori baru', level: 'info', topic: 'memory_proposal' },
+      {
+        type: 'notification',
+        title: 'Usulan memori baru',
+        level: 'info',
+        topic: 'memory_proposal',
+      },
     ],
     invalid: [
       { type: 'notification', title: '', level: 'info' },

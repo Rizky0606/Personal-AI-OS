@@ -62,7 +62,8 @@ type Executor = Pick<Database, 'select' | 'insert' | 'update' | 'delete'>;
 
 const target = aliasedTable(memories, 'target');
 
-const clip = (text: string, max: number) => (text.length > max ? `${text.slice(0, max - 1)}…` : text);
+const clip = (text: string, max: number) =>
+  text.length > max ? `${text.slice(0, max - 1)}…` : text;
 
 function toDto(row: ProposalRow, targetText: string | null): MemoryProposal {
   return {
@@ -314,7 +315,10 @@ export function createMemoryProposalService(deps: {
         .from(memoryProposals)
         .where(eq(memoryProposals.status, 'pending'));
       if ((pending?.n ?? 0) >= PENDING_MAX) {
-        log?.info({ conversationId, pending: pending?.n }, 'ekstraksi memori dilewati: usulan menunggu penuh');
+        log?.info(
+          { conversationId, pending: pending?.n },
+          'ekstraksi memori dilewati: usulan menunggu penuh',
+        );
         return 0;
       }
       const [calls] = await db
@@ -322,7 +326,10 @@ export function createMemoryProposalService(deps: {
         .from(memoryExtractions)
         .where(gt(memoryExtractions.createdAt, new Date(now() - DAY_MS)));
       if ((calls?.n ?? 0) >= dailyMax) {
-        log?.warn({ conversationId, limit: dailyMax }, 'ekstraksi memori dilewati: batas harian tercapai');
+        log?.warn(
+          { conversationId, limit: dailyMax },
+          'ekstraksi memori dilewati: batas harian tercapai',
+        );
         return 0;
       }
 
@@ -365,7 +372,10 @@ export function createMemoryProposalService(deps: {
           seen: [...seen, ...accepted.map((a) => a.text)],
         });
         if ('reject' in result) {
-          log?.info({ conversationId, why: result.reject, rule: result.rule }, 'fakta memori dibuang');
+          log?.info(
+            { conversationId, why: result.reject, rule: result.rule },
+            'fakta memori dibuang',
+          );
           continue;
         }
         accepted.push(result.ok);
@@ -375,7 +385,11 @@ export function createMemoryProposalService(deps: {
       for (const fact of accepted) {
         if (mode === 'auto') {
           if (await autoSave(fact, conversationId)) saved += 1;
-          else log?.warn({ conversationId }, 'fakta memori tidak disimpan: batas memori atau target hilang');
+          else
+            log?.warn(
+              { conversationId },
+              'fakta memori tidak disimpan: batas memori atau target hilang',
+            );
           continue;
         }
         await db.insert(memoryProposals).values({
@@ -401,7 +415,9 @@ export function createMemoryProposalService(deps: {
           ...(mode === 'auto'
             ? {
                 title: `Disimpan ke memori: ${clip(first, NOTIFY_TEXT_MAX)}`,
-                ...(saved > 1 ? { body: `${saved} fakta disimpan; bisa diurungkan di Memori.` } : {}),
+                ...(saved > 1
+                  ? { body: `${saved} fakta disimpan; bisa diurungkan di Memori.` }
+                  : {}),
               }
             : {
                 title: saved > 1 ? `${saved} usulan memori baru` : 'Usulan memori baru',

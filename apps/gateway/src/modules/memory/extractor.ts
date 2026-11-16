@@ -191,8 +191,9 @@ export function factShapeOk(text: string): boolean {
   const trimmed = text.trim();
   if (!trimmed || /[\r\n]/.test(trimmed)) return false;
   if (IMPERATIVE_START.test(trimmed)) return false;
-  // Lebih dari satu kalimat = lebih dari satu fakta atau ada sisipan; tolak.
-  const sentences = trimmed.split(/(?<=[.!?])\s+(?=\p{Lu})/u);
+  // Lebih dari satu kalimat = lebih dari satu fakta atau ada sisipan; tolak. Singkatan pendek ("RS.", "dr.") bukan
+  // akhir kalimat.
+  const sentences = trimmed.split(/(?<=\p{L}{4,}[.!?])\s+(?=\p{Lu})/u);
   return sentences.length === 1;
 }
 
@@ -224,13 +225,7 @@ export function isDuplicate(text: string, existing: readonly string[]): boolean 
   );
 }
 
-export type FactRejection =
-  | 'evidence'
-  | 'injection'
-  | 'secret'
-  | 'shape'
-  | 'target'
-  | 'duplicate';
+export type FactRejection = 'evidence' | 'injection' | 'secret' | 'shape' | 'target' | 'duplicate';
 
 export interface AcceptedFact {
   kind: 'add' | 'update';

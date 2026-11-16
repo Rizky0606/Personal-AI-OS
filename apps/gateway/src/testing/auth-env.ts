@@ -13,7 +13,10 @@ import { runs as runsTable } from '../db/schema/index.js';
 import { createTitleService } from '../modules/chat/title.js';
 import { createDevicesService } from '../modules/devices/service.js';
 import { createOutbox } from '../modules/files/outbox.js';
-import { createMemoryProposalService, type MemoryProposalService } from '../modules/memory/proposal-service.js';
+import {
+  createMemoryProposalService,
+  type MemoryProposalService,
+} from '../modules/memory/proposal-service.js';
 import type { MemoryExtractMode } from '../modules/memory/extractor.js';
 import { createMemoryService } from '../modules/memory/service.js';
 import { createFleetService } from '../modules/fleets/service.js';

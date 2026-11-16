@@ -421,7 +421,9 @@ describe('entitas', () => {
       decidedAt: null,
     };
     expect(MemoryProposalSchema.safeParse(proposal).success).toBe(true);
-    expect(MemoryProposalSchema.safeParse({ ...proposal, status: 'auto_saved' }).success).toBe(true);
+    expect(MemoryProposalSchema.safeParse({ ...proposal, status: 'auto_saved' }).success).toBe(
+      true,
+    );
     expect(MemoryProposalSchema.safeParse({ ...proposal, status: 'saved' }).success).toBe(false);
     expect(MemoryProposalSchema.safeParse({ ...proposal, kind: 'delete' }).success).toBe(false);
     expect(ApproveMemoryProposalRequestSchema.safeParse({}).success).toBe(true);
