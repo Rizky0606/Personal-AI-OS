@@ -1,6 +1,6 @@
 # Desain: tool gateway lewat MCP (`aios_tools`)
 
-Status: **desain, belum ada kode.** Disusun 2026-11-16 di branch `feat/mcp-tools` dari `main` (1ab4582). Semua rujukan `berkas:baris` dibaca langsung di commit itu; rujukan Hermes dibaca read-only dari `~/.hermes/hermes-agent` (checkout `b200f5bc60`, `git describe` = `v0.22.7`). Yang tidak teramati langsung ditandai **[INFERENSI]**.
+Status: **slice 1 terimplementasi** (web untuk omp lewat worker, bawaan mati; lihat bagian 15); slice 2–4 masih desain. Keputusan pemilik bagian 13 diterima dengan rekomendasi bawaan. Disusun 2026-11-16 di branch `feat/mcp-tools` dari `main` (1ab4582). Semua rujukan `berkas:baris` dibaca langsung di commit itu; rujukan Hermes dibaca read-only dari `~/.hermes/hermes-agent` (checkout `b200f5bc60`, `git describe` = `v0.22.7`). Yang tidak teramati langsung ditandai **[INFERENSI]**.
 
 ## 0. Ringkasan
 
@@ -100,7 +100,7 @@ Hermes (127.0.0.1) ──HTTP loopback, Bearer ${AIOS_MCP_TOKEN}──┘
 - **Satu implementasi tool** (`apps/gateway/src/modules/mcp/`): skema, batas, pemagaran keluaran, audit, dan rate limit di satu tempat; omp dan Hermes melihat daftar tool yang sama.
 - **Relay worker** (`apps/worker/src/tools/relay.ts`, kelas baru): server loopback dengan registrasi per run persis seperti `McpServer.register` (`preview/mcp.ts:195-214`) dan penerusan seperti `LlmProxy` (token segar, satu kali coba ulang dengan `force` setelah 401). Relay tidak mem-parse tool; ia meneruskan body JSON-RPC (≤256 KiB) dan jawaban JSON apa adanya. `runId` disisipkan relay dari registrasi, jadi omp tidak bisa memalsukan run lain.
 - **Tanpa perubahan nginx:** `location ~ ^/(v1|llm/v1)/` sudah meneruskan `/v1/mcp` (`infra/nginx/aios.conf.example:48-50`).
-- **Protokol:** sama dengan server browser: `initialize` (memantulkan `protocolVersion` klien), `notifications/*` → 202, `ping`, `tools/list`, `tools/call`, batch; `GET` → 405, `DELETE` → 200; tanpa `Mcp-Session-Id`, tanpa SSE, tanpa sampling/roots. Hermes dikonfigurasi `protocol: legacy` supaya tidak mencoba `server/discover`.
+- **Protokol:** sama dengan server browser: `initialize` (memantulkan `protocolVersion` klien), `notifications/*` → 202, `ping`, `tools/list`, `tools/call`, batch; `GET` → 405, `DELETE` → 204; tanpa `Mcp-Session-Id`, tanpa SSE, tanpa sampling/roots. Hermes dikonfigurasi `protocol: legacy` supaya tidak mencoba `server/discover`.
 
 ### Alternatif yang ditolak
 
@@ -164,7 +164,7 @@ Nama server `aios_tools` (tidak berawalan sama dengan `aios_browser`, sehingga p
 
 ### Audit dan log
 
-- `writeAudit` (`modules/audit/repo.ts:4-16`) untuk: `agent_proposal.created`, `agent_proposal.approved`, `agent_proposal.rejected`. Panggilan baca **tidak** diaudit (konsisten dengan proxy LLM yang sengaja tidak diaudit, `llm.integration.test.ts:488-495`).
+- `writeAudit` (`modules/audit/repo.ts:4-16`) untuk: `agent_proposal.created`, `agent_proposal.approved`, `agent_proposal.rejected`. Setiap `tools/call` juga dicatat sebagai `mcp.tool_called` dengan sasaran `run:<id> tool:<nama> ok|error` (permintaan pemilik saat slice 1; volumenya dibatasi anggaran per run), tanpa argumen atau isi.
 - Log pino per panggilan: `principal`, `deviceId`, `runId`, `tool`, `ok`, `durationMs`, jumlah hasil, panjang kueri. **Tidak** mencatat isi kueri/URL/teks (data pribadi) atau header Authorization (`SECURITY_OPS.md:60`).
 
 ### Prompt injection pada keluaran tool
@@ -279,3 +279,12 @@ Perubahan:
 - Hermes mengawasi `config.yaml`: entri baru disambungkan dalam ±1 menit tanpa restart, dan koneksi pertama yang gagal dicoba ulang (30 dtk, berlipat sampai 10 menit) menurut dokumentasi (`mcp.md:788`). Belum diuji di sini; deploy gateway yang memutus koneksi sebentar juga belum diuji terhadap Hermes.
 - Panggilan Hermes tidak terikat run: usulan dari Hermes tidak punya `conversationId`, jadi kartu usulan hanya muncul di tab Usulan, bukan di percakapan.
 - Rekaman omp dengan tool MCP gateway belum ada; perilaku omp terhadap jawaban `isError` dari server MCP diasumsikan sama dengan tool browser (`preview.test.ts:290-306`).
+
+## 15. Catatan implementasi slice 1
+
+- Gateway: `apps/gateway/src/modules/mcp/` (`server.ts` JSON-RPC, `web-tools.ts`, `routes.ts`, `owner-text.ts`), dipasang di `app.ts` hanya bila `AppDeps.mcp` ada; `main.ts` mengisinya dan `createWorkerRelayAdapter({ gatewayTools })` dari satu sakelar `MCP_TOOLS_ENABLED`.
+- Kontrak: `packages/contracts/src/tools.ts` (`AIOS_TOOLS_SERVER`, `aiosToolOf`, skema masukan, `RUN_ID_HEADER` yang kini juga dipakai proxy LLM), `RunStartCommandSchema.gatewayTools`, endpoint `POST/GET/DELETE /mcp`.
+- Worker: `apps/worker/src/tools/relay.ts` (`GatewayToolsRelay`), `tools/instruction.ts`, cabang di `runs/coordinator.ts` (pendaftaran, `mcpServers`, mode rencana), `runs/rules.ts` (pola per nama tool). Adapter omp: `approvalKind` → `network` untuk tool web `aios_tools`.
+- UI: `toolKindOf`/`toolKind` desktop dan `kindOf` Android memetakan tool ini ke jenis web; Progres tidak menghitungnya sebagai Konektor.
+- Bukti: e2e omp sungguhan (`omp.e2e.test.ts`, "tool gateway") dan smoke sekali pakai omp 18.12.6 → relay → kode MCP gateway sungguhan → SearXNG tiruan (hasil berpagar sampai ke model, `web_read` ke `127.0.0.1` ditolak allowlist).
+

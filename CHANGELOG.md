@@ -2,6 +2,12 @@
 
 Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/); versi mengikuti [SemVer](https://semver.org/lang/id/).
 
+## [1.2.0] - belum dirilis
+
+### Ditambah
+
+- **Tool gateway lewat MCP untuk agent project (slice 1, bawaan mati):** gateway menyajikan server MCP `aios_tools` di `POST /v1/mcp` dengan `web_search` (SearXNG milik sistem) dan `web_read` (pengambil halaman aman SSRF, hanya URL dari hasil pencarian run itu atau dari pesan pemilik). omp di worker memanggilnya lewat relay loopback per run; token perangkat tidak pernah sampai ke omp. Izin jaringan ditanyakan dengan "selalu izinkan" per nama tool per project, dan tetap boleh di mode rencana karena hanya membaca. Dinyalakan dengan `MCP_TOOLS_ENABLED=true` (kontrak aditif `run.start.gatewayTools`). Langkahnya tampil sebagai langkah web di Aktivitas dan Progres (desktop dan Android). Desain dan slice berikutnya: `docs/DESIGN_MCP_TOOLS.md`.
+
 ## [1.1.0] - 2026-11-15
 
 Merangkum pekerjaan sesi P1 sampai P11 (dikerjakan di cabang `fix/*` dan `feat/*`; **sudah digabung ke `main`**, `b26d61e`, 2026-11-13). **Perombakan "Command Center" yang tercatat di sini sebelumnya sudah ditulis ulang total** menjadi shell "pulau" (lihat Diubah); catatan lama dihapus karena tidak lagi menggambarkan kode yang ada.
