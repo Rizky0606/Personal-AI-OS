@@ -1,4 +1,5 @@
 import {
+  aiosToolOf,
   isRasterImageMime,
   type ConversationProgress,
   type ProgressOutput,
@@ -185,7 +186,8 @@ export function buildProgress(
   const groups = new Set<ToolGroup>();
   const connectors: string[] = [];
   for (const name of toolNames) {
-    if (name.startsWith('mcp__')) {
+    // Tool `aios_tools` milik sistem sendiri: dihitung ke grup alat (web), bukan konektor.
+    if (name.startsWith('mcp__') && !aiosToolOf(name)) {
       connectors.push(name.split('__')[1] ?? name);
       continue;
     }
