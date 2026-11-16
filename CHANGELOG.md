@@ -19,6 +19,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/); ve
 
 - **Recall memori beranggaran** (slice 1 `docs/DESIGN_MEMORI_SEMANTIK.md`): selama bagian memori muat di anggaran, keluaran sama persis seperti sebelumnya; di atas anggaran dipilih yang tersemat, yang cocok kata dengan pesan pemilik (ditambah pesan pemilik sebelumnya), lalu yang terbaru. Memori dibaca sekali per run; `context.used.memory` kini sama persis dengan yang disuntik dan bertambah `total`, `mode`, `items[].via`. Panel Progres menampilkan "Dibaca · N dari M fakta" bila sebagian tidak ikut.
 - Migrasi aditif `0018_memories_recall`: `memories.pinned` (bawaan false) dan `memories.tsv` (tsvector `simple`, indeks GIN).
+- **Composer desktop**: Rencana dulu, Kerjakan sebagai tim, Cari di web, dan Skill digabung ke satu menu "Opsi"; tab pane menjadi satu pill aktif + dropdown "Ganti tab" bila pane sempit (< 300 px). Perbaikan lanjutan: lint/format, bayangan tab aktif memakai token `shadow-lift`, dan tes mengikuti menu Opsi.
 
 ## [1.1.0] - 2026-11-15
 
