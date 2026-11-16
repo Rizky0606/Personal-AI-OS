@@ -9,8 +9,9 @@ Slice 1 (recall beranggaran leksikal + memori tersemat) selesai di cabang `feat/
 - [ ] Slice 2: embedding dan recall hibrida untuk memori (tabel `embeddings`, klien `/embeddings` 9Router, backfill pg-boss, RRF); butuh koneksi embedding di 9Router untuk dinyalakan.
 - [x] Slice 3: ekstraksi fakta menjadi usulan memori (`memory_proposals`, mode `off`/`propose`/`auto`, penjaga injeksi dan rahasia, UI usulan desktop dan Android); `MAX_MEMORIES` naik ke 1.000. Cabang `feat/memori-ekstraksi`, bawaan `MEMORY_EXTRACT_MODE=off`.
 - [ ] Ekstraksi: belum ada set evaluasi ±30 giliran berlabel (precision/recall, nol lolos dari kelompok injeksi/rahasia) lewat model sungguhan; perlu sebelum menyarankan `auto`.
-- [ ] Ekstraksi: urungkan untuk mode `auto` baru ada di REST (`POST /memories/proposals/:id/undo`); desktop dan Android belum punya tombol/snackbar Urungkan, dan Android tidak bisa menyunting usulan sebelum disimpan.
-- [ ] Ekstraksi: notifikasi `memory_proposal` tidak dikirim lewat push FCM (hanya WebSocket); Android belum menyegarkan layar Memori saat notifikasi datang.
+- [x] Ekstraksi: urungkan untuk mode `auto` di desktop dan Android (blok "Disimpan otomatis dari chat" + Urungkan, lewat `GET /memories/proposals?status=review`), dan Android bisa "Ubah lalu simpan". Cabang `feat/memori-sisa`.
+- [x] Ekstraksi: push FCM `memory_proposal` (mode propose, maks sekali per giliran, hanya ID); Android membuka layar Memori dari push dan menyegarkannya saat notifikasi `memory_proposal` datang lewat WebSocket. Cabang `feat/memori-sisa`.
+- [ ] Ekstraksi: mode `auto` tidak mengirim push (hanya WebSocket); belum ada snackbar Urungkan langsung di chat saat memori disimpan otomatis.
 - [ ] Ekstraksi: memori internal Hermes tetap berjalan berdampingan (keputusan terbuka 5 di desain).
 - [ ] Ekstraksi: E2E Playwright (`e2e/tests/memory.spec.ts`, model palsu di `e2e/harness/fakes.ts`) belum diperluas untuk usulan.
 - [ ] Slice 4: ruang pengetahuan hibrida (`SPACES_VECTOR`).
