@@ -17,7 +17,8 @@
     "owner:init": "tsx --env-file-if-exists=.env src/cli/owner-init.ts",
     "push:test": "tsx --env-file-if-exists=.env src/cli/push-test.ts",
     "skills:sync-hermes": "tsx --env-file-if-exists=.env src/cli/sync-hermes-skills.ts",
-    "eval:skills": "tsx --env-file-if-exists=.env src/cli/eval-skills.ts"
+    "eval:skills": "tsx --env-file-if-exists=.env src/cli/eval-skills.ts",
+    "eval:memory": "tsx --env-file-if-exists=.env src/cli/eval-memory.ts"
   },
   "dependencies": {
     "@aios/adapters": "workspace:*",
