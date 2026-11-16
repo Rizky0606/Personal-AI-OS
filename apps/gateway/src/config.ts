@@ -37,6 +37,11 @@ const EnvSchema = z.object({
   NINEROUTER_URL: withDefault(httpUrl, 'http://127.0.0.1:20128/v1'),
   NINEROUTER_API_KEY: optionalString,
   SEARXNG_URL: withDefault(httpUrl, 'http://127.0.0.1:8888'),
+  /**
+   * Tool gateway untuk agent lewat MCP (`POST /v1/mcp`, server `aios_tools`: web_search, web_read). Bawaan mati:
+   * route tidak dipasang (404) dan run coding tidak membawa `gatewayTools`. docs/DESIGN_MCP_TOOLS.md.
+   */
+  MCP_TOOLS_ENABLED: withDefault(z.enum(['true', 'false']), 'false'),
   /** Combo 9Router untuk model kecil. */
   TITLE_MODEL: withDefault(z.string().min(1), 'router-fast'),
   /**

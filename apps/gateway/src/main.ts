@@ -3,6 +3,7 @@ import { RegistryError } from '@aios/roles';
 import { buildApp } from './app.js';
 import { ConfigError, loadConfig } from './config.js';
 import { createDb } from './db/client.js';
+import { GATEWAY_VERSION } from './version.js';
 import { createLinkReader } from './modules/chat/links.js';
 import { createChatService } from './modules/chat/service.js';
 import { createWebContext } from './modules/chat/web.js';
@@ -15,6 +16,9 @@ import { createOutbox } from './modules/files/outbox.js';
 import { createDshEngine } from './modules/dsh/launch.js';
 import { createEnginesService, workersOnlineFrom } from './modules/llm/engines.js';
 import { createMemoryService } from './modules/memory/service.js';
+import { createOwnerText } from './modules/mcp/owner-text.js';
+import { createMcpServer } from './modules/mcp/server.js';
+import { createWebTools } from './modules/mcp/web-tools.js';
 import { createFleetService } from './modules/fleets/service.js';
 import { createForkService } from './modules/fork/service.js';
 import { createHandoffService } from './modules/handoff/service.js';
@@ -171,7 +175,11 @@ async function main(): Promise<void> {
     hub,
     observer,
     adapter: createHermesAdapter({ baseUrl: config.HERMES_URL, apiKey: config.HERMES_API_KEY }),
-    workerAdapter: createWorkerRelayAdapter({ relay: workerRelay }),
+    // Satu sakelar: route /v1/mcp dan `run.start.gatewayTools` menyala bersama (docs/DESIGN_MCP_TOOLS.md).
+    workerAdapter: createWorkerRelayAdapter({
+      relay: workerRelay,
+      gatewayTools: config.MCP_TOOLS_ENABLED === 'true',
+    }),
     ...(dsh ? { dsh } : {}),
     proposals: skillProposals,
     skillOpened: (runId, ids) => skillUsage.recordOpened(runId, ids),
@@ -347,6 +355,21 @@ async function main(): Promise<void> {
         team: (id) => teams.exists(id),
       },
     },
+    ...(config.MCP_TOOLS_ENABLED === 'true'
+      ? {
+          mcp: {
+            db,
+            server: createMcpServer({
+              version: GATEWAY_VERSION,
+              tools: createWebTools({
+                search: createSearxngClient({ baseUrl: config.SEARXNG_URL }),
+                fetchPage,
+                ownerText: createOwnerText(db),
+              }),
+            }),
+          },
+        }
+      : {}),
   });
 
   let stopping = false;

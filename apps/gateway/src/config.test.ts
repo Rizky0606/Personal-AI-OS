@@ -29,6 +29,13 @@ describe('loadConfig', () => {
     expect(loadConfig({ ...base, HOST: '0.0.0.0' }).HOST).toBe('0.0.0.0');
   });
 
+  it('MCP_TOOLS_ENABLED bawaan mati; hanya true/false yang diterima', () => {
+    expect(loadConfig(base).MCP_TOOLS_ENABLED).toBe('false');
+    expect(loadConfig({ ...base, MCP_TOOLS_ENABLED: '' }).MCP_TOOLS_ENABLED).toBe('false');
+    expect(loadConfig({ ...base, MCP_TOOLS_ENABLED: 'true' }).MCP_TOOLS_ENABLED).toBe('true');
+    expect(() => loadConfig({ ...base, MCP_TOOLS_ENABLED: 'ya' })).toThrow(/MCP_TOOLS_ENABLED/);
+  });
+
   it('menganggap string kosong dari .env sebagai tidak diisi', () => {
     const c = loadConfig({ ...base, HERMES_API_KEY: '', PORT: '', LOG_LEVEL: ' ' });
     expect(c.HERMES_API_KEY).toBeUndefined();
