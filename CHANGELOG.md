@@ -2,6 +2,19 @@
 
 Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/); versi mengikuti [SemVer](https://semver.org/lang/id/).
 
+## [1.2.0] - belum dirilis
+
+### Ditambah
+
+- **Memori tersemat**: memori bisa disematkan di Pengaturan > Memori (desktop) dan layar Memori (Android); yang tersemat selalu ikut ke pesan sistem. Kontrak: `Memory.pinned`, `pinned` di `POST`/`PATCH /memories`.
+- **`pnpm --filter @aios/gateway eval:memory`**: evaluasi recall memori pada fixture sintetis (60 fakta, 40 kueri) per mode `all` dan `lexical`; recall@12 leksikal kategori "cocok kata" dijaga tes regresi.
+- Variabel opsional `MEMORY_RECALL_BUDGET_CHARS` (bawaan 6000) dan `MEMORY_RECALL_TOP_K` (bawaan 12).
+
+### Diubah
+
+- **Recall memori beranggaran** (slice 1 `docs/DESIGN_MEMORI_SEMANTIK.md`): selama bagian memori muat di anggaran, keluaran sama persis seperti sebelumnya; di atas anggaran dipilih yang tersemat, yang cocok kata dengan pesan pemilik (ditambah pesan pemilik sebelumnya), lalu yang terbaru. Memori dibaca sekali per run; `context.used.memory` kini sama persis dengan yang disuntik dan bertambah `total`, `mode`, `items[].via`. Panel Progres menampilkan "Dibaca · N dari M fakta" bila sebagian tidak ikut.
+- Migrasi aditif `0018_memories_recall`: `memories.pinned` (bawaan false) dan `memories.tsv` (tsvector `simple`, indeks GIN).
+
 ## [1.1.0] - 2026-11-15
 
 Merangkum pekerjaan sesi P1 sampai P11 (dikerjakan di cabang `fix/*` dan `feat/*`; **sudah digabung ke `main`**, `b26d61e`, 2026-11-13). **Perombakan "Command Center" yang tercatat di sini sebelumnya sudah ditulis ulang total** menjadi shell "pulau" (lihat Diubah); catatan lama dihapus karena tidak lagi menggambarkan kode yang ada.
