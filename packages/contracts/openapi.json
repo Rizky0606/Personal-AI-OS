@@ -16849,7 +16849,8 @@
                 "rejected",
                 "auto_saved",
                 "undone",
-                "all"
+                "all",
+                "review"
               ]
             },
             "required": false,

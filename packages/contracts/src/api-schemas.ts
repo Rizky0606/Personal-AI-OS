@@ -1072,8 +1072,14 @@ export type MemoryProposal = z.infer<typeof MemoryProposalSchema>;
 export const MemoryProposalListSchema = itemsOf(MemoryProposalSchema).meta({
   id: 'MemoryProposalList',
 });
+/** Jendela `status=review`: usulan `auto_saved`/`undone` sebanyak hari ini ikut tampil di blok usulan klien. */
+export const MEMORY_PROPOSAL_RECENT_DAYS = 7;
 export const MemoryProposalQuerySchema = z.object({
-  status: z.enum([...MemoryProposalStatusSchema.options, 'all']).optional(),
+  /**
+   * Bawaan `pending`. `review` = semua yang `pending` ditambah `auto_saved` dan `undone` yang dibuat dalam
+   * MEMORY_PROPOSAL_RECENT_DAYS hari terakhir (blok usulan di desktop dan Android, termasuk tombol Urungkan).
+   */
+  status: z.enum([...MemoryProposalStatusSchema.options, 'all', 'review']).optional(),
 });
 /** Setujui; `text` opsional untuk "Ubah lalu simpan". */
 export const ApproveMemoryProposalRequestSchema = z

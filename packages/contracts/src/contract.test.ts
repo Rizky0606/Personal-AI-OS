@@ -464,6 +464,7 @@ describe('entitas', () => {
     );
     expect(ApproveMemoryProposalRequestSchema.safeParse({ text: ' ' }).success).toBe(false);
     expect(MemoryProposalQuerySchema.safeParse({ status: 'all' }).success).toBe(true);
+    expect(MemoryProposalQuerySchema.safeParse({ status: 'review' }).success).toBe(true);
     expect(MemoryProposalQuerySchema.safeParse({ status: 'semua' }).success).toBe(false);
   });
 
