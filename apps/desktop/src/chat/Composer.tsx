@@ -119,10 +119,10 @@ function OptionsMenu({
   onSkillPacks,
   skillOptions,
 }: OptionsMenuProps) {
-  const anyActive =
-    planMode || teamMode || webSearch || skillPacks.length > 0;
+  const anyActive = planMode || teamMode || webSearch || skillPacks.length > 0;
   const hasSkills = onSkillPacks && skillOptions.length > 0;
-  const hasModes = onPlanMode || onTeamMode || onWebSearch;
+  const hasModes =
+    onPlanMode !== undefined || onTeamMode !== undefined || onWebSearch !== undefined;
   return (
     <Dropdown.Root>
       <Dropdown.Trigger asChild>
@@ -186,9 +186,7 @@ function OptionsMenu({
               ) : null}
             </>
           ) : null}
-          {hasModes && hasSkills ? (
-            <Dropdown.Separator className="my-1 h-px bg-border" />
-          ) : null}
+          {hasModes && hasSkills ? <Dropdown.Separator className="my-1 h-px bg-border" /> : null}
           {hasSkills
             ? skillOptions.map((option) => (
                 <Dropdown.CheckboxItem
@@ -196,7 +194,7 @@ function OptionsMenu({
                   checked={skillPacks.includes(option.value)}
                   onSelect={(e) => e.preventDefault()}
                   onCheckedChange={(on) =>
-                    onSkillPacks!(
+                    onSkillPacks(
                       on
                         ? [...skillPacks, option.value]
                         : skillPacks.filter((v) => v !== option.value),
@@ -504,7 +502,7 @@ export function Composer({
                 }
               />
             )}
-            {(onPlanMode || onTeamMode || onWebSearch || onSkillPacks) ? (
+            {onPlanMode || onTeamMode || onWebSearch || onSkillPacks ? (
               <OptionsMenu
                 planMode={planMode}
                 onPlanMode={onPlanMode}

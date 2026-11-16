@@ -30,8 +30,10 @@ test('tim Orca: rencana 2 tugas -> Worker mengerjakan berurutan -> Lead terima -
   await page.keyboard.press('Control+2');
   await page.getByRole('list', { name: 'Daftar project' }).getByRole('link').first().click();
 
-  // Nyalakan "Kerjakan sebagai tim" sebelum mengirim; opt-in, hanya untuk percakapan baru di project.
-  await page.getByRole('button', { name: 'Kerjakan sebagai tim' }).click();
+  // Nyalakan "Kerjakan sebagai tim" (menu Opsi) sebelum mengirim; opt-in, hanya untuk percakapan baru di project.
+  await page.getByRole('button', { name: 'Opsi' }).click();
+  await page.getByRole('menuitemcheckbox', { name: 'Kerjakan sebagai tim' }).click();
+  await page.keyboard.press('Escape');
   await page
     .getByRole('textbox', { name: 'Pesan' })
     .fill(`${SCENARIO_TEAM} Tambahkan dua catatan e2e.`);
