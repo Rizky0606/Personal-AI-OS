@@ -79,6 +79,7 @@ describe('audit auth dan scope', () => {
       'POST /v1/compare',
       'GET /v1/quota',
       'POST /v1/runs/:id/review',
+      'POST /v1/agent-proposals/:id/approve',
     ]) {
       expect(keys).toContain(must);
     }

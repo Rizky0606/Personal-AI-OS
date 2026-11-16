@@ -11,7 +11,7 @@ import { z } from 'zod';
 import type { AddressInfo } from 'node:net';
 import { WebSocket } from 'ws';
 import { afterAll, beforeAll, describe, expect, inject, it } from 'vitest';
-import { auditLog } from '../../db/schema/index.js';
+import { agentProposals, auditLog, memoryProposals } from '../../db/schema/index.js';
 import { createAuthEnv, type AuthEnv } from '../../testing/auth-env.js';
 import type { PageFetcher } from '../research/fetcher.js';
 import type { SearchClient } from '../research/search.js';
@@ -100,7 +100,7 @@ async function gateway(options: Parameters<typeof createAuthEnv>[1]): Promise<Ga
 }
 
 /** Worker + project + run coding yang sudah `running` dengan pesan pemilik `text`. */
-async function runningRun(gw: Gateway, name: string, text: string) {
+async function runningRun(gw: Gateway, name: string, text: string, extra: object = {}) {
   const { env, desktop } = gw;
   const worker = LoginResponseSchema.parse(
     (await env.post('/devices/worker', { name }, desktop)).json(),
@@ -120,7 +120,7 @@ async function runningRun(gw: Gateway, name: string, text: string) {
   await fake.connect(gw.wsUrl);
   const res = await env.post(
     `/conversations/${conversation.id}/messages`,
-    { parts: [{ type: 'text', text }] },
+    { parts: [{ type: 'text', text }], ...extra },
     desktop,
   );
   expect(res.statusCode, res.body).toBe(201);
@@ -272,6 +272,9 @@ describe('MCP_TOOLS_ENABLED menyala', () => {
       'space_search',
       'task_list',
       'schedule_list',
+      'memory_propose',
+      'task_propose',
+      'schedule_propose',
     ]);
 
     const blocked = await post(on.env, call(3, 'web_read', { url: 'https://vite.dev/guide/' }), h);
@@ -323,7 +326,7 @@ describe('MCP_TOOLS_ENABLED menyala', () => {
     expect(
       (await post(on.env, { jsonrpc: '2.0', id: 1, method: 'resources/list' }, h)).json(),
     ).toMatchObject({ error: { code: -32601 } });
-    expect((await post(on.env, call(2, 'memory_propose', {}), h)).json()).toMatchObject({
+    expect((await post(on.env, call(2, 'memory_delete', {}), h)).json()).toMatchObject({
       error: { code: -32602 },
     });
     expect(
@@ -460,5 +463,395 @@ describe('MCP_TOOLS_ENABLED menyala', () => {
       codes.push((await post(on.env, ping, as(token, runId))).statusCode);
     expect(codes.slice(0, 40).every((c) => c === 200)).toBe(true);
     expect(codes[40]).toBe(429);
+  });
+});
+
+describe('tool usulan (slice 3): tidak ada yang berubah sebelum pemilik menyetujui', () => {
+  const db = () => on.env.database.handle.db;
+  const isError = (body: unknown) =>
+    z.object({ result: z.object({ isError: z.literal(true) }) }).safeParse(body).success;
+
+  it('task_propose: hanya project run ini, tanpa kartu sebelum disetujui; setuju dua kali = satu berhasil', async () => {
+    const mine = await runningRun(on, 'Usul A', 'perbaiki tes login');
+    const other = await runningRun(on, 'Usul B', 'halo');
+    const h = as(mine.token, mine.runId);
+
+    const list = await post(on.env, { jsonrpc: '2.0', id: 1, method: 'tools/list' }, h);
+    const tools = z
+      .object({
+        result: z.object({
+          tools: z.array(
+            z.object({ name: z.string(), annotations: z.object({ readOnlyHint: z.boolean() }) }),
+          ),
+        }),
+      })
+      .parse(list.json()).result.tools;
+    expect(tools.filter((t) => t.name.endsWith('_propose'))).toEqual([
+      expect.objectContaining({
+        name: 'memory_propose',
+        annotations: { readOnlyHint: false },
+      }),
+      expect.objectContaining({ name: 'task_propose', annotations: { readOnlyHint: false } }),
+      expect.objectContaining({ name: 'schedule_propose', annotations: { readOnlyHint: false } }),
+    ]);
+
+    const stolen = await post(
+      on.env,
+      call(2, 'task_propose', { title: 'Kartu B', reason: 'x', projectId: other.projectId }),
+      h,
+    );
+    expect(isError(stolen.json())).toBe(true);
+    const secret = await post(
+      on.env,
+      call(3, 'task_propose', {
+        title: 'Pasang kunci',
+        body: 'OPENAI_API_KEY=sk-proj-abcdef1234567890abcdef1234567890',
+        reason: 'x',
+      }),
+      h,
+    );
+    expect(isError(secret.json())).toBe(true);
+    expect(textOf(secret.json())).not.toContain('sk-proj');
+
+    const ok = await post(
+      on.env,
+      call(4, 'task_propose', {
+        title: 'Tambah tes login',
+        body: 'Kasus token kedaluwarsa',
+        reason: 'Belum ada tesnya',
+      }),
+      h,
+    );
+    expect(isError(ok.json())).toBe(false);
+    expect(textOf(ok.json())).toContain('menunggu pemilik');
+
+    // Belum ada kartu di kanban mana pun.
+    for (const projectId of [mine.projectId, other.projectId]) {
+      const tasks = await on.env.get(`/projects/${projectId}/tasks`, on.desktop);
+      expect(tasks.json<{ items: unknown[] }>().items).toEqual([]);
+    }
+    const pending = (
+      await on.env.get(`/agent-proposals?kind=task&projectId=${mine.projectId}`, on.desktop)
+    ).json<{ items: { id: string; agent: string; projectId: string; runId: string }[] }>().items;
+    expect(pending).toEqual([
+      expect.objectContaining({
+        kind: 'task',
+        status: 'pending',
+        agent: 'omp',
+        projectId: mine.projectId,
+        runId: mine.runId,
+        task: { title: 'Tambah tes login', body: 'Kasus token kedaluwarsa' },
+        reason: 'Belum ada tesnya',
+        afterWeb: false,
+      }),
+    ]);
+    const id = pending[0]!.id;
+    // Worker tidak bisa meninjau usulannya sendiri.
+    expect((await on.env.post(`/agent-proposals/${id}/approve`, {}, mine.token)).statusCode).toBe(
+      403,
+    );
+
+    const [first, second] = await Promise.all([
+      on.env.post(`/agent-proposals/${id}/approve`, { task: { title: 'Tes login' } }, on.desktop),
+      on.env.post(`/agent-proposals/${id}/approve`, {}, on.desktop),
+    ]);
+    expect([first.statusCode, second.statusCode].sort()).toEqual([200, 409]);
+    const approved = [first, second]
+      .find((r) => r.statusCode === 200)!
+      .json<{
+        resultId: string;
+        status: string;
+      }>();
+    expect(approved.status).toBe('approved');
+    const tasks = (await on.env.get(`/projects/${mine.projectId}/tasks`, on.desktop)).json<{
+      items: { id: string; status: string; title: string }[];
+    }>().items;
+    expect(tasks).toHaveLength(1);
+    expect(tasks[0]).toMatchObject({ id: approved.resultId, status: 'backlog' });
+    expect((await on.env.post(`/agent-proposals/${id}/reject`, {}, on.desktop)).statusCode).toBe(
+      409,
+    );
+
+    const audit = await db().select().from(auditLog);
+    const mineAudit = audit.filter((r) => r.target.startsWith(`agent_proposal:${id}`));
+    expect(mineAudit.map((r) => r.action).sort()).toEqual([
+      'agent_proposal.approved',
+      'agent_proposal.created',
+    ]);
+    expect(mineAudit.find((r) => r.action === 'agent_proposal.created')?.actorDeviceId).toBe(
+      mine.deviceId,
+    );
+    expect(JSON.stringify(audit)).not.toMatch(/Tambah tes login|token kedaluwarsa|Belum ada/);
+  });
+
+  it('schedule_propose: cron salah = isError; jadwal dibuat hanya saat disetujui (dengan pilihan nonaktif)', async () => {
+    const run = await runningRun(on, 'Usul Jadwal', 'tolong ringkas berita tiap pagi');
+    const h = as(run.token, run.runId);
+    const before = (await on.env.get('/schedules', on.desktop)).json<{ items: unknown[] }>().items
+      .length;
+    const base = {
+      name: 'Ringkas pagi',
+      prompt: 'Ringkas berita',
+      target: 'chat',
+      reason: 'diminta',
+    };
+
+    for (const cron of ['0 7 * *', '99 7 * * *']) {
+      const bad = await post(on.env, call(1, 'schedule_propose', { ...base, cron }), h);
+      expect(isError(bad.json()), cron).toBe(true);
+    }
+    const zone = await post(
+      on.env,
+      call(2, 'schedule_propose', { ...base, cron: '0 7 * * *', timezone: 'Mars/Olympus' }),
+      h,
+    );
+    expect(isError(zone.json())).toBe(true);
+    expect(
+      isError(
+        (
+          await post(
+            on.env,
+            call(3, 'schedule_propose', { ...base, cron: '0 7 * * *', target: 'role' }),
+            h,
+          )
+        ).json(),
+      ),
+    ).toBe(true);
+
+    const ok = await post(on.env, call(4, 'schedule_propose', { ...base, cron: '0 7 * * 1' }), h);
+    expect(textOf(ok.json())).toContain('Setiap Senin 07.00 WIB');
+    expect(
+      (await on.env.get('/schedules', on.desktop)).json<{ items: unknown[] }>().items,
+    ).toHaveLength(before);
+    const [proposal] = (await on.env.get('/agent-proposals?kind=schedule', on.desktop))
+      .json<{ items: { id: string; runId: string }[] }>()
+      .items.filter((p) => p.runId === run.runId);
+    expect(proposal).toMatchObject({
+      status: 'pending',
+      schedule: {
+        name: 'Ringkas pagi',
+        cron: '0 7 * * 1',
+        timezone: 'Asia/Jakarta',
+        target: 'chat',
+      },
+      description: 'Setiap Senin 07.00 WIB',
+    });
+
+    const badEdit = await on.env.post(
+      `/agent-proposals/${proposal!.id}/approve`,
+      { schedule: { cron: '61 7 * * *' } },
+      on.desktop,
+    );
+    expect(badEdit.statusCode).toBe(400);
+    expect(badEdit.json()).toMatchObject({ code: 'invalid_cron' });
+    const wrongKind = await on.env.post(
+      `/agent-proposals/${proposal!.id}/approve`,
+      { task: { title: 'x' } },
+      on.desktop,
+    );
+    expect(wrongKind.statusCode).toBe(400);
+
+    const approved = await on.env.post(
+      `/agent-proposals/${proposal!.id}/approve`,
+      { schedule: { name: 'Berita Senin', enabled: false } },
+      on.desktop,
+    );
+    expect(approved.statusCode, approved.body).toBe(200);
+    const resultId = approved.json<{ resultId: string }>().resultId;
+    const schedules = (await on.env.get('/schedules', on.desktop)).json<{
+      items: { id: string; name: string; enabled: boolean; cron: string }[];
+    }>().items;
+    expect(schedules.find((s) => s.id === resultId)).toMatchObject({
+      name: 'Berita Senin',
+      enabled: false,
+      cron: '0 7 * * 1',
+    });
+  });
+
+  it('memory_propose lewat jalur usulan memori: kutipan wajib, rahasia ditolak, tanpa memori sebelum disimpan', async () => {
+    const run = await runningRun(
+      on,
+      'Usul Memori',
+      'Ingat ya, aku alergi kacang tanah sejak kecil.',
+    );
+    const h = as(run.token, run.runId);
+    const memoriesBefore = (await on.env.get('/memories', on.desktop)).json<{ items: unknown[] }>()
+      .items.length;
+
+    const invented = await post(
+      on.env,
+      call(1, 'memory_propose', {
+        text: 'Pemilik tinggal di Bandung.',
+        evidence: 'tinggal di Bandung',
+      }),
+      h,
+    );
+    expect(isError(invented.json())).toBe(true);
+    expect(textOf(invented.json())).toContain('Kutipan evidence tidak ditemukan');
+    const secret = await post(
+      on.env,
+      call(2, 'memory_propose', {
+        text: 'Kata sandi pemilik adalah kacang123.',
+        evidence: 'aku alergi kacang tanah',
+      }),
+      h,
+    );
+    expect(isError(secret.json())).toBe(true);
+
+    const ok = await post(
+      on.env,
+      call(3, 'memory_propose', {
+        text: 'Pemilik alergi kacang tanah.',
+        evidence: 'aku alergi kacang tanah sejak kecil',
+      }),
+      h,
+    );
+    expect(isError(ok.json())).toBe(false);
+    expect(
+      (await on.env.get('/memories', on.desktop)).json<{ items: unknown[] }>().items,
+    ).toHaveLength(memoriesBefore);
+    const proposals = (await on.env.get('/memories/proposals', on.desktop)).json<{
+      items: { id: string; runId: string | null }[];
+    }>().items;
+    const mine = proposals.find((p) => p.runId === run.runId);
+    expect(mine).toMatchObject({
+      kind: 'add',
+      status: 'pending',
+      text: 'Pemilik alergi kacang tanah.',
+      source: 'agent',
+      agent: 'omp',
+      afterWeb: false,
+    });
+    // Duplikat dari usulan yang menunggu ditolak penjaga yang sama dengan ekstraksi.
+    const again = await post(
+      on.env,
+      call(4, 'memory_propose', {
+        text: 'Pemilik alergi kacang tanah.',
+        evidence: 'alergi kacang tanah sejak kecil',
+      }),
+      h,
+    );
+    expect(isError(again.json())).toBe(true);
+
+    const saved = await on.env.post(`/memories/proposals/${mine!.id}/approve`, {}, on.desktop);
+    expect(saved.statusCode, saved.body).toBe(200);
+    const memories = (await on.env.get('/memories', on.desktop)).json<{
+      items: { text: string; source: string }[];
+    }>().items;
+    expect(memories.find((m) => m.text === 'Pemilik alergi kacang tanah.')).toMatchObject({
+      source: 'extracted',
+    });
+    const audit = await db().select().from(auditLog);
+    expect(audit.map((r) => r.target)).toContain(`memory_proposal:${mine!.id} agent:omp`);
+    expect(JSON.stringify(audit)).not.toMatch(/kacang/);
+  });
+
+  it('batas 3 usulan per run, afterWeb setelah tool web, dan batas harian per jenis', async () => {
+    const run = await runningRun(on, 'Usul Batas', 'cari panduan vite lalu catat');
+    const h = as(run.token, run.runId);
+    run.fake.emit(run.runId, {
+      type: 'tool.started',
+      toolCallId: 'tc-1',
+      name: 'mcp__aios_tools_web_search',
+      target: 'vite',
+    });
+    await until(
+      async () => (await on.env.get(`/runs/${run.runId}/events`, on.desktop)).body.includes('tc-1'),
+      'event tool tersimpan',
+    );
+    for (let i = 1; i <= 3; i += 1) {
+      const res = await post(
+        on.env,
+        call(i, 'task_propose', { title: `Kartu ${i}`, reason: 'lanjutan' }),
+        h,
+      );
+      expect(isError(res.json()), `usulan ${i}`).toBe(false);
+    }
+    const fourth = await post(
+      on.env,
+      call(4, 'task_propose', { title: 'Kartu 4', reason: 'x' }),
+      h,
+    );
+    expect(isError(fourth.json())).toBe(true);
+    expect(textOf(fourth.json())).toContain('Batas 3 usulan per run');
+    const rows = await db()
+      .select()
+      .from(agentProposals)
+      .where(eq(agentProposals.runId, run.runId));
+    expect(rows).toHaveLength(3);
+    expect(rows.every((r) => r.afterWeb)).toBe(true);
+
+    // Batas harian dihitung dari database (bertahan setelah restart): 10 usulan jadwal dalam 24 jam.
+    const existing = await db()
+      .select()
+      .from(agentProposals)
+      .where(eq(agentProposals.kind, 'schedule'));
+    const fill =
+      10 - existing.filter((r) => r.createdAt.getTime() > on.env.clock.now - 86_400_000).length;
+    if (fill > 0) {
+      await db()
+        .insert(agentProposals)
+        .values(
+          Array.from({ length: fill }, (_, i) => ({
+            kind: 'schedule' as const,
+            agent: 'omp' as const,
+            payload: {
+              name: `Isi ${i}`,
+              cron: '0 7 * * *',
+              timezone: 'Asia/Jakarta',
+              prompt: 'x',
+              target: 'chat' as const,
+            },
+            reason: 'isi',
+            createdAt: new Date(on.env.clock.now),
+          })),
+        );
+    }
+    const fresh = await runningRun(on, 'Usul Harian', 'jadwalkan');
+    const daily = await post(
+      on.env,
+      call(1, 'schedule_propose', {
+        name: 'Satu lagi',
+        cron: '0 8 * * *',
+        prompt: 'x',
+        target: 'chat',
+        reason: 'x',
+      }),
+      as(fresh.token, fresh.runId),
+    );
+    expect(isError(daily.json())).toBe(true);
+    expect(textOf(daily.json())).toContain('usulan jadwal per hari');
+    // Jenis lain tidak terpengaruh.
+    const task = await post(
+      on.env,
+      call(2, 'task_propose', { title: 'Kartu harian', reason: 'x' }),
+      as(fresh.token, fresh.runId),
+    );
+    expect(isError(task.json())).toBe(false);
+  });
+
+  it('mode rencana: usulan ditolak gateway (lapis kedua setelah worker) tanpa baris baru', async () => {
+    const run = await runningRun(on, 'Usul Rencana', 'rencanakan refactor', { planOnly: true });
+    const h = as(run.token, run.runId);
+    for (const [name, args] of [
+      ['task_propose', { title: 'Refactor', reason: 'x' }],
+      [
+        'schedule_propose',
+        { name: 'x', cron: '0 7 * * *', prompt: 'x', target: 'chat', reason: 'x' },
+      ],
+      ['memory_propose', { text: 'Pemilik suka refactor.', evidence: 'rencanakan refactor' }],
+    ] as const) {
+      const res = await post(on.env, call(1, name, args), h);
+      expect(isError(res.json()), name).toBe(true);
+      expect(textOf(res.json())).toContain('Mode rencana');
+    }
+    expect(
+      await db().select().from(agentProposals).where(eq(agentProposals.runId, run.runId)),
+    ).toEqual([]);
+    expect(
+      await db().select().from(memoryProposals).where(eq(memoryProposals.runId, run.runId)),
+    ).toEqual([]);
+    // Tool baca tetap boleh di mode rencana.
+    expect(isError((await post(on.env, call(2, 'task_list', {}), h)).json())).toBe(false);
   });
 });

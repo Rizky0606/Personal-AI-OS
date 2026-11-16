@@ -325,3 +325,11 @@ Sejak desain ini ditulis, `main` mendapat usulan memori dari ekstraksi fakta (`m
 - `task_propose`: hanya project run itu (`projectId` lain ditolak); tidak disajikan ke Hermes (tanpa project). `schedule_propose`: `target` `chat`|`research`, cron dan zona waktu divalidasi dengan `normalizeCron` yang sama dengan `POST /schedules` (cron salah = `isError`); jadwal baru dibuat hanya saat disetujui.
 - Audit tanpa isi: `memory_proposal.agent_created`, `agent_proposal.created`, `agent_proposal.approved`, `agent_proposal.rejected` dengan sasaran id dan jenis saja.
 - Persetujuan: klaim `UPDATE … WHERE status='pending'` lalu membuat entitas; bila pembuatan gagal (mis. project dihapus, cron hasil ubah tidak sah) klaim dikembalikan ke `pending` dan galatnya diteruskan. Setuju dua kali bersamaan = satu berhasil, satu 409 `proposal_decided`.
+
+## 18. Catatan implementasi slice 3
+
+- Gateway: `modules/mcp/propose-tools.ts` (`createProposeTools`: validasi, mode rencana, rahasia, batas per run dan harian dari database, `afterWeb` dari `run_events`), `modules/memory/agent-proposals.ts` (sisipan `memory_proposals` lewat `checkFact` yang sama dengan ekstraksi; Hermes memakai pesan pemilik chat umum 30 menit terakhir sebagai pembanding kutipan), `modules/agent-proposals/` (service + rute `/agent-proposals`). Konteks tool kini membawa `conversationId`, `planOnly`, `model`, dan `deviceId` run dari route.
+- Migrasi `0020_agent_proposals`. `MemoryProposal` mendapat `source`, `agent`, `afterWeb` (aditif dengan bawaan).
+- Worker: tool usulan diizinkan diam-diam, ditolak di mode rencana (`AIOS_PROPOSE_TOOLS`); instruksi prompt menyebut batas dan aturan kutipan.
+- UI: jenis langkah `propose` ("Membuat usulan", grup Progres "Usulan") di desktop dan Android. Desktop: "Usulan kartu" di atas kanban project, "Usulan jadwal" di atas Jadwal. Android: layar "Usulan agent" dari Pengaturan (setujui/tolak tanpa ubah). Usulan memori dari agent tampil di blok usulan Memori yang sudah ada.
+- Penyimpangan dari bagian 6–7: `memory_propose` memakai `evidence` wajib, bukan `reason`; batas memakai jumlah baris di database, bukan anggaran in-memory; tidak ada kartu usulan di chat (BACKLOG).
