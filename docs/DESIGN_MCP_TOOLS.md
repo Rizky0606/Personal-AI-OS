@@ -1,6 +1,6 @@
 # Desain: tool gateway lewat MCP (`aios_tools`)
 
-Status: **slice 1–2 terimplementasi** (web dan baca data sistem untuk omp lewat worker, bawaan mati; lihat bagian 15); slice 3–4 masih desain. Keputusan pemilik bagian 13 diterima dengan rekomendasi bawaan. Disusun 2026-11-16 di branch `feat/mcp-tools` dari `main` (1ab4582). Semua rujukan `berkas:baris` dibaca langsung di commit itu; rujukan Hermes dibaca read-only dari `~/.hermes/hermes-agent` (checkout `b200f5bc60`, `git describe` = `v0.22.7`). Yang tidak teramati langsung ditandai **[INFERENSI]**.
+Status: **slice 1–2 terimplementasi** (web dan baca data sistem untuk omp lewat worker, bawaan mati; lihat bagian 15); **slice 3 (usulan) dan slice 4 (Hermes) sedang dikerjakan di `feat/mcp-propose`** dengan keputusan di bagian 17. Keputusan pemilik bagian 13 diterima dengan rekomendasi bawaan. Disusun 2026-11-16 di branch `feat/mcp-tools` dari `main` (1ab4582). Semua rujukan `berkas:baris` dibaca langsung di commit itu; rujukan Hermes dibaca read-only dari `~/.hermes/hermes-agent` (checkout `b200f5bc60`, `git describe` = `v0.22.7`). Yang tidak teramati langsung ditandai **[INFERENSI]**.
 
 ## 0. Ringkasan
 
@@ -295,3 +295,33 @@ Perubahan:
 - `memory_list` menerima `query?` opsional (tambahan dari bagian 6) untuk mendahulukan memori yang cocok kata; batasnya 50 butir (bukan 200) dan anggaran karakter recall.
 - Izin: adapter omp tetap memberi `command` untuk tool data; worker mengizinkannya diam-diam bila run membawa `gatewayTools` (juga `planOnly`). Kontrak: `AIOS_DATA_TOOLS`.
 - UI: jenis langkah `data` ("Membaca data AIOS") dan grup Progres `data` ("Data AIOS") di desktop dan Android.
+
+## 17. Keputusan slice 3 (usulan): satu jalur memori, `agent_proposals` hanya untuk kartu dan jadwal
+
+Sejak desain ini ditulis, `main` mendapat usulan memori dari ekstraksi fakta (`modules/memory/proposal-service.ts`, tabel `memory_proposals`, migrasi 0019) lengkap dengan tinjauan di desktop dan Android. Karena itu bagian 7 ("satu tabel `agent_proposals` untuk tiga jenis") diubah:
+
+| Tool | Disimpan di | Ditinjau di | Disetujui menjadi |
+| --- | --- | --- | --- |
+| `memory_propose` | **`memory_proposals`** (baris `kind: add`, `status: pending`) dengan kolom asal baru | layar Memori yang sudah ada (Simpan, Ubah lalu simpan, Tolak; desktop dan Android) | memori lewat `approve` yang sudah ada (cek `MAX_MEMORIES`, klaim atomik `proposal_decided`) |
+| `task_propose` | **`agent_proposals`** `kind: task` | bagian "Usulan kartu" di atas kanban project (desktop, bisa diubah) dan layar "Usulan agent" Android | `tasks.create({status:'backlog'})` di project run itu |
+| `schedule_propose` | **`agent_proposals`** `kind: schedule` | bagian "Usulan jadwal" di atas daftar Jadwal (desktop, bisa diubah) dan layar "Usulan agent" Android | `schedules.create` dengan pilihan aktif/nonaktif saat menyetujui |
+
+**Mengapa memori lewat `memory_proposals`, bukan tabel baru.** Satu fakta tentang pemilik hanya boleh punya satu jalur tinjau. Jalur ekstraksi sudah punya semua penjaga yang dibutuhkan usulan dari agent: kutipan harus muncul apa adanya di pesan pemilik (`evidenceSource`), pemindai injeksi (`scanSkill`), rahasia (`factSecret` = `findSecret` + nomor kartu, OTP, kata kredensial), bentuk satu kalimat (`factShapeOk`), duplikat terhadap memori, usulan menunggu, dan yang ditolak 90 hari terakhir (`isDuplicate`), batas `PENDING_MAX` usulan menunggu, dan `MAX_MEMORIES` saat disetujui. Tabel kedua berarti dua daftar tinjau untuk hal yang sama dan dedup yang tidak saling melihat (agent bisa mengusulkan ulang fakta yang baru ditolak di jalur lain).
+
+- `memory_propose` menerima `text` (≤300) dan **`evidence` wajib**: kutipan persis dari pesan pemilik. Untuk principal `worker` pembandingnya pesan pemilik yang memulai run (`createOwnerText`); untuk `hermes` (tanpa run) pesan pemilik di chat umum 30 menit terakhir. Akibatnya teks yang dibaca agent dari web, dokumen, atau kode tidak bisa menjadi memori: hanya yang dikatakan pemilik sendiri. Ini juga membuat label "Dari pesan Anda: …" di layar Memori tetap benar tanpa mengubah UI.
+- Migrasi 0020 (aditif) menambah tiga kolom di `memory_proposals`: `source` (`extraction` bawaan | `agent`), `agent` (`omp`|`hermes`, null untuk ekstraksi), `after_web` (boolean, bawaan false). Kontrak `MemoryProposal` mendapat field yang sama dengan bawaan (`source: 'extraction'`, `agent: null`, `afterWeb: false`) sehingga server lama tetap terbaca. `model` diisi model run (atau nama mesin bila run tanpa model).
+- Memori hasil persetujuan tetap `source: 'extracted'` dengan `origin` percakapan run: nilai `MemorySource` baru akan membuat klien lama gagal mengurai daftar memori, sedangkan asal agent sudah tercatat di baris usulannya.
+- Notifikasi memakai topik yang sudah ada `memory_proposal` (klien sudah menyegarkan daftar usulan memori karenanya).
+
+**Mengapa `agent_proposals` tetap dibutuhkan untuk kartu dan jadwal.** Kanban dan jadwal tidak punya status draf yang aman: kartu `backlog` langsung terlihat dan bisa dikerjakan, jadwal `enabled:false` tetap mengotori daftar nyata dan bisa diaktifkan tanpa sadar dari mana asalnya (keputusan pemilik #3). Satu tabel untuk dua jenis (pola `skill_proposals`) memberi satu klaim atomik, satu batas, satu topik notifikasi (`agent_proposal`), dan satu set rute; tabel per jenis hanya menggandakan logika itu. Kolom: `kind` (`task`|`schedule`), `status` (`pending`|`approved`|`rejected`), `agent` (`omp`|`hermes`), `payload` jsonb yang divalidasi Zod per jenis, `reason`, `after_web`, `project_id` (kartu; hapus project = hapus usulannya), `conversation_id`, `run_id`, `result_id` (kartu/jadwal yang dibuat), `created_at`, `decided_at`.
+
+**Aturan bersama ketiga tool.**
+
+- Batas: **3 usulan per run** (semua jenis, dihitung dari kedua tabel menurut `run_id`, jadi tetap berlaku setelah gateway restart) dan **10 per jenis per 24 jam bergulir** (hanya usulan dari agent). Hermes tanpa run: batas harian saja. Usulan memori juga tunduk pada `PENDING_MAX`.
+- Rahasia: `findSecret` pada semua teks usulan (memori memakai `factSecret` yang lebih ketat); ditolak dengan `isError` tanpa menyebut nilainya.
+- Mode rencana: worker menolak izin tool usulan (`deny`, tanpa bertanya); gateway juga menolak bila run `planOnly` (lapis kedua, `isError`).
+- Izin omp: adapter tetap memberi jenis `command`; worker mengizinkan tool usulan diam-diam (tidak ada yang berubah sebelum pemilik menyetujui), kecuali `planOnly`.
+- `afterWeb`: true bila run sudah memakai tool web (event `tool.started` web/fetch/browser tersimpan di `run_events`, atau `web_*` `aios_tools`) sebelum mengusulkan; ditampilkan sebagai peringatan saat meninjau.
+- `task_propose`: hanya project run itu (`projectId` lain ditolak); tidak disajikan ke Hermes (tanpa project). `schedule_propose`: `target` `chat`|`research`, cron dan zona waktu divalidasi dengan `normalizeCron` yang sama dengan `POST /schedules` (cron salah = `isError`); jadwal baru dibuat hanya saat disetujui.
+- Audit tanpa isi: `memory_proposal.agent_created`, `agent_proposal.created`, `agent_proposal.approved`, `agent_proposal.rejected` dengan sasaran id dan jenis saja.
+- Persetujuan: klaim `UPDATE … WHERE status='pending'` lalu membuat entitas; bila pembuatan gagal (mis. project dihapus, cron hasil ubah tidak sah) klaim dikembalikan ke `pending` dan galatnya diteruskan. Setuju dua kali bersamaan = satu berhasil, satu 409 `proposal_decided`.
