@@ -65,11 +65,9 @@ sealed interface ServerEvent {
     data class ResearchCompleted(val researchId: String, val runId: String?) : ServerEvent
 
     /**
-    /**
      * Channel `user`: notifikasi umum. [topic] menandai jenis (mis. `memory_proposal` menyegarkan layar Memori,
      * `agent_proposal` menyegarkan usulan agent); null untuk notifikasi biasa. Topik baru dibaca sebagai teks supaya
      * tidak merusak penguraian. Judul/isi bisa memuat teks fakta dan tidak disimpan.
-     */
      */
     data class Notification(val topic: String?) : ServerEvent
 
