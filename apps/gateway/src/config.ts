@@ -42,6 +42,11 @@ const EnvSchema = z.object({
    * route tidak dipasang (404) dan run coding tidak membawa `gatewayTools`. docs/DESIGN_MCP_TOOLS.md.
    */
   MCP_TOOLS_ENABLED: withDefault(z.enum(['true', 'false']), 'false'),
+  /**
+   * SHA-256 (64 heks) token layanan Hermes untuk `/v1/mcp` (docs/RUNBOOK_HERMES_MCP.md). Kosong (bawaan) = principal
+   * Hermes mati. Token-nya sendiri hanya disimpan di `~/.hermes/.env`, tidak pernah di gateway.
+   */
+  MCP_HERMES_TOKEN_SHA256: optionalString,
   /** Combo 9Router untuk model kecil. */
   TITLE_MODEL: withDefault(z.string().min(1), 'router-fast'),
   /**
@@ -161,6 +166,15 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     if ((data.DSH_UID === undefined) !== (data.DSH_GID === undefined)) {
       throw new ConfigError([
         { variable: 'DSH_GID', message: 'DSH_UID dan DSH_GID harus diisi bersama.' },
+      ]);
+    }
+    if (data.MCP_HERMES_TOKEN_SHA256 && !/^[0-9a-f]{64}$/i.test(data.MCP_HERMES_TOKEN_SHA256)) {
+      throw new ConfigError([
+        {
+          variable: 'MCP_HERMES_TOKEN_SHA256',
+          message:
+            'harus SHA-256 heks 64 karakter (lihat docs/RUNBOOK_HERMES_MCP.md), bukan token-nya.',
+        },
       ]);
     }
     return data;

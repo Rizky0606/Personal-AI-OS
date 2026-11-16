@@ -44,10 +44,7 @@ import { createSearxngClient, type SearchClient } from '../modules/research/sear
 import type { PageFetcher } from '../modules/research/fetcher.js';
 import { createOwnerText } from '../modules/mcp/owner-text.js';
 import { createMcpServer } from '../modules/mcp/server.js';
-import { createDataTools } from '../modules/mcp/data-tools.js';
-import { combineTools } from '../modules/mcp/tools.js';
-import { createWebTools } from '../modules/mcp/web-tools.js';
-import { createProposeTools } from '../modules/mcp/propose-tools.js';
+import { createAiosTools } from '../modules/mcp/aios-tools.js';
 import { createAgentMemoryProposals } from '../modules/memory/agent-proposals.js';
 import {
   createAgentProposalService,
@@ -232,7 +229,12 @@ export async function createAuthEnv(
      * Tool gateway MCP (MCP_TOOLS_ENABLED=true): memasang `/v1/mcp` dan `run.start.gatewayTools`. SearXNG dan
      * pengambil halaman tiruan; tanpa ini fiturnya mati seperti bawaan produksi.
      */
-    mcpTools?: { search?: SearchClient; fetchPage?: PageFetcher };
+    mcpTools?: {
+      search?: SearchClient;
+      fetchPage?: PageFetcher;
+      /** MCP_HERMES_TOKEN_SHA256: menyalakan principal Hermes. */
+      hermesTokenSha256?: string;
+    };
     /** Batas run coding paralel per project untuk kartu kanban. */
     taskMaxParallel?: number;
     rateLimits?: Partial<RateLimits>;
@@ -551,27 +553,29 @@ export async function createAuthEnv(
       ? {
           mcp: {
             db,
+            hermesTokenSha256: options.mcpTools.hermesTokenSha256,
+            now,
             server: createMcpServer({
               version: 'test',
-              tools: combineTools(
-                createWebTools({
+              tools: createAiosTools({
+                web: {
                   search:
                     options.mcpTools.search ??
                     createSearxngClient({ baseUrl: 'http://127.0.0.1:9' }),
                   fetchPage:
                     options.mcpTools.fetchPage ??
                     (() => Promise.reject(new Error('tes: halaman web tidak tersedia'))),
-                  ownerText: createOwnerText(db),
+                  ownerText: createOwnerText(db, now),
                   now,
-                }),
-                createDataTools({ memory, spaces, tasks, schedules, now }),
-                createProposeTools({
+                },
+                data: { memory, spaces, tasks, schedules, now },
+                propose: {
                   db,
                   memory: createAgentMemoryProposals({ db, hub, now }),
                   proposals: agentProposals,
                   now,
-                }),
-              ),
+                },
+              }),
             }),
           },
         }

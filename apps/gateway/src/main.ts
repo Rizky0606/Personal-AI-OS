@@ -20,10 +20,7 @@ import { createMemoryProposalService } from './modules/memory/proposal-service.j
 import { createMemoryService } from './modules/memory/service.js';
 import { createOwnerText } from './modules/mcp/owner-text.js';
 import { createMcpServer } from './modules/mcp/server.js';
-import { createDataTools } from './modules/mcp/data-tools.js';
-import { combineTools } from './modules/mcp/tools.js';
-import { createWebTools } from './modules/mcp/web-tools.js';
-import { createProposeTools } from './modules/mcp/propose-tools.js';
+import { createAiosTools } from './modules/mcp/aios-tools.js';
 import { createAgentMemoryProposals } from './modules/memory/agent-proposals.js';
 import { createAgentProposalService } from './modules/agent-proposals/service.js';
 import { createFleetService } from './modules/fleets/service.js';
@@ -387,21 +384,22 @@ async function main(): Promise<void> {
       ? {
           mcp: {
             db,
+            hermesTokenSha256: config.MCP_HERMES_TOKEN_SHA256,
             server: createMcpServer({
               version: GATEWAY_VERSION,
-              tools: combineTools(
-                createWebTools({
+              tools: createAiosTools({
+                web: {
                   search: createSearxngClient({ baseUrl: config.SEARXNG_URL }),
                   fetchPage,
                   ownerText: createOwnerText(db),
-                }),
-                createDataTools({ memory, spaces, tasks, schedules }),
-                createProposeTools({
+                },
+                data: { memory, spaces, tasks, schedules },
+                propose: {
                   db,
                   memory: createAgentMemoryProposals({ db, hub }),
                   proposals: agentProposals,
-                }),
-              ),
+                },
+              }),
             }),
           },
         }

@@ -63,6 +63,14 @@ export const AIOS_PROPOSE_TOOLS: readonly AiosToolName[] = [
   'schedule_propose',
 ];
 
+/**
+ * Tool yang disajikan ke Hermes (principal `hermes`, tanpa run dan tanpa project): semua kecuali tool kanban, yang
+ * hanya bermakna untuk project run worker (docs/DESIGN_MCP_TOOLS.md bagian 19).
+ */
+export const AIOS_HERMES_TOOLS: readonly AiosToolName[] = AIOS_TOOL_NAMES.filter(
+  (name) => name !== 'task_list' && name !== 'task_propose',
+);
+
 export const WEB_SEARCH_QUERY_MAX = 200;
 export const WEB_SEARCH_LIMIT_MAX = 8;
 

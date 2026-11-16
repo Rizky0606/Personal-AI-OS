@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { createMcpServer, type ToolCallRecord } from './server.js';
-import type { ToolSet } from './tools.js';
+import { workerContext, type ToolSet } from './tools.js';
 
 const RUN = '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f';
 
 function setup() {
-  const calls: { name: string; args: Record<string, unknown>; runId: string }[] = [];
+  const calls: { name: string; args: Record<string, unknown>; runId: string | null }[] = [];
   const tools: ToolSet = {
     list: () => [
       {
@@ -31,7 +31,7 @@ function setup() {
   const records: ToolCallRecord[] = [];
   const handle = (body: unknown) =>
     server.handle(typeof body === 'string' ? body : JSON.stringify(body), {
-      runId: RUN,
+      ...workerContext(RUN),
       onToolCall: (r) => records.push(r),
     });
   return { handle, calls, records };

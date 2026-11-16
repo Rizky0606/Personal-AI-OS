@@ -29,8 +29,11 @@ const SNIPPET_CHARS = 500;
 export interface WebToolsDeps {
   search: SearchClient;
   fetchPage: PageFetcher;
-  /** Teks pesan pemilik yang memulai run ini; URL di dalamnya boleh dibaca `web_read`. */
-  ownerText: (runId: string) => Promise<string>;
+  /**
+   * Teks pesan pemilik yang boleh dirujuk: pesan yang memulai run (worker), atau pesan chat umum terbaru (Hermes);
+   * URL di dalamnya boleh dibaca `web_read`.
+   */
+  ownerText: (ctx: Pick<ToolContext, 'runId'>) => Promise<string>;
   now?: () => number;
 }
 
@@ -82,17 +85,20 @@ function httpUrl(raw: string): string | null {
  * muncul di hasil pencarian run itu atau di pesan pemilik, supaya isi halaman yang tidak tepercaya tidak bisa
  * menyuruh agent membuka alamat buatan penyerang (mis. URL berisi data pribadi).
  */
-export function createWebTools(deps: WebToolsDeps): ToolSet {
+export function createWebTools(deps: WebToolsDeps): ToolSet & {
+  /** Kunci anggaran ini sudah memakai `web_search`/`web_read` (penanda `afterWeb` usulan Hermes). */
+  usedWeb(budgetKey: string): boolean;
+} {
   const now = deps.now ?? Date.now;
   const runs = new Map<string, RunState>();
 
-  function stateOf(runId: string): RunState {
+  function stateOf(key: string): RunState {
     const at = now();
     for (const [id, state] of runs) if (at - state.touchedAt > STATE_TTL_MS) runs.delete(id);
-    let state = runs.get(runId);
+    let state = runs.get(key);
     if (!state) {
       state = { searches: 0, reads: 0, allowed: new Set(), ownerLoaded: false, touchedAt: at };
-      runs.set(runId, state);
+      runs.set(key, state);
     }
     state.touchedAt = at;
     return state;
@@ -109,10 +115,11 @@ export function createWebTools(deps: WebToolsDeps): ToolSet {
         `Kueri ditolak karena tampak memuat rahasia (${secret}). Kueri dikirim ke mesin pencari luar; tulis ulang tanpa rahasia.`,
       );
     }
-    const state = stateOf(ctx.runId);
-    if (state.searches >= WEB_SEARCH_PER_RUN) {
+    const state = stateOf(ctx.budgetKey);
+    const limit = WEB_SEARCH_PER_RUN * ctx.budgetScale;
+    if (state.searches >= limit) {
       return failure(
-        `Batas ${WEB_SEARCH_PER_RUN} pencarian web per run tercapai. Lanjutkan dengan hasil yang sudah ada.`,
+        `Batas ${limit} pencarian web ${ctx.runId ? 'per run' : 'per jam'} tercapai. Lanjutkan dengan hasil yang sudah ada.`,
       );
     }
     state.searches += 1;
@@ -174,19 +181,21 @@ export function createWebTools(deps: WebToolsDeps): ToolSet {
     const url = httpUrl(parsed.data.url);
     if (!url) return failure('URL harus http atau https.');
 
-    const state = stateOf(ctx.runId);
+    const state = stateOf(ctx.budgetKey);
+    // Pesan pemilik run tidak berubah, jadi dibaca sekali; untuk Hermes (tanpa run) pesan terbaru dibaca ulang.
     if (!state.ownerLoaded) {
-      for (const u of urlsIn(await deps.ownerText(ctx.runId))) state.allowed.add(normalizeUrl(u));
-      state.ownerLoaded = true;
+      for (const u of urlsIn(await deps.ownerText(ctx))) state.allowed.add(normalizeUrl(u));
+      state.ownerLoaded = ctx.runId !== null;
     }
     if (!state.allowed.has(normalizeUrl(url))) {
       return failure(
         'URL ini tidak ada di hasil web_search run ini maupun di pesan pemilik, jadi tidak dibuka. Cari dulu dengan web_search lalu pakai URL persis dari hasilnya.',
       );
     }
-    if (state.reads >= WEB_READ_PER_RUN) {
+    const limit = WEB_READ_PER_RUN * ctx.budgetScale;
+    if (state.reads >= limit) {
       return failure(
-        `Batas ${WEB_READ_PER_RUN} halaman per run tercapai. Lanjutkan dengan bahan yang sudah ada.`,
+        `Batas ${limit} halaman ${ctx.runId ? 'per run' : 'per jam'} tercapai. Lanjutkan dengan bahan yang sudah ada.`,
       );
     }
     state.reads += 1;
@@ -220,6 +229,10 @@ export function createWebTools(deps: WebToolsDeps): ToolSet {
       if (name === 'web_search') return webSearch(args, ctx);
       if (name === 'web_read') return webRead(args, ctx);
       return null;
+    },
+    usedWeb(budgetKey) {
+      const state = runs.get(budgetKey);
+      return state !== undefined && state.searches + state.reads > 0;
     },
   };
 }

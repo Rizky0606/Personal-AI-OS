@@ -37,8 +37,8 @@ export interface ProposeToolsDeps {
   db: Database;
   memory: AgentMemoryProposals;
   proposals: Pick<AgentProposalService, 'create'>;
-  /** Mesin pemanggil untuk principal worker. */
-  agent?: ProposalAgent;
+  /** Kunci anggaran sudah memakai tool web `aios_tools` (Hermes, tanpa `run_events`). */
+  webUsed?: (budgetKey: string) => boolean;
   now?: () => number;
 }
 
@@ -100,22 +100,27 @@ const MEMORY_REJECTIONS: Record<AgentMemoryRejection, string> = {
 export function createProposeTools(deps: ProposeToolsDeps): ToolSet {
   const { db } = deps;
   const now = deps.now ?? Date.now;
-  const agent = deps.agent ?? 'omp';
+  /** Mesin yang mengusulkan: worker = omp, Hermes = hermes. */
+  const agentOf = (ctx: ToolContext): ProposalAgent =>
+    ctx.principal === 'hermes' ? 'hermes' : 'omp';
 
   /** Batas per run (semua jenis, dari kedua tabel) dan per jenis per 24 jam; pesan galat atau null. */
   async function overLimit(
     kind: 'memory' | 'task' | 'schedule',
     ctx: ToolContext,
   ): Promise<string | null> {
-    const [memoryRun, agentRun] = await Promise.all([
-      db
-        .select({ n: count() })
-        .from(memoryProposals)
-        .where(and(eq(memoryProposals.runId, ctx.runId), eq(memoryProposals.source, 'agent'))),
-      db.select({ n: count() }).from(agentProposals).where(eq(agentProposals.runId, ctx.runId)),
-    ]);
-    if ((memoryRun[0]?.n ?? 0) + (agentRun[0]?.n ?? 0) >= PROPOSALS_PER_RUN) {
-      return `Batas ${PROPOSALS_PER_RUN} usulan per run tercapai. Sebutkan usulan lain di jawabanmu saja.`;
+    const runId = ctx.runId;
+    if (runId) {
+      const [memoryRun, agentRun] = await Promise.all([
+        db
+          .select({ n: count() })
+          .from(memoryProposals)
+          .where(and(eq(memoryProposals.runId, runId), eq(memoryProposals.source, 'agent'))),
+        db.select({ n: count() }).from(agentProposals).where(eq(agentProposals.runId, runId)),
+      ]);
+      if ((memoryRun[0]?.n ?? 0) + (agentRun[0]?.n ?? 0) >= PROPOSALS_PER_RUN) {
+        return `Batas ${PROPOSALS_PER_RUN} usulan per run tercapai. Sebutkan usulan lain di jawabanmu saja.`;
+      }
     }
     const since = new Date(now() - DAY_MS);
     const [day] =
@@ -134,8 +139,10 @@ export function createProposeTools(deps: ProposeToolsDeps): ToolSet {
     return null;
   }
 
-  /** Run ini sudah memakai tool web sebelum mengusulkan (ditandai di usulan sebagai peringatan). */
+  /** Pemanggil sudah memakai tool web sebelum mengusulkan (ditandai di usulan sebagai peringatan). */
   async function afterWeb(ctx: ToolContext): Promise<boolean> {
+    if (deps.webUsed?.(ctx.budgetKey)) return true;
+    if (!ctx.runId) return false;
     const name = sql`lower(${runEvents.payload}->>'name')`;
     const [hit] = await db
       .select({ seq: runEvents.seq })
@@ -166,6 +173,7 @@ export function createProposeTools(deps: ProposeToolsDeps): ToolSet {
     if (ctx.planOnly) return planOnlyFailure();
     const limited = await overLimit('memory', ctx);
     if (limited) return failure(limited);
+    const agent = agentOf(ctx);
     const result = await deps.memory.propose({
       text: parsed.data.text,
       evidence: parsed.data.evidence,
@@ -206,7 +214,7 @@ export function createProposeTools(deps: ProposeToolsDeps): ToolSet {
       kind: 'task',
       task: { title, body },
       projectId,
-      agent,
+      agent: agentOf(ctx),
       reason,
       afterWeb: await afterWeb(ctx),
       conversationId: ctx.conversationId ?? null,
@@ -240,7 +248,7 @@ export function createProposeTools(deps: ProposeToolsDeps): ToolSet {
     const proposal = await deps.proposals.create({
       kind: 'schedule',
       schedule: { name, cron, timezone, prompt, target },
-      agent,
+      agent: agentOf(ctx),
       reason,
       afterWeb: await afterWeb(ctx),
       conversationId: ctx.conversationId ?? null,

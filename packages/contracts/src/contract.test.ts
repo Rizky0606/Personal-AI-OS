@@ -23,6 +23,7 @@ import {
 import {
   AIOS_DATA_TOOLS,
   AIOS_NETWORK_TOOLS,
+  AIOS_HERMES_TOOLS,
   AIOS_PROPOSE_TOOLS,
   MemoryListInputSchema,
   MemoryProposeInputSchema,
@@ -358,6 +359,10 @@ describe('tool gateway (aios_tools)', () => {
     expect(AIOS_PROPOSE_TOOLS.filter((t) => AIOS_DATA_TOOLS.includes(t))).toEqual([]);
     expect(AIOS_PROPOSE_TOOLS.filter((t) => AIOS_NETWORK_TOOLS.includes(t))).toEqual([]);
     expect([...AIOS_NETWORK_TOOLS, ...AIOS_DATA_TOOLS, ...AIOS_PROPOSE_TOOLS]).toHaveLength(9);
+    // Hermes tanpa project: tanpa tool kanban, sisanya ikut.
+    expect(AIOS_HERMES_TOOLS).not.toContain('task_list');
+    expect(AIOS_HERMES_TOOLS).not.toContain('task_propose');
+    expect(AIOS_HERMES_TOOLS).toHaveLength(7);
   });
 
   it('skema masukan tool usulan', () => {

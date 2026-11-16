@@ -12,6 +12,7 @@ import type { AddressInfo } from 'node:net';
 import { WebSocket } from 'ws';
 import { afterAll, beforeAll, describe, expect, inject, it } from 'vitest';
 import { agentProposals, auditLog, memoryProposals } from '../../db/schema/index.js';
+import { createHash, randomBytes } from 'node:crypto';
 import { createAuthEnv, type AuthEnv } from '../../testing/auth-env.js';
 import type { PageFetcher } from '../research/fetcher.js';
 import type { SearchClient } from '../research/search.js';
@@ -173,6 +174,9 @@ const textOf = (body: unknown) => ToolTextSchema.parse(body).result.content[0]?.
 
 let on: Gateway;
 let off: Gateway;
+/** MCP menyala dengan principal Hermes (MCP_HERMES_TOKEN_SHA256 terisi). */
+let herm: Gateway;
+const HERMES_TOKEN = randomBytes(32).toString('hex');
 
 beforeAll(async () => {
   // Masa tunggu relay pendek: run yang masih `running` di akhir tes ditutup cepat saat worker tiruan putus.
@@ -185,12 +189,169 @@ beforeAll(async () => {
     schedules: { pollMs: 1000 },
   });
   off = await gateway({ workerRelay });
+  herm = await gateway({
+    mcpTools: {
+      search,
+      fetchPage,
+      hermesTokenSha256: createHash('sha256').update(HERMES_TOKEN).digest('hex').toUpperCase(),
+    },
+    workerRelay,
+    schedules: { pollMs: 1000 },
+  });
 });
 afterAll(async () => {
-  for (const gw of [on, off]) {
+  for (const gw of [on, off, herm]) {
     for (const w of gw.workers) w.close();
     await gw.env.close();
   }
+});
+
+describe('principal Hermes (slice 4): token layanan dari loopback, tanpa run', () => {
+  const send = (
+    env: AuthEnv,
+    body: unknown,
+    options: { token?: string; headers?: Record<string, string>; remoteAddress?: string } = {},
+  ) =>
+    env.app.inject({
+      method: 'POST',
+      url: '/v1/mcp',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${options.token ?? HERMES_TOKEN}`,
+        ...options.headers,
+      },
+      ...(options.remoteAddress ? { remoteAddress: options.remoteAddress } : {}),
+      payload: JSON.stringify(body),
+    });
+  const ping = { jsonrpc: '2.0', id: 1, method: 'ping' };
+
+  it('hash kosong = Hermes mati (401); token salah 401; token benar lewat proxy atau dari luar loopback 403', async () => {
+    expect((await send(on.env, ping)).statusCode).toBe(401);
+    expect((await send(herm.env, ping, { token: 'b'.repeat(64) })).statusCode).toBe(401);
+    expect((await send(herm.env, ping, { token: `${HERMES_TOKEN}x` })).statusCode).toBe(401);
+    const proxied = await send(herm.env, ping, { headers: { 'x-forwarded-for': '127.0.0.1' } });
+    expect(proxied.statusCode).toBe(403);
+    expect(proxied.json()).toMatchObject({ code: 'hermes_not_local' });
+    expect(
+      (await send(herm.env, ping, { headers: { 'x-real-ip': '198.51.100.7' } })).statusCode,
+    ).toBe(403);
+    expect((await send(herm.env, ping, { remoteAddress: '203.0.113.5' })).statusCode).toBe(403);
+    expect((await send(herm.env, ping)).statusCode).toBe(200);
+    // Token Hermes tidak membuka rute aplikasi mana pun.
+    const app = await herm.env.app.inject({
+      method: 'GET',
+      url: '/v1/agent-proposals',
+      headers: { authorization: `Bearer ${HERMES_TOKEN}` },
+    });
+    expect(app.statusCode).toBe(401);
+  });
+
+  it('tools/list tanpa tool kanban; task_list/task_propose = tool tidak dikenal; worker tetap berfungsi', async () => {
+    const init = await send(herm.env, {
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'initialize',
+      params: { protocolVersion: '2025-06-18', capabilities: {} },
+    });
+    expect(init.json()).toMatchObject({ result: { serverInfo: { name: 'aios_tools' } } });
+    const names = ToolListSchema.parse(
+      (await send(herm.env, { jsonrpc: '2.0', id: 2, method: 'tools/list' })).json(),
+    ).result.tools.map((t) => t.name);
+    expect(names).toEqual([
+      'web_search',
+      'web_read',
+      'memory_list',
+      'space_search',
+      'schedule_list',
+      'memory_propose',
+      'schedule_propose',
+    ]);
+    for (const name of ['task_list', 'task_propose']) {
+      expect(
+        (await send(herm.env, call(3, name, { title: 'x', reason: 'y' }))).json(),
+      ).toMatchObject({ error: { code: -32602 } });
+    }
+    const memories = await send(herm.env, call(4, 'memory_list', {}));
+    expect(memories.json()).not.toHaveProperty('result.isError');
+
+    // Worker di gateway yang sama tetap lewat JWT + run.
+    const run = await runningRun(herm, 'Hermes Worker', 'halo');
+    const list = await post(
+      herm.env,
+      { jsonrpc: '2.0', id: 5, method: 'tools/list' },
+      as(run.token, run.runId),
+    );
+    expect(ToolListSchema.parse(list.json()).result.tools.map((t) => t.name)).toContain(
+      'task_propose',
+    );
+
+    const audit = await herm.env.database.handle.db.select().from(auditLog);
+    const hermesRows = audit.filter((r) => r.target.startsWith('hermes tool:'));
+    expect(hermesRows.map((r) => r.target).sort()).toEqual(['hermes tool:memory_list ok']);
+    expect(hermesRows.every((r) => r.actorDeviceId === null)).toBe(true);
+  });
+
+  it('usulan Hermes: jadwal tanpa run bertanda agent hermes; memori hanya dari kutipan pesan chat umum terbaru', async () => {
+    const sched = await send(
+      herm.env,
+      call(1, 'schedule_propose', {
+        name: 'Ringkasan malam',
+        cron: '0 21 * * *',
+        prompt: 'Ringkas hari ini',
+        target: 'chat',
+        reason: 'diminta pemilik',
+      }),
+    );
+    expect(sched.json()).not.toHaveProperty('result.isError');
+    const [proposal] = (await herm.env.get('/agent-proposals?kind=schedule', herm.desktop)).json<{
+      items: { agent: string; runId: string | null }[];
+    }>().items;
+    expect(proposal).toMatchObject({
+      agent: 'hermes',
+      runId: null,
+      projectId: null,
+      status: 'pending',
+    });
+    expect(
+      (await herm.env.get('/schedules', herm.desktop)).json<{ items: unknown[] }>().items,
+    ).toEqual([]);
+
+    const invented = await send(
+      herm.env,
+      call(2, 'memory_propose', {
+        text: 'Pemilik suka teh tawar.',
+        evidence: 'aku suka teh tawar',
+      }),
+    );
+    expect(invented.json()).toMatchObject({ result: { isError: true } });
+
+    const conversation = (
+      await herm.env.post('/conversations', { surface: 'windows' }, herm.desktop)
+    ).json<{ id: string }>();
+    await herm.env.post(
+      `/conversations/${conversation.id}/messages`,
+      { parts: [{ type: 'text', text: 'Catat ya, aku suka teh tawar tanpa gula.' }] },
+      herm.desktop,
+    );
+    const ok = await send(
+      herm.env,
+      call(3, 'memory_propose', {
+        text: 'Pemilik suka teh tawar tanpa gula.',
+        evidence: 'aku suka teh tawar tanpa gula',
+      }),
+    );
+    expect(ok.json()).not.toHaveProperty('result.isError');
+    const memoryProposal = (await herm.env.get('/memories/proposals', herm.desktop)).json<{
+      items: unknown[];
+    }>().items[0];
+    expect(memoryProposal).toMatchObject({
+      source: 'agent',
+      agent: 'hermes',
+      runId: null,
+      model: 'hermes',
+      conversationId: null,
+    });
+  });
 });
 
 describe('MCP_TOOLS_ENABLED mati (bawaan)', () => {

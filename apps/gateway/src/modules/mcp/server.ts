@@ -1,4 +1,4 @@
-import { AIOS_TOOLS_SERVER } from '@aios/contracts';
+import { AIOS_HERMES_TOOLS, AIOS_TOOLS_SERVER } from '@aios/contracts';
 import { z } from 'zod';
 import type { ToolContext, ToolSet } from './tools.js';
 
@@ -57,6 +57,11 @@ export interface McpServer {
   handle(raw: string, ctx: McpCallContext): Promise<McpReply>;
 }
 
+/** Hermes (tanpa run dan project) hanya melihat dan memanggil `AIOS_HERMES_TOOLS`; worker semua tool. */
+function allowed(name: string, ctx: McpCallContext): boolean {
+  return ctx.principal === 'worker' || (AIOS_HERMES_TOOLS as readonly string[]).includes(name);
+}
+
 export function createMcpServer(deps: McpServerDeps): McpServer {
   const now = deps.now ?? Date.now;
 
@@ -87,14 +92,14 @@ export function createMcpServer(deps: McpServerDeps): McpServer {
       case 'ping':
         return ok({});
       case 'tools/list':
-        return ok({ tools: deps.tools.list() });
+        return ok({ tools: deps.tools.list().filter((tool) => allowed(tool.name, ctx)) });
       case 'tools/call': {
         const call = CallParamsSchema.safeParse(params);
         if (!call.success)
           return fail(-32602, 'params.name wajib dan params.arguments harus objek');
         const { name, arguments: args = {} } = call.data;
         const started = now();
-        const outcome = await deps.tools.call(name, args, ctx);
+        const outcome = allowed(name, ctx) ? await deps.tools.call(name, args, ctx) : null;
         if (!outcome) return fail(-32602, `Tool tidak dikenal: ${name.slice(0, 80)}`);
         ctx.onToolCall?.({
           tool: name,

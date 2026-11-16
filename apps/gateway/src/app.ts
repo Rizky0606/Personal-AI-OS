@@ -137,8 +137,16 @@ export interface AppDeps {
   worker: { hub: ReturnType<typeof createWorkerHub>; relay: WorkerRelay };
   /** WebSocket /v1/ws; `auth` diisi dari dependensi di atas. */
   ws: Omit<WsDeps, 'auth'>;
-  /** Tool gateway lewat MCP (MCP_TOOLS_ENABLED); tanpa ini `/v1/mcp` tidak dipasang (404). */
-  mcp?: { server: McpServer; db: McpRouteOptions['db'] };
+  /**
+   * Tool gateway lewat MCP (MCP_TOOLS_ENABLED); tanpa ini `/v1/mcp` tidak dipasang (404). `hermesTokenSha256`
+   * (MCP_HERMES_TOKEN_SHA256) menyalakan principal Hermes.
+   */
+  mcp?: {
+    server: McpServer;
+    db: McpRouteOptions['db'];
+    hermesTokenSha256?: string | undefined;
+    now?: () => number;
+  };
   rateLimits?: Partial<RateLimits>;
   /** Tujuan log selain stdout; dipakai tes. */
   logStream?: NodeJS.WritableStream;
@@ -295,15 +303,19 @@ export function buildApp({
             projects,
             store,
           });
-        if (mcp)
-          await protectedScope.register(mcpRoutes, {
-            server: mcp.server,
-            db: mcp.db,
-            runs,
-            projects,
-            perMinute: limits.mcp,
-          });
       });
+      // Di luar protectedScope: `/v1/mcp` punya auth sendiri (JWT worker, atau token layanan Hermes dari loopback).
+      if (mcp)
+        await v1.register(mcpRoutes, {
+          server: mcp.server,
+          db: mcp.db,
+          auth,
+          runs,
+          projects,
+          perMinute: limits.mcp,
+          hermesTokenSha256: mcp.hermesTokenSha256,
+          ...(mcp.now ? { now: mcp.now } : {}),
+        });
     },
     { prefix: API_PREFIX },
   );
