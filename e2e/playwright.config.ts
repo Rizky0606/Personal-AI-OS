@@ -12,7 +12,8 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   retries: 0,
-  reporter: [['list']],
+  // Di CI juga reporter `github`: tes yang gagal menjadi anotasi check-run, terbaca tanpa login (log job butuh login).
+  reporter: process.env.CI ? [['list'], ['github']] : [['list']],
   use: {
     baseURL: 'http://127.0.0.1:1421',
     channel: process.env.E2E_BROWSER ?? 'msedge',
