@@ -13,6 +13,7 @@ import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, inject, it } from 'vitest';
 import { conversations, spaceChunks, spaces } from '../../db/schema/index.js';
 import { createAuthEnv, type AuthEnv } from '../../testing/auth-env.js';
+import { createSpacesService } from './service.js';
 import { startFakeHermes, type FakeHermes } from '../../testing/fake-hermes.js';
 
 let env: AuthEnv;
@@ -201,5 +202,42 @@ describe('ruang: chat memakai dokumen sebagai sumber', () => {
       .from(conversations)
       .where(eq(conversations.id, conversationId));
     expect(row?.spaceId).toBeNull();
+  });
+});
+
+describe('ruang: pencarian lintas ruang (tool space_search)', () => {
+  it('potongan paling relevan dulu dengan nama dokumen dan ruang; per ruang; kosong dengan bersih', async () => {
+    const service = createSpacesService({ db: env.database.handle.db });
+    const work = await createSpace('Kontrak kerja');
+    const kitchen = await createSpace('Dapur');
+    await addDoc(
+      work.id,
+      (
+        await upload(
+          'catatan.txt',
+          'Rapat mingguan membahas jadwal rilis. Denda parkir kantor naik bulan depan.',
+        )
+      ).id,
+    );
+    await addDoc(work.id, (await upload('kontrak.txt', CONTRACT)).id);
+    await addDoc(
+      kitchen.id,
+      (await upload('resep.txt', 'Rendang padang dimasak santan dan rempah selama empat jam.')).id,
+    );
+
+    const hits = await service.search({ query: 'Berapa denda keterlambatan pembayaran?' });
+    expect(hits.map((h) => h.documentName)).toEqual(['kontrak.txt', 'catatan.txt']);
+    expect(hits[0]).toMatchObject({ spaceId: work.id, spaceName: 'Kontrak kerja', ordinal: 0 });
+    expect(hits[0]?.content).toContain('denda sebesar 2% per hari');
+
+    const across = await service.search({ query: 'resep rendang' });
+    expect(across.map((h) => [h.spaceName, h.documentName])).toEqual([['Dapur', 'resep.txt']]);
+    expect(await service.search({ query: 'denda', spaceId: kitchen.id })).toEqual([]);
+    expect(await service.search({ query: 'xyzzy qwerty' })).toEqual([]);
+    // Hanya kata umum: tidak ada kata kunci, tidak ada kueri.
+    expect(await service.search({ query: 'apa yang itu' })).toEqual([]);
+    await expect(
+      service.search({ query: 'denda', spaceId: '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f' }),
+    ).rejects.toMatchObject({ status: 404, code: 'space_not_found' });
   });
 });

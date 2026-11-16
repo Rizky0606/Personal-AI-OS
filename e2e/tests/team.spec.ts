@@ -45,7 +45,10 @@ test('tim Orca: rencana 2 tugas -> Worker mengerjakan berurutan -> Lead terima -
   // Panel Progres: pohon Lead -> tugas -> Worker menggantikan linimasa biasa.
   await page.keyboard.press('Control+.');
   const panel = page.getByRole('region', { name: 'Progres percakapan' });
-  await expect(panel.getByText('Lead')).toBeVisible();
+  // Baris Lead di pohon tim (judul persis "Lead"); `getByText('Lead')` saja juga mengenai baris Skill "orca-lead".
+  await expect(
+    panel.getByRole('listitem').filter({ has: page.getByText('Lead', { exact: true }) }),
+  ).toBeVisible();
   await expect(panel.getByText(TEAM_TASK_1)).toBeVisible({ timeout: 90_000 });
 
   // omp sungguhan meminta izin menulis file (SECURITY_OPS.md: worker selalu --approval-mode always-ask), satu kali

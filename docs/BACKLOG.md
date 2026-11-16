@@ -896,9 +896,9 @@ Cabang `fix/p9-katalog-skill` (dari ujung P8, `9ad1808`). Commit `c7dfc5c` (task
 
 ## Tool gateway lewat MCP (`aios_tools`, desain `docs/DESIGN_MCP_TOOLS.md`)
 
-Slice 1 selesai (web untuk omp lewat worker, bawaan mati). Sisa dan temuan:
+Slice 1–2 selesai (web dan baca data sistem untuk omp lewat worker, bawaan mati). Sisa dan temuan:
 
-- [ ] **Slice 2: baca data sistem untuk omp.** `memory_list`, `space_search` (butuh metode FTS lintas ruang; hari ini `contextFor` satu ruang), `task_list` (dibatasi project run), `schedule_list`; jenis langkah UI baru `data` di desktop dan Android. Tanpa migrasi.
+- [x] **Slice 2: baca data sistem untuk omp.** `memory_list`, `space_search` (butuh metode FTS lintas ruang; hari ini `contextFor` satu ruang), `task_list` (dibatasi project run), `schedule_list`; jenis langkah UI baru `data` di desktop dan Android. Tanpa migrasi.
 - [ ] **Slice 3: usulan.** Tabel `agent_proposals` (pola `skill_proposals`: klaim atomik, batas harian, `findSecret`, notifikasi `agent_proposal`, audit), tool `memory_propose`/`task_propose`/`schedule_propose`, route tinjau, UI desktop (kartu chat + tab) dan Android (daftar + setujui/tolak), jenis langkah `propose`.
 - [ ] **Slice 4: Hermes.** Principal `hermes` (`MCP_HERMES_TOKEN_SHA256`, hanya dari loopback tanpa `X-Forwarded-For`, tanpa run), anggaran per jam, allowlist `web_read` per principal. Uji kompatibilitas dulu dengan klien Python `mcp` milik Hermes ke gateway tes; langkah config Hermes (`mcp_servers.aios_tools`, `protocol: legacy`, `platform_toolsets.api_server`) dilakukan pemilik, bukan kode. Rekaman SSE nyata untuk memastikan nama tool di `hermes.tool.progress`.
 - [ ] **Belum dicoba dengan omp di Windows** dan dengan gateway produksi: e2e memakai omp 18.12.6 Linux ARM64 dengan gateway tiruan (`omp.e2e.test.ts`), dan smoke sekali pakai memakai kode MCP gateway sungguhan + SearXNG tiruan. Aktifkan `MCP_TOOLS_ENABLED=true` di VPS hanya setelah worker versi baru terpasang di PC (worker lama mengabaikan `gatewayTools`, jadi aman, tetapi tool tidak muncul).

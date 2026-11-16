@@ -1,4 +1,4 @@
-import { aiosToolOf } from '@aios/contracts';
+import { AIOS_NETWORK_TOOLS, aiosToolOf } from '@aios/contracts';
 
 /** Satu langkah tool agent, seperti yang tampil di pesan (live maupun tersimpan). */
 export interface ActivityStep {
@@ -8,7 +8,7 @@ export interface ActivityStep {
   status: 'running' | 'ok' | 'error' | 'denied' | 'cancelled';
 }
 
-export type ToolKind = 'read' | 'edit' | 'search' | 'command' | 'web' | 'other';
+export type ToolKind = 'read' | 'edit' | 'search' | 'command' | 'web' | 'data' | 'other';
 
 const READ = new Set(['read', 'cat', 'view', 'open']);
 const EDIT = new Set(['write', 'edit', 'patch', 'delete', 'rm', 'notebook', 'multiedit', 'create']);
@@ -25,15 +25,17 @@ const WEB = new Set([
 const COMMAND = new Set(['bash', 'shell', 'sh', 'exec', 'run', 'terminal']);
 
 /**
- * Jenis langkah menurut nama tool; tool web gateway (`aios_tools`) jadi `web`, nama tool MCP lain
- * (`mcp__...`) dan yang tak dikenal jadi `other`.
+ * Jenis langkah menurut nama tool; tool gateway (`aios_tools`) jadi `web` atau `data` (baca data sistem), nama
+ * tool MCP lain (`mcp__...`) dan yang tak dikenal jadi `other`.
  */
 export function toolKind(name: string): ToolKind {
   const n = name.toLowerCase();
   if (READ.has(n)) return 'read';
   if (EDIT.has(n)) return 'edit';
   if (SEARCH.has(n)) return 'search';
-  if (WEB.has(n) || aiosToolOf(n)) return 'web';
+  const gatewayTool = aiosToolOf(n);
+  if (gatewayTool) return AIOS_NETWORK_TOOLS.includes(gatewayTool) ? 'web' : 'data';
+  if (WEB.has(n)) return 'web';
   if (COMMAND.has(n)) return 'command';
   return 'other';
 }

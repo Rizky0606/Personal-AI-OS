@@ -794,6 +794,12 @@ export const copy = {
         noun: 'Pencarian kode',
       },
       web: { running: 'Mencari di web', done: 'Pencarian web selesai', noun: 'Pencarian web' },
+      /** Tool data gateway (`aios_tools`: memori, ruang, kanban, jadwal); hanya membaca. */
+      data: {
+        running: 'Membaca data AIOS',
+        done: 'Data AIOS dibaca',
+        noun: 'Pembacaan data AIOS',
+      },
       browser: {
         running: 'Membuka halaman',
         done: 'Halaman dibuka',
@@ -905,6 +911,7 @@ export const copy = {
     },
     tools: {
       web: 'Web',
+      data: 'Data AIOS',
       browser: 'Browser',
       terminal: 'Terminal',
       files: 'Berkas',

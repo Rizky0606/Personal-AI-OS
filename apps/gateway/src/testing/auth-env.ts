@@ -39,6 +39,8 @@ import { createSearxngClient, type SearchClient } from '../modules/research/sear
 import type { PageFetcher } from '../modules/research/fetcher.js';
 import { createOwnerText } from '../modules/mcp/owner-text.js';
 import { createMcpServer } from '../modules/mcp/server.js';
+import { createDataTools } from '../modules/mcp/data-tools.js';
+import { combineTools } from '../modules/mcp/tools.js';
 import { createWebTools } from '../modules/mcp/web-tools.js';
 import { createResearchService, type ResearchService } from '../modules/research/service.js';
 import { createProjectsService } from '../modules/projects/service.js';
@@ -502,15 +504,19 @@ export async function createAuthEnv(
             db,
             server: createMcpServer({
               version: 'test',
-              tools: createWebTools({
-                search:
-                  options.mcpTools.search ?? createSearxngClient({ baseUrl: 'http://127.0.0.1:9' }),
-                fetchPage:
-                  options.mcpTools.fetchPage ??
-                  (() => Promise.reject(new Error('tes: halaman web tidak tersedia'))),
-                ownerText: createOwnerText(db),
-                now,
-              }),
+              tools: combineTools(
+                createWebTools({
+                  search:
+                    options.mcpTools.search ??
+                    createSearxngClient({ baseUrl: 'http://127.0.0.1:9' }),
+                  fetchPage:
+                    options.mcpTools.fetchPage ??
+                    (() => Promise.reject(new Error('tes: halaman web tidak tersedia'))),
+                  ownerText: createOwnerText(db),
+                  now,
+                }),
+                createDataTools({ memory, spaces, tasks, schedules, now }),
+              ),
             }),
           },
         }

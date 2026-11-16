@@ -4,7 +4,7 @@ import type { z } from 'zod';
 import type { Database } from '../../db/client.js';
 import { memories } from '../../db/schema/index.js';
 import { AppError } from '../../errors.js';
-import { createMemoryRecaller, type MemoryRecall } from './recall.js';
+import { createMemoryRecaller, type MemoryRecall, type RecallSelection } from './recall.js';
 
 /** Batas jumlah memori: daftar yang dikelola pemilik harus tetap ringkas. */
 export const MAX_MEMORIES = 200;
@@ -20,6 +20,11 @@ export interface MemoryService {
    * pesan berikutnya. Isi lengkap tidak pernah keluar dari sini selain lewat `section`.
    */
   recall(input: { text: string }): Promise<MemoryRecall>;
+  /**
+   * Pemilihan memori aktif untuk satu teks (anggaran dan urutan yang sama dengan `recall`: tersemat, cocok kata,
+   * terbaru), beserta jumlah memori aktif. Dipakai tool `memory_list`.
+   */
+  select(text: string): Promise<RecallSelection & { total: number }>;
 }
 
 const columns = {
@@ -107,5 +112,6 @@ export function createMemoryService(deps: {
     },
 
     recall: (input) => recaller.recall(input),
+    select: (text) => recaller.select(text),
   };
 }

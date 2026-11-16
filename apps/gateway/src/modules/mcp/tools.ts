@@ -1,0 +1,85 @@
+import type { AiosToolName } from '@aios/contracts';
+import { z } from 'zod';
+
+/** Keadaan run yang tidak disentuh selama ini dibuang (run terlama 2 jam, RunStartCommand.timeoutMs). */
+export const STATE_TTL_MS = 3 * 60 * 60_000;
+
+export interface ToolDef {
+  name: AiosToolName;
+  title: string;
+  description: string;
+  inputSchema: Record<string, unknown>;
+  annotations: { readOnlyHint: boolean; openWorldHint: boolean };
+}
+
+export interface ToolResult {
+  content: { type: 'text'; text: string }[];
+  isError?: boolean;
+}
+
+/** Hasil satu panggilan tool beserta ringkasan tanpa isi (untuk log dan audit). */
+export interface ToolOutcome {
+  result: ToolResult;
+  ok: boolean;
+  /** Jumlah butir yang dikembalikan (hasil, kartu, potongan) atau 1 (halaman terbaca); 0 bila gagal. */
+  items: number;
+}
+
+export interface ToolContext {
+  runId: string;
+  /** Project run itu (principal worker); tool kanban hanya membaca project ini. */
+  projectId?: string | undefined;
+  signal?: AbortSignal;
+}
+
+/** Sekumpulan tool `aios_tools`; beberapa kumpulan digabung dengan [combineTools]. */
+export interface ToolSet {
+  list(): ToolDef[];
+  /** Null bila nama tool tidak dikenal (galat protokol, bukan galat tool). */
+  call(name: string, args: Record<string, unknown>, ctx: ToolContext): Promise<ToolOutcome | null>;
+}
+
+/** Satu server, beberapa kumpulan tool: daftar digabung berurutan, panggilan ke kumpulan pertama yang mengenalinya. */
+export function combineTools(...sets: ToolSet[]): ToolSet {
+  return {
+    list: () => sets.flatMap((set) => set.list()),
+    async call(name, args, ctx) {
+      for (const set of sets) {
+        const outcome = await set.call(name, args, ctx);
+        if (outcome) return outcome;
+      }
+      return null;
+    },
+  };
+}
+
+/** JSON Schema masukan untuk `tools/list`, tanpa `$schema` (MCP hanya butuh skema objeknya). */
+export const jsonSchema = (schema: z.ZodType): Record<string, unknown> => {
+  const out: Record<string, unknown> = z.toJSONSchema(schema, { io: 'input' });
+  delete out.$schema;
+  return out;
+};
+
+export const oneLine = (text: string, max: number) =>
+  text.replace(/\s+/g, ' ').trim().slice(0, max);
+
+/** Konten tidak tepercaya dipagari `<<< >>>`; pagar di dalam konten dinetralkan supaya tidak bisa ditutup dari dalam. */
+export const fenced = (lines: string[]) =>
+  ['<<<', lines.join('\n').replaceAll('<<<', '‹‹‹').replaceAll('>>>', '›››'), '>>>'].join('\n');
+
+export const textResult = (text: string, isError = false): ToolResult => ({
+  content: [{ type: 'text', text }],
+  ...(isError ? { isError: true } : {}),
+});
+
+export const failure = (text: string): ToolOutcome => ({
+  result: textResult(text, true),
+  ok: false,
+  items: 0,
+});
+
+export const reasonOf = (error: unknown) =>
+  error instanceof Error && error.message ? oneLine(error.message, 200) : 'tidak diketahui';
+
+export const issuesOf = (error: z.ZodError) =>
+  error.issues.map((i) => `${i.path.join('.') || 'argumen'}: ${i.message}`).join('; ');

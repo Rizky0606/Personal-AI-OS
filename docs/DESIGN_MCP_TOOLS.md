@@ -1,6 +1,6 @@
 # Desain: tool gateway lewat MCP (`aios_tools`)
 
-Status: **slice 1 terimplementasi** (web untuk omp lewat worker, bawaan mati; lihat bagian 15); slice 2–4 masih desain. Keputusan pemilik bagian 13 diterima dengan rekomendasi bawaan. Disusun 2026-11-16 di branch `feat/mcp-tools` dari `main` (1ab4582). Semua rujukan `berkas:baris` dibaca langsung di commit itu; rujukan Hermes dibaca read-only dari `~/.hermes/hermes-agent` (checkout `b200f5bc60`, `git describe` = `v0.22.7`). Yang tidak teramati langsung ditandai **[INFERENSI]**.
+Status: **slice 1–2 terimplementasi** (web dan baca data sistem untuk omp lewat worker, bawaan mati; lihat bagian 15); slice 3–4 masih desain. Keputusan pemilik bagian 13 diterima dengan rekomendasi bawaan. Disusun 2026-11-16 di branch `feat/mcp-tools` dari `main` (1ab4582). Semua rujukan `berkas:baris` dibaca langsung di commit itu; rujukan Hermes dibaca read-only dari `~/.hermes/hermes-agent` (checkout `b200f5bc60`, `git describe` = `v0.22.7`). Yang tidak teramati langsung ditandai **[INFERENSI]**.
 
 ## 0. Ringkasan
 
@@ -288,3 +288,10 @@ Perubahan:
 - UI: `toolKindOf`/`toolKind` desktop dan `kindOf` Android memetakan tool ini ke jenis web; Progres tidak menghitungnya sebagai Konektor.
 - Bukti: e2e omp sungguhan (`omp.e2e.test.ts`, "tool gateway") dan smoke sekali pakai omp 18.12.6 → relay → kode MCP gateway sungguhan → SearXNG tiruan (hasil berpagar sampai ke model, `web_read` ke `127.0.0.1` ditolak allowlist).
 
+
+## 16. Catatan implementasi slice 2
+
+- Gateway: `modules/mcp/data-tools.ts` (`createDataTools`), helper bersama dan `combineTools` di `modules/mcp/tools.ts`; `SpacesService.search` (FTS `ts_rank_cd` lintas ruang atau satu ruang, 6 potongan); `MemoryService.select` (pemilihan recall yang sama, dipotong 50). Konteks tool membawa `projectId` run dari route, jadi `task_list` tidak pernah membaca project lain.
+- `memory_list` menerima `query?` opsional (tambahan dari bagian 6) untuk mendahulukan memori yang cocok kata; batasnya 50 butir (bukan 200) dan anggaran karakter recall.
+- Izin: adapter omp tetap memberi `command` untuk tool data; worker mengizinkannya diam-diam bila run membawa `gatewayTools` (juga `planOnly`). Kontrak: `AIOS_DATA_TOOLS`.
+- UI: jenis langkah `data` ("Membaca data AIOS") dan grup Progres `data` ("Data AIOS") di desktop dan Android.

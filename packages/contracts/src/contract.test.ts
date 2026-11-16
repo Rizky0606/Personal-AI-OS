@@ -12,7 +12,17 @@ import {
   TERMINAL_RUN_STATUSES,
   canTransition,
 } from './run-status.js';
-import { WebReadInputSchema, WebSearchInputSchema, aiosToolOf } from './tools.js';
+import {
+  AIOS_DATA_TOOLS,
+  AIOS_NETWORK_TOOLS,
+  MemoryListInputSchema,
+  ScheduleListInputSchema,
+  SpaceSearchInputSchema,
+  TaskListInputSchema,
+  WebReadInputSchema,
+  WebSearchInputSchema,
+  aiosToolOf,
+} from './tools.js';
 import { WorkerCommandSchema } from './worker.js';
 import { ChannelSchema, ClientMessageSchema, EventEnvelopeSchema } from './ws.js';
 
@@ -311,9 +321,31 @@ describe('tool gateway (aios_tools)', () => {
   it('mengenali nama tool omp dan Hermes, menolak yang lain', () => {
     expect(aiosToolOf('mcp__aios_tools_web_search')).toBe('web_search');
     expect(aiosToolOf('mcp__aios_tools__web_read')).toBe('web_read');
-    expect(aiosToolOf('mcp__aios_tools_memory_list')).toBeNull();
+    expect(aiosToolOf('mcp__aios_tools_memory_list')).toBe('memory_list');
+    expect(aiosToolOf('mcp__aios_tools__space_search')).toBe('space_search');
+    expect(aiosToolOf('mcp__aios_tools_task_list')).toBe('task_list');
+    expect(aiosToolOf('mcp__aios_tools_schedule_list')).toBe('schedule_list');
+    expect(aiosToolOf('mcp__aios_tools_memory_propose')).toBeNull();
     expect(aiosToolOf('mcp__aios_browser_browser_screenshot')).toBeNull();
     expect(aiosToolOf('web_search')).toBeNull();
+  });
+
+  it('tool data dan tool jaringan terpisah', () => {
+    expect(AIOS_DATA_TOOLS.filter((t) => AIOS_NETWORK_TOOLS.includes(t))).toEqual([]);
+    expect([...AIOS_NETWORK_TOOLS, ...AIOS_DATA_TOOLS]).toHaveLength(6);
+  });
+
+  it('skema masukan tool data', () => {
+    const id = '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f';
+    expect(MemoryListInputSchema.safeParse({}).success).toBe(true);
+    expect(MemoryListInputSchema.safeParse({ query: 'x'.repeat(201) }).success).toBe(false);
+    expect(SpaceSearchInputSchema.safeParse({ query: 'kontrak', spaceId: id }).success).toBe(true);
+    expect(SpaceSearchInputSchema.safeParse({ query: '' }).success).toBe(false);
+    expect(SpaceSearchInputSchema.safeParse({ query: 'a', spaceId: 'bukan' }).success).toBe(false);
+    expect(TaskListInputSchema.safeParse({ status: 'todo' }).success).toBe(true);
+    expect(TaskListInputSchema.safeParse({ status: 'draf' }).success).toBe(false);
+    expect(ScheduleListInputSchema.safeParse({}).success).toBe(true);
+    expect(ScheduleListInputSchema.safeParse({ limit: 5 }).success).toBe(false);
   });
 
   it('skema masukan membatasi kueri dan menolak argumen asing', () => {

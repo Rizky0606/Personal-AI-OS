@@ -21,6 +21,9 @@
     <string name="activity_tool_web_running">Mencari di web</string>
     <string name="activity_tool_web_done">Pencarian web selesai</string>
     <string name="activity_tool_web_noun">Pencarian web</string>
+    <string name="activity_tool_data_running">Membaca data AIOS</string>
+    <string name="activity_tool_data_done">Data AIOS dibaca</string>
+    <string name="activity_tool_data_noun">Pembacaan data AIOS</string>
     <string name="activity_tool_browser_running">Membuka halaman</string>
     <string name="activity_tool_browser_done">Halaman dibuka</string>
     <string name="activity_tool_browser_noun">Pembukaan halaman</string>

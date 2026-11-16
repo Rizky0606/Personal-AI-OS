@@ -71,6 +71,7 @@ export const mcpRoutes: FastifyPluginCallback<McpRouteOptions> = (app, opts, don
       const audits: Promise<void>[] = [];
       const result = await opts.server.handle(typeof req.body === 'string' ? req.body : '', {
         runId,
+        projectId,
         signal: abort.signal,
         onToolCall: (record) => {
           req.log.info({ deviceId: auth.deviceId, runId, ...record }, 'mcp tool selesai');

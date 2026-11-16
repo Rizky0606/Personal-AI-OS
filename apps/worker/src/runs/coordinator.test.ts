@@ -1026,6 +1026,50 @@ describe('RunCoordinator: tool gateway (aios_tools)', () => {
       expect.objectContaining({ approvalId: APPROVAL, kind: 'network' }),
     ]);
   });
+
+  it('tool data gateway diizinkan diam-diam, juga di mode rencana; nama lain tetap ditolak', async () => {
+    coordinator.start(command({ gatewayTools: true, planOnly: true }));
+    await until(() => adapter.handles.length === 1, 'adapter dimulai');
+    const handle = adapter.handle;
+    const names = ['memory_list', 'space_search', 'task_list', 'schedule_list'];
+    const ids = names.map((_, i) => `0192f0c4-7a1b-7c2d-a006-4a5b6c7d8e9${i}`);
+    names.forEach((name, i) =>
+      handle.events.push({
+        type: 'approval.requested',
+        approvalId: ids[i]!,
+        kind: 'command',
+        detail: `mcp__aios_tools_${name}\nArguments:\n{}`,
+      }),
+    );
+    // Nama mirip di luar daftar tool data tetap ditolak mode rencana.
+    handle.events.push({
+      type: 'approval.requested',
+      approvalId: APPROVAL_2,
+      kind: 'command',
+      detail: 'mcp__aios_tools_memory_propose\nArguments:\n{}',
+    });
+    await until(() => handle.resolved.length === names.length + 1, 'semua dijawab');
+
+    expect(handle.resolved).toEqual([
+      ...ids.map((id) => [id, 'allow', undefined]),
+      [APPROVAL_2, 'deny', undefined],
+    ]);
+    expect(types()).not.toContain('approval.requested');
+    expect(rules.list(PROJECT)).toEqual([]);
+  });
+
+  it('tanpa gatewayTools nama tool data tidak dipercaya: tetap ditanyakan', async () => {
+    coordinator.start(command());
+    await until(() => adapter.handles.length === 1, 'adapter dimulai');
+    adapter.handle.events.push({
+      type: 'approval.requested',
+      approvalId: APPROVAL,
+      kind: 'command',
+      detail: 'mcp__aios_tools_task_list\nArguments:\n{}',
+    });
+    await until(() => types().includes('approval.requested'), 'ditanyakan');
+    expect(adapter.handle.resolved).toEqual([]);
+  });
 });
 
 vi.setConfig({ testTimeout: 20_000 });
