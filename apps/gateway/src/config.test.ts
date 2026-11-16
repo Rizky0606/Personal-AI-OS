@@ -61,6 +61,20 @@ describe('loadConfig', () => {
     expect(() => loadConfig({ ...base, MEMORY_RECALL_TOP_K: '51' })).toThrow(ConfigError);
   });
 
+  it('ekstraksi memori bawaan off dengan model router-fast dan 40 panggilan per hari', () => {
+    expect(loadConfig(base)).toMatchObject({
+      MEMORY_EXTRACT_MODE: 'off',
+      MEMORY_EXTRACT_MODEL: 'router-fast',
+      MEMORY_EXTRACT_DAILY_MAX: 40,
+    });
+    expect(loadConfig({ ...base, MEMORY_EXTRACT_MODE: '' }).MEMORY_EXTRACT_MODE).toBe('off');
+    expect(
+      loadConfig({ ...base, MEMORY_EXTRACT_MODE: 'propose', MEMORY_EXTRACT_DAILY_MAX: '5' }),
+    ).toMatchObject({ MEMORY_EXTRACT_MODE: 'propose', MEMORY_EXTRACT_DAILY_MAX: 5 });
+    expect(() => loadConfig({ ...base, MEMORY_EXTRACT_MODE: 'on' })).toThrow(/MEMORY_EXTRACT_MODE/);
+    expect(() => loadConfig({ ...base, MEMORY_EXTRACT_DAILY_MAX: '0' })).toThrow(ConfigError);
+  });
+
   it('dsh mati bila DSH_COMMAND kosong; bila diisi, folder kerja wajib dan UID/GID berpasangan', () => {
     expect(loadConfig(base).DSH_COMMAND).toBeUndefined();
     expect(() => loadConfig({ ...base, DSH_COMMAND: '/usr/local/bin/dsh' })).toThrow(

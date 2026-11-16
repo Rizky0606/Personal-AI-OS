@@ -13,6 +13,8 @@ import { runs as runsTable } from '../db/schema/index.js';
 import { createTitleService } from '../modules/chat/title.js';
 import { createDevicesService } from '../modules/devices/service.js';
 import { createOutbox } from '../modules/files/outbox.js';
+import { createMemoryProposalService, type MemoryProposalService } from '../modules/memory/proposal-service.js';
+import type { MemoryExtractMode } from '../modules/memory/extractor.js';
 import { createMemoryService } from '../modules/memory/service.js';
 import { createFleetService } from '../modules/fleets/service.js';
 import { createForkService } from '../modules/fork/service.js';
@@ -113,6 +115,12 @@ export interface AuthEnv {
   /** Usulan skill (P11) dan kurator; memakai jam palsu `clock`. */
   skillProposals: ProposalService;
   skillCurator: SkillCurator;
+  /** Usulan memori (ekstraksi fakta) dengan jam palsu `clock`; mode dari `options.memoryExtract` (bawaan off). */
+  memoryProposals: MemoryProposalService;
+  /** Percakapan yang dijadwalkan runner untuk ekstraksi (urutan panggilan `schedule` yang lolos mode). */
+  extractScheduled: string[];
+  /** Menunggu ekstraksi yang dijalankan langsung (pengganti pg-boss di tes) selesai. */
+  extractIdle(): Promise<void>;
   /** Run chat terbaru yang sedang disiapkan atau berjalan (skenario E2E menyisipkan event ke sana); null bila tak ada. */
   activeRunId(): Promise<string | null>;
   /** Kode TOTP yang valid pada waktu sekarang menurut jam palsu. */
@@ -147,6 +155,11 @@ export async function createAuthEnv(
     /** API key gateway untuk 9Router tiruan. */
     ninerouterKey?: string;
     streamIdleMs?: number;
+    /**
+     * Ekstraksi fakta memori. Pekerjaan dijalankan langsung tanpa pg-boss dan tanpa jeda 45 detik
+     * (`extractIdle()` menunggu); `inline: false` hanya mencatat percakapan yang dijadwalkan.
+     */
+    memoryExtract?: { mode: MemoryExtractMode; dailyMax?: number; inline?: boolean };
     /** Batas usulan skill dari agent per hari (default 3; tes mengecilkannya). */
     skillProposalsPerDay?: number;
     /** Dipanggil setelah katalog skill berubah (meniru sinkron ke Hermes di tes). */
@@ -274,6 +287,26 @@ export async function createAuthEnv(
   workerHub.onPresence((deviceId, online) => workerRelay.presence(deviceId, online));
   const observer = createRunObserver();
   const memory = createMemoryService({ db });
+  const extractScheduled: string[] = [];
+  const extractions = new Set<Promise<unknown>>();
+  const memoryProposals: MemoryProposalService = createMemoryProposalService({
+    db,
+    hub,
+    client,
+    mode: options.memoryExtract?.mode ?? 'off',
+    model: 'router-fast',
+    ...(options.memoryExtract?.dailyMax ? { dailyMax: options.memoryExtract.dailyMax } : {}),
+    now,
+    enqueue: (conversationId) => {
+      extractScheduled.push(conversationId);
+      if (options.memoryExtract?.inline !== false) {
+        const job = memoryProposals.extract(conversationId).catch(() => 0);
+        extractions.add(job);
+        void job.finally(() => extractions.delete(job));
+      }
+      return Promise.resolve();
+    },
+  });
   const files = createFilesService({ db });
   const outbox = options.outboxDir
     ? createOutbox({
@@ -310,6 +343,7 @@ export async function createAuthEnv(
     roles,
     ...(options.eagerSkillEngines ? { eagerSkillEngines: options.eagerSkillEngines } : {}),
     memory,
+    memoryExtract: memoryProposals,
     projectRules: projects,
     ...(outbox ? { outbox } : {}),
   });
@@ -471,6 +505,7 @@ export async function createAuthEnv(
     compare: createCompareService({ client }),
     status,
     memory,
+    memoryProposals,
     templates: createTemplateService({ db }),
     opinion: createOpinionService({ client }),
     handoff: createHandoffService({ db, client }),
@@ -551,6 +586,11 @@ export async function createAuthEnv(
     clock,
     totpSecret,
     skillProposals,
+    memoryProposals,
+    extractScheduled,
+    async extractIdle() {
+      await Promise.all([...extractions]);
+    },
     skillCurator,
     runner,
     roles,
@@ -593,6 +633,7 @@ export async function createAuthEnv(
       await orca?.close().catch(() => undefined);
       await boss?.stop({ graceful: false, timeout: 5000 }).catch(() => undefined);
       await runner.idle();
+      await Promise.all([...extractions]);
       await tasks.idle();
       await chat.idle();
       await app.close();

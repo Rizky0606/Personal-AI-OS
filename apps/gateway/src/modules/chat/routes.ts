@@ -75,6 +75,7 @@ export const chatRoutes: FastifyPluginCallback<{ chat: ChatService; runs: RunsSe
         await chat.sendMessage(
           IdParamsSchema.parse(req.params).id,
           SendMessageRequestSchema.parse(req.body),
+          { fromOwner: true },
         ),
       ),
   );

@@ -63,6 +63,11 @@ export interface ChatService {
       context?: string;
       /** Batas waktu run ini (ms), menimpa bawaan worker. Dipakai tim Orca untuk batas per-Worker. */
       timeoutMs?: number;
+      /**
+       * Pesan diketik pemilik di aplikasi (rute kirim dan edit), bukan dikirim jadwal, kanban, fleet, tim, atau
+       * revisi. Hanya pesan seperti ini di chat umum yang boleh menjadi sumber ekstraksi fakta memori.
+       */
+      fromOwner?: boolean;
     },
   ): Promise<{ message: Message; run: Run }>;
   /**
@@ -618,6 +623,11 @@ export function createChatService(deps: {
           routingText.slice(0, RECALL_TEXT_MAX),
         ),
         projectId: conversation.projectId,
+        extract:
+          options?.fromOwner === true &&
+          !conversation.projectId &&
+          !conversation.spaceId &&
+          !conversation.teamId,
         ...(options?.continueFromRunId ? { continueFromRunId: options.continueFromRunId } : {}),
         ...(options?.timeoutMs ? { timeoutMs: options.timeoutMs } : {}),
         resolveRole: makeResolver({
@@ -649,7 +659,7 @@ export function createChatService(deps: {
       // Pesan baru diperiksa dulu agar percakapan tidak terpotong lalu gagal terkirim.
       await composeInput(input);
       await truncateFrom(message);
-      return service.sendMessage(conversation.id, input);
+      return service.sendMessage(conversation.id, input, { fromOwner: true });
     },
 
     async deleteMessage(messageId) {

@@ -134,6 +134,13 @@
       "when": 1794761503200,
       "tag": "0018_memories_recall",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1794812401648,
+      "tag": "0019_memory_proposals",
+      "breakpoints": true
     }
   ]
 }

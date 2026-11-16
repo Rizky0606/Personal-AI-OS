@@ -49,6 +49,7 @@ import { opinionRoutes } from './modules/opinion/routes.js';
 import type { OpinionService } from './modules/opinion/service.js';
 import { templateRoutes } from './modules/templates/routes.js';
 import type { TemplateService } from './modules/templates/service.js';
+import type { MemoryProposalService } from './modules/memory/proposal-service.js';
 import type { MemoryService } from './modules/memory/service.js';
 import { mcpRoutes, type McpRouteOptions } from './modules/mcp/routes.js';
 import type { McpServer } from './modules/mcp/server.js';
@@ -118,6 +119,8 @@ export interface AppDeps {
   compare: CompareService;
   status: StatusService;
   memory: MemoryService;
+  /** Usulan memori dari ekstraksi fakta; rutenya selalu terpasang (mode off = daftar tetap bisa dibaca). */
+  memoryProposals: MemoryProposalService;
   templates: TemplateService;
   opinion: OpinionService;
   handoff: HandoffService;
@@ -161,6 +164,7 @@ export function buildApp({
   compare,
   status,
   memory,
+  memoryProposals,
   templates,
   opinion,
   handoff,
@@ -261,7 +265,7 @@ export function buildApp({
         await protectedScope.register(teamRoutes, { teams });
         await protectedScope.register(compareRoutes, { compare });
         await protectedScope.register(statusRoutes, { status });
-        await protectedScope.register(memoryRoutes, { memory });
+        await protectedScope.register(memoryRoutes, { memory, proposals: memoryProposals });
         await protectedScope.register(templateRoutes, { templates });
         await protectedScope.register(opinionRoutes, { opinion });
         await protectedScope.register(handoffRoutes, { handoff });

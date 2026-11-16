@@ -15,6 +15,8 @@ import { createDevicesService } from './modules/devices/service.js';
 import { createOutbox } from './modules/files/outbox.js';
 import { createDshEngine } from './modules/dsh/launch.js';
 import { createEnginesService, workersOnlineFrom } from './modules/llm/engines.js';
+import { memoryExtractEnqueue, startMemoryExtractJobs } from './modules/memory/jobs.js';
+import { createMemoryProposalService } from './modules/memory/proposal-service.js';
 import { createMemoryService } from './modules/memory/service.js';
 import { createOwnerText } from './modules/mcp/owner-text.js';
 import { createMcpServer } from './modules/mcp/server.js';
@@ -151,6 +153,17 @@ async function main(): Promise<void> {
     recallTopK: config.MEMORY_RECALL_TOP_K,
     log,
   });
+  // Mode off (bawaan): tidak ada antrean, tidak ada pekerjaan, tidak ada panggilan model; rute usulan tetap terbaca.
+  const memoryProposals = createMemoryProposalService({
+    db,
+    hub,
+    client,
+    mode: config.MEMORY_EXTRACT_MODE,
+    model: config.MEMORY_EXTRACT_MODEL,
+    dailyMax: config.MEMORY_EXTRACT_DAILY_MAX,
+    enqueue: memoryExtractEnqueue(boss),
+    log: { ...log, info: (obj, msg) => app.log.info(obj, msg) },
+  });
   const files = createFilesService({ db });
   const outbox =
     config.OUTBOX_DIR && config.OUTBOX_HOST_DIR
@@ -211,6 +224,7 @@ async function main(): Promise<void> {
         .filter(Boolean),
     ),
     memory,
+    memoryExtract: memoryProposals,
     projectRules: projects,
     ...(outbox ? { outbox } : {}),
     log,
@@ -335,6 +349,7 @@ async function main(): Promise<void> {
     tasks,
     compare: createCompareService({ client }),
     memory,
+    memoryProposals,
     templates: createTemplateService({ db }),
     opinion: createOpinionService({ client }),
     handoff: createHandoffService({ db, client }),
@@ -399,6 +414,9 @@ async function main(): Promise<void> {
   await research.start();
   await schedules.start();
   await startSkillJobs({ boss, curator: skillCurator, proposals: skillProposals, log });
+  if (memoryProposals.mode !== 'off') {
+    await startMemoryExtractJobs({ boss, proposals: memoryProposals, log });
+  }
   push.start();
   const recovered = await runner.recoverOrphans();
   if (recovered > 0) app.log.warn({ recovered }, 'run tertinggal ditandai gagal setelah restart');

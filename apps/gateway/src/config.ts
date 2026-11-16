@@ -83,6 +83,16 @@ const EnvSchema = z.object({
     blankToUndefined,
     z.coerce.number().int().min(0).max(50).optional(),
   ),
+  /**
+   * Ekstraksi fakta memori dari pesan pemilik di chat umum (docs/DESIGN_MEMORI_SEMANTIK.md 4.4). `off` (bawaan) =
+   * tidak ada pekerjaan dan tidak ada panggilan model; `propose` (disarankan) = usulan menunggu persetujuan di
+   * Memori; `auto` = langsung disimpan dengan asal terlihat dan bisa diurungkan.
+   */
+  MEMORY_EXTRACT_MODE: withDefault(z.enum(['off', 'propose', 'auto']), 'off'),
+  /** Combo 9Router kecil untuk ekstraksi fakta (suhu 0, satu panggilan per giliran). */
+  MEMORY_EXTRACT_MODEL: withDefault(z.string().min(1), 'router-fast'),
+  /** Batas panggilan model ekstraksi per 24 jam bergulir. */
+  MEMORY_EXTRACT_DAILY_MAX: withDefault(z.coerce.number().int().min(1).max(1000), 40),
   /** File service account Firebase (JSON) untuk push FCM. Kosong = push dimatikan. Simpan di secrets/, bukan di repo. */
   FCM_SERVICE_ACCOUNT_FILE: optionalString,
   /** Batas waktu tiap cek dependensi di /readyz. */

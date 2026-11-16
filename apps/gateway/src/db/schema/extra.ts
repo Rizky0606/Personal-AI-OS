@@ -1,4 +1,7 @@
 import type {
+  MemoryProposalKind,
+  MemoryProposalStatus,
+  MemorySource,
   ResearchPlanSchema,
   SkillEngine,
   SkillProposalKind,
@@ -163,7 +166,8 @@ export const auditLog = pgTable(
 
 /**
  * Memori yang terlihat (W17): fakta tentang pemilik. Yang aktif dipilih per pesan untuk pesan sistem (recall);
- * yang tersemat selalu ikut. `tsv` dipakai pemeringkatan cocok kata, sama dengan `space_chunks`.
+ * yang tersemat selalu ikut. `tsv` dipakai pemeringkatan cocok kata, sama dengan `space_chunks`. `source` =
+ * `extracted` untuk fakta yang diambil dari pesan pemilik di chat umum; asal percakapannya di `source_*`.
  */
 export const memories = pgTable(
   'memories',
@@ -173,6 +177,13 @@ export const memories = pgTable(
     enabled: boolean('enabled').notNull().default(true),
     pinned: boolean('pinned').notNull().default(false),
     tsv: tsvector('tsv').generatedAlwaysAs((): SQL => sql`to_tsvector('simple', ${memories.text})`),
+    source: text('source').$type<MemorySource>().notNull().default('owner'),
+    sourceConversationId: uuid('source_conversation_id').references(() => conversations.id, {
+      onDelete: 'set null',
+    }),
+    sourceMessageId: uuid('source_message_id').references(() => messages.id, {
+      onDelete: 'set null',
+    }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -180,6 +191,58 @@ export const memories = pgTable(
     index('memories_created_idx').on(t.createdAt),
     index('memories_tsv_idx').using('gin', t.tsv),
   ],
+);
+
+/**
+ * Usulan memori dari ekstraksi fakta (docs/DESIGN_MEMORI_SEMANTIK.md 4.4), meniru `skill_proposals`. Mode propose:
+ * `pending` sampai pemilik memutuskan; mode auto: langsung `auto_saved` dan bisa diurungkan (`undone`). Baris yang
+ * ditolak/diurungkan tetap ada supaya fakta yang sama tidak diusulkan lagi.
+ */
+export const memoryProposals = pgTable(
+  'memory_proposals',
+  {
+    id: id(),
+    kind: text('kind').$type<MemoryProposalKind>().notNull(),
+    status: text('status').$type<MemoryProposalStatus>().notNull().default('pending'),
+    text: text('text').notNull(),
+    evidence: text('evidence').notNull(),
+    targetMemoryId: uuid('target_memory_id').references(() => memories.id, {
+      onDelete: 'set null',
+    }),
+    previousText: text('previous_text'),
+    resultMemoryId: uuid('result_memory_id').references(() => memories.id, {
+      onDelete: 'set null',
+    }),
+    conversationId: uuid('conversation_id').references(() => conversations.id, {
+      onDelete: 'set null',
+    }),
+    messageId: uuid('message_id').references(() => messages.id, { onDelete: 'set null' }),
+    runId: uuid('run_id').references(() => runs.id, { onDelete: 'set null' }),
+    model: text('model').notNull(),
+    createdAt: createdAt(),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+  },
+  (t) => [index('memory_proposals_status_idx').on(t.status, t.createdAt)],
+);
+
+/**
+ * Satu baris per panggilan model ekstraksi (bukan per usulan): dasar batas harian `MEMORY_EXTRACT_DAILY_MAX` yang
+ * tetap berlaku setelah gateway restart. Tidak menyimpan isi pesan atau keluaran model.
+ */
+export const memoryExtractions = pgTable(
+  'memory_extractions',
+  {
+    id: id(),
+    conversationId: uuid('conversation_id').references(() => conversations.id, {
+      onDelete: 'set null',
+    }),
+    /** `ok` (keluaran sah), `invalid` (keluaran tidak sah), `failed` (galat jaringan/HTTP). */
+    outcome: text('outcome').$type<'ok' | 'invalid' | 'failed'>().notNull(),
+    /** Usulan yang lolos semua penjaga dari panggilan ini. */
+    proposals: integer('proposals').notNull().default(0),
+    createdAt: createdAt(),
+  },
+  (t) => [index('memory_extractions_created_idx').on(t.createdAt)],
 );
 
 /** Templat prompt (W27): prompt tersimpan yang dipanggil dengan `/nama` di composer. */
