@@ -451,9 +451,14 @@ export type PromptTemplate = z.infer<typeof PromptTemplateSchema>;
 /** Batas panjang satu fakta memori; cukup untuk satu atau dua kalimat. */
 export const MEMORY_TEXT_MAX = 500;
 
+/** Asal memori: ditulis pemilik, atau diambil dari percakapan (ekstraksi fakta, lewat usulan atau simpan otomatis). */
+export const MemorySourceSchema = z.enum(['owner', 'extracted']);
+export type MemorySource = z.infer<typeof MemorySourceSchema>;
+
 /**
- * Fakta tentang pemilik (W17). Dikelola pemilik, bukan diisi otomatis. Yang disuntik ke pesan sistem dipilih per
- * pesan (lihat `context.used.memory`); yang tersemat selalu ikut.
+ * Fakta tentang pemilik (W17). Ditulis pemilik, atau diambil dari pesan pemilik di chat umum (`source = 'extracted'`,
+ * asal percakapan di `origin`). Yang disuntik ke pesan sistem dipilih per pesan (lihat `context.used.memory`); yang
+ * tersemat selalu ikut.
  */
 export const MemorySchema = z
   .object({
@@ -463,6 +468,16 @@ export const MemorySchema = z
     enabled: z.boolean(),
     /** Tersemat: selalu ikut ke pesan sistem, tidak ikut pemeringkatan. Absen pada server lama = false. */
     pinned: z.boolean().default(false),
+    /** Asal memori. Absen pada server lama = owner. */
+    source: MemorySourceSchema.default('owner'),
+    /**
+     * Percakapan dan pesan pemilik asal fakta (hanya `extracted`); null bila ditulis pemilik atau percakapannya
+     * sudah dihapus. Absen pada server lama = null.
+     */
+    origin: z
+      .object({ conversationId: IdSchema, messageId: IdSchema.nullable() })
+      .nullable()
+      .default(null),
     createdAt: TimestampSchema,
     updatedAt: TimestampSchema,
   })

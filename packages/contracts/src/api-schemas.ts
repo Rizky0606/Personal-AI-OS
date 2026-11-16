@@ -1023,6 +1023,63 @@ export const UpdateMemoryRequestSchema = z
   })
   .meta({ id: 'UpdateMemoryRequest' });
 
+/** Batas usulan memori dari ekstraksi fakta (docs/DESIGN_MEMORI_SEMANTIK.md 4.1). */
+export const MEMORY_PROPOSAL_LIMITS = { textMax: 300, evidenceMax: 200 } as const;
+
+/** `add` = fakta baru; `update` = mengganti teks memori yang sudah ada (`targetMemoryId`). */
+export const MemoryProposalKindSchema = z.enum(['add', 'update']);
+/**
+ * `pending` menunggu keputusan (mode propose); `approved`/`rejected` keputusan pemilik; `auto_saved` langsung disimpan
+ * (mode auto) dan masih bisa diurungkan; `undone` sudah diurungkan.
+ */
+export const MemoryProposalStatusSchema = z.enum([
+  'pending',
+  'approved',
+  'rejected',
+  'auto_saved',
+  'undone',
+]);
+export type MemoryProposalKind = z.infer<typeof MemoryProposalKindSchema>;
+export type MemoryProposalStatus = z.infer<typeof MemoryProposalStatusSchema>;
+
+/** Usulan memori dari ekstraksi fakta: fakta tentang pemilik plus kutipan pesan pemilik yang menjadi dasarnya. */
+export const MemoryProposalSchema = z
+  .object({
+    id: IdSchema,
+    kind: MemoryProposalKindSchema,
+    status: MemoryProposalStatusSchema,
+    text: z.string().min(1).max(MEMORY_TEXT_MAX),
+    /** Kutipan apa adanya dari pesan pemilik; dijamin muncul di pesan itu. */
+    evidence: z.string().max(MEMORY_PROPOSAL_LIMITS.evidenceMax),
+    /** Memori yang diganti (kind = update); null untuk fakta baru atau bila memori itu sudah dihapus. */
+    targetMemoryId: IdSchema.nullable(),
+    /** Teks memori target sekarang (kind = update), untuk dibandingkan sebelum disetujui. */
+    targetText: z.string().nullable(),
+    /** Teks memori target sebelum diganti; terisi setelah usulan update diterapkan (untuk urungkan). */
+    previousText: z.string().nullable(),
+    /** Memori hasil setelah disetujui atau disimpan otomatis. */
+    resultMemoryId: IdSchema.nullable(),
+    conversationId: IdSchema.nullable(),
+    messageId: IdSchema.nullable(),
+    runId: IdSchema.nullable(),
+    /** Model pengekstrak. */
+    model: z.string(),
+    createdAt: TimestampSchema,
+    decidedAt: TimestampSchema.nullable(),
+  })
+  .meta({ id: 'MemoryProposal' });
+export type MemoryProposal = z.infer<typeof MemoryProposalSchema>;
+export const MemoryProposalListSchema = itemsOf(MemoryProposalSchema).meta({
+  id: 'MemoryProposalList',
+});
+export const MemoryProposalQuerySchema = z.object({
+  status: z.enum([...MemoryProposalStatusSchema.options, 'all']).optional(),
+});
+/** Setujui; `text` opsional untuk "Ubah lalu simpan". */
+export const ApproveMemoryProposalRequestSchema = z
+  .object({ text: MemoryTextSchema.optional() })
+  .meta({ id: 'ApproveMemoryProposalRequest' });
+
 export const UpdateScheduleRequestSchema = z
   .object({
     name: z.string().min(1).optional(),

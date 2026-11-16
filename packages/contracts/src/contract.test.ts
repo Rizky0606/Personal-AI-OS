@@ -1,7 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { endpoints } from './api.js';
-import { UpdateMemoryRequestSchema } from './api-schemas.js';
+import {
+  ApproveMemoryProposalRequestSchema,
+  MemoryProposalQuerySchema,
+  MemoryProposalSchema,
+  UpdateMemoryRequestSchema,
+} from './api-schemas.js';
 import { PageQuerySchema, ProblemSchema } from './common.js';
 import { MemorySchema, MessageSchema, RunSchema } from './entities.js';
 import { ID_A, ID_B, ID_C, TS } from './fixtures.js';
@@ -96,6 +101,10 @@ const DOCUMENTED_ENDPOINTS = [
   'POST /memories',
   'PATCH /memories/:id',
   'DELETE /memories/:id',
+  'GET /memories/proposals',
+  'POST /memories/proposals/:id/approve',
+  'POST /memories/proposals/:id/reject',
+  'POST /memories/proposals/:id/undo',
   'GET /spaces',
   'POST /spaces',
   'PATCH /spaces/:id',
@@ -377,6 +386,51 @@ describe('entitas', () => {
     expect(UpdateMemoryRequestSchema.safeParse({ pinned: true }).success).toBe(true);
     expect(UpdateMemoryRequestSchema.safeParse({}).success).toBe(false);
     expect(UpdateMemoryRequestSchema.safeParse({ pinned: 'ya' }).success).toBe(false);
+  });
+
+  it('Memory: server lama tanpa source/origin = owner tanpa asal; extracted membawa asal percakapan', () => {
+    const memory = { id: ID_A, text: 'Fakta', enabled: true, createdAt: TS, updatedAt: TS };
+    const old = MemorySchema.parse(memory);
+    expect(old.source).toBe('owner');
+    expect(old.origin).toBeNull();
+    const extracted = MemorySchema.parse({
+      ...memory,
+      source: 'extracted',
+      origin: { conversationId: ID_B, messageId: null },
+    });
+    expect(extracted.origin).toEqual({ conversationId: ID_B, messageId: null });
+    expect(MemorySchema.safeParse({ ...memory, source: 'agent' }).success).toBe(false);
+  });
+
+  it('MemoryProposal: status dan kind tertutup; approve boleh tanpa badan; query status', () => {
+    const proposal = {
+      id: ID_A,
+      kind: 'add',
+      status: 'pending',
+      text: 'Pemilik tinggal di Bandung.',
+      evidence: 'saya tinggal di Bandung',
+      targetMemoryId: null,
+      targetText: null,
+      previousText: null,
+      resultMemoryId: null,
+      conversationId: ID_B,
+      messageId: ID_C,
+      runId: null,
+      model: 'router-fast',
+      createdAt: TS,
+      decidedAt: null,
+    };
+    expect(MemoryProposalSchema.safeParse(proposal).success).toBe(true);
+    expect(MemoryProposalSchema.safeParse({ ...proposal, status: 'auto_saved' }).success).toBe(true);
+    expect(MemoryProposalSchema.safeParse({ ...proposal, status: 'saved' }).success).toBe(false);
+    expect(MemoryProposalSchema.safeParse({ ...proposal, kind: 'delete' }).success).toBe(false);
+    expect(ApproveMemoryProposalRequestSchema.safeParse({}).success).toBe(true);
+    expect(ApproveMemoryProposalRequestSchema.parse({ text: '  Teks baru ' }).text).toBe(
+      'Teks baru',
+    );
+    expect(ApproveMemoryProposalRequestSchema.safeParse({ text: ' ' }).success).toBe(false);
+    expect(MemoryProposalQuerySchema.safeParse({ status: 'all' }).success).toBe(true);
+    expect(MemoryProposalQuerySchema.safeParse({ status: 'semua' }).success).toBe(false);
   });
 
   it('pagination: default 50, maksimum 100', () => {
