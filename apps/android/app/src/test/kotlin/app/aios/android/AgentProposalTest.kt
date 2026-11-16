@@ -42,7 +42,10 @@ import retrofit2.HttpException
 import retrofit2.Response
 import java.io.IOException
 
-/* Bentuk mengikuti AgentProposalSchema di packages/contracts; `extra` dan `hint` adalah kolom baru yang belum dikenal. */
+/*
+ * Bentuk mengikuti AgentProposalSchema di packages/contracts; `extra` dan `hint` adalah kolom baru yang belum
+ * dikenal.
+ */
 private const val TASK_JSON = """
 {"id":"0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e01","kind":"task","status":"pending","agent":"omp",
 "reason":"Bug login muncul tiga kali minggu ini.","afterWeb":false,

@@ -260,8 +260,7 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun agentProposalRepository(api: AgentProposalApi): AgentProposalRepository =
-        RemoteAgentProposalRepository(api)
+    fun agentProposalRepository(api: AgentProposalApi): AgentProposalRepository = RemoteAgentProposalRepository(api)
 
     @Provides
     @Singleton
