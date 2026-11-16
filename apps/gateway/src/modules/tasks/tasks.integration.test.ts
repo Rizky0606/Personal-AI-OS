@@ -322,16 +322,20 @@ describe('Kerjakan dengan AI', () => {
       async () => (await getTask(projectId, card.id)).status === 'todo',
       'kartu kembali ke Todo',
     );
-    expect(
-      userEvents
-        .slice(before)
-        .some(
-          (e) =>
-            e.type === 'notification' &&
-            e.level === 'error' &&
-            e.title.includes('Gagal dikerjakan'),
-        ),
-    ).toBe(true);
+    // Notifikasi disiarkan terpisah dari perubahan status kartu, jadi bisa tiba sesaat setelah
+    // kartu kembali ke Todo; tunggu sampai muncul, bukan baca sekali.
+    await until(
+      () =>
+        userEvents
+          .slice(before)
+          .some(
+            (e) =>
+              e.type === 'notification' &&
+              e.level === 'error' &&
+              e.title.includes('Gagal dikerjakan'),
+          ),
+      'notifikasi error kartu',
+    );
 
     // Bisa dikerjakan lagi.
     const second = await runTask(card.id);
