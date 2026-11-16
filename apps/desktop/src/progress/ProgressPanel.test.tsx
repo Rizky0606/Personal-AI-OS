@@ -291,6 +291,36 @@ describe('ProgressPanel: Output dan Digunakan', () => {
     expect(within(list).getByText('Suka jawaban singkat')).toBeInTheDocument();
   });
 
+  it('memori dipilih (di atas anggaran): "N dari M fakta", cara pemilihan, dan alasan tiap judul', async () => {
+    source();
+    const base = fixture('reload-complete').response;
+    api.getConversationProgress.mockResolvedValue({
+      ...base,
+      used: {
+        ...base.used,
+        memory: {
+          read: 2,
+          total: 40,
+          mode: 'lexical',
+          items: [
+            { id: uid(), title: 'Nama saya Rina', via: 'pinned' },
+            { id: uid(), title: 'Server produksi di Jakarta', via: 'lexical' },
+          ],
+        },
+      },
+    });
+    const user = userEvent.setup();
+    await renderScreen(<ProgressPanel />);
+    const used = await screen.findByLabelText(p.sections.used);
+    const memory = within(used).getByRole('button', { name: /Dibaca · 2 dari 40 fakta/ });
+    await user.click(memory);
+    expect(within(used).getByText(p.used.memoryMode.lexical)).toBeInTheDocument();
+    const list = within(used).getByRole('list', { name: p.used.memoryList });
+    const [pinned, lexical] = within(list).getAllByRole('listitem');
+    expect(pinned).toHaveTextContent(`Nama saya Rina${p.used.memoryVia.pinned}`);
+    expect(lexical).toHaveTextContent(`Server produksi di Jakarta${p.used.memoryVia.lexical}`);
+  });
+
   it('tanpa data penggunaan: bagian Digunakan tidak tampil; konektor hanya bila ada datanya', async () => {
     source();
     api.getConversationProgress.mockResolvedValue(withPlan(tasks(['in_progress'])));

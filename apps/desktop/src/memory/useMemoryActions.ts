@@ -7,7 +7,7 @@ import { copy } from '../copy';
 import { useToastStore } from '../ui/Toaster';
 
 /**
- * Tambah, ubah, aktif/nonaktif, dan hapus memori. Kesalahan jadi toast dan aksi mengembalikan false, supaya
+ * Tambah, ubah, aktif/nonaktif, sematkan, dan hapus memori. Kesalahan jadi toast dan aksi mengembalikan false, supaya
  * editor atau dialog tetap terbuka dan isian tidak hilang.
  */
 export function useMemoryActions() {
@@ -42,6 +42,8 @@ export function useMemoryActions() {
       guarded(`edit:${id}`, () => api.updateMemory(id, { text: text.trim() }), m.updated),
     setEnabled: (id: string, enabled: boolean) =>
       guarded(`toggle:${id}`, () => api.updateMemory(id, { enabled })),
+    setPinned: (id: string, pinned: boolean) =>
+      guarded(`pin:${id}`, () => api.updateMemory(id, { pinned }), pinned ? m.pinned : m.unpinned),
     remove: (id: string) => guarded(`remove:${id}`, () => api.deleteMemory(id), m.removed),
   };
 }

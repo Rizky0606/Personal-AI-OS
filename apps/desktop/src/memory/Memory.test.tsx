@@ -89,6 +89,27 @@ describe('MemorySection', () => {
     expect(screen.getByText('Saya memakai Windows 11.')).toHaveClass('line-through');
   });
 
+  it('sematkan: tombol mengirim pinned, memori tersemat berlencana dan tombolnya melepas sematan', async () => {
+    const user = userEvent.setup();
+    const item = memory();
+    api.listMemories.mockResolvedValue([item]);
+    api.updateMemory.mockResolvedValue({ ...item, pinned: true });
+    const view = await renderScreen(<MemorySection />);
+    const list = await screen.findByRole('list', { name: m.listLabel });
+    expect(within(list).queryByText(m.pinnedBadge)).not.toBeInTheDocument();
+    await user.click(within(list).getByRole('button', { name: m.pin }));
+    expect(api.updateMemory).toHaveBeenCalledWith(item.id, { pinned: true });
+    view.unmount();
+
+    api.listMemories.mockResolvedValue([memory({ pinned: true })]);
+    api.updateMemory.mockResolvedValue(item);
+    await renderScreen(<MemorySection />);
+    const pinnedList = await screen.findByRole('list', { name: m.listLabel });
+    expect(within(pinnedList).getByText(m.pinnedBadge)).toBeInTheDocument();
+    await user.click(within(pinnedList).getByRole('button', { name: m.unpin }));
+    expect(api.updateMemory).toHaveBeenCalledWith(item.id, { pinned: false });
+  });
+
   it('error dengan tombol coba lagi; offline tanpa tombol', async () => {
     api.listMemories.mockRejectedValueOnce(new ApiProblem(500, 'x', 'Server bermasalah.'));
     const view = await renderScreen(<MemorySection />);

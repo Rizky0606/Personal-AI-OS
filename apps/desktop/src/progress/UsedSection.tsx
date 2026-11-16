@@ -28,13 +28,15 @@ export const hasUsed = (used: ProgressUsed): boolean =>
   used.connectors.length > 0;
 
 /**
- * Baris ikon + label + nilai di kanan: Unggahan (nama pertama + "+N"), Skill, Memori ("Dibaca · N fakta", klik
- * membuka judul fakta; bukan isinya), Mesin dan model, Alat, dan Konektor MCP hanya bila ada datanya.
+ * Baris ikon + label + nilai di kanan: Unggahan (nama pertama + "+N"), Skill, Memori ("Dibaca · N fakta" atau
+ * "N dari M" bila sebagian tidak ikut; klik membuka cara pemilihan dan judul fakta beserta alasannya, bukan isinya),
+ * Mesin dan model, Alat, dan Konektor MCP hanya bila ada datanya.
  */
 export function UsedSection({ used }: { used: ProgressUsed }) {
   const [memoryOpen, setMemoryOpen] = useState(false);
   const listId = useId();
   const u = copy.progress.used;
+  const memoryRead = u.memoryRead(used.memory.read, used.memory.total);
   const engine = [used.engine, used.model].filter(Boolean).join(' · ');
   return (
     <dl aria-label={copy.progress.sections.used} className="flex flex-col gap-2">
@@ -67,7 +69,7 @@ export function UsedSection({ used }: { used: ProgressUsed }) {
               onClick={() => setMemoryOpen((v) => !v)}
               className="inline-flex items-center gap-1 rounded-control text-text underline decoration-border-strong underline-offset-2"
             >
-              {u.memoryRead(used.memory.read)}
+              {memoryRead}
               <ChevronDown
                 size={12}
                 strokeWidth={1.5}
@@ -79,22 +81,26 @@ export function UsedSection({ used }: { used: ProgressUsed }) {
               />
             </button>
           ) : (
-            u.memoryRead(used.memory.read)
+            memoryRead
           )}
         </Row>
       ) : null}
       {memoryOpen && used.memory.items.length > 0 ? (
-        <ul
-          id={listId}
-          aria-label={u.memoryList}
-          className="ml-6 flex flex-col gap-1 border-l border-border pl-3 text-meta text-text-2"
-        >
-          {used.memory.items.map((item) => (
-            <li key={item.id} className="truncate">
-              {item.title}
-            </li>
-          ))}
-        </ul>
+        <div id={listId} className="ml-6 flex flex-col gap-1 border-l border-border pl-3 text-meta">
+          {used.memory.mode ? (
+            <p className="text-text-3">{u.memoryMode[used.memory.mode]}</p>
+          ) : null}
+          <ul aria-label={u.memoryList} className="flex flex-col gap-1 text-text-2">
+            {used.memory.items.map((item) => (
+              <li key={item.id} className="flex items-baseline gap-2">
+                <span className="min-w-0 flex-1 truncate">{item.title}</span>
+                {item.via ? (
+                  <span className="shrink-0 text-text-3">{u.memoryVia[item.via]}</span>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </div>
       ) : null}
       {used.engine !== null ? (
         <Row icon={<Cpu {...ICON} />} label={u.engine}>

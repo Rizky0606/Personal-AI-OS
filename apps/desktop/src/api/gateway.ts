@@ -386,7 +386,7 @@ export function createGatewayApi(call: Call) {
     listMemories: async () => (await get('/memories', MemoryListSchema)).items,
     createMemory: (text: string) =>
       get('/memories', MemorySchema, { method: 'POST', body: { text } }),
-    updateMemory: (id: string, patch: { text?: string; enabled?: boolean }) =>
+    updateMemory: (id: string, patch: { text?: string; enabled?: boolean; pinned?: boolean }) =>
       get(`/memories/${id}`, MemorySchema, { method: 'PATCH', body: patch }),
     deleteMemory: async (id: string) => {
       await call(`/memories/${id}`, { method: 'DELETE' });

@@ -536,7 +536,7 @@ export const copy = {
   memory: {
     title: 'Memori',
     intro:
-      'Fakta tentang Anda yang selalu diketahui AI di setiap chat dan tugas coding. Nonaktifkan untuk menyimpan tanpa memakainya.',
+      'Fakta tentang Anda untuk chat dan tugas coding. Selama daftarnya pendek, semuanya ikut; bila panjang, AI menerima yang tersemat, yang cocok dengan pesan, dan yang terbaru. Nonaktifkan untuk menyimpan tanpa memakainya.',
     addLabel: 'Fakta baru',
     placeholder: 'Mis. Saya lebih suka jawaban singkat dalam bahasa Indonesia.',
     counter: (n: number, max: number) => `${n}/${max} karakter`,
@@ -557,8 +557,14 @@ export const copy = {
     deleteBody: (text: string) =>
       `"${text.length > 120 ? `${text.slice(0, 120)}…` : text}" tidak akan diketahui AI lagi.`,
     toggle: (text: string) => `Pakai memori: ${text.slice(0, 60)}`,
+    pin: 'Sematkan',
+    unpin: 'Lepas sematan',
+    pinnedBadge: 'Tersemat',
+    pinned: 'Memori disematkan: selalu ikut ke AI.',
+    unpinned: 'Sematan dilepas.',
     rememberTitle: 'Ingat ini',
-    rememberBody: 'Ringkas menjadi satu fakta singkat. Fakta ini ikut di setiap chat berikutnya.',
+    rememberBody:
+      'Ringkas menjadi satu fakta singkat. AI memakainya di chat berikutnya; sematkan di Pengaturan agar selalu ikut.',
   },
   settings: {
     tools: 'Alat',
@@ -877,7 +883,21 @@ export const copy = {
       engine: 'Mesin dan model',
       tools: 'Alat',
       connectors: 'Konektor',
-      memoryRead: (n: number) => `Dibaca · ${n} fakta`,
+      /** `total` = memori aktif; ditampilkan hanya bila sebagian tidak ikut. */
+      memoryRead: (n: number, total?: number) =>
+        total !== undefined && total > n ? `Dibaca · ${n} dari ${total} fakta` : `Dibaca · ${n} fakta`,
+      memoryMode: {
+        all: 'Semua memori aktif ikut',
+        lexical: 'Dipilih: tersemat, cocok kata, terbaru',
+        hybrid: 'Dipilih: tersemat, cocok kata dan makna',
+      },
+      memoryVia: {
+        pinned: 'Tersemat',
+        lexical: 'Cocok kata',
+        vector: 'Mirip makna',
+        hybrid: 'Cocok kata dan makna',
+        recent: 'Terbaru',
+      },
       more: (n: number) => `+${n}`,
       memoryList: 'Fakta memori yang dibaca',
     },
