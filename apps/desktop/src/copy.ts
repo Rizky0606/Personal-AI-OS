@@ -565,6 +565,21 @@ export const copy = {
     rememberTitle: 'Ingat ini',
     rememberBody:
       'Ringkas menjadi satu fakta singkat. AI memakainya di chat berikutnya; sematkan di Pengaturan agar selalu ikut.',
+    fromConversation: 'Dari percakapan',
+    fromDeletedConversation: 'Dari percakapan yang sudah dihapus',
+    proposalsTitle: (n: number) => `Usulan memori (${n})`,
+    proposalsIntro:
+      'Diambil dari pesan Anda di chat umum. Tidak ada yang dipakai AI sebelum Anda simpan.',
+    proposalsLabel: 'Daftar usulan memori',
+    proposalsError: 'Usulan memori tidak bisa dimuat.',
+    proposalEvidence: (quote: string) => `Dari pesan Anda: “${quote}”`,
+    proposalReplaces: (text: string) => `Mengganti: ${text}`,
+    proposalApprove: 'Simpan',
+    proposalEditApprove: 'Ubah lalu simpan',
+    proposalEditLabel: 'Ubah usulan sebelum disimpan',
+    proposalReject: 'Tolak',
+    proposalApproved: 'Usulan disimpan ke memori.',
+    proposalRejected: 'Usulan ditolak dan tidak akan diusulkan lagi.',
   },
   settings: {
     tools: 'Alat',

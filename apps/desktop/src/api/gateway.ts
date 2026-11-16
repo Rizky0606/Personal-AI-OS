@@ -15,6 +15,8 @@ import {
   IdSchema,
   LoginResponseSchema,
   MemoryListSchema,
+  MemoryProposalListSchema,
+  MemoryProposalSchema,
   MemorySchema,
   OpinionResponseSchema,
   PromptTemplateListSchema,
@@ -391,6 +393,17 @@ export function createGatewayApi(call: Call) {
     deleteMemory: async (id: string) => {
       await call(`/memories/${id}`, { method: 'DELETE' });
     },
+    /** Usulan memori yang menunggu persetujuan (ekstraksi fakta dari chat umum). */
+    listMemoryProposals: async () =>
+      (await get('/memories/proposals', MemoryProposalListSchema)).items,
+    /** Setujui usulan; `text` diisi untuk "Ubah lalu simpan". */
+    approveMemoryProposal: (id: string, text?: string) =>
+      get(`/memories/proposals/${id}/approve`, MemoryProposalSchema, {
+        method: 'POST',
+        body: text?.trim() ? { text: text.trim() } : {},
+      }),
+    rejectMemoryProposal: (id: string) =>
+      get(`/memories/proposals/${id}/reject`, MemoryProposalSchema, { method: 'POST', body: {} }),
 
     /** Meringkas percakapan lalu membuka percakapan baru yang diawali ringkasan itu. */
     handoffConversation: (id: string, model: string) =>

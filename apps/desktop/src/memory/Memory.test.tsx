@@ -1,4 +1,4 @@
-import type { Memory } from '@aios/contracts';
+import type { Memory, MemoryProposal } from '@aios/contracts';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -19,8 +19,29 @@ const memory = (over: Partial<Memory> = {}): Memory => ({
   text: 'Saya memakai Windows 11.',
   enabled: true,
   pinned: false,
+  source: 'owner',
+  origin: null,
   createdAt: TS,
   updatedAt: TS,
+  ...over,
+});
+const CONVERSATION = '0192f0c4-7a1b-7c2d-8e3f-000000000001';
+const proposal = (over: Partial<MemoryProposal> = {}): MemoryProposal => ({
+  id: '0192f0c4-7a1b-7c2d-8e3f-0000000000aa',
+  kind: 'add',
+  status: 'pending',
+  text: 'Pemilik tinggal di Bandung.',
+  evidence: 'saya tinggal di Bandung',
+  targetMemoryId: null,
+  targetText: null,
+  previousText: null,
+  resultMemoryId: null,
+  conversationId: CONVERSATION,
+  messageId: null,
+  runId: null,
+  model: 'router-fast',
+  createdAt: TS,
+  decidedAt: null,
   ...over,
 });
 
@@ -121,6 +142,78 @@ describe('MemorySection', () => {
     await renderScreen(<MemorySection />);
     expect(await screen.findByText(copy.states.offline)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: m.add })).toBeDisabled();
+  });
+
+  it('usulan memori: tampil dengan kutipan; Simpan, Ubah lalu simpan, dan Tolak memanggil API', async () => {
+    const user = userEvent.setup();
+    const first = proposal();
+    const second = proposal({
+      id: '0192f0c4-7a1b-7c2d-8e3f-0000000000bb',
+      kind: 'update',
+      text: 'Pemilik bekerja sebagai dokter gigi.',
+      evidence: 'kerja sebagai dokter gigi',
+      targetText: 'Pemilik bekerja sebagai dokter umum.',
+    });
+    const third = proposal({
+      id: '0192f0c4-7a1b-7c2d-8e3f-0000000000cc',
+      text: 'Pemilik suka teh.',
+    });
+    api.listMemoryProposals.mockResolvedValue([first, second, third]);
+    api.approveMemoryProposal.mockResolvedValue({ ...first, status: 'approved' });
+    api.rejectMemoryProposal.mockResolvedValue({ ...third, status: 'rejected' });
+    await renderScreen(<MemorySection />);
+
+    expect(await screen.findByText(m.proposalsTitle(3))).toBeInTheDocument();
+    const list = screen.getByRole('list', { name: m.proposalsLabel });
+    const rows = within(list).getAllByRole('listitem');
+    expect(within(rows[0]!).getByText(m.proposalEvidence(first.evidence))).toBeInTheDocument();
+    expect(
+      within(rows[1]!).getByText(m.proposalReplaces('Pemilik bekerja sebagai dokter umum.')),
+    ).toBeInTheDocument();
+
+    await user.click(within(rows[0]!).getByRole('button', { name: m.proposalApprove }));
+    expect(api.approveMemoryProposal).toHaveBeenCalledWith(first.id, undefined);
+
+    await user.click(await within(rows[1]!).findByRole('button', { name: m.proposalEditApprove }));
+    const editor = within(rows[1]!).getByRole('textbox', { name: m.proposalEditLabel });
+    await user.clear(editor);
+    await user.type(editor, 'Pemilik dokter gigi di Bandung.');
+    await user.click(within(rows[1]!).getByRole('button', { name: m.proposalApprove }));
+    expect(api.approveMemoryProposal).toHaveBeenCalledWith(
+      second.id,
+      'Pemilik dokter gigi di Bandung.',
+    );
+
+    await user.click(await within(rows[2]!).findByRole('button', { name: m.proposalReject }));
+    expect(api.rejectMemoryProposal).toHaveBeenCalledWith(third.id);
+  });
+
+  it('tanpa usulan: blok usulan tidak tampil; gagal memuat usulan menampilkan coba lagi', async () => {
+    api.listMemories.mockResolvedValue([memory()]);
+    const view = await renderScreen(<MemorySection />);
+    await screen.findByRole('list', { name: m.listLabel });
+    expect(screen.queryByText(m.proposalsIntro)).not.toBeInTheDocument();
+    view.unmount();
+
+    api.listMemoryProposals.mockRejectedValue(new ApiProblem(500, 'x', 'Server bermasalah.'));
+    await renderScreen(<MemorySection />);
+    expect(await screen.findByText(m.proposalsError)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: copy.states.retry })).toBeEnabled();
+  });
+
+  it('memori dari percakapan menautkan ke percakapan asal; asal yang dihapus tanpa tautan', async () => {
+    const user = userEvent.setup();
+    api.listMemories.mockResolvedValue([
+      memory({ source: 'extracted', origin: { conversationId: CONVERSATION, messageId: null } }),
+      memory({ id: '0192f0c4-7a1b-7c2d-8e3f-0000000000dd', source: 'extracted', origin: null }),
+      memory({ id: '0192f0c4-7a1b-7c2d-8e3f-0000000000ee' }),
+    ]);
+    const view = await renderScreen(<MemorySection />);
+    const list = await screen.findByRole('list', { name: m.listLabel });
+    expect(within(list).getAllByRole('link')).toHaveLength(1);
+    expect(within(list).getByText(m.fromDeletedConversation)).toBeInTheDocument();
+    await user.click(within(list).getByRole('link', { name: m.fromConversation }));
+    await waitFor(() => expect(view.router.state.location.pathname).toBe(`/chat/${CONVERSATION}`));
   });
 });
 
