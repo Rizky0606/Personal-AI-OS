@@ -10,6 +10,7 @@ import { resolveWorkDir } from './preview/target.js';
 import { createFilesService } from './files/service.js';
 import { createGitService } from './git/service.js';
 import { TerminalService } from './terminal/service.js';
+import { GatewayToolsRelay } from './tools/relay.js';
 import { AllowList } from './paths/allowlist.js';
 import { canonicalize } from './paths/normalize.js';
 import { ProcessManager } from './process/manager.js';
@@ -96,6 +97,12 @@ export async function startWorker(options: WorkerOptions): Promise<RunningWorker
     log,
   });
   const proxyPort = await proxy.start();
+  // Relay tool gateway (aios_tools): token perangkat tetap di worker, omp hanya memegang token lokal per run.
+  const toolsRelay = new GatewayToolsRelay({
+    serverUrl: () => link.serverUrl,
+    token: (opts) => link.freshAccessToken(opts),
+    log,
+  });
 
   const adapter = createOmpAdapter({
     llm: { baseUrl: `http://127.0.0.1:${proxyPort}/v1`, apiKey: proxy.key },
@@ -166,6 +173,7 @@ export async function startWorker(options: WorkerOptions): Promise<RunningWorker
     adapter,
     preview,
     terminal,
+    tools: toolsRelay,
     send: (runId, event) => link.sendEvent(runId, event),
     dataDir: options.dataDir,
     skills: createSkillCache(nodePath.join(options.dataDir, 'skills-cache'), {
@@ -280,6 +288,7 @@ export async function startWorker(options: WorkerOptions): Promise<RunningWorker
       await preview.stopAll().catch(() => undefined);
       await processes.killAll();
       await proxy.close();
+      await toolsRelay.close();
       await server.close();
     },
   };
