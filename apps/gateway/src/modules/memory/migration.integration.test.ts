@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, inject, it } from 'vitest';
 import { MIGRATIONS_FOLDER, runMigrations } from '../../db/migrate.js';
 import { uuidv7 } from '../../lib/uuidv7.js';
 import { createTestDatabase, type TestDatabase } from '../../testing/db.js';
-import { createMemoryRecaller } from './recall.js';
+import { createMemoryRecaller, RECALL_SECTION_HEADER } from './recall.js';
 
 const RECALL_MIGRATION = '0018_memories_recall';
 
@@ -98,9 +98,11 @@ describe('migrasi recall memori pada baris yang sudah ada', () => {
     // Anggaran kecil memaksa pemilihan: baris lama harus ditemukan lewat cocok kata tanpa langkah backfill.
     await db.execute(sql`
       insert into memories (id, text) select gen_random_uuid(), 'Catatan pengisi ' || n from generate_series(1, 5) n`);
-    const picked = await createMemoryRecaller({ db, budgetChars: 60, topK: 12 }).select(
-      'Apa saja alergi saya?',
-    );
+    const picked = await createMemoryRecaller({
+      db,
+      budgetChars: RECALL_SECTION_HEADER.length + 60,
+      topK: 12,
+    }).select('Apa saja alergi saya?');
     expect(picked.mode).toBe('lexical');
     expect(picked.picks[0]).toEqual({
       id: allergy,

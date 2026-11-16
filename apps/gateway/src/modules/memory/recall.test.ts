@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { selectMemories, type RecallCandidate } from './recall.js';
+import { RECALL_SECTION_HEADER, selectMemories, type RecallCandidate } from './recall.js';
 
 /** Satu fakta = baris `- <teks>` + pemisah baris, jadi biayanya panjang teks + 3. */
 const COST_OVERHEAD = 3;
+/** Anggaran mencakup kepala bagian; `room(n)` = anggaran yang menyisakan tepat n karakter untuk fakta. */
+const room = (chars: number) => RECALL_SECTION_HEADER.length + chars;
 const T0 = Date.UTC(2026, 0, 1);
 
 /** Memori ke-n: dibuat pada menit ke-n; `updated` (menit) menentukan urutan "terbaru". */
@@ -26,7 +28,7 @@ describe('selectMemories: batas anggaran', () => {
   const active = [fact(1, 100), fact(2, 100, { pinned: true }), fact(3, 100)];
 
   it('total tepat sama dengan anggaran: semua ikut, terlama dulu, hanya yang tersemat diberi alasan', () => {
-    const out = selectMemories({ active, lexical: ['m03'], budgetChars: 300, topK: 12 });
+    const out = selectMemories({ active, lexical: ['m03'], budgetChars: room(300), topK: 12 });
     expect(out.mode).toBe('all');
     expect(out.picks).toEqual([
       { id: 'm01', text: active[0]!.text },
@@ -37,7 +39,7 @@ describe('selectMemories: batas anggaran', () => {
   });
 
   it('satu karakter di atas anggaran: beralih ke pemilihan dan tidak pernah melewati anggaran', () => {
-    const out = selectMemories({ active, lexical: ['m03'], budgetChars: 299, topK: 12 });
+    const out = selectMemories({ active, lexical: ['m03'], budgetChars: room(299), topK: 12 });
     expect(out.mode).toBe('lexical');
     expect(out.picks.map((p) => [p.id, p.via])).toEqual([
       ['m02', 'pinned'],
@@ -47,7 +49,7 @@ describe('selectMemories: batas anggaran', () => {
   });
 
   it('tanpa memori aktif: mode all tanpa butir', () => {
-    expect(selectMemories({ active: [], lexical: [], budgetChars: 100, topK: 12 })).toEqual({
+    expect(selectMemories({ active: [], lexical: [], budgetChars: room(100), topK: 12 })).toEqual({
       mode: 'all',
       picks: [],
       pinnedDropped: 0,
@@ -69,7 +71,7 @@ describe('selectMemories: di atas anggaran', () => {
     const out = selectMemories({
       active,
       lexical: ['m06', 'm02'],
-      budgetChars: 500,
+      budgetChars: room(500),
       topK: 12,
     });
     expect(out.picks.map((p) => [p.id, p.via])).toEqual([
@@ -87,7 +89,7 @@ describe('selectMemories: di atas anggaran', () => {
     const out = selectMemories({
       active,
       lexical: ['m01', 'm02', 'm03'],
-      budgetChars: 400,
+      budgetChars: room(400),
       topK: 2,
     });
     expect(out.picks.map((p) => [p.id, p.via])).toEqual([
@@ -103,7 +105,7 @@ describe('selectMemories: di atas anggaran', () => {
     const out = selectMemories({
       active,
       lexical: ['m01', 'm02', 'm03'],
-      budgetChars: 300,
+      budgetChars: room(300),
       topK: 12,
     });
     expect(ids(out.picks)).toEqual(['m01', 'm03']);
@@ -115,7 +117,7 @@ describe('selectMemories: di atas anggaran', () => {
     const out = selectMemories({
       active,
       lexical: ['m01', 'hilang', 'm02', 'm02'],
-      budgetChars: 200,
+      budgetChars: room(200),
       topK: 12,
     });
     expect(out.picks.map((p) => [p.id, p.via])).toEqual([
@@ -135,8 +137,8 @@ describe('selectMemories: memori tersemat melebihi jatahnya', () => {
       fact(5, 150),
       fact(6, 150),
     ];
-    const out = selectMemories({ active, lexical: ['m05'], budgetChars: 600, topK: 12 });
-    // Separuh anggaran = 300: m01 (200) masuk, m02 (200) tidak muat, m03 (100) masih muat.
+    const out = selectMemories({ active, lexical: ['m05'], budgetChars: room(600), topK: 12 });
+    // Separuh ruang fakta = 300: m01 (200) masuk, m02 (200) tidak muat, m03 (100) masih muat.
     expect(out.picks.map((p) => [p.id, p.via])).toEqual([
       ['m01', 'pinned'],
       ['m03', 'pinned'],
@@ -149,7 +151,7 @@ describe('selectMemories: memori tersemat melebihi jatahnya', () => {
 
   it('memori tersemat yang tidak muat tidak pernah masuk lewat jalur terbaru', () => {
     const active = [fact(1, 400, { pinned: true, updated: 99 }), fact(2, 100), fact(3, 100)];
-    const out = selectMemories({ active, lexical: [], budgetChars: 500, topK: 12 });
+    const out = selectMemories({ active, lexical: [], budgetChars: room(500), topK: 12 });
     expect(ids(out.picks)).toEqual(['m03', 'm02']);
     expect(out.pinnedDropped).toBe(1);
   });

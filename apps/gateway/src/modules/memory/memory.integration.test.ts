@@ -13,7 +13,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, inject, it } from 'v
 import { memories } from '../../db/schema/index.js';
 import { createAuthEnv, type AuthEnv } from '../../testing/auth-env.js';
 import { startFakeHermes, type FakeHermes } from '../../testing/fake-hermes.js';
-import { DEFAULT_RECALL_BUDGET_CHARS, memoryTitle } from './recall.js';
+import { DEFAULT_RECALL_BUDGET_CHARS, memoryTitle, RECALL_SECTION_HEADER } from './recall.js';
 import { MAX_MEMORIES } from './service.js';
 
 let env: AuthEnv;
@@ -266,10 +266,17 @@ describe('memori: recall per pesan', () => {
     const recent = facts.slice(3);
     expect(recent.length).toBeGreaterThan(0);
     expect(recent).toEqual(Array.from({ length: recent.length }, (_, i) => filler(30 - i)));
-    // Anggaran tidak pernah dilewati, dan terisi penuh: satu pengisi lagi sudah tidak muat.
-    const cost = facts.reduce((sum, text) => sum + text.length + 3, 0);
-    expect(cost).toBeLessThanOrEqual(DEFAULT_RECALL_BUDGET_CHARS);
-    expect(cost + 303).toBeGreaterThan(DEFAULT_RECALL_BUDGET_CHARS);
+    // Bagian memori (kepala + baris fakta) tidak pernah melewati anggaran, dan terisi penuh: satu pengisi lagi
+    // sudah tidak muat.
+    const sectionChars = facts.reduce(
+      (sum, text) => sum + text.length + 3,
+      RECALL_SECTION_HEADER.length,
+    );
+    expect(system).toContain(
+      [RECALL_SECTION_HEADER, ...facts.map((text) => `- ${text}`)].join('\n'),
+    );
+    expect(sectionChars).toBeLessThanOrEqual(DEFAULT_RECALL_BUDGET_CHARS);
+    expect(sectionChars + 303).toBeGreaterThan(DEFAULT_RECALL_BUDGET_CHARS);
     expect(facts).not.toContain(filler(1));
 
     expect(used).toHaveLength(1);
