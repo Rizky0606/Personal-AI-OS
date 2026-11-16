@@ -1,6 +1,6 @@
 # Desain: tool gateway lewat MCP (`aios_tools`)
 
-Status: **slice 1–2 terimplementasi** (web dan baca data sistem untuk omp lewat worker, bawaan mati; lihat bagian 15); **slice 3 (usulan) dan slice 4 (Hermes) sedang dikerjakan di `feat/mcp-propose`** dengan keputusan di bagian 17. Keputusan pemilik bagian 13 diterima dengan rekomendasi bawaan. Disusun 2026-11-16 di branch `feat/mcp-tools` dari `main` (1ab4582). Semua rujukan `berkas:baris` dibaca langsung di commit itu; rujukan Hermes dibaca read-only dari `~/.hermes/hermes-agent` (checkout `b200f5bc60`, `git describe` = `v0.22.7`). Yang tidak teramati langsung ditandai **[INFERENSI]**.
+Status: **slice 1–4 terimplementasi** (web, baca data sistem, dan usulan untuk omp lewat worker; principal Hermes di gateway; semuanya bawaan mati; lihat bagian 15–19). Menyalakan Hermes = langkah pemilik di `docs/RUNBOOK_HERMES_MCP.md`. Keputusan pemilik bagian 13 diterima dengan rekomendasi bawaan. Disusun 2026-11-16 di branch `feat/mcp-tools` dari `main` (1ab4582). Semua rujukan `berkas:baris` dibaca langsung di commit itu; rujukan Hermes dibaca read-only dari `~/.hermes/hermes-agent` (checkout `b200f5bc60`, `git describe` = `v0.22.7`). Yang tidak teramati langsung ditandai **[INFERENSI]**.
 
 ## 0. Ringkasan
 
@@ -333,3 +333,13 @@ Sejak desain ini ditulis, `main` mendapat usulan memori dari ekstraksi fakta (`m
 - Worker: tool usulan diizinkan diam-diam, ditolak di mode rencana (`AIOS_PROPOSE_TOOLS`); instruksi prompt menyebut batas dan aturan kutipan.
 - UI: jenis langkah `propose` ("Membuat usulan", grup Progres "Usulan") di desktop dan Android. Desktop: "Usulan kartu" di atas kanban project, "Usulan jadwal" di atas Jadwal. Android: layar "Usulan agent" dari Pengaturan (setujui/tolak tanpa ubah). Usulan memori dari agent tampil di blok usulan Memori yang sudah ada.
 - Penyimpangan dari bagian 6–7: `memory_propose` memakai `evidence` wajib, bukan `reason`; batas memakai jumlah baris di database, bukan anggaran in-memory; tidak ada kartu usulan di chat (BACKLOG).
+
+## 19. Catatan implementasi slice 4 (Hermes)
+
+- **Auth** (`modules/mcp/routes.ts`): `/v1/mcp` kini didaftarkan di luar `protectedScope` dengan hook sendiri. Bila `MCP_HERMES_TOKEN_SHA256` terisi dan SHA-256 bearer sama (`hashesEqual`, waktu tetap) → principal `hermes`, **hanya** bila alamat soket (bukan `req.ip`) loopback dan tanpa `X-Forwarded-For`/`X-Real-IP`/`Forwarded`; selain itu `403 hermes_not_local`. Token lain → jalur JWT worker seperti sebelumnya (salah = 401, token app = 403). Hash kosong = jalur Hermes tidak ada. Token Hermes tidak membuka rute lain mana pun.
+- **Konteks tanpa run** (`ToolContext.principal`, `budgetKey`, `budgetScale`; `workerContext`/`hermesContext` di `modules/mcp/tools.ts`): anggaran Hermes per jam berjalan dengan pengali 4; allowlist `web_read` Hermes = hasil `web_search` di jam itu + URL di pesan pemilik chat umum 30 menit terakhir (dibaca ulang tiap panggilan); kutipan `memory_propose` Hermes dicocokkan dengan pesan yang sama. `afterWeb` usulan Hermes = Hermes memakai `web_*` di jam itu.
+- **Tool** (`AIOS_HERMES_TOOLS` di kontrak): semua kecuali `task_list`/`task_propose`; tidak muncul di `tools/list` dan dipanggil = `-32602`. Usulan Hermes `agent: hermes`, `runId`/`conversationId` null, hanya batas harian.
+- **Audit/log**: `mcp.tool_called` dengan sasaran `hermes tool:<nama> ok|error`, `actor_device_id` null; rate limit HTTP satu kunci `mcp:hermes`.
+- **Config**: `MCP_HERMES_TOKEN_SHA256` (opsional, 64 heks, `ConfigError` tanpa nilai) di `gateway.env.example`. Runbook: `docs/RUNBOOK_HERMES_MCP.md`.
+- **Kompatibilitas** (menutup **[INFERENSI]** baris 49 dan bagian 14): proses `hermes gateway run` memakai Python 3.14.9 dari `~/.hermes/tools/` dengan venv `~/.hermes/installs/…/venv/lib/python3.14/site-packages` berisi `mcp` 2.3.0 (dibaca dari `/proc/<pid>/maps` dan dist-info). Klien itu sendiri (dibaca saja, `python -I -B`) terhadap gateway tes lokal: preflight `HEAD`/`GET` 405 lolos, `initialize` (`2025-11-25`), `tools/list` 7 tool dengan `readOnlyHint` benar, `tools/call` berhasil, tool kanban = galat protokol. Rinciannya di runbook.
+- Belum: rekaman SSE `hermes.tool.progress` dengan tool MCP sungguhan (perlu config Hermes produksi menyala); perangkat layanan yang bisa dicabut dari halaman Perangkat (keputusan pemilik #2, BACKLOG).
