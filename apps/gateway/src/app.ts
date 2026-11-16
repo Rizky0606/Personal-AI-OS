@@ -52,6 +52,8 @@ import type { TemplateService } from './modules/templates/service.js';
 import type { MemoryProposalService } from './modules/memory/proposal-service.js';
 import type { MemoryService } from './modules/memory/service.js';
 import { mcpRoutes, type McpRouteOptions } from './modules/mcp/routes.js';
+import { agentProposalRoutes } from './modules/agent-proposals/routes.js';
+import type { AgentProposalService } from './modules/agent-proposals/service.js';
 import type { McpServer } from './modules/mcp/server.js';
 import { roleRoutes } from './modules/roles/routes.js';
 import { skillRoutes } from './modules/skills/routes.js';
@@ -121,6 +123,8 @@ export interface AppDeps {
   memory: MemoryService;
   /** Usulan memori dari ekstraksi fakta; rutenya selalu terpasang (mode off = daftar tetap bisa dibaca). */
   memoryProposals: MemoryProposalService;
+  /** Usulan kartu dan jadwal dari agent (tool `aios_tools`); rutenya selalu terpasang. */
+  agentProposals: AgentProposalService;
   templates: TemplateService;
   opinion: OpinionService;
   handoff: HandoffService;
@@ -165,6 +169,7 @@ export function buildApp({
   status,
   memory,
   memoryProposals,
+  agentProposals,
   templates,
   opinion,
   handoff,
@@ -266,6 +271,7 @@ export function buildApp({
         await protectedScope.register(compareRoutes, { compare });
         await protectedScope.register(statusRoutes, { status });
         await protectedScope.register(memoryRoutes, { memory, proposals: memoryProposals });
+        await protectedScope.register(agentProposalRoutes, { proposals: agentProposals });
         await protectedScope.register(templateRoutes, { templates });
         await protectedScope.register(opinionRoutes, { opinion });
         await protectedScope.register(handoffRoutes, { handoff });

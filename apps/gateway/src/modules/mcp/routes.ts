@@ -72,6 +72,10 @@ export const mcpRoutes: FastifyPluginCallback<McpRouteOptions> = (app, opts, don
       const result = await opts.server.handle(typeof req.body === 'string' ? req.body : '', {
         runId,
         projectId,
+        conversationId: run.conversationId,
+        planOnly: run.planOnly,
+        model: run.model ?? run.engine,
+        deviceId: auth.deviceId,
         signal: abort.signal,
         onToolCall: (record) => {
           req.log.info({ deviceId: auth.deviceId, runId, ...record }, 'mcp tool selesai');

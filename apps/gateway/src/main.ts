@@ -23,6 +23,9 @@ import { createMcpServer } from './modules/mcp/server.js';
 import { createDataTools } from './modules/mcp/data-tools.js';
 import { combineTools } from './modules/mcp/tools.js';
 import { createWebTools } from './modules/mcp/web-tools.js';
+import { createProposeTools } from './modules/mcp/propose-tools.js';
+import { createAgentMemoryProposals } from './modules/memory/agent-proposals.js';
+import { createAgentProposalService } from './modules/agent-proposals/service.js';
 import { createFleetService } from './modules/fleets/service.js';
 import { createForkService } from './modules/fork/service.js';
 import { createHandoffService } from './modules/handoff/service.js';
@@ -323,6 +326,7 @@ async function main(): Promise<void> {
   });
 
   const health = createHealthService({ config, pingDatabase: () => pool.query('select 1') });
+  const agentProposals = createAgentProposalService({ db, hub, tasks, schedules });
   const app = buildApp({
     config,
     health,
@@ -353,6 +357,7 @@ async function main(): Promise<void> {
     compare: createCompareService({ client }),
     memory,
     memoryProposals,
+    agentProposals,
     templates: createTemplateService({ db }),
     opinion: createOpinionService({ client }),
     handoff: createHandoffService({ db, client }),
@@ -391,6 +396,11 @@ async function main(): Promise<void> {
                   ownerText: createOwnerText(db),
                 }),
                 createDataTools({ memory, spaces, tasks, schedules }),
+                createProposeTools({
+                  db,
+                  memory: createAgentMemoryProposals({ db, hub }),
+                  proposals: agentProposals,
+                }),
               ),
             }),
           },

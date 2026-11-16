@@ -87,6 +87,9 @@ function toDto(row: ProposalRow, targetText: string | null): MemoryProposal {
     messageId: row.messageId,
     runId: row.runId,
     model: row.model,
+    source: row.source,
+    agent: row.agent ?? null,
+    afterWeb: row.afterWeb,
     createdAt: row.createdAt.toISOString(),
     decidedAt: row.decidedAt ? row.decidedAt.toISOString() : null,
   };

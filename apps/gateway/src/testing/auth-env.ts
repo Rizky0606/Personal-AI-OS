@@ -47,6 +47,12 @@ import { createMcpServer } from '../modules/mcp/server.js';
 import { createDataTools } from '../modules/mcp/data-tools.js';
 import { combineTools } from '../modules/mcp/tools.js';
 import { createWebTools } from '../modules/mcp/web-tools.js';
+import { createProposeTools } from '../modules/mcp/propose-tools.js';
+import { createAgentMemoryProposals } from '../modules/memory/agent-proposals.js';
+import {
+  createAgentProposalService,
+  type AgentProposalService,
+} from '../modules/agent-proposals/service.js';
 import { createResearchService, type ResearchService } from '../modules/research/service.js';
 import { createProjectsService } from '../modules/projects/service.js';
 import { createStatusService, type StatusService } from '../modules/status/service.js';
@@ -122,6 +128,8 @@ export interface AuthEnv {
   skillCurator: SkillCurator;
   /** Usulan memori (ekstraksi fakta) dengan jam palsu `clock`; mode dari `options.memoryExtract` (bawaan off). */
   memoryProposals: MemoryProposalService;
+  /** Usulan kartu dan jadwal dari agent (tool usulan `aios_tools`) dengan jam palsu `clock`. */
+  agentProposals: AgentProposalService;
   /** Percakapan yang dijadwalkan runner untuk ekstraksi (urutan panggilan `schedule` yang lolos mode). */
   extractScheduled: string[];
   /** Menunggu ekstraksi yang dijalankan langsung (pengganti pg-boss di tes) selesai. */
@@ -480,6 +488,7 @@ export async function createAuthEnv(
     queues: boss,
     now,
   });
+  const agentProposals = createAgentProposalService({ db, hub, tasks, schedules, now });
   const app = buildApp({
     config: { LOG_LEVEL: options.logStream ? 'info' : 'silent', NODE_ENV: 'test' },
     health: { readiness: () => Promise.reject(new Error('tidak dipakai')) },
@@ -512,6 +521,7 @@ export async function createAuthEnv(
     status,
     memory,
     memoryProposals,
+    agentProposals,
     templates: createTemplateService({ db }),
     opinion: createOpinionService({ client }),
     handoff: createHandoffService({ db, client }),
@@ -555,6 +565,12 @@ export async function createAuthEnv(
                   now,
                 }),
                 createDataTools({ memory, spaces, tasks, schedules, now }),
+                createProposeTools({
+                  db,
+                  memory: createAgentMemoryProposals({ db, hub, now }),
+                  proposals: agentProposals,
+                  now,
+                }),
               ),
             }),
           },
@@ -597,6 +613,7 @@ export async function createAuthEnv(
     totpSecret,
     skillProposals,
     memoryProposals,
+    agentProposals,
     extractScheduled,
     async extractIdle() {
       await Promise.all([...extractions]);

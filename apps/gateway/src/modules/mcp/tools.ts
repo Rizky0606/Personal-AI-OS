@@ -29,6 +29,14 @@ export interface ToolContext {
   runId: string;
   /** Project run itu (principal worker); tool kanban hanya membaca project ini. */
   projectId?: string | undefined;
+  /** Percakapan run itu; usulan menautkannya. */
+  conversationId?: string | null | undefined;
+  /** Run mode rencana: tool usulan ditolak (docs/DESIGN_MCP_TOOLS.md keputusan #5). */
+  planOnly?: boolean | undefined;
+  /** Model run (atau nama mesin), dicatat di usulan memori. */
+  model?: string | undefined;
+  /** Perangkat worker yang memanggil (audit usulan); null/absen untuk Hermes. */
+  deviceId?: string | null | undefined;
   signal?: AbortSignal;
 }
 
