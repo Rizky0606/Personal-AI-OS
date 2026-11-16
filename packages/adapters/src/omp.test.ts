@@ -983,7 +983,7 @@ describe('urutan frame sintetis (bentuk frame dari rekaman)', () => {
     ]);
   });
 
-  it('izin tool MCP: web aios_tools berjenis network dengan nama tool di baris pertama; MCP lain tetap command', async () => {
+  it('izin tool MCP: web aios_tools berjenis network, tool data aios_tools command (worker mengizinkannya), nama tool di baris pertama', async () => {
     const { transport, handle } = await boot({ t: 0 });
     const ask = (id: string, tool: string, args: string) =>
       frame(transport, {
@@ -996,6 +996,10 @@ describe('urutan frame sintetis (bentuk frame dari rekaman)', () => {
     ask('u1', 'mcp__aios_tools_web_search', '{"query":"vite 7"}');
     ask('u2', 'mcp__aios_tools_web_read', '{"url":"https://vite.dev/"}');
     ask('u3', 'mcp__aios_browser_browser_click', '{"selector":"#a"}');
+    ask('u4', 'mcp__aios_tools_memory_list', '{}');
+    ask('u5', 'mcp__aios_tools_space_search', '{"query":"kontrak"}');
+    ask('u6', 'mcp__aios_tools_task_list', '{}');
+    ask('u7', 'mcp__aios_tools_schedule_list', '{}');
     frame(transport, { id: 'p1', type: 'prompt_result', status: 'completed' });
 
     const events = await collect(handle);
@@ -1004,6 +1008,10 @@ describe('urutan frame sintetis (bentuk frame dari rekaman)', () => {
       ['network', 'mcp__aios_tools_web_search'],
       ['network', 'mcp__aios_tools_web_read'],
       ['command', 'mcp__aios_browser_browser_click'],
+      ['command', 'mcp__aios_tools_memory_list'],
+      ['command', 'mcp__aios_tools_space_search'],
+      ['command', 'mcp__aios_tools_task_list'],
+      ['command', 'mcp__aios_tools_schedule_list'],
     ]);
   });
 });
