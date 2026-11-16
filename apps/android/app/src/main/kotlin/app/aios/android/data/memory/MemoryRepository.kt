@@ -2,6 +2,7 @@ package app.aios.android.data.memory
 
 import app.aios.android.data.api.ApproveMemoryProposalRequest
 import app.aios.android.data.api.CreateMemoryRequest
+import app.aios.android.data.api.MEMORY_PROPOSALS_REVIEW
 import app.aios.android.data.api.Memory
 import app.aios.android.data.api.MemoryApi
 import app.aios.android.data.api.MemoryProposal
@@ -18,12 +19,16 @@ interface MemoryRepository {
 
     suspend fun delete(id: String)
 
-    /** Usulan memori yang menunggu persetujuan (ekstraksi fakta dari chat umum). */
+    /** Usulan menunggu persetujuan ditambah memori yang disimpan otomatis/diurungkan 7 hari terakhir. */
     suspend fun proposals(): List<MemoryProposal>
 
-    suspend fun approveProposal(id: String): MemoryProposal
+    /** [text] = hasil suntingan pemilik ("Ubah lalu simpan"); null = simpan apa adanya. */
+    suspend fun approveProposal(id: String, text: String? = null): MemoryProposal
 
     suspend fun rejectProposal(id: String): MemoryProposal
+
+    /** Mengurungkan memori yang disimpan otomatis (status auto_saved). */
+    suspend fun undoProposal(id: String): MemoryProposal
 }
 
 class RemoteMemoryRepository(private val api: MemoryApi) : MemoryRepository {
@@ -39,9 +44,12 @@ class RemoteMemoryRepository(private val api: MemoryApi) : MemoryRepository {
         if (!response.isSuccessful) throw HttpException(response)
     }
 
-    override suspend fun proposals() = api.proposals().items
+    override suspend fun proposals() = api.proposals(MEMORY_PROPOSALS_REVIEW).items
 
-    override suspend fun approveProposal(id: String) = api.approveProposal(id, ApproveMemoryProposalRequest())
+    override suspend fun approveProposal(id: String, text: String?) =
+        api.approveProposal(id, ApproveMemoryProposalRequest(text?.trim()))
 
     override suspend fun rejectProposal(id: String) = api.rejectProposal(id)
+
+    override suspend fun undoProposal(id: String) = api.undoProposal(id)
 }

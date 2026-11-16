@@ -171,6 +171,8 @@ fun MainScreen(online: Boolean, sessionKey: String, link: AppLink?, onLinkConsum
             }
             is AppLink.OpenResearch -> nav.navigate("research/${target.researchId}")
             is AppLink.OpenSchedule -> nav.navigate("schedules/${target.scheduleId}")
+            // Entri baru = ViewModel baru yang memuat ulang memori dan usulan.
+            AppLink.OpenMemory -> nav.navigate(Routes.MEMORY)
         }
         onLinkConsumed()
     }

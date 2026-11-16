@@ -38,6 +38,13 @@
     <string name="memory_proposal_reject">Tolak</string>
     <string name="memory_proposal_approved">Usulan disimpan ke memori.</string>
     <string name="memory_proposal_rejected">Usulan ditolak dan tidak akan diusulkan lagi.</string>
+    <string name="memory_proposal_edit_approve">Ubah lalu simpan</string>
+    <string name="memory_proposal_edit_title">Ubah usulan sebelum disimpan</string>
+    <string name="memory_auto_title">Disimpan otomatis dari chat (%1$d)</string>
+    <string name="memory_auto_intro">Diambil dari pesan Anda di chat umum dan langsung dipakai AI. Urungkan bila keliru; tampil 7 hari.</string>
+    <string name="memory_proposal_undo">Urungkan</string>
+    <string name="memory_proposal_undone_badge">Diurungkan</string>
+    <string name="memory_proposal_undone">Memori diurungkan dan tidak akan diusulkan lagi.</string>
     <!-- Asisten bawaan (A12) -->
     <string name="assistant_section">Asisten bawaan</string>
     <string name="assistant_item">Jadikan asisten digital</string>

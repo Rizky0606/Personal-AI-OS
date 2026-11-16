@@ -8,6 +8,7 @@ import retrofit2.http.GET
 import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Path
+import retrofit2.http.Query
 
 /* Memori yang terlihat (A9), mengikuti packages/contracts (MemorySchema, endpoints/memory.ts). Ubah bersama kontrak. */
 
@@ -51,13 +52,24 @@ data class MemoryProposal(
     /** Kutipan pesan pemilik yang menjadi dasar fakta. */
     val evidence: String,
     /** Teks memori yang akan diganti (kind = update). */
-    val targetText: String? = null
+    val targetText: String? = null,
+    /** `pending`, `auto_saved` (mode auto, bisa diurungkan), `undone`, `approved`, atau `rejected`. */
+    val status: String = MEMORY_PROPOSAL_PENDING,
+    /** Teks memori target sebelum diganti otomatis (kind = update, status auto_saved/undone). */
+    val previousText: String? = null
 )
+
+const val MEMORY_PROPOSAL_PENDING = "pending"
+const val MEMORY_PROPOSAL_AUTO_SAVED = "auto_saved"
+const val MEMORY_PROPOSAL_UNDONE = "undone"
+
+/** Blok usulan: semua yang menunggu ditambah auto_saved/undone 7 hari terakhir (MEMORY_PROPOSAL_RECENT_DAYS). */
+const val MEMORY_PROPOSALS_REVIEW = "review"
 
 @Serializable
 data class MemoryProposalList(val items: List<MemoryProposal>)
 
-/** Badan setuju; `text` hanya untuk menyunting dulu (Android tidak menyunting, jadi selalu kosong). */
+/** Badan setuju; `text` diisi bila usulan disunting dulu ("Ubah lalu simpan"). */
 @Serializable
 data class ApproveMemoryProposalRequest(val text: String? = null)
 
@@ -74,13 +86,16 @@ interface MemoryApi {
     @DELETE("memories/{id}")
     suspend fun delete(@Path("id") id: String): Response<Unit>
 
-    /** Tanpa query: hanya usulan yang menunggu. */
+    /** [status] `review` untuk blok usulan; tanpa query server hanya mengembalikan yang menunggu. */
     @GET("memories/proposals")
-    suspend fun proposals(): MemoryProposalList
+    suspend fun proposals(@Query("status") status: String): MemoryProposalList
 
     @POST("memories/proposals/{id}/approve")
     suspend fun approveProposal(@Path("id") id: String, @Body body: ApproveMemoryProposalRequest): MemoryProposal
 
     @POST("memories/proposals/{id}/reject")
     suspend fun rejectProposal(@Path("id") id: String): MemoryProposal
+
+    @POST("memories/proposals/{id}/undo")
+    suspend fun undoProposal(@Path("id") id: String): MemoryProposal
 }

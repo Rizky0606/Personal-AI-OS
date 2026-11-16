@@ -83,6 +83,7 @@ data class LiveRun(
         is ServerEvent.ResearchSourceFound,
         is ServerEvent.ResearchCompleted,
         is ServerEvent.ScheduleResult,
+        is ServerEvent.Notification,
         is ServerEvent.TodoUpdated,
         is ServerEvent.ContextUsed,
         is ServerEvent.Other -> this
