@@ -1,5 +1,10 @@
-import { IdSchema, type MemoryProposal, type MemoryProposalStatus } from '@aios/contracts';
-import { aliasedTable, and, asc, count, desc, eq, gt, inArray, sql } from 'drizzle-orm';
+import {
+  IdSchema,
+  MEMORY_PROPOSAL_RECENT_DAYS,
+  type MemoryProposal,
+  type MemoryProposalStatus,
+} from '@aios/contracts';
+import { aliasedTable, and, asc, count, desc, eq, gt, inArray, or, sql } from 'drizzle-orm';
 import type { Database } from '../../db/client.js';
 import {
   conversations,
@@ -45,7 +50,9 @@ export interface MemoryProposalService {
   schedule(conversationId: string): Promise<void>;
   /** Pekerjaan `memory-extract`: satu panggilan model paling banyak. Mengembalikan jumlah usulan baru. */
   extract(conversationId: string): Promise<number>;
-  list(query: { status?: MemoryProposalStatus | 'all' | undefined }): Promise<MemoryProposal[]>;
+  list(query: {
+    status?: MemoryProposalStatus | 'all' | 'review' | undefined;
+  }): Promise<MemoryProposal[]>;
   approve(id: string, edits: { text?: string | undefined }): Promise<MemoryProposal>;
   reject(id: string): Promise<MemoryProposal>;
   undo(id: string): Promise<MemoryProposal>;
@@ -93,6 +100,11 @@ export function createMemoryProposalService(deps: {
   model: string;
   /** Menaruh pekerjaan ekstraksi di antrean (pg-boss di produksi; langsung dijalankan di tes). */
   enqueue: (conversationId: string) => Promise<void>;
+  /**
+   * Push FCM saat giliran ini menghasilkan usulan `pending` baru (mode propose): paling banyak sekali per ekstraksi,
+   * hanya ID. PushService sendiri tidak melakukan apa pun bila FCM tidak dikonfigurasi.
+   */
+  push?: { memoryProposals(input: { conversationId: string; proposalIds: string[] }): void };
   dailyMax?: number | undefined;
   now?: () => number;
   log?: {
@@ -100,7 +112,7 @@ export function createMemoryProposalService(deps: {
     warn: (obj: object, msg: string) => void;
   };
 }): MemoryProposalService {
-  const { db, hub, client, mode, model, enqueue, log } = deps;
+  const { db, hub, client, mode, model, enqueue, push, log } = deps;
   const now = deps.now ?? Date.now;
   const dailyMax = deps.dailyMax ?? DEFAULT_EXTRACT_DAILY_MAX;
 
@@ -382,6 +394,7 @@ export function createMemoryProposalService(deps: {
       }
 
       let saved = 0;
+      const pendingIds: string[] = [];
       for (const fact of accepted) {
         if (mode === 'auto') {
           if (await autoSave(fact, conversationId)) saved += 1;
@@ -392,17 +405,21 @@ export function createMemoryProposalService(deps: {
             );
           continue;
         }
-        await db.insert(memoryProposals).values({
-          kind: fact.kind,
-          text: fact.text,
-          evidence: fact.evidence,
-          targetMemoryId: fact.target?.id ?? null,
-          conversationId,
-          messageId: fact.source.id,
-          runId: fact.source.runId,
-          model,
-          createdAt: new Date(now()),
-        });
+        const [created] = await db
+          .insert(memoryProposals)
+          .values({
+            kind: fact.kind,
+            text: fact.text,
+            evidence: fact.evidence,
+            targetMemoryId: fact.target?.id ?? null,
+            conversationId,
+            messageId: fact.source.id,
+            runId: fact.source.runId,
+            model,
+            createdAt: new Date(now()),
+          })
+          .returning({ id: memoryProposals.id });
+        pendingIds.push(created!.id);
         saved += 1;
       }
       await finish('ok', saved);
@@ -425,16 +442,30 @@ export function createMemoryProposalService(deps: {
               }),
         });
         log?.info({ conversationId, saved, mode }, 'ekstraksi memori selesai');
+        if (pendingIds.length > 0) push?.memoryProposals({ conversationId, proposalIds: pendingIds });
       }
       return saved;
     },
 
     async list({ status = 'pending' }) {
+      const since = new Date(now() - MEMORY_PROPOSAL_RECENT_DAYS * DAY_MS);
+      const where =
+        status === 'all'
+          ? undefined
+          : status === 'review'
+            ? or(
+                eq(memoryProposals.status, 'pending'),
+                and(
+                  inArray(memoryProposals.status, ['auto_saved', 'undone']),
+                  gt(memoryProposals.createdAt, since),
+                ),
+              )
+            : eq(memoryProposals.status, status);
       const rows = await db
         .select({ row: memoryProposals, targetText: target.text })
         .from(memoryProposals)
         .leftJoin(target, eq(target.id, memoryProposals.targetMemoryId))
-        .where(status === 'all' ? undefined : eq(memoryProposals.status, status))
+        .where(where)
         .orderBy(desc(memoryProposals.createdAt), desc(memoryProposals.id))
         .limit(LIST_MAX);
       return rows.map((r) => toDto(r.row, r.targetText));

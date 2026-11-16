@@ -155,6 +155,14 @@ async function main(): Promise<void> {
     recallTopK: config.MEMORY_RECALL_TOP_K,
     log,
   });
+  const push = createPushService({
+    db,
+    hub,
+    fcm: config.FCM_SERVICE_ACCOUNT_FILE
+      ? createFcmClient({ account: loadServiceAccount(config.FCM_SERVICE_ACCOUNT_FILE), log })
+      : undefined,
+    log: { ...log, info: (obj, msg) => app.log.info(obj, msg) },
+  });
   // Mode off (bawaan): tidak ada antrean, tidak ada pekerjaan, tidak ada panggilan model; rute usulan tetap terbaca.
   const memoryProposals = createMemoryProposalService({
     db,
@@ -164,6 +172,7 @@ async function main(): Promise<void> {
     model: config.MEMORY_EXTRACT_MODEL,
     dailyMax: config.MEMORY_EXTRACT_DAILY_MAX,
     enqueue: memoryExtractEnqueue(boss),
+    push,
     log: { ...log, info: (obj, msg) => app.log.info(obj, msg) },
   });
   const files = createFilesService({ db });
@@ -310,14 +319,6 @@ async function main(): Promise<void> {
       roles,
     }),
     roles,
-    log: { ...log, info: (obj, msg) => app.log.info(obj, msg) },
-  });
-  const push = createPushService({
-    db,
-    hub,
-    fcm: config.FCM_SERVICE_ACCOUNT_FILE
-      ? createFcmClient({ account: loadServiceAccount(config.FCM_SERVICE_ACCOUNT_FILE), log })
-      : undefined,
     log: { ...log, info: (obj, msg) => app.log.info(obj, msg) },
   });
 

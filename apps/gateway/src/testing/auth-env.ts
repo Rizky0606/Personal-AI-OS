@@ -292,6 +292,18 @@ export async function createAuthEnv(
   workerHub.onPresence((deviceId, online) => workerRelay.presence(deviceId, online));
   const observer = createRunObserver();
   const memory = createMemoryService({ db });
+  const push = createPushService({
+    db,
+    hub,
+    fcm: options.push
+      ? createFcmClient({
+          account: options.push.account,
+          baseUrl: options.push.baseUrl,
+          retryDelayMs: 0,
+          now,
+        })
+      : undefined,
+  });
   const extractScheduled: string[] = [];
   const extractions = new Set<Promise<unknown>>();
   const memoryProposals: MemoryProposalService = createMemoryProposalService({
@@ -302,6 +314,7 @@ export async function createAuthEnv(
     model: 'router-fast',
     ...(options.memoryExtract?.dailyMax ? { dailyMax: options.memoryExtract.dailyMax } : {}),
     now,
+    push,
     enqueue: (conversationId) => {
       extractScheduled.push(conversationId);
       if (options.memoryExtract?.inline !== false) {
@@ -454,18 +467,6 @@ export async function createAuthEnv(
         })
       : unusedSchedules;
   if (options.schedules) await schedules.start();
-  const push = createPushService({
-    db,
-    hub,
-    fcm: options.push
-      ? createFcmClient({
-          account: options.push.account,
-          baseUrl: options.push.baseUrl,
-          retryDelayMs: 0,
-          now,
-        })
-      : undefined,
-  });
   push.start();
 
   if (options.owner !== false) {
