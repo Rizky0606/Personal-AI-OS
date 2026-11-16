@@ -50,6 +50,8 @@ import type { OpinionService } from './modules/opinion/service.js';
 import { templateRoutes } from './modules/templates/routes.js';
 import type { TemplateService } from './modules/templates/service.js';
 import type { MemoryService } from './modules/memory/service.js';
+import { mcpRoutes, type McpRouteOptions } from './modules/mcp/routes.js';
+import type { McpServer } from './modules/mcp/server.js';
 import { roleRoutes } from './modules/roles/routes.js';
 import { skillRoutes } from './modules/skills/routes.js';
 import type { SkillCurator } from './modules/skills/curator.js';
@@ -72,13 +74,14 @@ export const API_PREFIX = '/v1';
 /** Header request ID dari proxy hanya dipakai bila bentuknya aman untuk log. */
 const SAFE_REQUEST_ID = /^[A-Za-z0-9._-]{1,64}$/;
 
-/** Batas per menit (SECURITY_OPS.md): login 5 per IP, API umum 120 per perangkat. */
+/** Batas per menit (SECURITY_OPS.md): login 5 per IP, API umum 120 per perangkat, tool MCP 60 per worker. */
 export interface RateLimits {
   login: number;
   refresh: number;
   general: number;
+  mcp: number;
 }
-export const DEFAULT_RATE_LIMITS: RateLimits = { login: 5, refresh: 20, general: 120 };
+export const DEFAULT_RATE_LIMITS: RateLimits = { login: 5, refresh: 20, general: 120, mcp: 60 };
 
 export interface AppDeps {
   config: Pick<Config, 'LOG_LEVEL' | 'NODE_ENV'>;
@@ -127,6 +130,8 @@ export interface AppDeps {
   worker: { hub: ReturnType<typeof createWorkerHub>; relay: WorkerRelay };
   /** WebSocket /v1/ws; `auth` diisi dari dependensi di atas. */
   ws: Omit<WsDeps, 'auth'>;
+  /** Tool gateway lewat MCP (MCP_TOOLS_ENABLED); tanpa ini `/v1/mcp` tidak dipasang (404). */
+  mcp?: { server: McpServer; db: McpRouteOptions['db'] };
   rateLimits?: Partial<RateLimits>;
   /** Tujuan log selain stdout; dipakai tes. */
   logStream?: NodeJS.WritableStream;
@@ -166,6 +171,7 @@ export function buildApp({
   search,
   worker,
   ws,
+  mcp,
   rateLimits,
   logStream,
 }: AppDeps): FastifyInstance {
@@ -278,6 +284,14 @@ export function buildApp({
             runs,
             projects,
             store,
+          });
+        if (mcp)
+          await protectedScope.register(mcpRoutes, {
+            server: mcp.server,
+            db: mcp.db,
+            runs,
+            projects,
+            perMinute: limits.mcp,
           });
       });
     },

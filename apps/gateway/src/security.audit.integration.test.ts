@@ -33,6 +33,8 @@ function expectedScope(method: string, url: string): Expected {
   if (url.startsWith('/llm/v1')) return 'llm';
   if (url.startsWith('/v1/worker/')) return 'worker';
   if (url === '/v1/worker/ws') return 'worker';
+  // Tool gateway MCP: hanya worker (dengan run miliknya), bukan aplikasi.
+  if (url === '/v1/mcp') return 'worker';
   return 'app';
 }
 
@@ -42,7 +44,8 @@ let app: string;
 let worker: string;
 
 beforeAll(async () => {
-  env = await createAuthEnv(inject('testDatabaseUrl'));
+  // Tool gateway MCP dinyalakan supaya route /v1/mcp ikut diaudit dan cocok dengan kontrak.
+  env = await createAuthEnv(inject('testDatabaseUrl'), { mcpTools: {} });
   // Route dipasang saat aplikasi siap, jadi hook ini menangkap semuanya.
   env.app.addHook('onRoute', (route: RouteOptions) => {
     for (const method of [route.method].flat()) {

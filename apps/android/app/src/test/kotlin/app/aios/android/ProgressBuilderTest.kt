@@ -9,7 +9,10 @@ import app.aios.android.ui.chat.activity.ProgressUsed
 import app.aios.android.ui.chat.activity.ProgressView
 import app.aios.android.ui.chat.activity.StepState
 import app.aios.android.ui.chat.activity.RunTrace
+import app.aios.android.ui.chat.activity.ToolGroup
+import app.aios.android.ui.chat.activity.ToolKind
 import app.aios.android.ui.chat.activity.buildProgress
+import app.aios.android.ui.chat.activity.kindOf
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
@@ -206,5 +209,25 @@ class ProgressBuilderTest {
         assertEquals(2, used.memoryRead)
         assertEquals(40, used.memoryTotal)
         assertEquals(listOf("m1" to "Nama saya Rina", "m2" to "Server di Jakarta"), used.memoryItems)
+    }
+
+    @Test
+    fun toolWebAiosToolsMasukGrupWebBukanKonektor() {
+        val response = ConversationProgress(
+            used = app.aios.android.data.api.ProgressUsedDto(
+                tools = listOf("mcp__aios_tools_web_search", "mcp__aios_tools__web_read", "mcp__github__x")
+            )
+        )
+        val view = buildProgress(response, null, null, 0, texts)
+        assertEquals(listOf(ToolGroup.Web), view.used.tools)
+        assertEquals(listOf("github"), view.used.connectors)
+    }
+
+    @Test
+    fun jenisToolAiosToolsAdalahWeb() {
+        assertEquals(ToolKind.Web, kindOf("mcp__aios_tools_web_search"))
+        assertEquals(ToolKind.Web, kindOf(" MCP__AIOS_TOOLS__WEB_READ "))
+        assertEquals(null, kindOf("mcp__aios_tools_lain"))
+        assertEquals(null, kindOf("mcp__github__x"))
     }
 }

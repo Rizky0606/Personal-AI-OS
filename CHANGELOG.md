@@ -9,6 +9,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/); ve
 - **Memori tersemat**: memori bisa disematkan di Pengaturan > Memori (desktop) dan layar Memori (Android); yang tersemat selalu ikut ke pesan sistem. Kontrak: `Memory.pinned`, `pinned` di `POST`/`PATCH /memories`.
 - **`pnpm --filter @aios/gateway eval:memory`**: evaluasi recall memori pada fixture sintetis (60 fakta, 40 kueri) per mode `all` dan `lexical`; recall@12 leksikal kategori "cocok kata" dijaga tes regresi.
 - Variabel opsional `MEMORY_RECALL_BUDGET_CHARS` (bawaan 6000) dan `MEMORY_RECALL_TOP_K` (bawaan 12).
+- **Tool gateway lewat MCP untuk agent project (slice 1, bawaan mati):** gateway menyajikan server MCP `aios_tools` di `POST /v1/mcp` dengan `web_search` (SearXNG milik sistem) dan `web_read` (pengambil halaman aman SSRF, hanya URL dari hasil pencarian run itu atau dari pesan pemilik). omp di worker memanggilnya lewat relay loopback per run; token perangkat tidak pernah sampai ke omp. Izin jaringan ditanyakan dengan "selalu izinkan" per nama tool per project, dan tetap boleh di mode rencana karena hanya membaca. Dinyalakan dengan `MCP_TOOLS_ENABLED=true` (kontrak aditif `run.start.gatewayTools`). Langkahnya tampil sebagai langkah web di Aktivitas dan Progres (desktop dan Android). Desain dan slice berikutnya: `docs/DESIGN_MCP_TOOLS.md`.
 
 ### Diubah
 

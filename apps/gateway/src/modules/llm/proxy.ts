@@ -1,4 +1,4 @@
-import { IdSchema, type Usage } from '@aios/contracts';
+import { IdSchema, RUN_ID_HEADER, type Usage } from '@aios/contracts';
 import type { FastifyPluginAsync } from 'fastify';
 import { pipeline, Readable } from 'node:stream';
 import { AppError } from '../../errors.js';
@@ -9,8 +9,6 @@ import { SseUsageTap, usageFromPayload, type UsageRecorder } from './usage.js';
 
 /** Dipasang di root, bukan di bawah /v1, supaya base URL provider omp adalah `https://<domain>/llm/v1`. */
 export const LLM_PREFIX = '/llm/v1';
-/** Worker menyebut run mana yang memakai model, agar usage tercatat di run itu. */
-export const RUN_ID_HEADER = 'x-aios-run-id';
 
 const MAX_BODY_BYTES = 25 * 1024 * 1024;
 export const DEFAULT_STREAM_IDLE_MS = 120_000;

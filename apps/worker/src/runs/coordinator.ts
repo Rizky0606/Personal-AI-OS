@@ -1,11 +1,13 @@
 import { promises as fs } from 'node:fs';
 import nodePath from 'node:path';
 import { AdapterError, uuidv7, type AgentAdapter, type RunHandle } from '@aios/adapters';
-import type {
-  AgentEvent,
-  SteerMode,
-  WorkerCommand,
-  WorkerReviewResultFrame,
+import {
+  AIOS_TOOLS_SERVER,
+  aiosToolOf,
+  type AgentEvent,
+  type SteerMode,
+  type WorkerCommand,
+  type WorkerReviewResultFrame,
 } from '@aios/contracts';
 import { PathError } from '../paths/normalize.js';
 import type { ProcessManager } from '../process/manager.js';
@@ -15,6 +17,7 @@ import type { McpRegistration } from '../preview/mcp.js';
 import { BROWSER_TOOL_PREFIX, MCP_SERVER_NAME } from '../preview/mcp.js';
 import type { PreviewService } from '../preview/service.js';
 import type { TerminalService } from '../terminal/service.js';
+import { TOOLS_INSTRUCTION } from '../tools/instruction.js';
 import { COMMIT_INSTRUCTION } from './commit-message.js';
 import { withHistory } from './history.js';
 import { LINK_INSTRUCTION, isLinkFromPrompt } from './links.js';
@@ -45,6 +48,8 @@ export interface CoordinatorDeps {
   preview?: PreviewService;
   /** Terminal di worktree run ditutup sebelum worktree dihapus. */
   terminal?: TerminalService;
+  /** Relay MCP lokal ke tool gateway (`aios_tools`); dipakai hanya bila run.start membawa `gatewayTools`. */
+  tools?: { register(runId: string): Promise<McpRegistration> };
   /** Mengirim event ke gateway; false bila tidak tersambung (event disimpan dan dikirim saat tersambung). */
   send: (runId: string, event: AgentEvent) => boolean;
   dataDir: string;
@@ -83,6 +88,8 @@ interface RunState {
   timer: ReturnType<typeof setTimeout> | undefined;
   /** Pendaftaran tool browser di server MCP lokal. */
   mcp: McpRegistration | undefined;
+  /** Pendaftaran run di relay tool gateway (`aios_tools`). */
+  toolsMcp: McpRegistration | undefined;
 }
 
 /** Satu frame WebSocket gateway maksimal 16 KB; event dipecah bila serialisasinya mendekati itu. */
@@ -155,6 +162,7 @@ export class RunCoordinator {
       steps: new Map(),
       timer: undefined,
       mcp: undefined,
+      toolsMcp: undefined,
     };
     this.runs.set(cmd.runId, run);
     void this.execute(cmd.runId, run).catch((error: unknown) => {
@@ -321,6 +329,19 @@ export class RunCoordinator {
           this.deps.log?.(`tool browser tidak tersedia untuk run ${runId}: ${String(error)}`);
           return undefined;
         });
+      // Tool gateway (web_search, web_read) hanya bila gateway menyalakannya untuk run ini.
+      if (cmd.gatewayTools && this.deps.tools) {
+        run.toolsMcp = await this.deps.tools.register(runId).catch((error: unknown) => {
+          this.deps.log?.(`tool gateway tidak tersedia untuk run ${runId}: ${String(error)}`);
+          return undefined;
+        });
+      }
+      const mcpServers = {
+        ...(run.mcp ? { [MCP_SERVER_NAME]: { url: run.mcp.url, headers: run.mcp.headers } } : {}),
+        ...(run.toolsMcp
+          ? { [AIOS_TOOLS_SERVER]: { url: run.toolsMcp.url, headers: run.toolsMcp.headers } }
+          : {}),
+      };
 
       // Skill yang ditawarkan di indeks dipasang ke folder skill milik run ini. Gagal memuat katalog tidak
       // menggagalkan run coding: agent tetap jalan tanpa skill tambahan (dicatat di log worker).
@@ -340,10 +361,9 @@ export class RunCoordinator {
           cmd.bundle.systemPrompt +
           COMMIT_INSTRUCTION +
           LINK_INSTRUCTION +
-          (run.mcp ? BROWSER_INSTRUCTION : ''),
-        ...(run.mcp
-          ? { mcpServers: { [MCP_SERVER_NAME]: { url: run.mcp.url, headers: run.mcp.headers } } }
-          : {}),
+          (run.mcp ? BROWSER_INSTRUCTION : '') +
+          (run.toolsMcp ? TOOLS_INSTRUCTION : ''),
+        ...(Object.keys(mcpServers).length > 0 ? { mcpServers } : {}),
         model: cmd.model,
         skills,
         skillIds: [...cmd.bundle.skillIds],
@@ -429,8 +449,11 @@ export class RunCoordinator {
       if (id && run.cmd.bundle.skillIds.includes(id)) run.openedSkills.add(id);
     }
     if (event.type === 'approval.requested') {
-      // Mode rencana: agent hanya boleh membaca. Semua izin ditolak, termasuk aturan "izinkan selalu" project.
-      if (run.cmd.planOnly) {
+      // Mode rencana: agent hanya boleh membaca. Semua izin ditolak, termasuk aturan "izinkan selalu" project,
+      // kecuali tool gateway yang hanya membaca (web_search, web_read): riset saat merencanakan tetap boleh,
+      // dan izinnya tetap lewat aturan atau pertanyaan di bawah (keputusan pemilik, DESIGN_MCP_TOOLS.md #5).
+      const gatewayTool = run.toolsMcp ? aiosToolOf(event.detail.split('\n')[0] ?? '') : null;
+      if (run.cmd.planOnly && !gatewayTool) {
         run.silent.add(event.approvalId);
         void run.handle?.resolveApproval(event.approvalId, 'deny').catch(() => undefined);
         return;
@@ -559,6 +582,8 @@ export class RunCoordinator {
     clearTimeout(run.timer);
     // Dev server dan browser milik run dihentikan begitu agent selesai (SECURITY_OPS: proses anak mati bersama run).
     run.mcp?.unregister();
+    // Token relay tool gateway run ini berhenti berlaku; gateway juga menolak run yang tidak lagi berjalan.
+    run.toolsMcp?.unregister();
     await this.deps.preview?.stopRun(run.cmd.projectId, runId).catch(() => undefined);
     await this.deps.processes.killRun(runId).catch(() => undefined);
     // Sudah di-set serentak dengan `terminal` (onEvent/fail/cancelled/timeout); diulang di sini hanya sebagai

@@ -81,6 +81,23 @@ describe('buildProgress: aturan penggabungan', () => {
     expect(view.used.tools).toEqual([]);
   });
 
+  it('tool web aios_tools masuk grup web, bukan konektor; MCP pihak ketiga tetap konektor', () => {
+    const base = response(['completed']);
+    const view = buildProgress(
+      {
+        ...base,
+        used: {
+          ...base.used,
+          tools: ['mcp__aios_tools_web_search', 'mcp__aios_tools__web_read', 'mcp__github__x'],
+        },
+      },
+      undefined,
+      0,
+    );
+    expect(view.used.tools).toContain('web');
+    expect(view.used.connectors).toEqual(['github']);
+  });
+
   it('chip bernomor dari langkah aktif; semua selesai: N dari N; di sela pembaruan: langkah berikutnya', () => {
     const chip = (s: Parameters<typeof plan>[0]) => buildProgress(response(s), undefined, 0).chip;
     expect(chip(['completed', 'completed', 'in_progress', 'pending'])).toEqual({

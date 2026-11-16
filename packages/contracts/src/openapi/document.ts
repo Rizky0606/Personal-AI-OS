@@ -15,6 +15,7 @@ const ERROR_TITLES: Record<number, string> = {
   401: 'Belum login atau token tidak berlaku',
   403: 'Token tidak punya scope yang dibutuhkan',
   404: 'Tidak ditemukan',
+  405: 'Metode tidak didukung',
   409: 'Konflik dengan status saat ini',
   413: 'Berkas terlalu besar',
   422: 'Tidak bisa diproses',

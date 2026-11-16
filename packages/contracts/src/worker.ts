@@ -43,6 +43,11 @@ export const RunStartCommandSchema = z.object({
     .positive()
     .max(2 * 60 * 60_000)
     .optional(),
+  /**
+   * Gateway menyajikan tool `aios_tools` (POST /v1/mcp) untuk run ini: worker mendaftarkan relay MCP lokal
+   * dan omp boleh memanggil `web_search`/`web_read`. Kosong = fitur mati (MCP_TOOLS_ENABLED=false).
+   */
+  gatewayTools: z.boolean().optional(),
 });
 
 export const RunSteerCommandSchema = z.object({

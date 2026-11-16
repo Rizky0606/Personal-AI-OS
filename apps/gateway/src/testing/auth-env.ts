@@ -35,7 +35,11 @@ import { createPageFetcher } from '../modules/research/fetcher.js';
 import { createResearchLlm } from '../modules/research/llm.js';
 import type { DepthConfig } from '../modules/research/pipeline.js';
 import type { PageRenderer } from '../modules/research/render.js';
-import { createSearxngClient } from '../modules/research/search.js';
+import { createSearxngClient, type SearchClient } from '../modules/research/search.js';
+import type { PageFetcher } from '../modules/research/fetcher.js';
+import { createOwnerText } from '../modules/mcp/owner-text.js';
+import { createMcpServer } from '../modules/mcp/server.js';
+import { createWebTools } from '../modules/mcp/web-tools.js';
 import { createResearchService, type ResearchService } from '../modules/research/service.js';
 import { createProjectsService } from '../modules/projects/service.js';
 import { createStatusService, type StatusService } from '../modules/status/service.js';
@@ -198,6 +202,11 @@ export async function createAuthEnv(
         signal?: AbortSignal,
       ): Promise<string>;
     };
+    /**
+     * Tool gateway MCP (MCP_TOOLS_ENABLED=true): memasang `/v1/mcp` dan `run.start.gatewayTools`. SearXNG dan
+     * pengambil halaman tiruan; tanpa ini fiturnya mati seperti bawaan produksi.
+     */
+    mcpTools?: { search?: SearchClient; fetchPage?: PageFetcher };
     /** Batas run coding paralel per project untuk kartu kanban. */
     taskMaxParallel?: number;
     rateLimits?: Partial<RateLimits>;
@@ -295,6 +304,7 @@ export async function createAuthEnv(
     workerAdapter: createWorkerRelayAdapter({
       relay: workerRelay,
       ...(options.workerRelay ?? {}),
+      ...(options.mcpTools ? { gatewayTools: true } : {}),
     }),
     ...(dsh ? { dsh } : {}),
     roles,
@@ -486,6 +496,25 @@ export async function createAuthEnv(
     // tes rate limit menimpanya.
     rateLimits: { login: 1000, refresh: 1000, general: 1_000_000, ...options.rateLimits },
     ...(options.logStream ? { logStream: options.logStream } : {}),
+    ...(options.mcpTools
+      ? {
+          mcp: {
+            db,
+            server: createMcpServer({
+              version: 'test',
+              tools: createWebTools({
+                search:
+                  options.mcpTools.search ?? createSearxngClient({ baseUrl: 'http://127.0.0.1:9' }),
+                fetchPage:
+                  options.mcpTools.fetchPage ??
+                  (() => Promise.reject(new Error('tes: halaman web tidak tersedia'))),
+                ownerText: createOwnerText(db),
+                now,
+              }),
+            }),
+          },
+        }
+      : {}),
   });
 
   const code = () => totpCode(totpSecret, timeStep(clock.now));

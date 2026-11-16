@@ -1,11 +1,15 @@
 import { promises as fs } from 'node:fs';
 import nodePath from 'node:path';
+import { aiosToolOf } from '@aios/contracts';
 import { z } from 'zod';
 
 const RuleSchema = z.object({
   projectId: z.string().min(1),
   kind: z.enum(['command', 'file_write', 'network']),
-  /** Perintah/URL persis (spasi dinormalkan), atau `*` untuk semua penulisan file di worktree. */
+  /**
+   * Perintah/URL persis (spasi dinormalkan), `*` untuk semua penulisan file di worktree, atau nama tool gateway
+   * (`mcp__aios_tools_web_search`) untuk semua panggilan tool itu.
+   */
   pattern: z.string().min(1),
 });
 export type ApprovalRule = z.infer<typeof RuleSchema>;
@@ -18,10 +22,21 @@ export type RuleKind = ApprovalRule['kind'];
 export const normalizeDetail = (detail: string): string => detail.trim().replace(/\s+/g, ' ');
 
 /**
+ * Pola aturan dari permintaan izin. Tool gateway (`aios_tools`) diingat per nama tool, karena detailnya memuat
+ * argumen (kueri, URL) yang hampir tidak pernah sama; gateway tetap membatasi apa yang boleh dibuka.
+ */
+function patternOf(kind: RuleKind, detail: string): string {
+  if (kind === 'file_write') return '*';
+  const tool = detail.split('\n')[0]?.trim() ?? '';
+  return aiosToolOf(tool) ? tool : normalizeDetail(detail);
+}
+
+/**
  * Aturan "selalu izinkan untuk project ini" (SECURITY_OPS.md). Omp tidak punya aturan permanen per pola
  * (docs/VERIFICATION.md), jadi disimpan di worker dan dijawab otomatis di sini. Sengaja sempit:
  * - perintah dan URL: cocok persis, bukan awalan, jadi `pnpm test` tidak membuka `pnpm test && rm -rf`.
  * - penulisan file: seluruh penulisan agent di worktree project itu (sudah terisolasi dan ditinjau sebelum diterima).
+ * - tool gateway (web_search, web_read): per nama tool; batas URL dan kueri ditegakkan gateway.
  * Hanya keputusan "izinkan" yang disimpan; "tolak" selalu ditanyakan ulang.
  */
 export class ApprovalRules {
@@ -43,21 +58,17 @@ export class ApprovalRules {
   }
 
   matches(projectId: string, kind: RuleKind, detail: string): boolean {
-    const normalized = normalizeDetail(detail);
+    const pattern = patternOf(kind, detail);
     return this.rules.some(
       (r) =>
         r.projectId === projectId &&
         r.kind === kind &&
-        (r.pattern === '*' || r.pattern === normalized),
+        (r.pattern === '*' || r.pattern === pattern),
     );
   }
 
   async add(projectId: string, kind: RuleKind, detail: string): Promise<ApprovalRule> {
-    const rule: ApprovalRule = {
-      projectId,
-      kind,
-      pattern: kind === 'file_write' ? '*' : normalizeDetail(detail),
-    };
+    const rule: ApprovalRule = { projectId, kind, pattern: patternOf(kind, detail) };
     if (
       !this.rules.some(
         (r) => r.projectId === projectId && r.kind === kind && r.pattern === rule.pattern,

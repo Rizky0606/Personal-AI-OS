@@ -92,7 +92,25 @@ internal fun kindOf(name: String): ToolKind? {
     val key = name.trim().lowercase()
     TOOL_KINDS[key]?.let { return it }
     if (key.startsWith("browser_")) return ToolKind.Browser
+    if (aiosToolOf(key) != null) return ToolKind.Web
     return null
+}
+
+private val AIOS_TOOL_NAMES = setOf("web_search", "web_read")
+
+/**
+ * Nama tool gateway (server MCP `aios_tools`) bila [name] salah satunya, selain itu null. omp menamai
+ * `mcp__aios_tools_<tool>`, Hermes `mcp__aios_tools__<tool>`. Cermin `aiosToolOf` di
+ * packages/contracts/src/tools.ts.
+ */
+internal fun aiosToolOf(name: String): String? {
+    val key = name.trim().lowercase()
+    val rest = when {
+        key.startsWith("mcp__aios_tools__") -> key.removePrefix("mcp__aios_tools__")
+        key.startsWith("mcp__aios_tools_") -> key.removePrefix("mcp__aios_tools_")
+        else -> return null
+    }
+    return rest.takeIf { it in AIOS_TOOL_NAMES }
 }
 
 /** Kalimat langkah menurut jenis tool dan status. */

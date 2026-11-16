@@ -31,7 +31,7 @@ Mengubah aliran event run menjadi data untuk baris progres ala Claude: satu judu
 
 Target (`truncateTarget`): satu baris, spasi dipadatkan, maks 60 karakter. Path memotong awal (nama berkas tetap terlihat), perintah dan URL memotong akhir.
 
-Pemetaan nama tool → jenis ada di `TOOL_KINDS` (`activity.ts`): terverifikasi rekaman untuk omp `bash`, `write`, `todo`, `task`; sisanya dari daftar tool omp dan nama umum Hermes (belum terverifikasi rekaman Hermes). Awalan `browser_` → membuka halaman. Nama lain (termasuk `mcp__…`) → "Menjalankan alat: <nama>".
+Pemetaan nama tool → jenis ada di `TOOL_KINDS` (`activity.ts`): terverifikasi rekaman untuk omp `bash`, `write`, `todo`, `task`; sisanya dari daftar tool omp dan nama umum Hermes (belum terverifikasi rekaman Hermes). Awalan `browser_` → membuka halaman. Tool gateway `aios_tools` (`mcp__aios_tools_web_search`/`_web_read` dari omp, `mcp__aios_tools__…` dari Hermes; `aiosToolOf` di `packages/contracts/src/tools.ts`, salinan Kotlin di `ActivityBuilder.kt`) → web, dan di panel Progres dihitung dalam grup Web, bukan Konektor. Nama lain (termasuk `mcp__…` lain) → "Menjalankan alat: <nama>".
 
 `formatElapsed`: detik dipotong ke bawah (floor). `< 60 dtk`: `N dtk`; `< 1 jam`: `M mnt SS dtk`; `≥ 1 jam`: `J j MM mnt` (detik dibuang). Negatif atau bukan angka → `0 dtk`.
 

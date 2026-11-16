@@ -132,6 +132,7 @@ async function build(
     maxRunMs?: number;
     setup?: ProjectSetupStore;
     skills?: ConstructorParameters<typeof RunCoordinator>[0]['skills'];
+    tools?: ConstructorParameters<typeof RunCoordinator>[0]['tools'];
   } = {},
 ) {
   const allowed = new AllowList({ file: path.join(base, 'data', 'allowed.json'), forbidden: [] });
@@ -907,6 +908,123 @@ describe('RunCoordinator: checkpoint, diff, dan run lanjutan', () => {
     await until(() => types(RUN_2).includes('error'), 'galat');
 
     expect(events(RUN_2)[0]).toMatchObject({ code: 'worktree_failed' });
+  });
+});
+
+describe('RunCoordinator: tool gateway (aios_tools)', () => {
+  const registered: string[] = [];
+  const released: string[] = [];
+  const tools = {
+    register: (runId: string) => {
+      registered.push(runId);
+      return Promise.resolve({
+        url: `http://127.0.0.1:1/mcp/${runId}`,
+        headers: { Authorization: 'Bearer lokal-per-run' },
+        unregister: () => released.push(runId),
+      });
+    },
+  };
+  const ask = (approvalId: string, tool: string, args: string) => ({
+    type: 'approval.requested' as const,
+    approvalId,
+    kind: 'network' as const,
+    detail: `${tool}\nArguments:\n${args}`,
+  });
+
+  beforeEach(async () => {
+    registered.length = 0;
+    released.length = 0;
+    await build({ tools });
+  });
+
+  it('gatewayTools: relay didaftarkan, server aios_tools dan instruksi ikut ke omp, dilepas saat run selesai', async () => {
+    coordinator.start(command({ gatewayTools: true }));
+    await until(() => adapter.handles.length === 1, 'adapter dimulai');
+
+    expect(registered).toEqual([RUN]);
+    expect(adapter.inputs[0]?.mcpServers).toEqual({
+      aios_tools: {
+        url: `http://127.0.0.1:1/mcp/${RUN}`,
+        headers: { Authorization: 'Bearer lokal-per-run' },
+      },
+    });
+    expect(adapter.inputs[0]?.systemPrompt).toContain('# Tool web');
+
+    adapter.handle.events.push({ type: 'run.completed', summary: 'selesai' });
+    adapter.handle.events.end();
+    await until(() => coordinator.activeRunIds.length === 0, 'run dilepas');
+    expect(released).toEqual([RUN]);
+  });
+
+  it('tanpa gatewayTools (gateway mematikan fitur): tidak ada relay, server MCP, atau instruksi', async () => {
+    coordinator.start(command());
+    await until(() => adapter.handles.length === 1, 'adapter dimulai');
+
+    expect(registered).toEqual([]);
+    expect(adapter.inputs[0]?.mcpServers).toBeUndefined();
+    expect(adapter.inputs[0]?.systemPrompt).not.toContain('# Tool web');
+  });
+
+  it('izin web ditanyakan; "selalu" diingat per nama tool untuk project ini, bukan per argumen', async () => {
+    coordinator.start(command({ gatewayTools: true }));
+    await until(() => adapter.handles.length === 1, 'adapter dimulai');
+    const handle = adapter.handle;
+
+    handle.events.push(ask(APPROVAL, 'mcp__aios_tools_web_search', '{"query":"vite 7"}'));
+    await until(() => types().includes('approval.requested'), 'permintaan izin');
+    expect(handle.resolved).toEqual([]);
+    await coordinator.resolveApproval({
+      type: 'approval.resolve',
+      runId: RUN,
+      approvalId: APPROVAL,
+      decision: 'allow',
+      remember: true,
+    });
+    await until(() => handle.resolved.length === 1, 'dijawab');
+    expect(rules.list(PROJECT)).toEqual([
+      { projectId: PROJECT, kind: 'network', pattern: 'mcp__aios_tools_web_search' },
+    ]);
+    const before = types().filter((t) => t === 'approval.requested').length;
+
+    // Kueri lain dengan tool yang sama dijawab otomatis; web_read tetap ditanyakan.
+    handle.events.push(ask(APPROVAL_2, 'mcp__aios_tools_web_search', '{"query":"lain"}'));
+    await until(() => handle.resolved.length === 2, 'dijawab otomatis');
+    expect(handle.resolved[1]).toEqual([APPROVAL_2, 'allow', undefined]);
+    const third = '0192f0c4-7a1b-7c2d-a005-4a5b6c7d8e95';
+    handle.events.push(ask(third, 'mcp__aios_tools_web_read', '{"url":"https://vite.dev/"}'));
+    await until(
+      () => types().filter((t) => t === 'approval.requested').length === before + 1,
+      'web_read ditanyakan',
+    );
+    expect(handle.resolved).toHaveLength(2);
+    // Aturan per nama tool hanya untuk tool gateway; perintah lain tetap cocok persis.
+    expect(rules.matches(PROJECT, 'network', 'mcp__aios_tools_web_search\nArguments:\n{}')).toBe(
+      true,
+    );
+    expect(rules.matches(PROJECT, 'network', 'mcp__aios_tools_web_read\nArguments:\n{}')).toBe(
+      false,
+    );
+  });
+
+  it('mode rencana: tool web gateway tetap ditanyakan (hanya membaca), izin lain tetap ditolak otomatis', async () => {
+    coordinator.start(command({ gatewayTools: true, planOnly: true }));
+    await until(() => adapter.handles.length === 1, 'adapter dimulai');
+    const handle = adapter.handle;
+
+    handle.events.push(ask(APPROVAL, 'mcp__aios_tools_web_search', '{"query":"vite"}'));
+    handle.events.push({
+      type: 'approval.requested',
+      approvalId: APPROVAL_2,
+      kind: 'command',
+      detail: 'node --test',
+    });
+    await until(() => handle.resolved.length === 1, 'perintah ditolak');
+    await until(() => types().includes('approval.requested'), 'web ditanyakan');
+
+    expect(handle.resolved).toEqual([[APPROVAL_2, 'deny', undefined]]);
+    expect(events().filter((e) => e.type === 'approval.requested')).toEqual([
+      expect.objectContaining({ approvalId: APPROVAL, kind: 'network' }),
+    ]);
   });
 });
 

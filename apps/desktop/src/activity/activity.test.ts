@@ -23,6 +23,9 @@ describe('toolKind', () => {
     expect(toolKind('grep')).toBe('search');
     expect(toolKind('web_search')).toBe('web');
     expect(toolKind('cari_web')).toBe('web');
+    expect(toolKind('mcp__aios_tools_web_search')).toBe('web');
+    expect(toolKind('mcp__aios_tools__web_read')).toBe('web');
+    expect(toolKind('mcp__github__create_issue')).toBe('other');
     expect(toolKind('baca_tautan')).toBe('web');
     expect(toolKind('bash')).toBe('command');
     expect(toolKind('mcp__aios-browser__screenshot')).toBe('other');
