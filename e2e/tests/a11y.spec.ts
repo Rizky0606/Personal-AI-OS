@@ -60,6 +60,12 @@ for (const theme of ['light', 'dark'] as const) {
 
     await page.keyboard.press('Control+k');
     await page.getByRole('combobox', { name: 'Cari atau jalankan perintah' }).waitFor();
+    // Palet masuk dengan animasi pudar (`aios-palette-in`, opacity 0 -> 1). Selama animasi berjalan
+    // axe membaca warna hasil campuran (mis. text-2 #475569 di atas surface-2 #EDF2F8 terbaca
+    // #6f7b8a di atas #f0f4f9) dan melaporkan pelanggaran kontras palsu. Tunggu animasinya selesai.
+    await page.locator('.aios-palette-in').evaluate(async (el) => {
+      await Promise.all(el.getAnimations().map((a) => a.finished));
+    });
     const palette = await violations(page);
     if (palette.length > 0) found['Palet perintah'] = palette;
 
