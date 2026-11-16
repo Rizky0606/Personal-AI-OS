@@ -2,6 +2,9 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { endpoints } from './api.js';
 import {
+  AgentProposalQuerySchema,
+  AgentProposalSchema,
+  ApproveAgentProposalRequestSchema,
   ApproveMemoryProposalRequestSchema,
   MemoryProposalQuerySchema,
   MemoryProposalSchema,
@@ -20,10 +23,14 @@ import {
 import {
   AIOS_DATA_TOOLS,
   AIOS_NETWORK_TOOLS,
+  AIOS_PROPOSE_TOOLS,
   MemoryListInputSchema,
+  MemoryProposeInputSchema,
   ScheduleListInputSchema,
+  ScheduleProposeInputSchema,
   SpaceSearchInputSchema,
   TaskListInputSchema,
+  TaskProposeInputSchema,
   WebReadInputSchema,
   WebSearchInputSchema,
   aiosToolOf,
@@ -115,6 +122,10 @@ const DOCUMENTED_ENDPOINTS = [
   'POST /memories/proposals/:id/approve',
   'POST /memories/proposals/:id/reject',
   'POST /memories/proposals/:id/undo',
+  'GET /agent-proposals',
+  'GET /agent-proposals/:id',
+  'POST /agent-proposals/:id/approve',
+  'POST /agent-proposals/:id/reject',
   'GET /spaces',
   'POST /spaces',
   'PATCH /spaces/:id',
@@ -334,14 +345,57 @@ describe('tool gateway (aios_tools)', () => {
     expect(aiosToolOf('mcp__aios_tools__space_search')).toBe('space_search');
     expect(aiosToolOf('mcp__aios_tools_task_list')).toBe('task_list');
     expect(aiosToolOf('mcp__aios_tools_schedule_list')).toBe('schedule_list');
-    expect(aiosToolOf('mcp__aios_tools_memory_propose')).toBeNull();
+    expect(aiosToolOf('mcp__aios_tools_memory_propose')).toBe('memory_propose');
+    expect(aiosToolOf('mcp__aios_tools__task_propose')).toBe('task_propose');
+    expect(aiosToolOf('mcp__aios_tools_schedule_propose')).toBe('schedule_propose');
+    expect(aiosToolOf('mcp__aios_tools_memory_delete')).toBeNull();
     expect(aiosToolOf('mcp__aios_browser_browser_screenshot')).toBeNull();
     expect(aiosToolOf('web_search')).toBeNull();
   });
 
-  it('tool data dan tool jaringan terpisah', () => {
+  it('tool data, jaringan, dan usulan terpisah', () => {
     expect(AIOS_DATA_TOOLS.filter((t) => AIOS_NETWORK_TOOLS.includes(t))).toEqual([]);
-    expect([...AIOS_NETWORK_TOOLS, ...AIOS_DATA_TOOLS]).toHaveLength(6);
+    expect(AIOS_PROPOSE_TOOLS.filter((t) => AIOS_DATA_TOOLS.includes(t))).toEqual([]);
+    expect(AIOS_PROPOSE_TOOLS.filter((t) => AIOS_NETWORK_TOOLS.includes(t))).toEqual([]);
+    expect([...AIOS_NETWORK_TOOLS, ...AIOS_DATA_TOOLS, ...AIOS_PROPOSE_TOOLS]).toHaveLength(9);
+  });
+
+  it('skema masukan tool usulan', () => {
+    const id = '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f';
+    expect(
+      MemoryProposeInputSchema.safeParse({ text: 'Pemilik suka kopi.', evidence: 'aku suka kopi' })
+        .success,
+    ).toBe(true);
+    expect(MemoryProposeInputSchema.safeParse({ text: 'Pemilik suka kopi.' }).success).toBe(false);
+    expect(
+      MemoryProposeInputSchema.safeParse({ text: 'x'.repeat(301), evidence: 'aku suka kopi' })
+        .success,
+    ).toBe(false);
+    expect(
+      TaskProposeInputSchema.safeParse({ title: 'Tambah tes', reason: 'cakupan', projectId: id })
+        .success,
+    ).toBe(true);
+    expect(TaskProposeInputSchema.safeParse({ title: 'Tambah tes' }).success).toBe(false);
+    expect(
+      TaskProposeInputSchema.safeParse({ title: 'a', reason: 'b', status: 'todo' }).success,
+    ).toBe(false);
+    const schedule = {
+      name: 'Ringkasan pagi',
+      cron: '0 7 * * 1',
+      prompt: 'Ringkas berita',
+      target: 'chat',
+      reason: 'diminta pemilik',
+    };
+    expect(ScheduleProposeInputSchema.safeParse(schedule).success).toBe(true);
+    expect(ScheduleProposeInputSchema.safeParse({ ...schedule, target: 'role' }).success).toBe(
+      false,
+    );
+    expect(ScheduleProposeInputSchema.safeParse({ ...schedule, cron: '0 7 * *' }).success).toBe(
+      false,
+    );
+    expect(ScheduleProposeInputSchema.safeParse({ ...schedule, enabled: true }).success).toBe(
+      false,
+    );
   });
 
   it('skema masukan tool data', () => {
@@ -466,6 +520,92 @@ describe('entitas', () => {
     expect(MemoryProposalQuerySchema.safeParse({ status: 'all' }).success).toBe(true);
     expect(MemoryProposalQuerySchema.safeParse({ status: 'review' }).success).toBe(true);
     expect(MemoryProposalQuerySchema.safeParse({ status: 'semua' }).success).toBe(false);
+  });
+
+  it('MemoryProposal dari server lama: asal ekstraksi; usulan agent membawa mesin dan afterWeb', () => {
+    const old = {
+      id: ID_A,
+      kind: 'add',
+      status: 'pending',
+      text: 'Pemilik suka kopi.',
+      evidence: 'aku suka kopi',
+      targetMemoryId: null,
+      targetText: null,
+      previousText: null,
+      resultMemoryId: null,
+      conversationId: null,
+      messageId: null,
+      runId: null,
+      model: 'router-fast',
+      createdAt: TS,
+      decidedAt: null,
+    };
+    expect(MemoryProposalSchema.parse(old)).toMatchObject({
+      source: 'extraction',
+      agent: null,
+      afterWeb: false,
+    });
+    const agent = { ...old, source: 'agent', agent: 'omp', afterWeb: true };
+    expect(MemoryProposalSchema.parse(agent)).toMatchObject(agent);
+    expect(MemoryProposalSchema.safeParse({ ...old, agent: 'pi' }).success).toBe(false);
+  });
+
+  it('AgentProposal: kartu atau jadwal; approve dengan ubahan per jenis', () => {
+    const base = {
+      id: ID_A,
+      status: 'pending',
+      agent: 'omp',
+      reason: 'Ditemukan bug',
+      afterWeb: false,
+      projectId: ID_B,
+      conversationId: ID_C,
+      runId: null,
+      resultId: null,
+      createdAt: TS,
+      decidedAt: null,
+    };
+    expect(
+      AgentProposalSchema.safeParse({
+        ...base,
+        kind: 'task',
+        task: { title: 'Perbaiki', body: '' },
+      }).success,
+    ).toBe(true);
+    expect(AgentProposalSchema.safeParse({ ...base, kind: 'task' }).success).toBe(false);
+    const schedule = {
+      ...base,
+      projectId: null,
+      kind: 'schedule',
+      schedule: {
+        name: 'Pagi',
+        cron: '0 7 * * *',
+        timezone: 'Asia/Jakarta',
+        prompt: 'Ringkas',
+        target: 'research',
+      },
+      description: 'Setiap hari 07.00 WIB',
+    };
+    expect(AgentProposalSchema.safeParse(schedule).success).toBe(true);
+    expect(
+      AgentProposalSchema.safeParse({
+        ...schedule,
+        schedule: { ...schedule.schedule, target: 'briefing' },
+      }).success,
+    ).toBe(false);
+    expect(AgentProposalSchema.safeParse({ ...schedule, status: 'auto_saved' }).success).toBe(
+      false,
+    );
+    expect(ApproveAgentProposalRequestSchema.safeParse({}).success).toBe(true);
+    expect(
+      ApproveAgentProposalRequestSchema.safeParse({
+        schedule: { enabled: false, cron: '0 8 * * *' },
+      }).success,
+    ).toBe(true);
+    expect(ApproveAgentProposalRequestSchema.safeParse({ task: { status: 'todo' } }).success).toBe(
+      false,
+    );
+    expect(AgentProposalQuerySchema.safeParse({ status: 'all', kind: 'task' }).success).toBe(true);
+    expect(AgentProposalQuerySchema.safeParse({ kind: 'memory' }).success).toBe(false);
   });
 
   it('pagination: default 50, maksimum 100', () => {

@@ -1,6 +1,15 @@
 import { z } from 'zod';
+import {
+  MEMORY_PROPOSAL_LIMITS,
+  PROPOSAL_REASON_MAX,
+  ProposedScheduleTargetSchema,
+  SCHEDULE_PROPOSAL_NAME_MAX,
+  SCHEDULE_PROPOSAL_PROMPT_MAX,
+  TASK_PROPOSAL_BODY_MAX,
+  TASK_PROPOSAL_TITLE_MAX,
+} from './api-schemas.js';
 import { IdSchema } from './common.js';
-import { TaskStatusSchema } from './entities.js';
+import { CronSchema, DEFAULT_TIMEZONE, TaskStatusSchema } from './entities.js';
 
 /*
  * Tool gateway lewat MCP (docs/DESIGN_MCP_TOOLS.md). Gateway menyajikan server MCP `aios_tools` di
@@ -24,6 +33,9 @@ export const AIOS_TOOL_NAMES = [
   'space_search',
   'task_list',
   'schedule_list',
+  'memory_propose',
+  'task_propose',
+  'schedule_propose',
 ] as const;
 export type AiosToolName = (typeof AIOS_TOOL_NAMES)[number];
 
@@ -39,6 +51,16 @@ export const AIOS_DATA_TOOLS: readonly AiosToolName[] = [
   'space_search',
   'task_list',
   'schedule_list',
+];
+
+/**
+ * Tool tulis yang hanya membuat usulan; tidak ada yang berubah sebelum pemilik menyetujui. Worker mengizinkannya
+ * tanpa bertanya, kecuali di mode rencana (ditolak). docs/DESIGN_MCP_TOOLS.md bagian 17.
+ */
+export const AIOS_PROPOSE_TOOLS: readonly AiosToolName[] = [
+  'memory_propose',
+  'task_propose',
+  'schedule_propose',
 ];
 
 export const WEB_SEARCH_QUERY_MAX = 200;
@@ -109,6 +131,73 @@ export const TaskListInputSchema = z
   .strict();
 
 export const ScheduleListInputSchema = z.object({}).strict();
+
+export const MemoryProposeInputSchema = z
+  .object({
+    text: z
+      .string()
+      .trim()
+      .min(1)
+      .max(MEMORY_PROPOSAL_LIMITS.textMax)
+      .describe('Satu kalimat pernyataan tentang pemilik, mis. "Pemilik tinggal di Bandung."'),
+    evidence: z
+      .string()
+      .trim()
+      .min(1)
+      .max(MEMORY_PROPOSAL_LIMITS.evidenceMax)
+      .describe('Kutipan PERSIS dari pesan pemilik yang menjadi dasar fakta ini'),
+  })
+  .strict();
+
+export const TaskProposeInputSchema = z
+  .object({
+    title: z.string().trim().min(1).max(TASK_PROPOSAL_TITLE_MAX).describe('Judul kartu'),
+    body: z
+      .string()
+      .trim()
+      .max(TASK_PROPOSAL_BODY_MAX)
+      .optional()
+      .describe('Isi kartu: apa yang perlu dikerjakan (opsional)'),
+    reason: z
+      .string()
+      .trim()
+      .min(1)
+      .max(PROPOSAL_REASON_MAX)
+      .describe('Mengapa kartu ini diusulkan, untuk pemilik'),
+    projectId: IdSchema.optional().describe(
+      'Project kanban (opsional; hanya project run ini yang boleh)',
+    ),
+  })
+  .strict();
+
+export const ScheduleProposeInputSchema = z
+  .object({
+    name: z.string().trim().min(1).max(SCHEDULE_PROPOSAL_NAME_MAX).describe('Nama jadwal'),
+    cron: CronSchema.describe('Cron 5 field: menit jam tanggal bulan hari-minggu'),
+    timezone: z
+      .string()
+      .trim()
+      .min(1)
+      .max(64)
+      .optional()
+      .describe(`Zona waktu IANA (bawaan ${DEFAULT_TIMEZONE})`),
+    prompt: z
+      .string()
+      .trim()
+      .min(1)
+      .max(SCHEDULE_PROPOSAL_PROMPT_MAX)
+      .describe('Perintah yang dijalankan tiap jadwal tiba'),
+    target: ProposedScheduleTargetSchema.describe(
+      'chat (jawaban agent) atau research (laporan riset)',
+    ),
+    reason: z
+      .string()
+      .trim()
+      .min(1)
+      .max(PROPOSAL_REASON_MAX)
+      .describe('Mengapa jadwal ini diusulkan, untuk pemilik'),
+  })
+  .strict();
 
 /** Pesan JSON-RPC 2.0 (atau batch) untuk `POST /mcp`; isinya divalidasi server MCP, bukan skema ini. */
 export const McpMessageSchema = z
