@@ -32,7 +32,7 @@ Kodenya **sudah digabung ke `main`** (`b26d61e`, 2026-11-13) dan mencakup sesi P
 - **dsh** (salah satu pilihan mesin) belum pernah benar-benar dicoba dengan program dsh sungguhan di mesin pengembangan mana pun — hanya diuji dengan tiruan. Jangan andalkan dsh untuk pekerjaan penting sampai ada verifikasi nyata.
 - **Hermes** (mesin percakapan umum) hanya pernah diverifikasi nyata sekali, di sesi terpisah sebelumnya; alur pengguna lengkap versi ini belum dicoba dengan Hermes sungguhan, hanya tiruan.
 - Uji beban di VPS produksi **belum pernah dijalankan** untuk versi ini. (Deploy dan backup sudah: lihat Status.)
-- Instalasi Windows (aplikasi desktop) dan APK Android rilis (bertanda tangan) **belum dibuat** — hanya tersedia build debug untuk pengujian internal, disimpan di luar repo, belum pernah dibagikan.
+- **Diketahui**: pemeriksaan `/v1/readyz` untuk 9Router butuh 1,3–1,9 detik di VPS, dekat batas `READY_TIMEOUT_MS` (2000 ms); pada 2026-11-15 satu pemeriksaan sempat gagal `timeout` sehingga `/v1/readyz` sekali menjawab 503 (pemeriksaan berikutnya 200).
 - **Skill** (P9–P11): ketepatan agent memilih skill belum diukur ulang setelah perbaikan nama skill; petunjuk "usulkan skill" belum diuji dengan model sungguhan; kurator mingguan dan pemantau skill Hermes belum pernah berjalan di server produksi (hanya pendaftaran jadwalnya yang diuji); Android belum punya layar usulan skill.
 
 ## Bukti verifikasi (ringkas; detail lengkap di `docs/REPAIR_LOG.md` bagian "P8" dan `docs/BACKLOG.md` "Temuan P9" sampai "Temuan P11")
@@ -44,14 +44,17 @@ Kodenya **sudah digabung ke `main`** (`b26d61e`, 2026-11-13) dan mencakup sesi P
 - Pemeriksaan kode secara menyeluruh untuk memastikan tidak ada berkas kode yang ditulis tapi tidak pernah dipakai: tidak ditemukan.
 - Sesi skill (P9–P11), seperti dicatat di `docs/BACKLOG.md` "Temuan P11": pemeriksaan tipe 12 dari 12 paket, tes kontrak, gateway, dan desktop lulus, alur lengkap di aplikasi (e2e) lulus; pasang skill dari internet dan impor dari folder Hermes sungguhan dicoba nyata di mesin pengembangan.
 
-## Paket dan checksum (disiapkan, TIDAK dipublikasikan)
+## Paket rilis
 
-Disimpan di luar repo (`/home/ubuntu/.hermes/cache/scratch/p8-artifacts/`), bukan artefak rilis resmi (tanpa tanda tangan, tanpa installer):
+Installer dan APK resmi ada di rilis GitHub [`v1.1.0`](https://github.com/Rizky0606/Personal-AI-OS/releases/tag/v1.1.0) (dibangun `build.yml` dari commit `1f36931`, diterbitkan 2026-11-15):
 
-| Berkas | Isi | SHA-256 |
+| Berkas | Isi | Ukuran (byte) |
 | --- | --- | --- |
-| `desktop-dist-1.1.0.tar.gz` | Frontend desktop hasil build (`apps/desktop/dist`), bukan installer Tauri bertanda tangan | `fc04dc80a61a52735c96476ea68d8b25a783dfda5795891220b7d27a8a9abf18` |
-| `android-debug-1.1.0.apk` | APK debug Android (bukan rilis bertanda tangan) | `c0bc8da3cd9163141da5221a3cc7b9b272f8095176b4bf2fe8b58c9f0cd7e7e9` |
+| `Personal.AI.OS_1.1.0_x64-setup.exe` | Installer Windows NSIS bertanda tangan updater | 34760754 |
+| `Personal.AI.OS_1.1.0_x64-setup.exe.sig` | Tanda tangan updater untuk installer | 444 |
+| `latest.json` | Manifes auto-update (versi `1.1.0`, platform `windows-x86_64`) | 720 |
+| `app-release.apk` | APK Android rilis bertanda tangan (pasang yang ini) | 3042130 |
+| `app-debug.apk` | APK Android debug (kunci acak CI, tidak bisa menimpa APK lain) | 16099088 |
 
 ## Deploy dan rollback
 
