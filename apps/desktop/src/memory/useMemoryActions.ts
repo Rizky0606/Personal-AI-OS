@@ -7,8 +7,8 @@ import { copy } from '../copy';
 import { useToastStore } from '../ui/Toaster';
 
 /**
- * Tambah, ubah, aktif/nonaktif, sematkan, dan hapus memori, plus setujui/tolak usulan memori dari chat. Kesalahan
- * jadi toast dan aksi mengembalikan false, supaya editor atau dialog tetap terbuka dan isian tidak hilang.
+ * Tambah, ubah, aktif/nonaktif, sematkan, dan hapus memori, plus setujui/tolak/urungkan usulan memori dari chat.
+ * Kesalahan jadi toast dan aksi mengembalikan false, supaya editor atau dialog tetap terbuka dan isian tidak hilang.
  */
 export function useMemoryActions() {
   const queryClient = useQueryClient();
@@ -52,5 +52,7 @@ export function useMemoryActions() {
       guarded(`proposal:${id}`, () => api.approveMemoryProposal(id, text), m.proposalApproved),
     rejectProposal: (id: string) =>
       guarded(`proposal:${id}`, () => api.rejectMemoryProposal(id), m.proposalRejected),
+    undoProposal: (id: string) =>
+      guarded(`proposal:${id}`, () => api.undoMemoryProposal(id), m.proposalUndoneToast),
   };
 }

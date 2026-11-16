@@ -581,6 +581,13 @@ export const copy = {
     proposalReject: 'Tolak',
     proposalApproved: 'Usulan disimpan ke memori.',
     proposalRejected: 'Usulan ditolak dan tidak akan diusulkan lagi.',
+    autoTitle: (n: number) => `Disimpan otomatis dari chat (${n})`,
+    autoIntro:
+      'Diambil dari pesan Anda di chat umum dan langsung dipakai AI. Urungkan bila keliru; tampil 7 hari.',
+    autoLabel: 'Memori yang disimpan otomatis',
+    proposalUndo: 'Urungkan',
+    proposalUndone: 'Diurungkan',
+    proposalUndoneToast: 'Memori diurungkan dan tidak akan diusulkan lagi.',
   },
   settings: {
     tools: 'Alat',

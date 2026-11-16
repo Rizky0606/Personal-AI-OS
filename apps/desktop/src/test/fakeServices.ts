@@ -126,6 +126,7 @@ export const api: FakeApi = {
   listMemoryProposals: fn<'listMemoryProposals'>(),
   approveMemoryProposal: fn<'approveMemoryProposal'>(),
   rejectMemoryProposal: fn<'rejectMemoryProposal'>(),
+  undoMemoryProposal: fn<'undoMemoryProposal'>(),
   listSchedules: fn<'listSchedules'>(),
   createSchedule: fn<'createSchedule'>(),
   updateSchedule: fn<'updateSchedule'>(),

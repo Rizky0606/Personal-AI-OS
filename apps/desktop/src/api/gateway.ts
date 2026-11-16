@@ -393,9 +393,12 @@ export function createGatewayApi(call: Call) {
     deleteMemory: async (id: string) => {
       await call(`/memories/${id}`, { method: 'DELETE' });
     },
-    /** Usulan memori yang menunggu persetujuan (ekstraksi fakta dari chat umum). */
+    /**
+     * Blok usulan memori: semua yang menunggu persetujuan ditambah yang disimpan otomatis atau diurungkan 7 hari
+     * terakhir (`status=review`).
+     */
     listMemoryProposals: async () =>
-      (await get('/memories/proposals', MemoryProposalListSchema)).items,
+      (await get('/memories/proposals?status=review', MemoryProposalListSchema)).items,
     /** Setujui usulan; `text` diisi untuk "Ubah lalu simpan". */
     approveMemoryProposal: (id: string, text?: string) =>
       get(`/memories/proposals/${id}/approve`, MemoryProposalSchema, {
@@ -404,6 +407,9 @@ export function createGatewayApi(call: Call) {
       }),
     rejectMemoryProposal: (id: string) =>
       get(`/memories/proposals/${id}/reject`, MemoryProposalSchema, { method: 'POST', body: {} }),
+    /** Mengurungkan memori yang disimpan otomatis (mode auto). */
+    undoMemoryProposal: (id: string) =>
+      get(`/memories/proposals/${id}/undo`, MemoryProposalSchema, { method: 'POST', body: {} }),
 
     /** Meringkas percakapan lalu membuka percakapan baru yang diawali ringkasan itu. */
     handoffConversation: (id: string, model: string) =>
