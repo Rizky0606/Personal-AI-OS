@@ -1042,6 +1042,13 @@ export const MemoryProposalStatusSchema = z.enum([
 export type MemoryProposalKind = z.infer<typeof MemoryProposalKindSchema>;
 export type MemoryProposalStatus = z.infer<typeof MemoryProposalStatusSchema>;
 
+/** Mesin agent yang membuat usulan lewat tool `aios_tools` (docs/DESIGN_MCP_TOOLS.md bagian 17). */
+export const ProposalAgentSchema = z.enum(['omp', 'hermes']);
+export type ProposalAgent = z.infer<typeof ProposalAgentSchema>;
+/** `extraction` = ekstraksi fakta setelah chat umum; `agent` = tool `memory_propose`. */
+export const MemoryProposalSourceSchema = z.enum(['extraction', 'agent']);
+export type MemoryProposalSource = z.infer<typeof MemoryProposalSourceSchema>;
+
 /** Usulan memori dari ekstraksi fakta: fakta tentang pemilik plus kutipan pesan pemilik yang menjadi dasarnya. */
 export const MemoryProposalSchema = z
   .object({
@@ -1062,8 +1069,14 @@ export const MemoryProposalSchema = z
     conversationId: IdSchema.nullable(),
     messageId: IdSchema.nullable(),
     runId: IdSchema.nullable(),
-    /** Model pengekstrak. */
+    /** Model pengekstrak, atau model run agent (mesin bila tanpa model). */
     model: z.string(),
+    /** Asal usulan: ekstraksi fakta, atau agent lewat tool `memory_propose`. Absen pada server lama = extraction. */
+    source: MemoryProposalSourceSchema.default('extraction'),
+    /** Mesin agent yang mengusulkan (source = agent). Absen pada server lama = null. */
+    agent: ProposalAgentSchema.nullable().default(null),
+    /** Agent sudah memakai tool web di run itu sebelum mengusulkan; tampilkan peringatan. Absen = false. */
+    afterWeb: z.boolean().default(false),
     createdAt: TimestampSchema,
     decidedAt: TimestampSchema.nullable(),
   })
@@ -1072,13 +1085,121 @@ export type MemoryProposal = z.infer<typeof MemoryProposalSchema>;
 export const MemoryProposalListSchema = itemsOf(MemoryProposalSchema).meta({
   id: 'MemoryProposalList',
 });
+/** Jendela `status=review`: usulan `auto_saved`/`undone` sebanyak hari ini ikut tampil di blok usulan klien. */
+export const MEMORY_PROPOSAL_RECENT_DAYS = 7;
 export const MemoryProposalQuerySchema = z.object({
-  status: z.enum([...MemoryProposalStatusSchema.options, 'all']).optional(),
+  /**
+   * Bawaan `pending`. `review` = semua yang `pending` ditambah `auto_saved` dan `undone` yang dibuat dalam
+   * MEMORY_PROPOSAL_RECENT_DAYS hari terakhir (blok usulan di desktop dan Android, termasuk tombol Urungkan).
+   */
+  status: z.enum([...MemoryProposalStatusSchema.options, 'all', 'review']).optional(),
 });
 /** Setujui; `text` opsional untuk "Ubah lalu simpan". */
 export const ApproveMemoryProposalRequestSchema = z
   .object({ text: MemoryTextSchema.optional() })
   .meta({ id: 'ApproveMemoryProposalRequest' });
+
+/* Usulan kartu dan jadwal dari agent (tool `task_propose`/`schedule_propose`, docs/DESIGN_MCP_TOOLS.md bagian 17) */
+
+/** Alasan singkat agent untuk usulan kartu/jadwal, ditampilkan saat meninjau. */
+export const PROPOSAL_REASON_MAX = 300;
+export const TASK_PROPOSAL_TITLE_MAX = 200;
+export const TASK_PROPOSAL_BODY_MAX = 4000;
+export const SCHEDULE_PROPOSAL_NAME_MAX = 120;
+export const SCHEDULE_PROPOSAL_PROMPT_MAX = 2000;
+/** Target jadwal yang boleh diusulkan agent (role dan briefing hanya dari pemilik). */
+export const ProposedScheduleTargetSchema = z.enum(['chat', 'research']);
+
+export const AgentProposalKindSchema = z.enum(['task', 'schedule']);
+export type AgentProposalKind = z.infer<typeof AgentProposalKindSchema>;
+export const AgentProposalStatusSchema = z.enum(['pending', 'approved', 'rejected']);
+export type AgentProposalStatus = z.infer<typeof AgentProposalStatusSchema>;
+
+export const ProposedTaskSchema = z
+  .object({
+    title: z.string().min(1).max(TASK_PROPOSAL_TITLE_MAX),
+    body: z.string().max(TASK_PROPOSAL_BODY_MAX),
+  })
+  .meta({ id: 'ProposedTask' });
+export type ProposedTask = z.infer<typeof ProposedTaskSchema>;
+
+export const ProposedScheduleSchema = z
+  .object({
+    name: z.string().min(1).max(SCHEDULE_PROPOSAL_NAME_MAX),
+    cron: CronSchema,
+    timezone: z.string().min(1),
+    prompt: z.string().min(1).max(SCHEDULE_PROPOSAL_PROMPT_MAX),
+    target: ProposedScheduleTargetSchema,
+  })
+  .meta({ id: 'ProposedSchedule' });
+export type ProposedSchedule = z.infer<typeof ProposedScheduleSchema>;
+
+const AgentProposalBase = {
+  id: IdSchema,
+  status: AgentProposalStatusSchema,
+  agent: ProposalAgentSchema,
+  /** Alasan agent; data dari agent, bukan perintah. */
+  reason: z.string(),
+  /** Agent sudah memakai tool web di run itu sebelum mengusulkan; tampilkan peringatan. */
+  afterWeb: z.boolean(),
+  /** Project kartu (kind = task); null untuk jadwal. */
+  projectId: IdSchema.nullable(),
+  conversationId: IdSchema.nullable(),
+  runId: IdSchema.nullable(),
+  /** Kartu atau jadwal yang dibuat setelah disetujui. */
+  resultId: IdSchema.nullable(),
+  createdAt: TimestampSchema,
+  decidedAt: TimestampSchema.nullable(),
+};
+
+/** Usulan agent yang belum mengubah apa pun sampai pemilik menyetujuinya. */
+export const AgentProposalSchema = z
+  .discriminatedUnion('kind', [
+    z.object({ ...AgentProposalBase, kind: z.literal('task'), task: ProposedTaskSchema }),
+    z.object({
+      ...AgentProposalBase,
+      kind: z.literal('schedule'),
+      schedule: ProposedScheduleSchema,
+      /** Jadwal yang dibaca manusia, mis. "Setiap Senin 07.00 WIB". */
+      description: z.string(),
+    }),
+  ])
+  .meta({ id: 'AgentProposal' });
+export type AgentProposal = z.infer<typeof AgentProposalSchema>;
+export const AgentProposalListSchema = itemsOf(AgentProposalSchema).meta({
+  id: 'AgentProposalList',
+});
+export const AgentProposalQuerySchema = z.object({
+  status: z.enum([...AgentProposalStatusSchema.options, 'all']).optional(),
+  kind: AgentProposalKindSchema.optional(),
+  projectId: IdSchema.optional(),
+});
+/**
+ * Setujui, opsional dengan ubahan pemilik. Field `task`/`schedule` hanya untuk jenis yang sesuai; `enabled` (jadwal)
+ * bawaan true: menyetujui berarti jadwal mulai berjalan, kecuali pemilik memilih nonaktif.
+ */
+export const ApproveAgentProposalRequestSchema = z
+  .object({
+    task: z
+      .object({
+        title: z.string().trim().min(1).max(TASK_PROPOSAL_TITLE_MAX).optional(),
+        body: z.string().trim().max(TASK_PROPOSAL_BODY_MAX).optional(),
+      })
+      .strict()
+      .optional(),
+    schedule: z
+      .object({
+        name: z.string().trim().min(1).max(SCHEDULE_PROPOSAL_NAME_MAX).optional(),
+        cron: CronSchema.optional(),
+        timezone: z.string().trim().min(1).optional(),
+        prompt: z.string().trim().min(1).max(SCHEDULE_PROPOSAL_PROMPT_MAX).optional(),
+        target: ProposedScheduleTargetSchema.optional(),
+        enabled: z.boolean().optional(),
+      })
+      .strict()
+      .optional(),
+  })
+  .meta({ id: 'ApproveAgentProposalRequest' });
 
 export const UpdateScheduleRequestSchema = z
   .object({

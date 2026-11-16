@@ -8,6 +8,8 @@ import type {
   SteerMode,
 } from '@aios/contracts';
 import {
+  AgentProposalListSchema,
+  AgentProposalSchema,
   ApprovalSchema,
   ConversationProgressSchema,
   ConversationSchema,
@@ -64,6 +66,8 @@ import {
   type SkillEngine,
   type SkillStatus,
   type UpdateSkillRequestSchema,
+  type AgentProposalKind,
+  type ApproveAgentProposalRequestSchema,
   type CreateProjectRequestSchema,
   type CreateScheduleRequestSchema,
   type CreateTaskRequestSchema,
@@ -131,6 +135,13 @@ export interface ProposalQuery {
   status?: 'pending' | 'approved' | 'rejected' | 'all' | undefined;
   conversationId?: string | undefined;
 }
+/** Filter daftar usulan agent (kartu/jadwal); bawaan server: status pending. */
+export interface AgentProposalQuery {
+  status?: 'pending' | 'approved' | 'rejected' | 'all' | undefined;
+  kind?: AgentProposalKind | undefined;
+  projectId?: string | undefined;
+}
+export type ApproveAgentProposalInput = z.input<typeof ApproveAgentProposalRequestSchema>;
 export type UpdateSkillInput = z.input<typeof UpdateSkillRequestSchema>;
 export type HermesSkillList = z.infer<typeof HermesSkillListSchema>;
 export type SkillVersion = z.infer<typeof SkillVersionListSchema>['items'][number];
@@ -393,9 +404,12 @@ export function createGatewayApi(call: Call) {
     deleteMemory: async (id: string) => {
       await call(`/memories/${id}`, { method: 'DELETE' });
     },
-    /** Usulan memori yang menunggu persetujuan (ekstraksi fakta dari chat umum). */
+    /**
+     * Blok usulan memori: semua yang menunggu persetujuan ditambah yang disimpan otomatis atau diurungkan 7 hari
+     * terakhir (`status=review`).
+     */
     listMemoryProposals: async () =>
-      (await get('/memories/proposals', MemoryProposalListSchema)).items,
+      (await get('/memories/proposals?status=review', MemoryProposalListSchema)).items,
     /** Setujui usulan; `text` diisi untuk "Ubah lalu simpan". */
     approveMemoryProposal: (id: string, text?: string) =>
       get(`/memories/proposals/${id}/approve`, MemoryProposalSchema, {
@@ -404,6 +418,29 @@ export function createGatewayApi(call: Call) {
       }),
     rejectMemoryProposal: (id: string) =>
       get(`/memories/proposals/${id}/reject`, MemoryProposalSchema, { method: 'POST', body: {} }),
+    /** Mengurungkan memori yang disimpan otomatis (mode auto). */
+    undoMemoryProposal: (id: string) =>
+      get(`/memories/proposals/${id}/undo`, MemoryProposalSchema, { method: 'POST', body: {} }),
+
+    /** Usulan kartu/jadwal dari agent (tool `task_propose`/`schedule_propose`), terbaru dulu. */
+    listAgentProposals: async (params: AgentProposalQuery = {}) =>
+      (
+        await get(
+          `/agent-proposals${query({ status: params.status, kind: params.kind, projectId: params.projectId })}`,
+          AgentProposalListSchema,
+        )
+      ).items,
+    /** Setujui usulan; `input` berisi ubahan pemilik ("Ubah lalu tambah/setujui"). */
+    approveAgentProposal: (id: string, input: ApproveAgentProposalInput = {}) =>
+      get(`/agent-proposals/${encodeURIComponent(id)}/approve`, AgentProposalSchema, {
+        method: 'POST',
+        body: input,
+      }),
+    rejectAgentProposal: (id: string) =>
+      get(`/agent-proposals/${encodeURIComponent(id)}/reject`, AgentProposalSchema, {
+        method: 'POST',
+        body: {},
+      }),
 
     /** Meringkas percakapan lalu membuka percakapan baru yang diawali ringkasan itu. */
     handoffConversation: (id: string, model: string) =>

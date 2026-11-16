@@ -40,6 +40,9 @@ const proposal = (over: Partial<MemoryProposal> = {}): MemoryProposal => ({
   messageId: null,
   runId: null,
   model: 'router-fast',
+  source: 'extraction',
+  agent: null,
+  afterWeb: false,
   createdAt: TS,
   decidedAt: null,
   ...over,
@@ -186,6 +189,35 @@ describe('MemorySection', () => {
 
     await user.click(await within(rows[2]!).findByRole('button', { name: m.proposalReject }));
     expect(api.rejectMemoryProposal).toHaveBeenCalledWith(third.id);
+  });
+
+  it('disimpan otomatis: Urungkan memanggil undo, memori hilang, baris tampil Diurungkan', async () => {
+    const user = userEvent.setup();
+    const resultId = '0192f0c4-7a1b-7c2d-8e3f-0000000000ee';
+    const saved = proposal({ status: 'auto_saved', resultMemoryId: resultId, decidedAt: TS });
+    const savedMemory = memory({ id: resultId, text: saved.text, source: 'extracted' });
+    api.listMemoryProposals.mockResolvedValue([saved]);
+    api.listMemories.mockResolvedValue([savedMemory]);
+    api.undoMemoryProposal.mockImplementation(() => {
+      // Server: memori hasil dihapus, usulan menjadi undone.
+      api.listMemories.mockResolvedValue([]);
+      api.listMemoryProposals.mockResolvedValue([{ ...saved, status: 'undone' }]);
+      return Promise.resolve({ ...saved, status: 'undone' });
+    });
+    await renderScreen(<MemorySection />);
+
+    const list = await screen.findByRole('list', { name: m.autoLabel });
+    expect(screen.getByText(m.autoTitle(1))).toBeInTheDocument();
+    expect(screen.queryByText(m.proposalsIntro)).not.toBeInTheDocument();
+    expect(within(list).queryByRole('button', { name: m.proposalApprove })).not.toBeInTheDocument();
+    expect(screen.getByRole('list', { name: m.listLabel })).toBeInTheDocument();
+
+    await user.click(within(list).getByRole('button', { name: m.proposalUndo }));
+    expect(api.undoMemoryProposal).toHaveBeenCalledWith(saved.id);
+    expect(await within(list).findByText(m.proposalUndone)).toBeInTheDocument();
+    expect(within(list).queryByRole('button', { name: m.proposalUndo })).not.toBeInTheDocument();
+    expect(await screen.findByText(m.proposalUndoneToast)).toBeInTheDocument();
+    expect(await screen.findByText(m.empty)).toBeInTheDocument();
   });
 
   it('tanpa usulan: blok usulan tidak tampil; gagal memuat usulan menampilkan coba lagi', async () => {

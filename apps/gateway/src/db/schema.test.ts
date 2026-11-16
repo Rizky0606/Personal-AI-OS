@@ -49,6 +49,7 @@ const DOCUMENTED_TABLES = [
   'memories',
   'memory_proposals',
   'memory_extractions',
+  'agent_proposals',
   'prompt_templates',
   'catalog_skills',
   'catalog_skill_versions',

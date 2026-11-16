@@ -116,6 +116,7 @@ private fun JsonObject.toView(): ProgressView {
 private fun toolGroupOf(name: String) = when (name) {
     "web" -> app.aios.android.ui.chat.activity.ToolGroup.Web
     "data" -> app.aios.android.ui.chat.activity.ToolGroup.Data
+    "propose" -> app.aios.android.ui.chat.activity.ToolGroup.Propose
     "browser" -> app.aios.android.ui.chat.activity.ToolGroup.Browser
     "terminal" -> app.aios.android.ui.chat.activity.ToolGroup.Terminal
     "files" -> app.aios.android.ui.chat.activity.ToolGroup.Files
@@ -256,6 +257,32 @@ class ProgressBuilderTest {
         assertEquals(ToolKind.Data, kindOf("mcp__aios_tools_space_search"))
         assertEquals(ToolKind.Data, kindOf(" MCP__AIOS_TOOLS__TASK_LIST "))
         assertEquals(ToolKind.Data, kindOf("mcp__aios_tools_schedule_list"))
-        assertEquals(null, kindOf("mcp__aios_tools_memory_propose"))
+        assertEquals(null, kindOf("mcp__aios_tools_memory_delete"))
+    }
+
+    @Test
+    fun toolUsulanAiosToolsMasukGrupUsulanSetelahDataBukanKonektor() {
+        val response = ConversationProgress(
+            used = app.aios.android.data.api.ProgressUsedDto(
+                tools = listOf(
+                    "bash",
+                    "mcp__aios_tools_task_propose",
+                    "mcp__aios_tools__schedule_propose",
+                    "mcp__aios_tools_memory_list",
+                    "mcp__aios_tools_web_search"
+                )
+            )
+        )
+        val view = buildProgress(response, null, null, 0, texts)
+        assertEquals(listOf(ToolGroup.Web, ToolGroup.Data, ToolGroup.Propose, ToolGroup.Terminal), view.used.tools)
+        assertEquals(emptyList<String>(), view.used.connectors)
+    }
+
+    @Test
+    fun jenisToolUsulanAiosToolsAdalahPropose() {
+        assertEquals(ToolKind.Propose, kindOf("mcp__aios_tools_memory_propose"))
+        assertEquals(ToolKind.Propose, kindOf("mcp__aios_tools__task_propose"))
+        assertEquals(ToolKind.Propose, kindOf(" MCP__AIOS_TOOLS_SCHEDULE_PROPOSE "))
+        assertEquals(null, kindOf("mcp__aios_tools_space_propose"))
     }
 }

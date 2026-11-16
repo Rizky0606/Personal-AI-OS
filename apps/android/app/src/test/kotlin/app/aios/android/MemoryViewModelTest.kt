@@ -2,9 +2,12 @@ package app.aios.android
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.aios.android.data.api.MEMORY_TEXT_MAX
 import app.aios.android.data.api.Memory
 import app.aios.android.data.api.MemoryProposal
 import app.aios.android.data.memory.MemoryRepository
+import app.aios.android.data.realtime.Backoff
+import app.aios.android.data.realtime.RealtimeClient
 import app.aios.android.ui.memory.MemoryEvent
 import app.aios.android.ui.memory.MemoryViewModel
 import app.aios.android.ui.memory.RememberViewModel
@@ -35,8 +38,8 @@ import java.io.IOException
 
 private fun memory(id: String, text: String = "fakta $id", enabled: Boolean = true) = Memory(id, text, enabled, TS, TS)
 
-private fun proposal(id: String, text: String = "Pemilik tinggal di Bandung.") =
-    MemoryProposal(id = id, kind = "add", text = text, evidence = "saya tinggal di Bandung")
+private fun proposal(id: String, text: String = "Pemilik tinggal di Bandung.", status: String = "pending") =
+    MemoryProposal(id = id, kind = "add", text = text, evidence = "saya tinggal di Bandung", status = status)
 
 private class FakeMemoryRepo : MemoryRepository {
     val items = mutableListOf<Memory>()
@@ -84,12 +87,12 @@ private class FakeMemoryRepo : MemoryRepository {
         return proposals.toList()
     }
 
-    override suspend fun approveProposal(id: String): MemoryProposal {
+    override suspend fun approveProposal(id: String, text: String?): MemoryProposal {
         maybeFail()
         val approved = proposals.first { it.id == id }
         proposals.remove(approved)
-        decisions += "approve:$id"
-        items += memory("m-$id", approved.text)
+        decisions += if (text == null) "approve:$id" else "approve:$id:$text"
+        items += memory("m-$id", text ?: approved.text)
         return approved
     }
 
@@ -99,6 +102,17 @@ private class FakeMemoryRepo : MemoryRepository {
         proposals.remove(rejected)
         decisions += "reject:$id"
         return rejected
+    }
+
+    override suspend fun undoProposal(id: String): MemoryProposal {
+        maybeFail()
+        val saved = proposals.first { it.id == id }
+        if (saved.status != "auto_saved") throw conflict()
+        val undone = saved.copy(status = "undone")
+        proposals[proposals.indexOf(saved)] = undone
+        decisions += "undo:$id"
+        items.removeAll { it.id == "m-$id" }
+        return undone
     }
 }
 
@@ -127,10 +141,14 @@ class MemoryViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun TestScope.vm() = MemoryViewModel(repo, connectivity).also { vm ->
-        created += vm
-        backgroundScope.launch { vm.events.collect { events += it } }
-    }
+    private fun TestScope.vm(realtime: RealtimeClient = realtime()) =
+        MemoryViewModel(repo, realtime, connectivity).also { vm ->
+            created += vm
+            backgroundScope.launch { vm.events.collect { events += it } }
+        }
+
+    private fun TestScope.realtime(ws: FakeWsTransport = FakeWsTransport()) =
+        RealtimeClient(backgroundScope, ws, FakeTokens(), Backoff(), lingerMs = 60_000)
 
     @Test
     fun `memuat daftar, kosong, dan gagal memuat saat offline`() = runTest(dispatcher) {
@@ -260,6 +278,80 @@ class MemoryViewModelTest {
             assertFalse(events.contains(MemoryEvent.Notice(R.string.memory_proposal_approved)))
             assertTrue(events.any { it is MemoryEvent.Notice })
         }
+
+    @Test
+    fun `Ubah lalu simpan - teks suntingan dirapikan dan dipotong ke batas lalu dikirim ke approve`() =
+        runTest(dispatcher) {
+            repo.proposals += listOf(proposal("p1"), proposal("p2", "Pemilik suka teh."))
+            val vm = vm()
+            runCurrent()
+            vm.startEditProposal(vm.ui.value.proposals.first())
+            assertEquals("Pemilik tinggal di Bandung.", vm.ui.value.proposalText)
+
+            // Kosong (hanya spasi) tidak dikirim.
+            vm.onProposalText("   ")
+            vm.approveEditedProposal()
+            runCurrent()
+            assertTrue(repo.decisions.isEmpty())
+            assertNotNull(vm.ui.value.proposalEditing)
+
+            vm.onProposalText("x".repeat(MEMORY_TEXT_MAX + 20))
+            assertEquals(MEMORY_TEXT_MAX, vm.ui.value.proposalText.length)
+            vm.onProposalText("  Pemilik dokter gigi di Bandung.  ")
+            vm.approveEditedProposal()
+            runCurrent()
+            assertEquals(listOf("approve:p1:Pemilik dokter gigi di Bandung."), repo.decisions)
+            assertEquals(listOf("Pemilik dokter gigi di Bandung."), vm.ui.value.items.map { it.text })
+            assertEquals(listOf("p2"), vm.ui.value.proposals.map { it.id })
+            assertNull(vm.ui.value.proposalEditing)
+            assertEquals("", vm.ui.value.proposalText)
+            assertTrue(events.contains(MemoryEvent.Notice(R.string.memory_proposal_approved)))
+        }
+
+    @Test
+    fun `Urungkan - memori hilang, usulan tetap tampil sebagai undone, urungkan kedua tidak dikirim`() =
+        runTest(dispatcher) {
+            repo.proposals += proposal("p1", status = "auto_saved")
+            repo.items += memory("m-p1", "Pemilik tinggal di Bandung.")
+            val vm = vm()
+            runCurrent()
+            assertEquals(listOf("m-p1"), vm.ui.value.items.map { it.id })
+
+            vm.undoProposal(vm.ui.value.proposals.single())
+            runCurrent()
+            assertTrue(vm.ui.value.items.isEmpty())
+            assertEquals(listOf("undone"), vm.ui.value.proposals.map { it.status })
+            assertTrue(events.contains(MemoryEvent.Notice(R.string.memory_proposal_undone)))
+            assertNull(vm.ui.value.deciding)
+
+            vm.undoProposal(vm.ui.value.proposals.single())
+            runCurrent()
+            assertEquals(listOf("undo:p1"), repo.decisions)
+        }
+
+    @Test
+    fun `notifikasi memory_proposal di channel user memuat ulang usulan, topik lain tidak`() = runTest(dispatcher) {
+        val ws = FakeWsTransport()
+        val vm = vm(realtime(ws))
+        runCurrent()
+        assertTrue(vm.ui.value.proposals.isEmpty())
+        val conn = ws.connections.last().also { it.open() }
+        runCurrent()
+        assertEquals(listOf("user" to 0L), conn.subscribes())
+
+        repo.proposals += proposal("p1")
+        conn.server(
+            envelope("user", 1, """{"type":"notification","title":"x","level":"info","topic":"skill_report"}""")
+        )
+        runCurrent()
+        assertTrue(vm.ui.value.proposals.isEmpty())
+
+        conn.server(
+            envelope("user", 2, """{"type":"notification","title":"x","level":"info","topic":"memory_proposal"}""")
+        )
+        runCurrent()
+        assertEquals(listOf("p1"), vm.ui.value.proposals.map { it.id })
+    }
 
     @Test
     fun `Ingat ini - teks pesan dipotong ke batas lalu disimpan`() = runTest(dispatcher) {

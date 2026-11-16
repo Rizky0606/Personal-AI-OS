@@ -102,14 +102,14 @@ export function createDataTools(deps: DataToolsDeps): ToolSet {
   const now = deps.now ?? Date.now;
   const runs = new Map<string, { reads: number; touchedAt: number }>();
 
-  /** Satu baca lagi untuk run ini; false bila anggaran habis. */
-  function spend(runId: string): boolean {
+  /** Satu baca lagi untuk kunci anggaran ini (run, atau jam untuk Hermes); false bila anggaran habis. */
+  function spend(ctx: ToolContext): boolean {
     const at = now();
     for (const [id, state] of runs) if (at - state.touchedAt > STATE_TTL_MS) runs.delete(id);
-    const state = runs.get(runId) ?? { reads: 0, touchedAt: at };
+    const state = runs.get(ctx.budgetKey) ?? { reads: 0, touchedAt: at };
     state.touchedAt = at;
-    runs.set(runId, state);
-    if (state.reads >= DATA_READS_PER_RUN) return false;
+    runs.set(ctx.budgetKey, state);
+    if (state.reads >= DATA_READS_PER_RUN * ctx.budgetScale) return false;
     state.reads += 1;
     return true;
   }
@@ -239,9 +239,9 @@ export function createDataTools(deps: DataToolsDeps): ToolSet {
     async call(name, args, ctx) {
       const handler = Object.hasOwn(handlers, name) ? handlers[name] : undefined;
       if (!handler) return null;
-      if (!spend(ctx.runId)) {
+      if (!spend(ctx)) {
         return failure(
-          `Batas ${DATA_READS_PER_RUN} pembacaan data per run tercapai. Lanjutkan dengan data yang sudah ada.`,
+          `Batas ${DATA_READS_PER_RUN * ctx.budgetScale} pembacaan data ${ctx.runId ? 'per run' : 'per jam'} tercapai. Lanjutkan dengan data yang sudah ada.`,
         );
       }
       try {

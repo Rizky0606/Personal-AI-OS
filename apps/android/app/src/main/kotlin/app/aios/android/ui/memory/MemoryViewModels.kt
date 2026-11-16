@@ -6,11 +6,14 @@ import androidx.lifecycle.viewModelScope
 import app.aios.android.R
 import app.aios.android.data.Connectivity
 import app.aios.android.data.api.ApiError
+import app.aios.android.data.api.MEMORY_PROPOSAL_AUTO_SAVED
 import app.aios.android.data.api.MEMORY_TEXT_MAX
 import app.aios.android.data.api.Memory
 import app.aios.android.data.api.MemoryProposal
 import app.aios.android.data.api.toApiError
 import app.aios.android.data.memory.MemoryRepository
+import app.aios.android.data.realtime.RealtimeClient
+import app.aios.android.data.realtime.ServerEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
@@ -42,19 +45,27 @@ data class MemoryUi(
     val saving: Boolean = false,
     /** Memori yang menunggu konfirmasi hapus. */
     val deleting: Memory? = null,
-    /** Usulan memori dari chat umum yang menunggu persetujuan. */
+    /** Usulan memori dari chat umum (menunggu), plus yang disimpan otomatis/diurungkan 7 hari terakhir. */
     val proposals: List<MemoryProposal> = emptyList(),
-    /** Usulan yang sedang disetujui atau ditolak; tombol lain dinonaktifkan sampai selesai. */
-    val deciding: String? = null
+    /** Usulan yang sedang disetujui, ditolak, atau diurungkan; tombol lain dinonaktifkan sampai selesai. */
+    val deciding: String? = null,
+    /** Usulan yang sedang disunting di dialog "Ubah lalu simpan", beserta teks sementaranya. */
+    val proposalEditing: MemoryProposal? = null,
+    val proposalText: String = ""
 )
 
+/** Topik notifikasi channel `user` untuk usulan memori baru atau memori yang disimpan otomatis. */
+const val MEMORY_PROPOSAL_TOPIC = "memory_proposal"
+
 /**
- * Layar Memori (A9): daftar, tambah, ubah, aktif/nonaktif, hapus, serta setujui/tolak usulan memori dari chat.
+ * Layar Memori (A9): daftar, tambah, ubah, aktif/nonaktif, hapus, serta setujui (apa adanya atau disunting dulu),
+ * tolak, dan urungkan usulan memori dari chat. Notifikasi `memory_proposal` di channel `user` menyegarkan layar.
  * Gagal = snackbar; isian tidak dibuang.
  */
 @HiltViewModel
 class MemoryViewModel @Inject constructor(
     private val repo: MemoryRepository,
+    private val realtime: RealtimeClient,
     private val connectivity: Connectivity
 ) : ViewModel() {
     private val state = MutableStateFlow(MemoryUi())
@@ -65,6 +76,12 @@ class MemoryViewModel @Inject constructor(
 
     init {
         refresh()
+        viewModelScope.launch {
+            realtime.channel("user").collect {
+                val event = it.event
+                if (event is ServerEvent.Notification && event.topic == MEMORY_PROPOSAL_TOPIC) refresh()
+            }
+        }
     }
 
     fun refresh() {
@@ -106,16 +123,63 @@ class MemoryViewModel @Inject constructor(
         state.update { it.copy(items = items) }
     }
 
+    fun startEditProposal(proposal: MemoryProposal) =
+        state.update { it.copy(proposalEditing = proposal, proposalText = proposal.text.take(MEMORY_TEXT_MAX)) }
+
+    fun onProposalText(value: String) = state.update { it.copy(proposalText = value.take(MEMORY_TEXT_MAX)) }
+
+    fun cancelEditProposal() = state.update { it.copy(proposalEditing = null, proposalText = "") }
+
+    /** "Ubah lalu simpan": teks suntingan (dirapikan, tidak kosong, maks MEMORY_TEXT_MAX) yang disimpan. */
+    fun approveEditedProposal() {
+        val proposal = state.value.proposalEditing ?: return
+        val text = state.value.proposalText.trim()
+        if (text.isEmpty()) return
+        decide(proposal, R.string.memory_proposal_approved, onDone = { cancelEditProposal() }) {
+            repo.approveProposal(proposal.id, text)
+            val items = repo.list()
+            state.update { it.copy(items = items) }
+        }
+    }
+
     fun rejectProposal(proposal: MemoryProposal) = decide(proposal, R.string.memory_proposal_rejected) {
         repo.rejectProposal(proposal.id)
     }
 
-    private fun decide(proposal: MemoryProposal, @StringRes done: Int, work: suspend () -> Unit) {
+    /** Urungkan memori yang disimpan otomatis: memori hilang dari daftar, usulan tetap tampil sebagai diurungkan. */
+    fun undoProposal(proposal: MemoryProposal) {
+        if (state.value.deciding != null || proposal.status != MEMORY_PROPOSAL_AUTO_SAVED) return
+        state.update { it.copy(deciding = proposal.id) }
+        viewModelScope.launch {
+            val undone = attempt {
+                val result = repo.undoProposal(proposal.id)
+                result to repo.list()
+            }
+            if (undone != null) {
+                val (result, items) = undone
+                state.update { s ->
+                    s.copy(items = items, proposals = s.proposals.map { if (it.id == result.id) result else it })
+                }
+                notices.trySend(MemoryEvent.Notice(R.string.memory_proposal_undone))
+            } else {
+                loadProposals()
+            }
+            state.update { it.copy(deciding = null) }
+        }
+    }
+
+    private fun decide(
+        proposal: MemoryProposal,
+        @StringRes done: Int,
+        onDone: () -> Unit = {},
+        work: suspend () -> Unit
+    ) {
         if (state.value.deciding != null) return
         state.update { it.copy(deciding = proposal.id) }
         viewModelScope.launch {
             if (attempt { work() } != null) {
                 state.update { s -> s.copy(proposals = s.proposals.filterNot { it.id == proposal.id }) }
+                onDone()
                 notices.trySend(MemoryEvent.Notice(done))
             } else {
                 // Mis. sudah diputuskan dari perangkat lain (409): ambil daftar terbaru.

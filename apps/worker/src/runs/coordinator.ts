@@ -3,6 +3,7 @@ import nodePath from 'node:path';
 import { AdapterError, uuidv7, type AgentAdapter, type RunHandle } from '@aios/adapters';
 import {
   AIOS_DATA_TOOLS,
+  AIOS_PROPOSE_TOOLS,
   AIOS_TOOLS_SERVER,
   aiosToolOf,
   type AgentEvent,
@@ -451,20 +452,23 @@ export class RunCoordinator {
     }
     if (event.type === 'approval.requested') {
       // Mode rencana: agent hanya boleh membaca. Semua izin ditolak, termasuk aturan "izinkan selalu" project,
-      // kecuali tool gateway yang hanya membaca (web_*, tool data): riset saat merencanakan tetap boleh
-      // (keputusan pemilik, DESIGN_MCP_TOOLS.md #5).
+      // kecuali tool gateway yang hanya membaca (web_*, tool data): riset saat merencanakan tetap boleh. Tool usulan
+      // tetap ditolak (keputusan pemilik, DESIGN_MCP_TOOLS.md #5).
       const gatewayTool = run.toolsMcp ? aiosToolOf(event.detail.split('\n')[0] ?? '') : null;
-      if (run.cmd.planOnly && !gatewayTool) {
+      const proposeTool = gatewayTool !== null && AIOS_PROPOSE_TOOLS.includes(gatewayTool);
+      if (run.cmd.planOnly && (!gatewayTool || proposeTool)) {
         run.silent.add(event.approvalId);
         void run.handle?.resolveApproval(event.approvalId, 'deny').catch(() => undefined);
         return;
       }
       // Tool browser worker hanya menyentuh preview localhost run ini: tidak perlu mengganggu pengguna tiap screenshot.
       // Tool data gateway hanya membaca data sistem sendiri (memori, ruang, kanban project ini, jadwal) dan tidak
-      // mengirim apa pun keluar, jadi diizinkan tanpa bertanya.
+      // mengirim apa pun keluar; tool usulan hanya membuat usulan yang menunggu pemilik. Keduanya diizinkan tanpa
+      // bertanya.
       if (
         (run.mcp && event.detail.startsWith(BROWSER_TOOL_PREFIX)) ||
-        (gatewayTool && AIOS_DATA_TOOLS.includes(gatewayTool))
+        (gatewayTool && AIOS_DATA_TOOLS.includes(gatewayTool)) ||
+        proposeTool
       ) {
         run.silent.add(event.approvalId);
         void run.handle?.resolveApproval(event.approvalId, 'allow').catch(() => undefined);

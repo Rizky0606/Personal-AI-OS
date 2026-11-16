@@ -141,6 +141,13 @@
       "when": 1794812401648,
       "tag": "0019_memory_proposals",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1794824940082,
+      "tag": "0020_agent_proposals",
+      "breakpoints": true
     }
   ]
 }

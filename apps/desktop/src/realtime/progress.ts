@@ -44,7 +44,7 @@ export interface ProgressChip {
 }
 
 /** Jenis alat yang ditampilkan di "Digunakan dalam sesi ini". */
-export type ToolGroup = 'web' | 'data' | 'browser' | 'terminal' | 'files' | 'subagent';
+export type ToolGroup = 'web' | 'data' | 'propose' | 'browser' | 'terminal' | 'files' | 'subagent';
 
 export interface ProgressUsed {
   uploads: { fileId: string; name: string }[];
@@ -79,6 +79,7 @@ export interface ProgressOptions {
 const TOOL_GROUP: Partial<Record<NonNullable<ReturnType<typeof toolKindOf>>, ToolGroup>> = {
   web: 'web',
   data: 'data',
+  propose: 'propose',
   browser: 'browser',
   command: 'terminal',
   read: 'files',
@@ -86,7 +87,15 @@ const TOOL_GROUP: Partial<Record<NonNullable<ReturnType<typeof toolKindOf>>, Too
   search: 'files',
   subagent: 'subagent',
 };
-const TOOL_GROUP_ORDER: ToolGroup[] = ['web', 'data', 'browser', 'terminal', 'files', 'subagent'];
+const TOOL_GROUP_ORDER: ToolGroup[] = [
+  'web',
+  'data',
+  'propose',
+  'browser',
+  'terminal',
+  'files',
+  'subagent',
+];
 
 const union = <T>(base: readonly T[], extra: readonly T[], key: (item: T) => string): T[] => {
   const seen = new Set(base.map(key));
@@ -195,7 +204,7 @@ export function buildProgress(
   const groups = new Set<ToolGroup>();
   const connectors: string[] = [];
   for (const name of toolNames) {
-    // Tool `aios_tools` milik sistem sendiri: dihitung ke grup alat (web atau data), bukan konektor.
+    // Tool `aios_tools` milik sistem sendiri: dihitung ke grup alat (web, data, atau usulan), bukan konektor.
     if (name.startsWith('mcp__') && !aiosToolOf(name)) {
       connectors.push(name.split('__')[1] ?? name);
       continue;

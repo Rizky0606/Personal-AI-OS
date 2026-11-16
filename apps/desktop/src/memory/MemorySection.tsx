@@ -90,6 +90,7 @@ export function MemorySection() {
         disabled={!online || actions.busy !== null}
         onApprove={(id, text) => actions.approveProposal(id, text)}
         onReject={(id) => void actions.rejectProposal(id)}
+        onUndo={(id) => void actions.undoProposal(id)}
       />
 
       <StateView

@@ -8,22 +8,27 @@ import { Button } from '../ui/Button';
 import { TextArea } from '../ui/TextArea';
 
 /**
- * Usulan memori dari ekstraksi fakta di chat umum: Simpan, Ubah lalu simpan, atau Tolak. Tidak tampil bila tidak
- * ada usulan; saat memuat, daftar memori di bawahnya yang menunjukkan status memuat.
+ * Usulan memori dari ekstraksi fakta di chat umum: Simpan, Ubah lalu simpan, atau Tolak (mode propose), dan memori
+ * yang disimpan otomatis 7 hari terakhir dengan Urungkan (mode auto). Tidak tampil bila keduanya kosong; saat memuat,
+ * daftar memori di bawahnya yang menunjukkan status memuat.
  */
 export function MemoryProposals({
   online,
   disabled,
   onApprove,
   onReject,
+  onUndo,
 }: {
   online: boolean;
   disabled: boolean;
   onApprove: (id: string, text?: string) => Promise<boolean>;
   onReject: (id: string) => void;
+  onUndo: (id: string) => void;
 }) {
   const query = useMemoryProposals();
   const items = query.data ?? [];
+  const pending = items.filter((p) => p.status === 'pending');
+  const auto = items.filter((p) => p.status === 'auto_saved' || p.status === 'undone');
   const m = copy.memory;
 
   if (query.isError && !query.data) {
@@ -41,31 +46,94 @@ export function MemoryProposals({
       </div>
     );
   }
-  if (items.length === 0) return null;
+  if (pending.length === 0 && auto.length === 0) return null;
 
   return (
-    <section aria-labelledby="memory-proposals" className="flex flex-col gap-2">
-      <div className="flex flex-col gap-1">
-        <h4 id="memory-proposals" className="text-ui font-semibold text-text">
-          {m.proposalsTitle(items.length)}
-        </h4>
-        <p className="text-meta text-text-2">{m.proposalsIntro}</p>
-      </div>
-      <ul
-        aria-label={m.proposalsLabel}
-        className="flex flex-col divide-y divide-border overflow-hidden rounded-panel border border-border bg-surface"
+    <>
+      {pending.length > 0 ? (
+        <section aria-labelledby="memory-proposals" className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1">
+            <h4 id="memory-proposals" className="text-ui font-semibold text-text">
+              {m.proposalsTitle(pending.length)}
+            </h4>
+            <p className="text-meta text-text-2">{m.proposalsIntro}</p>
+          </div>
+          <ul
+            aria-label={m.proposalsLabel}
+            className="flex flex-col divide-y divide-border overflow-hidden rounded-panel border border-border bg-surface"
+          >
+            {pending.map((proposal) => (
+              <ProposalRow
+                key={proposal.id}
+                proposal={proposal}
+                disabled={disabled}
+                onApprove={(text) => onApprove(proposal.id, text)}
+                onReject={() => onReject(proposal.id)}
+              />
+            ))}
+          </ul>
+        </section>
+      ) : null}
+      {auto.length > 0 ? (
+        <section aria-labelledby="memory-auto-saved" className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1">
+            <h4 id="memory-auto-saved" className="text-ui font-semibold text-text">
+              {m.autoTitle(auto.length)}
+            </h4>
+            <p className="text-meta text-text-2">{m.autoIntro}</p>
+          </div>
+          <ul
+            aria-label={m.autoLabel}
+            className="flex flex-col divide-y divide-border overflow-hidden rounded-panel border border-border bg-surface"
+          >
+            {auto.map((proposal) => (
+              <AutoSavedRow
+                key={proposal.id}
+                proposal={proposal}
+                disabled={disabled}
+                onUndo={() => onUndo(proposal.id)}
+              />
+            ))}
+          </ul>
+        </section>
+      ) : null}
+    </>
+  );
+}
+
+/** Memori yang disimpan otomatis: bisa diurungkan; yang sudah diurungkan tampil dicoret tanpa aksi. */
+function AutoSavedRow({
+  proposal,
+  disabled,
+  onUndo,
+}: {
+  proposal: MemoryProposal;
+  disabled: boolean;
+  onUndo: () => void;
+}) {
+  const m = copy.memory;
+  const undone = proposal.status === 'undone';
+  return (
+    <li className="flex flex-col gap-2 px-4 py-3">
+      <p
+        className={`text-ui whitespace-pre-wrap ${undone ? 'text-text-3 line-through' : 'text-text'}`}
       >
-        {items.map((proposal) => (
-          <ProposalRow
-            key={proposal.id}
-            proposal={proposal}
-            disabled={disabled}
-            onApprove={(text) => onApprove(proposal.id, text)}
-            onReject={() => onReject(proposal.id)}
-          />
-        ))}
-      </ul>
-    </section>
+        {proposal.text}
+      </p>
+      {proposal.kind === 'update' && proposal.previousText ? (
+        <p className="text-meta text-text-2">{m.proposalReplaces(proposal.previousText)}</p>
+      ) : null}
+      <p className="text-meta text-text-3">{m.proposalEvidence(proposal.evidence)}</p>
+      <div className="flex flex-wrap items-center gap-2">
+        {undone ? (
+          <span className="text-meta text-text-2">{m.proposalUndone}</span>
+        ) : (
+          <Button variant="secondary" disabled={disabled} onClick={onUndo}>
+            {m.proposalUndo}
+          </Button>
+        )}
+      </div>
+    </li>
   );
 }
 

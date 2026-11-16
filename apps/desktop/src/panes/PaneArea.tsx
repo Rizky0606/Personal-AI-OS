@@ -91,7 +91,7 @@ function Leaf({ id, tab, canSplit, canClose }: LeafProps) {
                 data-pane-tab={t}
                 title={copy.shell.panels[t]}
                 onFocus={() => setFocusedTab(t)}
-                className="group inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-transparent px-2.5 text-ui text-text-2 data-[state=active]:bg-surface data-[state=active]:text-text data-[state=active]:shadow-sm"
+                className="group inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-transparent px-2.5 text-ui text-text-2 data-[state=active]:bg-surface data-[state=active]:text-text data-[state=active]:shadow-lift"
               >
                 <Icon size={14} strokeWidth={1.5} aria-hidden="true" />
                 <span className={tab === t ? undefined : 'sr-only'}>{copy.shell.panels[t]}</span>

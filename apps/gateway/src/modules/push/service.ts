@@ -17,6 +17,11 @@ export interface PushService {
   start(): void;
   /** Notifikasi uji ke satu perangkat Android (atau semuanya). Tidak ada isi selain judul. */
   sendTest(options?: { deviceId?: string; title?: string }): Promise<DevicePushResult[]>;
+  /**
+   * Usulan memori `pending` baru dari satu giliran chat (dipanggil MemoryProposalService sekali per ekstraksi).
+   * Judul hanya jumlah usulan; data hanya ID. Tanpa FCM tidak melakukan apa pun.
+   */
+  memoryProposals(input: { conversationId: string; proposalIds: string[] }): void;
   /** Menunggu pengiriman yang sedang berjalan (tes, shutdown). */
   idle(): Promise<void>;
   close(): void;
@@ -176,6 +181,19 @@ export function createPushService(deps: {
       return deliver(
         { title: options.title ?? 'Tes notifikasi Personal AI OS', data: { type: 'test' } },
         options.deviceId,
+      );
+    },
+
+    memoryProposals({ conversationId, proposalIds }) {
+      if (!fcm || proposalIds.length === 0) return;
+      track(
+        deliver({
+          title:
+            proposalIds.length > 1
+              ? `${proposalIds.length} usulan memori baru`
+              : 'Usulan memori baru',
+          data: { type: 'memory_proposal', conversationId, proposalIds: proposalIds.join(',') },
+        }).catch((err: unknown) => log?.warn({ err }, 'push usulan memori gagal')),
       );
     },
 

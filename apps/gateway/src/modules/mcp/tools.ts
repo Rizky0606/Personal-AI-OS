@@ -25,11 +25,51 @@ export interface ToolOutcome {
   items: number;
 }
 
+/** Pemanggil `/v1/mcp`: worker (omp, terikat run) atau Hermes (token layanan dari loopback, tanpa run). */
+export type McpPrincipal = 'worker' | 'hermes';
+
 export interface ToolContext {
-  runId: string;
+  principal: McpPrincipal;
+  /** Run yang memanggil (principal worker); null untuk Hermes. */
+  runId: string | null;
+  /** Kunci anggaran dan allowlist `web_read`: per run (worker) atau per jam (Hermes). */
+  budgetKey: string;
+  /** Pengali anggaran per kunci: 1 per run, `HERMES_BUDGET_SCALE` per jam untuk Hermes. */
+  budgetScale: number;
   /** Project run itu (principal worker); tool kanban hanya membaca project ini. */
   projectId?: string | undefined;
+  /** Percakapan run itu; usulan menautkannya. */
+  conversationId?: string | null | undefined;
+  /** Run mode rencana: tool usulan ditolak (docs/DESIGN_MCP_TOOLS.md keputusan #5). */
+  planOnly?: boolean | undefined;
+  /** Model run (atau nama mesin), dicatat di usulan memori. */
+  model?: string | undefined;
+  /** Perangkat worker yang memanggil (audit usulan); null/absen untuk Hermes. */
+  deviceId?: string | null | undefined;
   signal?: AbortSignal;
+}
+
+/** Hermes tidak terikat run: anggaran per jam sebesar anggaran satu run dikali ini (docs/DESIGN_MCP_TOOLS.md bagian 7). */
+export const HERMES_BUDGET_SCALE = 4;
+const HOUR_MS = 60 * 60_000;
+
+/** Identitas dan anggaran principal worker untuk satu run. */
+export function workerContext(
+  runId: string,
+): Pick<ToolContext, 'principal' | 'runId' | 'budgetKey' | 'budgetScale'> {
+  return { principal: 'worker', runId, budgetKey: `run:${runId}`, budgetScale: 1 };
+}
+
+/** Identitas dan anggaran Hermes: jendela per jam (jam UTC berjalan), tanpa run. */
+export function hermesContext(
+  now: number,
+): Pick<ToolContext, 'principal' | 'runId' | 'budgetKey' | 'budgetScale'> {
+  return {
+    principal: 'hermes',
+    runId: null,
+    budgetKey: `hermes:${Math.floor(now / HOUR_MS)}`,
+    budgetScale: HERMES_BUDGET_SCALE,
+  };
 }
 
 /** Sekumpulan tool `aios_tools`; beberapa kumpulan digabung dengan [combineTools]. */

@@ -4,7 +4,7 @@ import { AppError } from '../../errors.js';
 import type { RecallPick } from '../memory/recall.js';
 import type { SpaceSearchHit } from '../spaces/service.js';
 import { DATA_LIST_MAX, DATA_READS_PER_RUN, createDataTools } from './data-tools.js';
-import type { ToolOutcome } from './tools.js';
+import { workerContext, type ToolOutcome } from './tools.js';
 
 const RUN = '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f';
 const OTHER_RUN = '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8ea0';
@@ -87,7 +87,7 @@ function setup(
   return { tools, calls };
 }
 
-const ctx = { runId: RUN, projectId: PROJECT };
+const ctx = { ...workerContext(RUN), projectId: PROJECT };
 const text = (outcome: ToolOutcome | null) => outcome?.result.content[0]?.text ?? '';
 /** Isi setiap blok `<<< … >>>`; tidak boleh ada pagar lain di dalamnya. */
 const blocks = (body: string) =>
@@ -215,7 +215,7 @@ describe('tool data aios_tools', () => {
     expect(text(other)).not.toContain('Rahasia');
     expect(calls.tasks).toEqual([PROJECT, PROJECT]);
 
-    const noProject = await tools.call('task_list', {}, { runId: RUN });
+    const noProject = await tools.call('task_list', {}, workerContext(RUN));
     expect(noProject?.result.isError).toBe(true);
   });
 
@@ -264,7 +264,7 @@ describe('tool data aios_tools', () => {
     const over = await tools.call('memory_list', {}, ctx);
     expect(over?.result.isError).toBe(true);
     expect(text(over)).toContain(`Batas ${DATA_READS_PER_RUN}`);
-    expect((await tools.call('memory_list', {}, { runId: OTHER_RUN }))?.ok).toBe(true);
+    expect((await tools.call('memory_list', {}, workerContext(OTHER_RUN)))?.ok).toBe(true);
   });
 
   it('service gagal: galat tool, bukan exception', async () => {

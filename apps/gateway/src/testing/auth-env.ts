@@ -44,9 +44,12 @@ import { createSearxngClient, type SearchClient } from '../modules/research/sear
 import type { PageFetcher } from '../modules/research/fetcher.js';
 import { createOwnerText } from '../modules/mcp/owner-text.js';
 import { createMcpServer } from '../modules/mcp/server.js';
-import { createDataTools } from '../modules/mcp/data-tools.js';
-import { combineTools } from '../modules/mcp/tools.js';
-import { createWebTools } from '../modules/mcp/web-tools.js';
+import { createAiosTools } from '../modules/mcp/aios-tools.js';
+import { createAgentMemoryProposals } from '../modules/memory/agent-proposals.js';
+import {
+  createAgentProposalService,
+  type AgentProposalService,
+} from '../modules/agent-proposals/service.js';
 import { createResearchService, type ResearchService } from '../modules/research/service.js';
 import { createProjectsService } from '../modules/projects/service.js';
 import { createStatusService, type StatusService } from '../modules/status/service.js';
@@ -122,6 +125,8 @@ export interface AuthEnv {
   skillCurator: SkillCurator;
   /** Usulan memori (ekstraksi fakta) dengan jam palsu `clock`; mode dari `options.memoryExtract` (bawaan off). */
   memoryProposals: MemoryProposalService;
+  /** Usulan kartu dan jadwal dari agent (tool usulan `aios_tools`) dengan jam palsu `clock`. */
+  agentProposals: AgentProposalService;
   /** Percakapan yang dijadwalkan runner untuk ekstraksi (urutan panggilan `schedule` yang lolos mode). */
   extractScheduled: string[];
   /** Menunggu ekstraksi yang dijalankan langsung (pengganti pg-boss di tes) selesai. */
@@ -224,7 +229,12 @@ export async function createAuthEnv(
      * Tool gateway MCP (MCP_TOOLS_ENABLED=true): memasang `/v1/mcp` dan `run.start.gatewayTools`. SearXNG dan
      * pengambil halaman tiruan; tanpa ini fiturnya mati seperti bawaan produksi.
      */
-    mcpTools?: { search?: SearchClient; fetchPage?: PageFetcher };
+    mcpTools?: {
+      search?: SearchClient;
+      fetchPage?: PageFetcher;
+      /** MCP_HERMES_TOKEN_SHA256: menyalakan principal Hermes. */
+      hermesTokenSha256?: string;
+    };
     /** Batas run coding paralel per project untuk kartu kanban. */
     taskMaxParallel?: number;
     rateLimits?: Partial<RateLimits>;
@@ -292,6 +302,18 @@ export async function createAuthEnv(
   workerHub.onPresence((deviceId, online) => workerRelay.presence(deviceId, online));
   const observer = createRunObserver();
   const memory = createMemoryService({ db });
+  const push = createPushService({
+    db,
+    hub,
+    fcm: options.push
+      ? createFcmClient({
+          account: options.push.account,
+          baseUrl: options.push.baseUrl,
+          retryDelayMs: 0,
+          now,
+        })
+      : undefined,
+  });
   const extractScheduled: string[] = [];
   const extractions = new Set<Promise<unknown>>();
   const memoryProposals: MemoryProposalService = createMemoryProposalService({
@@ -302,6 +324,7 @@ export async function createAuthEnv(
     model: 'router-fast',
     ...(options.memoryExtract?.dailyMax ? { dailyMax: options.memoryExtract.dailyMax } : {}),
     now,
+    push,
     enqueue: (conversationId) => {
       extractScheduled.push(conversationId);
       if (options.memoryExtract?.inline !== false) {
@@ -454,18 +477,6 @@ export async function createAuthEnv(
         })
       : unusedSchedules;
   if (options.schedules) await schedules.start();
-  const push = createPushService({
-    db,
-    hub,
-    fcm: options.push
-      ? createFcmClient({
-          account: options.push.account,
-          baseUrl: options.push.baseUrl,
-          retryDelayMs: 0,
-          now,
-        })
-      : undefined,
-  });
   push.start();
 
   if (options.owner !== false) {
@@ -479,6 +490,7 @@ export async function createAuthEnv(
     queues: boss,
     now,
   });
+  const agentProposals = createAgentProposalService({ db, hub, tasks, schedules, now });
   const app = buildApp({
     config: { LOG_LEVEL: options.logStream ? 'info' : 'silent', NODE_ENV: 'test' },
     health: { readiness: () => Promise.reject(new Error('tidak dipakai')) },
@@ -511,6 +523,7 @@ export async function createAuthEnv(
     status,
     memory,
     memoryProposals,
+    agentProposals,
     templates: createTemplateService({ db }),
     opinion: createOpinionService({ client }),
     handoff: createHandoffService({ db, client }),
@@ -540,21 +553,29 @@ export async function createAuthEnv(
       ? {
           mcp: {
             db,
+            hermesTokenSha256: options.mcpTools.hermesTokenSha256,
+            now,
             server: createMcpServer({
               version: 'test',
-              tools: combineTools(
-                createWebTools({
+              tools: createAiosTools({
+                web: {
                   search:
                     options.mcpTools.search ??
                     createSearxngClient({ baseUrl: 'http://127.0.0.1:9' }),
                   fetchPage:
                     options.mcpTools.fetchPage ??
                     (() => Promise.reject(new Error('tes: halaman web tidak tersedia'))),
-                  ownerText: createOwnerText(db),
+                  ownerText: createOwnerText(db, now),
                   now,
-                }),
-                createDataTools({ memory, spaces, tasks, schedules, now }),
-              ),
+                },
+                data: { memory, spaces, tasks, schedules, now },
+                propose: {
+                  db,
+                  memory: createAgentMemoryProposals({ db, hub, now }),
+                  proposals: agentProposals,
+                  now,
+                },
+              }),
             }),
           },
         }
@@ -596,6 +617,7 @@ export async function createAuthEnv(
     totpSecret,
     skillProposals,
     memoryProposals,
+    agentProposals,
     extractScheduled,
     async extractIdle() {
       await Promise.all([...extractions]);

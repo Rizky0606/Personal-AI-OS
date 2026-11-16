@@ -126,6 +126,10 @@ export const api: FakeApi = {
   listMemoryProposals: fn<'listMemoryProposals'>(),
   approveMemoryProposal: fn<'approveMemoryProposal'>(),
   rejectMemoryProposal: fn<'rejectMemoryProposal'>(),
+  undoMemoryProposal: fn<'undoMemoryProposal'>(),
+  listAgentProposals: fn<'listAgentProposals'>(),
+  approveAgentProposal: fn<'approveAgentProposal'>(),
+  rejectAgentProposal: fn<'rejectAgentProposal'>(),
   listSchedules: fn<'listSchedules'>(),
   createSchedule: fn<'createSchedule'>(),
   updateSchedule: fn<'updateSchedule'>(),
@@ -257,6 +261,7 @@ export function resetApi(): void {
   api.listRuns.mockResolvedValue([]);
   api.listMemories.mockResolvedValue([]);
   api.listMemoryProposals.mockResolvedValue([]);
+  api.listAgentProposals.mockResolvedValue([]);
   api.listPromptTemplates.mockResolvedValue([]);
   api.listSkills.mockResolvedValue([]);
   api.listSkillProposals.mockResolvedValue([]);

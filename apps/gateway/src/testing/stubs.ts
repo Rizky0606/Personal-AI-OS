@@ -62,6 +62,13 @@ export const unusedMemoryProposals: AppDeps['memoryProposals'] = {
   reject: unused('memoryProposals.reject'),
   undo: unused('memoryProposals.undo'),
 };
+export const unusedAgentProposals: AppDeps['agentProposals'] = {
+  create: unused('agentProposals.create'),
+  list: unused('agentProposals.list'),
+  get: unused('agentProposals.get'),
+  approve: unused('agentProposals.approve'),
+  reject: unused('agentProposals.reject'),
+};
 export const unusedTemplates: AppDeps['templates'] = {
   list: unused('templates.list'),
   create: unused('templates.create'),

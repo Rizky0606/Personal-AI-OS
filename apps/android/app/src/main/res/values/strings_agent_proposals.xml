@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Usulan kartu dan jadwal dari agent (tool aios_tools): setujui apa adanya atau tolak -->
+    <string name="agent_proposals_title">Usulan agent</string>
+    <string name="agent_proposals_settings_item">Usulan agent</string>
+    <string name="agent_proposals_settings_supporting">Kartu dan jadwal yang diusulkan agent; setujui atau tolak</string>
+    <string name="agent_proposals_intro">Agent hanya bisa mengusulkan. Kartu dan jadwal baru dibuat setelah kamu setujui. Untuk mengubah isi usulan, buka aplikasi Windows.</string>
+    <string name="agent_proposals_empty">Tidak ada usulan yang menunggu.</string>
+    <string name="agent_proposal_kind_task">Kartu</string>
+    <string name="agent_proposal_kind_schedule">Jadwal</string>
+    <string name="agent_proposal_agent_omp">Agent coding</string>
+    <string name="agent_proposal_agent_hermes">Hermes</string>
+    <string name="agent_proposal_reason">Alasan agent: %1$s</string>
+    <string name="agent_proposal_schedule_meta">%1$s · %2$s</string>
+    <string name="agent_proposal_after_web">Agent membaca halaman web sebelum mengusulkan ini. Periksa dengan teliti: isinya bisa berasal dari halaman web.</string>
+    <string name="agent_proposal_after_web_label">Peringatan</string>
+    <string name="agent_proposal_approve">Setujui</string>
+    <string name="agent_proposal_reject">Tolak</string>
+    <string name="agent_proposal_approve_task_label">Setujui kartu: %1$s</string>
+    <string name="agent_proposal_approve_schedule_label">Setujui jadwal: %1$s</string>
+    <string name="agent_proposal_reject_label">Tolak usulan: %1$s</string>
+    <string name="agent_proposal_approved_task">Kartu dibuat di Backlog.</string>
+    <string name="agent_proposal_approved_schedule">Jadwal dibuat dan aktif.</string>
+    <string name="agent_proposal_rejected">Usulan ditolak.</string>
+    <string name="agent_proposal_decided">Usulan ini sudah diputuskan</string>
+</resources>

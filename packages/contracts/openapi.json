@@ -1135,7 +1135,8 @@
                 "enum": [
                   "skill_report",
                   "skill_proposal",
-                  "memory_proposal"
+                  "memory_proposal",
+                  "agent_proposal"
                 ]
               }
             },
@@ -2322,7 +2323,8 @@
                 "enum": [
                   "skill_report",
                   "skill_proposal",
-                  "memory_proposal"
+                  "memory_proposal",
+                  "agent_proposal"
                 ]
               }
             },
@@ -8649,6 +8651,30 @@
           "model": {
             "type": "string"
           },
+          "source": {
+            "type": "string",
+            "enum": [
+              "extraction",
+              "agent"
+            ],
+            "default": "extraction"
+          },
+          "agent": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "omp",
+              "hermes",
+              null
+            ],
+            "default": null
+          },
+          "afterWeb": {
+            "type": "boolean",
+            "default": false
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -8686,6 +8712,323 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 500
+          }
+        }
+      },
+      "AgentProposalList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentProposal"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "AgentProposal": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "approved",
+                  "rejected"
+                ]
+              },
+              "agent": {
+                "type": "string",
+                "enum": [
+                  "omp",
+                  "hermes"
+                ]
+              },
+              "reason": {
+                "type": "string"
+              },
+              "afterWeb": {
+                "type": "boolean"
+              },
+              "projectId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "conversationId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "runId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "resultId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "decidedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "task"
+                ]
+              },
+              "task": {
+                "$ref": "#/components/schemas/ProposedTask"
+              }
+            },
+            "required": [
+              "id",
+              "status",
+              "agent",
+              "reason",
+              "afterWeb",
+              "projectId",
+              "conversationId",
+              "runId",
+              "resultId",
+              "createdAt",
+              "decidedAt",
+              "kind",
+              "task"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "approved",
+                  "rejected"
+                ]
+              },
+              "agent": {
+                "type": "string",
+                "enum": [
+                  "omp",
+                  "hermes"
+                ]
+              },
+              "reason": {
+                "type": "string"
+              },
+              "afterWeb": {
+                "type": "boolean"
+              },
+              "projectId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "conversationId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "runId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "resultId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "decidedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "schedule"
+                ]
+              },
+              "schedule": {
+                "$ref": "#/components/schemas/ProposedSchedule"
+              },
+              "description": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "status",
+              "agent",
+              "reason",
+              "afterWeb",
+              "projectId",
+              "conversationId",
+              "runId",
+              "resultId",
+              "createdAt",
+              "decidedAt",
+              "kind",
+              "schedule",
+              "description"
+            ]
+          }
+        ]
+      },
+      "ProposedTask": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "body": {
+            "type": "string",
+            "maxLength": 4000
+          }
+        },
+        "required": [
+          "title",
+          "body"
+        ]
+      },
+      "ProposedSchedule": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "cron": {
+            "type": "string",
+            "pattern": "^\\S+(\\s+\\S+){4}$"
+          },
+          "timezone": {
+            "type": "string",
+            "minLength": 1
+          },
+          "prompt": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "target": {
+            "type": "string",
+            "enum": [
+              "chat",
+              "research"
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "cron",
+          "timezone",
+          "prompt",
+          "target"
+        ]
+      },
+      "ApproveAgentProposalRequest": {
+        "type": "object",
+        "properties": {
+          "task": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "body": {
+                "type": "string",
+                "maxLength": 4000
+              }
+            },
+            "additionalProperties": false
+          },
+          "schedule": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              },
+              "cron": {
+                "type": "string",
+                "pattern": "^\\S+(\\s+\\S+){4}$"
+              },
+              "timezone": {
+                "type": "string",
+                "minLength": 1
+              },
+              "prompt": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              },
+              "target": {
+                "type": "string",
+                "enum": [
+                  "chat",
+                  "research"
+                ]
+              },
+              "enabled": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false
           }
         }
       },
@@ -16849,7 +17192,8 @@
                 "rejected",
                 "auto_saved",
                 "undone",
-                "all"
+                "all",
+                "review"
               ]
             },
             "required": false,
@@ -17134,6 +17478,379 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/MemoryProposal"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Belum login atau token tidak berlaku",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token tidak punya scope yang dibutuhkan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tidak ditemukan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Konflik dengan status saat ini",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agent-proposals": {
+      "get": {
+        "operationId": "listAgentProposals",
+        "tags": [
+          "Usulan agent"
+        ],
+        "summary": "Daftar usulan kartu dan jadwal dari agent, terbaru dulu (bawaan: menunggu)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "approved",
+                "rejected",
+                "all"
+              ]
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "task",
+                "schedule"
+              ]
+            },
+            "required": false,
+            "name": "kind",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "projectId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daftar usulan agent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProposalList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Permintaan tidak valid",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Belum login atau token tidak berlaku",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token tidak punya scope yang dibutuhkan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agent-proposals/{id}": {
+      "get": {
+        "operationId": "getAgentProposal",
+        "tags": [
+          "Usulan agent"
+        ],
+        "summary": "Satu usulan agent",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Usulan agent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProposal"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Belum login atau token tidak berlaku",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token tidak punya scope yang dibutuhkan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tidak ditemukan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agent-proposals/{id}/approve": {
+      "post": {
+        "operationId": "approveAgentProposal",
+        "tags": [
+          "Usulan agent"
+        ],
+        "summary": "Setujui usulan (opsional dengan ubahan): membuat kartu Backlog atau jadwal",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveAgentProposalRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Usulan yang disetujui",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProposal"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Permintaan tidak valid",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Belum login atau token tidak berlaku",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token tidak punya scope yang dibutuhkan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tidak ditemukan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Konflik dengan status saat ini",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agent-proposals/{id}/reject": {
+      "post": {
+        "operationId": "rejectAgentProposal",
+        "tags": [
+          "Usulan agent"
+        ],
+        "summary": "Tolak usulan agent",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Usulan ditolak",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentProposal"
                 }
               }
             }

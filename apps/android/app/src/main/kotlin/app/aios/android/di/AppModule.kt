@@ -13,6 +13,9 @@ import app.aios.android.data.ConnectivityObserver
 import app.aios.android.data.api.ChatApi
 import app.aios.android.data.api.MemoryApi
 import app.aios.android.data.api.SkillApi
+import app.aios.android.data.api.AgentProposalApi
+import app.aios.android.data.proposals.AgentProposalRepository
+import app.aios.android.data.proposals.RemoteAgentProposalRepository
 import app.aios.android.data.skills.RemoteSkillRepository
 import app.aios.android.data.skills.SkillRepository
 import app.aios.android.data.api.SpaceApi
@@ -249,6 +252,15 @@ object AppModule {
     @Provides
     @Singleton
     fun skillRepository(api: SkillApi): SkillRepository = RemoteSkillRepository(api)
+
+    @Provides
+    @Singleton
+    fun agentProposalApi(@Named("authed") client: OkHttpClient, json: Json): AgentProposalApi =
+        retrofit(client, json).create(AgentProposalApi::class.java)
+
+    @Provides
+    @Singleton
+    fun agentProposalRepository(api: AgentProposalApi): AgentProposalRepository = RemoteAgentProposalRepository(api)
 
     @Provides
     @Singleton

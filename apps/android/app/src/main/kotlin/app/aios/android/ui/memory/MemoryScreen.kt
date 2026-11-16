@@ -2,6 +2,7 @@ package app.aios.android.ui.memory
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -31,6 +33,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.aios.android.R
+import app.aios.android.data.api.MEMORY_PROPOSAL_PENDING
+import app.aios.android.data.api.MEMORY_PROPOSAL_UNDONE
 import app.aios.android.data.api.MEMORY_TEXT_MAX
 import app.aios.android.data.api.Memory
 import app.aios.android.data.api.MemoryProposal
@@ -90,32 +94,37 @@ fun MemoryScreen(online: Boolean, snackbar: SnackbarHostState, viewModel: Memory
             onRetry = viewModel::refresh
         ) {
             LazyColumn {
-                if (ui.proposals.isNotEmpty()) {
+                val pending = ui.proposals.filter { it.status == MEMORY_PROPOSAL_PENDING }
+                val auto = ui.proposals.filter { it.status != MEMORY_PROPOSAL_PENDING }
+                if (pending.isNotEmpty()) {
                     item(key = "proposals-header") {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = Tokens.Space.s16, vertical = Tokens.Space.s8),
-                            verticalArrangement = Arrangement.spacedBy(Tokens.Space.s4)
-                        ) {
-                            Text(
-                                stringResource(R.string.memory_proposals_title, ui.proposals.size),
-                                style = AiosTheme.type.section,
-                                color = colors.text
-                            )
-                            Text(
-                                stringResource(R.string.memory_proposals_intro),
-                                style = AiosTheme.type.meta,
-                                color = colors.text2
-                            )
-                        }
+                        SectionHeader(
+                            stringResource(R.string.memory_proposals_title, pending.size),
+                            stringResource(R.string.memory_proposals_intro)
+                        )
                     }
-                    items(ui.proposals, key = { "proposal-${it.id}" }) { proposal ->
+                    items(pending, key = { "proposal-${it.id}" }) { proposal ->
                         ProposalRow(
                             proposal = proposal,
                             enabled = online && ui.deciding == null,
                             onApprove = { viewModel.approveProposal(proposal) },
+                            onEdit = { viewModel.startEditProposal(proposal) },
                             onReject = { viewModel.rejectProposal(proposal) }
+                        )
+                    }
+                }
+                if (auto.isNotEmpty()) {
+                    item(key = "auto-header") {
+                        SectionHeader(
+                            stringResource(R.string.memory_auto_title, auto.size),
+                            stringResource(R.string.memory_auto_intro)
+                        )
+                    }
+                    items(auto, key = { "auto-${it.id}" }) { proposal ->
+                        AutoSavedRow(
+                            proposal = proposal,
+                            enabled = online && ui.deciding == null,
+                            onUndo = { viewModel.undoProposal(proposal) }
                         )
                     }
                 }
@@ -140,6 +149,15 @@ fun MemoryScreen(online: Boolean, snackbar: SnackbarHostState, viewModel: Memory
             onText = viewModel::onEditText,
             onSave = viewModel::saveEdit,
             onDismiss = viewModel::cancelEdit
+        )
+    }
+    ui.proposalEditing?.let {
+        EditProposalDialog(
+            text = ui.proposalText,
+            saving = ui.deciding != null,
+            onText = viewModel::onProposalText,
+            onSave = viewModel::approveEditedProposal,
+            onDismiss = viewModel::cancelEditProposal
         )
     }
     ui.deleting?.let { memory ->
@@ -172,19 +190,41 @@ fun MemoryScreen(online: Boolean, snackbar: SnackbarHostState, viewModel: Memory
     }
 }
 
-/** Satu usulan memori: fakta, kutipan pesan pemilik, dan aksi Simpan/Tolak (Android tidak menyunting usulan). */
 @Composable
-private fun ProposalRow(proposal: MemoryProposal, enabled: Boolean, onApprove: () -> Unit, onReject: () -> Unit) {
+private fun SectionHeader(title: String, intro: String) {
     val colors = AiosTheme.colors
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .drawBehind {
-                val y = size.height - Hairline.toPx() / 2
-                val inset = Tokens.Space.s16.toPx()
-                drawLine(colors.border, Offset(inset, y), Offset(size.width - inset, y), Hairline.toPx())
-            }
-            .padding(horizontal = Tokens.Space.s16, vertical = Tokens.Space.s12),
+            .padding(horizontal = Tokens.Space.s16, vertical = Tokens.Space.s8),
+        verticalArrangement = Arrangement.spacedBy(Tokens.Space.s4)
+    ) {
+        Text(title, style = AiosTheme.type.section, color = colors.text)
+        Text(intro, style = AiosTheme.type.meta, color = colors.text2)
+    }
+}
+
+private fun Modifier.proposalRow(border: Color) = this
+    .fillMaxWidth()
+    .drawBehind {
+        val y = size.height - Hairline.toPx() / 2
+        val inset = Tokens.Space.s16.toPx()
+        drawLine(border, Offset(inset, y), Offset(size.width - inset, y), Hairline.toPx())
+    }
+    .padding(horizontal = Tokens.Space.s16, vertical = Tokens.Space.s12)
+
+/** Satu usulan memori: fakta, kutipan pesan pemilik, dan aksi Simpan, Ubah lalu simpan, atau Tolak. */
+@Composable
+private fun ProposalRow(
+    proposal: MemoryProposal,
+    enabled: Boolean,
+    onApprove: () -> Unit,
+    onEdit: () -> Unit,
+    onReject: () -> Unit
+) {
+    val colors = AiosTheme.colors
+    Column(
+        modifier = Modifier.proposalRow(colors.border),
         verticalArrangement = Arrangement.spacedBy(Tokens.Space.s4)
     ) {
         Text(proposal.text, style = AiosTheme.type.ui, color = colors.text)
@@ -200,11 +240,20 @@ private fun ProposalRow(proposal: MemoryProposal, enabled: Boolean, onApprove: (
             style = AiosTheme.type.meta,
             color = colors.text3
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(Tokens.Space.s8)) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(Tokens.Space.s8),
+            verticalArrangement = Arrangement.spacedBy(Tokens.Space.s8)
+        ) {
             AiosButton(
                 stringResource(R.string.memory_proposal_approve),
                 onClick = onApprove,
                 kind = ButtonKind.Primary,
+                enabled = enabled
+            )
+            AiosButton(
+                stringResource(R.string.memory_proposal_edit_approve),
+                onClick = onEdit,
+                kind = ButtonKind.Secondary,
                 enabled = enabled
             )
             AiosButton(
@@ -215,6 +264,99 @@ private fun ProposalRow(proposal: MemoryProposal, enabled: Boolean, onApprove: (
             )
         }
     }
+}
+
+/** Memori yang disimpan otomatis (mode auto): Urungkan; yang sudah diurungkan dicoret tanpa aksi. */
+@Composable
+private fun AutoSavedRow(proposal: MemoryProposal, enabled: Boolean, onUndo: () -> Unit) {
+    val colors = AiosTheme.colors
+    val undone = proposal.status == MEMORY_PROPOSAL_UNDONE
+    Column(
+        modifier = Modifier.proposalRow(colors.border),
+        verticalArrangement = Arrangement.spacedBy(Tokens.Space.s4)
+    ) {
+        Text(
+            proposal.text,
+            style = AiosTheme.type.ui,
+            color = if (undone) colors.text3 else colors.text,
+            textDecoration = if (undone) TextDecoration.LineThrough else null
+        )
+        if (proposal.kind == "update" && proposal.previousText != null) {
+            Text(
+                stringResource(R.string.memory_proposal_replaces, proposal.previousText),
+                style = AiosTheme.type.meta,
+                color = colors.text2
+            )
+        }
+        Text(
+            stringResource(R.string.memory_proposal_evidence, proposal.evidence),
+            style = AiosTheme.type.meta,
+            color = colors.text3
+        )
+        if (undone) {
+            Text(
+                stringResource(R.string.memory_proposal_undone_badge),
+                style = AiosTheme.type.meta,
+                color = colors.text2
+            )
+        } else {
+            AiosButton(
+                stringResource(R.string.memory_proposal_undo),
+                onClick = onUndo,
+                kind = ButtonKind.Secondary,
+                enabled = enabled
+            )
+        }
+    }
+}
+
+/** "Ubah lalu simpan": batas sama dengan desktop (dirapikan, tidak kosong, maks MEMORY_TEXT_MAX karakter). */
+@Composable
+private fun EditProposalDialog(
+    text: String,
+    saving: Boolean,
+    onText: (String) -> Unit,
+    onSave: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val colors = AiosTheme.colors
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = colors.surface,
+        title = {
+            Text(
+                stringResource(R.string.memory_proposal_edit_title),
+                style = AiosTheme.type.section,
+                color = colors.text
+            )
+        },
+        text = {
+            AiosTextField(
+                value = text,
+                onValueChange = onText,
+                label = stringResource(R.string.memory_add_label),
+                supportingText = stringResource(R.string.memory_counter, text.trim().length, MEMORY_TEXT_MAX),
+                enabled = !saving,
+                singleLine = false,
+                maxLines = 6
+            )
+        },
+        confirmButton = {
+            AiosButton(
+                stringResource(if (saving) R.string.memory_saving else R.string.memory_proposal_approve),
+                onClick = onSave,
+                kind = ButtonKind.Primary,
+                enabled = !saving && text.isNotBlank()
+            )
+        },
+        dismissButton = {
+            AiosButton(
+                stringResource(R.string.memory_cancel),
+                onClick = onDismiss,
+                kind = ButtonKind.Ghost
+            )
+        }
+    )
 }
 
 @Composable

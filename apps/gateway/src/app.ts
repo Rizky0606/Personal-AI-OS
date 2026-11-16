@@ -52,6 +52,8 @@ import type { TemplateService } from './modules/templates/service.js';
 import type { MemoryProposalService } from './modules/memory/proposal-service.js';
 import type { MemoryService } from './modules/memory/service.js';
 import { mcpRoutes, type McpRouteOptions } from './modules/mcp/routes.js';
+import { agentProposalRoutes } from './modules/agent-proposals/routes.js';
+import type { AgentProposalService } from './modules/agent-proposals/service.js';
 import type { McpServer } from './modules/mcp/server.js';
 import { roleRoutes } from './modules/roles/routes.js';
 import { skillRoutes } from './modules/skills/routes.js';
@@ -121,6 +123,8 @@ export interface AppDeps {
   memory: MemoryService;
   /** Usulan memori dari ekstraksi fakta; rutenya selalu terpasang (mode off = daftar tetap bisa dibaca). */
   memoryProposals: MemoryProposalService;
+  /** Usulan kartu dan jadwal dari agent (tool `aios_tools`); rutenya selalu terpasang. */
+  agentProposals: AgentProposalService;
   templates: TemplateService;
   opinion: OpinionService;
   handoff: HandoffService;
@@ -133,8 +137,16 @@ export interface AppDeps {
   worker: { hub: ReturnType<typeof createWorkerHub>; relay: WorkerRelay };
   /** WebSocket /v1/ws; `auth` diisi dari dependensi di atas. */
   ws: Omit<WsDeps, 'auth'>;
-  /** Tool gateway lewat MCP (MCP_TOOLS_ENABLED); tanpa ini `/v1/mcp` tidak dipasang (404). */
-  mcp?: { server: McpServer; db: McpRouteOptions['db'] };
+  /**
+   * Tool gateway lewat MCP (MCP_TOOLS_ENABLED); tanpa ini `/v1/mcp` tidak dipasang (404). `hermesTokenSha256`
+   * (MCP_HERMES_TOKEN_SHA256) menyalakan principal Hermes.
+   */
+  mcp?: {
+    server: McpServer;
+    db: McpRouteOptions['db'];
+    hermesTokenSha256?: string | undefined;
+    now?: () => number;
+  };
   rateLimits?: Partial<RateLimits>;
   /** Tujuan log selain stdout; dipakai tes. */
   logStream?: NodeJS.WritableStream;
@@ -165,6 +177,7 @@ export function buildApp({
   status,
   memory,
   memoryProposals,
+  agentProposals,
   templates,
   opinion,
   handoff,
@@ -266,6 +279,7 @@ export function buildApp({
         await protectedScope.register(compareRoutes, { compare });
         await protectedScope.register(statusRoutes, { status });
         await protectedScope.register(memoryRoutes, { memory, proposals: memoryProposals });
+        await protectedScope.register(agentProposalRoutes, { proposals: agentProposals });
         await protectedScope.register(templateRoutes, { templates });
         await protectedScope.register(opinionRoutes, { opinion });
         await protectedScope.register(handoffRoutes, { handoff });
@@ -289,15 +303,19 @@ export function buildApp({
             projects,
             store,
           });
-        if (mcp)
-          await protectedScope.register(mcpRoutes, {
-            server: mcp.server,
-            db: mcp.db,
-            runs,
-            projects,
-            perMinute: limits.mcp,
-          });
       });
+      // Di luar protectedScope: `/v1/mcp` punya auth sendiri (JWT worker, atau token layanan Hermes dari loopback).
+      if (mcp)
+        await v1.register(mcpRoutes, {
+          server: mcp.server,
+          db: mcp.db,
+          auth,
+          runs,
+          projects,
+          perMinute: limits.mcp,
+          hermesTokenSha256: mcp.hermesTokenSha256,
+          ...(mcp.now ? { now: mcp.now } : {}),
+        });
     },
     { prefix: API_PREFIX },
   );

@@ -1,7 +1,13 @@
 import type {
+  AgentProposalKind,
+  AgentProposalStatus,
   MemoryProposalKind,
+  MemoryProposalSource,
   MemoryProposalStatus,
   MemorySource,
+  ProposalAgent,
+  ProposedSchedule,
+  ProposedTask,
   ResearchPlanSchema,
   SkillEngine,
   SkillProposalKind,
@@ -26,7 +32,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import type { z } from 'zod';
 import { uuidv7 } from '../../lib/uuidv7.js';
-import { conversations, devices, messages, runs, spaces } from './core.js';
+import { conversations, devices, messages, projects, runs, spaces } from './core.js';
 import {
   researchDepth,
   researchStatus,
@@ -219,10 +225,51 @@ export const memoryProposals = pgTable(
     messageId: uuid('message_id').references(() => messages.id, { onDelete: 'set null' }),
     runId: uuid('run_id').references(() => runs.id, { onDelete: 'set null' }),
     model: text('model').notNull(),
+    /** `extraction` (ekstraksi fakta) atau `agent` (tool `memory_propose`, docs/DESIGN_MCP_TOOLS.md bagian 17). */
+    source: text('source').$type<MemoryProposalSource>().notNull().default('extraction'),
+    /** Mesin agent yang mengusulkan (source = agent). */
+    agent: text('agent').$type<ProposalAgent>(),
+    /** Run agent sudah memakai tool web sebelum mengusulkan. */
+    afterWeb: boolean('after_web').notNull().default(false),
     createdAt: createdAt(),
     decidedAt: timestamp('decided_at', { withTimezone: true }),
   },
-  (t) => [index('memory_proposals_status_idx').on(t.status, t.createdAt)],
+  (t) => [
+    index('memory_proposals_status_idx').on(t.status, t.createdAt),
+    index('memory_proposals_run_idx').on(t.runId),
+  ],
+);
+
+/**
+ * Usulan kartu dan jadwal dari agent (tool `task_propose`/`schedule_propose`, docs/DESIGN_MCP_TOOLS.md bagian 17).
+ * `payload` divalidasi Zod per `kind` (`ProposedTask`/`ProposedSchedule`); kartu atau jadwal baru dibuat hanya saat
+ * pemilik menyetujui (`result_id`). Usulan kartu ikut terhapus bila project-nya dihapus.
+ */
+export const agentProposals = pgTable(
+  'agent_proposals',
+  {
+    id: id(),
+    kind: text('kind').$type<AgentProposalKind>().notNull(),
+    status: text('status').$type<AgentProposalStatus>().notNull().default('pending'),
+    agent: text('agent').$type<ProposalAgent>().notNull(),
+    payload: jsonb('payload').$type<ProposedTask | ProposedSchedule>().notNull(),
+    reason: text('reason').notNull(),
+    afterWeb: boolean('after_web').notNull().default(false),
+    projectId: uuid('project_id').references(() => projects.id, { onDelete: 'cascade' }),
+    conversationId: uuid('conversation_id').references(() => conversations.id, {
+      onDelete: 'set null',
+    }),
+    runId: uuid('run_id').references(() => runs.id, { onDelete: 'set null' }),
+    /** Kartu atau jadwal yang dibuat saat disetujui (tanpa FK: dua tabel sasaran). */
+    resultId: uuid('result_id'),
+    createdAt: createdAt(),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+  },
+  (t) => [
+    index('agent_proposals_status_idx').on(t.status, t.createdAt),
+    index('agent_proposals_kind_idx').on(t.kind, t.createdAt),
+    index('agent_proposals_run_idx').on(t.runId),
+  ],
 );
 
 /**

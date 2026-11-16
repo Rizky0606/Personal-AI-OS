@@ -20,9 +20,9 @@ import { createMemoryProposalService } from './modules/memory/proposal-service.j
 import { createMemoryService } from './modules/memory/service.js';
 import { createOwnerText } from './modules/mcp/owner-text.js';
 import { createMcpServer } from './modules/mcp/server.js';
-import { createDataTools } from './modules/mcp/data-tools.js';
-import { combineTools } from './modules/mcp/tools.js';
-import { createWebTools } from './modules/mcp/web-tools.js';
+import { createAiosTools } from './modules/mcp/aios-tools.js';
+import { createAgentMemoryProposals } from './modules/memory/agent-proposals.js';
+import { createAgentProposalService } from './modules/agent-proposals/service.js';
 import { createFleetService } from './modules/fleets/service.js';
 import { createForkService } from './modules/fork/service.js';
 import { createHandoffService } from './modules/handoff/service.js';
@@ -155,6 +155,14 @@ async function main(): Promise<void> {
     recallTopK: config.MEMORY_RECALL_TOP_K,
     log,
   });
+  const push = createPushService({
+    db,
+    hub,
+    fcm: config.FCM_SERVICE_ACCOUNT_FILE
+      ? createFcmClient({ account: loadServiceAccount(config.FCM_SERVICE_ACCOUNT_FILE), log })
+      : undefined,
+    log: { ...log, info: (obj, msg) => app.log.info(obj, msg) },
+  });
   // Mode off (bawaan): tidak ada antrean, tidak ada pekerjaan, tidak ada panggilan model; rute usulan tetap terbaca.
   const memoryProposals = createMemoryProposalService({
     db,
@@ -164,6 +172,7 @@ async function main(): Promise<void> {
     model: config.MEMORY_EXTRACT_MODEL,
     dailyMax: config.MEMORY_EXTRACT_DAILY_MAX,
     enqueue: memoryExtractEnqueue(boss),
+    push,
     log: { ...log, info: (obj, msg) => app.log.info(obj, msg) },
   });
   const files = createFilesService({ db });
@@ -312,16 +321,9 @@ async function main(): Promise<void> {
     roles,
     log: { ...log, info: (obj, msg) => app.log.info(obj, msg) },
   });
-  const push = createPushService({
-    db,
-    hub,
-    fcm: config.FCM_SERVICE_ACCOUNT_FILE
-      ? createFcmClient({ account: loadServiceAccount(config.FCM_SERVICE_ACCOUNT_FILE), log })
-      : undefined,
-    log: { ...log, info: (obj, msg) => app.log.info(obj, msg) },
-  });
 
   const health = createHealthService({ config, pingDatabase: () => pool.query('select 1') });
+  const agentProposals = createAgentProposalService({ db, hub, tasks, schedules });
   const app = buildApp({
     config,
     health,
@@ -352,6 +354,7 @@ async function main(): Promise<void> {
     compare: createCompareService({ client }),
     memory,
     memoryProposals,
+    agentProposals,
     templates: createTemplateService({ db }),
     opinion: createOpinionService({ client }),
     handoff: createHandoffService({ db, client }),
@@ -381,16 +384,22 @@ async function main(): Promise<void> {
       ? {
           mcp: {
             db,
+            hermesTokenSha256: config.MCP_HERMES_TOKEN_SHA256,
             server: createMcpServer({
               version: GATEWAY_VERSION,
-              tools: combineTools(
-                createWebTools({
+              tools: createAiosTools({
+                web: {
                   search: createSearxngClient({ baseUrl: config.SEARXNG_URL }),
                   fetchPage,
                   ownerText: createOwnerText(db),
-                }),
-                createDataTools({ memory, spaces, tasks, schedules }),
-              ),
+                },
+                data: { memory, spaces, tasks, schedules },
+                propose: {
+                  db,
+                  memory: createAgentMemoryProposals({ db, hub }),
+                  proposals: agentProposals,
+                },
+              }),
             }),
           },
         }

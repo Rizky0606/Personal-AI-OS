@@ -1,6 +1,6 @@
 import { workerBranchFor, type Project } from '@aios/contracts';
 import { act, screen, waitFor, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiProblem } from '../auth/authSession';
 import { copy } from '../copy';
@@ -39,6 +39,9 @@ const project: Project = {
 let RUN_X = '';
 const page = (...items: ReturnType<typeof message>[]) => ({ items, nextBefore: null });
 const field = () => screen.getByRole('textbox', { name: copy.chat.composerLabel });
+/** Rencana dulu, Kerjakan sebagai tim, Cari di web, dan Skill ada di satu menu Opsi di composer. */
+const openOptions = async (user: UserEvent) =>
+  user.click(await screen.findByRole('button', { name: copy.chat.composerOptions }));
 
 beforeEach(() => {
   RUN_X = uid();
@@ -100,7 +103,7 @@ describe('chat per project', () => {
     );
   });
 
-  it('Cari di web: sakelar tampil di chat umum dan project, diingat, dan dikirim bersama pesan', async () => {
+  it('Cari di web: sakelar di menu Opsi tampil di chat umum dan project, diingat, dan dikirim bersama pesan', async () => {
     api.createConversation.mockResolvedValue({
       id: CONV,
       title: '',
@@ -119,10 +122,13 @@ describe('chat per project', () => {
     const user = userEvent.setup();
     await renderScreen(<ChatScreen />);
 
-    const chip = await screen.findByRole('button', { name: copy.chat.web.chip });
-    expect(chip).toHaveAttribute('aria-pressed', 'false');
-    await user.click(chip);
+    await openOptions(user);
+    const item = await screen.findByRole('menuitemcheckbox', { name: copy.chat.web.chip });
+    expect(item).toHaveAttribute('aria-checked', 'false');
+    await user.click(item);
     expect(useUiStore.getState().webSearch).toBe(true);
+    expect(item).toHaveAttribute('aria-checked', 'true');
+    await user.keyboard('{Escape}');
 
     await user.type(field(), 'berita GPU terbaru{Enter}');
     expect(api.sendMessage).toHaveBeenCalledWith(
@@ -157,7 +163,7 @@ describe('chat per project', () => {
     );
   });
 
-  it('menu Skill: paket tampilan dan server tidak ditawarkan di chat umum; pilihan dikirim sekali lalu dikosongkan', async () => {
+  it('Skill di menu Opsi: paket tampilan dan server tidak ditawarkan di chat umum; pilihan dikirim sekali lalu dikosongkan', async () => {
     api.createConversation.mockResolvedValue({
       id: CONV,
       title: '',
@@ -176,9 +182,7 @@ describe('chat per project', () => {
     const user = userEvent.setup();
     await renderScreen(<ChatScreen />);
 
-    await user.click(
-      await screen.findByRole('button', { name: new RegExp(copy.chat.skills.chip) }),
-    );
+    await openOptions(user);
     expect(
       screen.queryByRole('menuitemcheckbox', { name: copy.chat.skills.packs.frontend }),
     ).toBeNull();
@@ -558,11 +562,13 @@ describe('hasil run coding menunggu tinjauan', () => {
 describe('mode rencana', () => {
   const planRun = (status: 'running' | 'completed', planOnly = true) =>
     run({ id: RUN_X, kind: 'coding', engine: 'omp', status, planOnly });
-  const chip = () => screen.queryByRole('button', { name: copy.chat.plan.chip });
+  const chip = () => screen.queryByRole('menuitemcheckbox', { name: copy.chat.plan.chip });
 
-  it('sakelar Rencana dulu hanya ada di dalam project dan memengaruhi pesan berikutnya', async () => {
+  it('sakelar Rencana dulu di menu Opsi hanya ada di dalam project dan memengaruhi pesan berikutnya', async () => {
     const general = await renderScreen(<ChatScreen />);
     await screen.findByRole('button', { name: new RegExp(`${copy.chat.model.label}:`) });
+    await openOptions(userEvent.setup());
+    await screen.findByRole('menuitemcheckbox', { name: copy.chat.web.chip });
     expect(chip()).not.toBeInTheDocument();
     general.unmount();
 
@@ -584,11 +590,13 @@ describe('mode rencana', () => {
     });
     const user = userEvent.setup();
     await renderScreen(<ChatScreen />);
-    const toggle = await screen.findByRole('button', { name: copy.chat.plan.chip });
-    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    await openOptions(user);
+    const toggle = await screen.findByRole('menuitemcheckbox', { name: copy.chat.plan.chip });
+    expect(toggle).toHaveAttribute('aria-checked', 'false');
 
     await user.click(toggle);
-    expect(toggle).toHaveAttribute('aria-pressed', 'true');
+    expect(toggle).toHaveAttribute('aria-checked', 'true');
+    await user.keyboard('{Escape}');
     await user.type(field(), 'rencanakan dark mode{Enter}');
 
     await waitFor(() => expect(api.sendMessage).toHaveBeenCalled());

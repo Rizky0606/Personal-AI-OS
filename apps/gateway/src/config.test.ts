@@ -36,6 +36,26 @@ describe('loadConfig', () => {
     expect(() => loadConfig({ ...base, MCP_TOOLS_ENABLED: 'ya' })).toThrow(/MCP_TOOLS_ENABLED/);
   });
 
+  it('MCP_HERMES_TOKEN_SHA256 opsional (kosong = Hermes mati); bila diisi wajib SHA-256 heks, pesan tanpa nilai', () => {
+    expect(loadConfig(base).MCP_HERMES_TOKEN_SHA256).toBeUndefined();
+    expect(loadConfig({ ...base, MCP_HERMES_TOKEN_SHA256: '' }).MCP_HERMES_TOKEN_SHA256).toBe(
+      undefined,
+    );
+    const hash = 'a'.repeat(64);
+    expect(loadConfig({ ...base, MCP_HERMES_TOKEN_SHA256: hash }).MCP_HERMES_TOKEN_SHA256).toBe(
+      hash,
+    );
+    const token = 'token-mentah-bukan-hash-1234567890';
+    let error: unknown;
+    try {
+      loadConfig({ ...base, MCP_HERMES_TOKEN_SHA256: token });
+    } catch (err) {
+      error = err;
+    }
+    expect(String(error)).toMatch(/MCP_HERMES_TOKEN_SHA256/);
+    expect(String(error)).not.toContain(token);
+  });
+
   it('menganggap string kosong dari .env sebagai tidak diisi', () => {
     const c = loadConfig({ ...base, HERMES_API_KEY: '', PORT: '', LOG_LEVEL: ' ' });
     expect(c.HERMES_API_KEY).toBeUndefined();

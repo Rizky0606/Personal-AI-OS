@@ -86,6 +86,12 @@ class AppLinksTest {
     }
 
     @Test
+    fun `notifikasi usulan memori membuka layar Memori`() {
+        val data = mapOf("type" to "memory_proposal", "conversationId" to "c1", "proposalIds" to "p1,p2")
+        assertEquals(AppLink.OpenMemory, AppLinks.fromPush(data))
+    }
+
+    @Test
     fun `notifikasi jadwal membuka percakapan hasilnya, atau jadwalnya bila percakapan tidak ada`() {
         val withConversation = mapOf(
             "type" to "schedule.result",

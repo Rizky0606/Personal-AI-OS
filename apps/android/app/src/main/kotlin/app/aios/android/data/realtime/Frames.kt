@@ -64,6 +64,13 @@ sealed interface ServerEvent {
     /** Channel `user`: sebuah job riset selesai. */
     data class ResearchCompleted(val researchId: String, val runId: String?) : ServerEvent
 
+    /**
+     * Channel `user`: notifikasi umum. [topic] menandai jenis (mis. `memory_proposal` menyegarkan layar Memori,
+     * `agent_proposal` menyegarkan usulan agent); null untuk notifikasi biasa. Topik baru dibaca sebagai teks supaya
+     * tidak merusak penguraian. Judul/isi bisa memuat teks fakta dan tidak disimpan.
+     */
+    data class Notification(val topic: String?) : ServerEvent
+
     data class ArtifactCreated(
         val fileId: String,
         val name: String,
@@ -207,6 +214,7 @@ object Frames {
         "research.source" -> ServerEvent.ResearchSourceFound(e.str("sourceId"), e.str("url"), e.str("title"))
         "schedule.result" -> ServerEvent.ScheduleResult(e.str("scheduleId"), e.str("status"))
         "research.completed" -> ServerEvent.ResearchCompleted(e.str("researchId"), e["runId"]?.str())
+        "notification" -> ServerEvent.Notification(e["topic"]?.str())
         "todo.updated" -> ServerEvent.TodoUpdated(todoPhases(e["phases"]))
         "context.used" -> ServerEvent.ContextUsed(
             e.str("runId"),

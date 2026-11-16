@@ -1,6 +1,7 @@
 import { Link, useNavigate } from '@tanstack/react-router';
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
+import { ScheduleProposals } from '../agentProposals/AgentProposals';
 import { apiErrorMessage } from '../api/errors';
 import { useSchedules } from '../api/queries';
 import { useOnline } from '../app/hooks';
@@ -49,6 +50,7 @@ export function SchedulesScreen() {
         description={copy.schedules.description}
         actions={view === 'content' ? newButton : undefined}
       />
+      <ScheduleProposals />
       <StateView
         state={view}
         loadingLabel={copy.schedules.loading}

@@ -26,6 +26,7 @@ import {
 } from '../../db/schema/index.js';
 import { createAuthEnv, type AuthEnv } from '../../testing/auth-env.js';
 import { startFakeHermes, type FakeHermes } from '../../testing/fake-hermes.js';
+import { startFakeFcm, type FakeFcm } from '../../testing/fake-fcm.js';
 import { startMockServer, type MockServer } from '../../testing/mock-server.js';
 import { PENDING_MAX } from './extractor.js';
 
@@ -36,6 +37,8 @@ const DAILY_MAX = 3;
 
 let hermes: FakeHermes;
 let router: MockServer;
+/** FCM tiruan: setiap lingkungan punya satu HP Android ber-token, jadi satu push = satu pesan di `fcm.sent`. */
+let fcm: FakeFcm;
 /** Isi semua permintaan ke 9Router tiruan (judul otomatis juga lewat sini, dibedakan lewat prompt). */
 const routerBodies: string[] = [];
 let extractReply: (res: ServerResponse) => void;
@@ -49,6 +52,7 @@ const facts = (...items: object[]) => answer(JSON.stringify({ facts: items }));
 
 beforeAll(async () => {
   hermes = await startFakeHermes();
+  fcm = await startFakeFcm();
   hermes.onRequest((s) => {
     s.delta(`Baik, dicatat. ${ASSISTANT_MARKER}`);
     s.finish();
@@ -69,6 +73,7 @@ beforeAll(async () => {
 afterAll(async () => {
   await hermes.close();
   await router.close();
+  await fcm.close();
 });
 
 /** Satu lingkungan gateway per mode; tabel memori dan usulan dikosongkan tiap tes. */
@@ -79,9 +84,11 @@ function gateway(mode: 'off' | 'propose' | 'auto') {
       hermesUrl: hermes.url,
       ninerouterUrl: `${router.url}/v1`,
       memoryExtract: { mode, dailyMax: DAILY_MAX },
+      push: { baseUrl: fcm.baseUrl, account: fcm.account },
     });
     ctx.events = [];
     ctx.env.hub.subscribe('user', ({ event }) => void ctx.events.push(event as UserEvent));
+    await ctx.env.loginOk({ kind: 'android', name: 'HP', pushToken: `fcm-token-${mode}` });
   });
   afterAll(async () => {
     await ctx.env.close();
@@ -94,6 +101,7 @@ function gateway(mode: 'off' | 'propose' | 'auto') {
     routerBodies.length = 0;
     ctx.events.length = 0;
     ctx.env.extractScheduled.length = 0;
+    fcm.sent.length = 0;
     extractReply = facts();
     ctx.token = (await ctx.env.loginOk({ kind: 'desktop' })).accessToken;
   });
@@ -251,6 +259,43 @@ describe('mode propose', () => {
     );
     await send(g.env, g.token, BANDUNG);
     expect(await proposals(g.env, g.token)).toHaveLength(2);
+  });
+
+  it('push FCM: satu per giliran walau 2 usulan, hanya judul dan ID tanpa teks fakta; 0 fakta diterima = tanpa push', async () => {
+    extractReply = facts(BANDUNG_FACT, {
+      action: 'add',
+      text: 'Pemilik bekerja sebagai dokter gigi.',
+      evidence: 'kerja sebagai dokter gigi',
+    });
+    const sent = await send(g.env, g.token, BANDUNG);
+    await g.env.push.idle();
+    const pending = await proposals(g.env, g.token);
+    expect(pending).toHaveLength(2);
+    expect(fcm.sent).toHaveLength(1);
+    const [push] = fcm.sent;
+    expect(push!.token).toBe('fcm-token-propose');
+    expect(push!.notification).toEqual({ title: '2 usulan memori baru' });
+    expect(push!.data).toEqual({
+      type: 'memory_proposal',
+      conversationId: sent.conversationId,
+      proposalIds: expect.any(String) as string,
+    });
+    expect(push!.data.proposalIds!.split(',').sort()).toEqual(pending.map((p) => p.id).sort());
+    // Teks fakta, kutipan, dan pesan pemilik tidak pernah lewat Google.
+    expect(JSON.stringify(fcm.sent)).not.toMatch(/Bandung|dokter|tinggal/);
+
+    // Giliran berikutnya: model mengembalikan fakta yang sama (duplikat usulan menunggu) = 0 diterima.
+    fcm.sent.length = 0;
+    await send(g.env, g.token, BANDUNG, sent.conversationId);
+    await g.env.push.idle();
+    expect(extractCalls()).toHaveLength(2);
+    expect(fcm.sent).toEqual([]);
+
+    // Model tidak mengembalikan fakta sama sekali.
+    extractReply = facts();
+    await send(g.env, g.token, BANDUNG);
+    await g.env.push.idle();
+    expect(fcm.sent).toEqual([]);
   });
 
   it('batas harian panggilan model: setelah habis, model tidak dipanggil lagi sampai jendela 24 jam lewat', async () => {
@@ -546,6 +591,56 @@ describe('mode auto', () => {
     expect(undo.statusCode).toBe(409);
     expect(ProblemSchema.parse(undo.json()).code).toBe('proposal_not_undoable');
   });
+
+  it('status=review: pending ditambah auto_saved/undone 7 hari terakhir; urungkan tampil sebagai undone; tanpa push', async () => {
+    extractReply = facts(BANDUNG_FACT);
+    await send(g.env, g.token, BANDUNG);
+    await g.env.push.idle();
+    // Mode auto tidak mengirim push (bukan usulan yang menunggu keputusan).
+    expect(fcm.sent).toEqual([]);
+
+    const { db } = g.env.database.handle;
+    const old = new Date(g.env.clock.now - 8 * 24 * 60 * 60 * 1000);
+    const [stale] = await db
+      .insert(memoryProposals)
+      .values({
+        kind: 'add',
+        status: 'auto_saved',
+        text: 'Fakta lama',
+        evidence: 'x',
+        model: 'router-fast',
+        createdAt: old,
+        decidedAt: old,
+      })
+      .returning();
+    const [waiting] = await db
+      .insert(memoryProposals)
+      .values({ kind: 'add', text: 'Fakta menunggu', evidence: 'x', model: 'router-fast' })
+      .returning();
+    await db.insert(memoryProposals).values({
+      kind: 'add',
+      status: 'rejected',
+      text: 'Fakta ditolak',
+      evidence: 'x',
+      model: 'router-fast',
+    });
+
+    const review = await proposals(g.env, g.token, 'review');
+    const saved = review.find((p) => p.status === 'auto_saved');
+    expect(saved).toMatchObject({ text: 'Pemilik tinggal di Bandung.' });
+    expect(review.map((p) => p.id).sort()).toEqual([saved!.id, waiting!.id].sort());
+    expect(review.map((p) => p.id)).not.toContain(stale!.id);
+
+    const memoriesBefore = await memoryList(g.env, g.token);
+    expect(memoriesBefore.map((m) => m.id)).toEqual([saved!.resultMemoryId]);
+    expect((await act(g.env, g.token, saved!.id, 'undo')).statusCode).toBe(200);
+    expect(await memoryList(g.env, g.token)).toEqual([]);
+    const after = await proposals(g.env, g.token, 'review');
+    expect(after.find((p) => p.id === saved!.id)?.status).toBe('undone');
+    const again = await act(g.env, g.token, saved!.id, 'undo');
+    expect(again.statusCode).toBe(409);
+    expect(ProblemSchema.parse(again.json()).code).toBe('proposal_not_undoable');
+  });
 });
 
 describe('mode off', () => {
@@ -564,5 +659,7 @@ describe('mode off', () => {
       .from(memoryExtractions)
       .where(eq(memoryExtractions.conversationId, sent.conversationId));
     expect(rows).toEqual([]);
+    await g.env.push.idle();
+    expect(fcm.sent).toEqual([]);
   });
 });

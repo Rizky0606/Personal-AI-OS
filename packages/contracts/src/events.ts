@@ -365,9 +365,10 @@ export const NotificationEventSchema = z.object({
   level: z.enum(['info', 'warning', 'error']),
   /**
    * Penanda jenis agar klien dan push FCM hanya menangani yang relevan; absen untuk notifikasi biasa. `skill_report`
-   * dan `skill_proposal` (P11); `memory_proposal` = usulan memori baru atau memori yang disimpan otomatis dari chat.
+   * dan `skill_proposal` (P11); `memory_proposal` = usulan memori baru (ekstraksi atau tool `memory_propose`) atau memori
+   * yang disimpan otomatis dari chat; `agent_proposal` = usulan kartu atau jadwal dari agent (tool `aios_tools`).
    */
-  topic: z.enum(['skill_report', 'skill_proposal', 'memory_proposal']).optional(),
+  topic: z.enum(['skill_report', 'skill_proposal', 'memory_proposal', 'agent_proposal']).optional(),
 });
 
 export const UserEventSchema = z

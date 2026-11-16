@@ -471,6 +471,12 @@ const userCases: Record<UserEvent['type'], Cases> = {
         level: 'info',
         topic: 'memory_proposal',
       },
+      {
+        type: 'notification',
+        title: 'Agent mengusulkan kartu',
+        level: 'info',
+        topic: 'agent_proposal',
+      },
     ],
     invalid: [
       { type: 'notification', title: '', level: 'info' },
