@@ -165,6 +165,7 @@ export const copy = {
     splitColumn: 'Bagi ke bawah',
     close: 'Tutup pane',
     resize: 'Ubah ukuran pane',
+    switchTab: 'Ganti tab',
   },
   status: {
     connected: 'Tersambung',
@@ -1212,6 +1213,7 @@ export const copy = {
     },
     emptyThread: 'Tulis pesan di bawah. Agent dan skill dipilih otomatis.',
     loadOlder: 'Muat pesan lebih lama',
+    composerOptions: 'Opsi',
     composerLabel: 'Pesan',
     plan: {
       chip: 'Rencana dulu',

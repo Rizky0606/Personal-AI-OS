@@ -1,8 +1,10 @@
 import type { OrbState } from './AgentOrb';
 import type { ModelInfo } from '../api/gateway';
-import { ArrowUp, ChevronDown, Paperclip, Pencil, Square, X } from 'lucide-react';
+import { ArrowUp, ChevronDown, Paperclip, Pencil, Settings2, Square, X } from 'lucide-react';
 import type { PromptTemplate } from '@aios/contracts';
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
+import * as Dropdown from '@radix-ui/react-dropdown-menu';
+import { Check } from 'lucide-react';
 import { copy } from '../copy';
 import { cn } from '../lib/cn';
 import type { PendingFile } from './useFileAttachments';
@@ -10,8 +12,9 @@ import type { ContextAttachment } from '../state/uiStore';
 import { Button } from '../ui/Button';
 import { Chip, type ChipProps } from '../ui/Chip';
 import { IconButton } from '../ui/IconButton';
-import { CheckboxMenu, type CheckboxOption } from '../ui/CheckboxMenu';
+import { type CheckboxOption } from '../ui/CheckboxMenu';
 import { RadioMenu } from '../ui/RadioMenu';
+import { menuContentClass, menuItemClass } from '../ui/menuStyles';
 import { slashMatches } from '../templates/vars';
 import type { EngineChoice, EngineOption } from './engineChoice';
 
@@ -89,6 +92,130 @@ function Pill({ selected = false, className, children, type = 'button', ...props
     >
       {children}
     </button>
+  );
+}
+
+interface OptionsMenuProps {
+  planMode: boolean;
+  onPlanMode?: ((on: boolean) => void) | undefined;
+  teamMode: boolean;
+  onTeamMode?: ((on: boolean) => void) | undefined;
+  webSearch: boolean;
+  onWebSearch?: ((on: boolean) => void) | undefined;
+  skillPacks: readonly string[];
+  onSkillPacks?: ((ids: string[]) => void) | undefined;
+  skillOptions: CheckboxOption[];
+}
+
+/** Tombol Opsi tunggal: menggabungkan Rencana dulu, Kerjakan sebagai tim, Cari di web, dan Skill ke satu menu. */
+function OptionsMenu({
+  planMode,
+  onPlanMode,
+  teamMode,
+  onTeamMode,
+  webSearch,
+  onWebSearch,
+  skillPacks,
+  onSkillPacks,
+  skillOptions,
+}: OptionsMenuProps) {
+  const anyActive =
+    planMode || teamMode || webSearch || skillPacks.length > 0;
+  const hasSkills = onSkillPacks && skillOptions.length > 0;
+  const hasModes = onPlanMode || onTeamMode || onWebSearch;
+  return (
+    <Dropdown.Root>
+      <Dropdown.Trigger asChild>
+        <Pill selected={anyActive} title={copy.chat.composerOptions}>
+          <Settings2 size={12} strokeWidth={1.5} aria-hidden="true" />
+          {copy.chat.composerOptions}
+          <ChevronDown size={12} strokeWidth={1.5} aria-hidden="true" />
+        </Pill>
+      </Dropdown.Trigger>
+      <Dropdown.Portal>
+        <Dropdown.Content align="start" sideOffset={4} className={menuContentClass}>
+          {hasModes ? (
+            <>
+              {onPlanMode ? (
+                <Dropdown.CheckboxItem
+                  checked={planMode}
+                  onSelect={(e) => e.preventDefault()}
+                  onCheckedChange={(on) => onPlanMode(on)}
+                  className={menuItemClass}
+                  title={copy.chat.plan.chipHint}
+                >
+                  <span className="size-4 shrink-0">
+                    <Dropdown.ItemIndicator>
+                      <Check size={16} strokeWidth={1.5} aria-hidden="true" />
+                    </Dropdown.ItemIndicator>
+                  </span>
+                  <span className="min-w-0 flex-1 truncate">{copy.chat.plan.chip}</span>
+                </Dropdown.CheckboxItem>
+              ) : null}
+              {onTeamMode ? (
+                <Dropdown.CheckboxItem
+                  checked={teamMode}
+                  onSelect={(e) => e.preventDefault()}
+                  onCheckedChange={(on) => onTeamMode(on)}
+                  className={menuItemClass}
+                  title={copy.chat.team.chipHint}
+                >
+                  <span className="size-4 shrink-0">
+                    <Dropdown.ItemIndicator>
+                      <Check size={16} strokeWidth={1.5} aria-hidden="true" />
+                    </Dropdown.ItemIndicator>
+                  </span>
+                  <span className="min-w-0 flex-1 truncate">{copy.chat.team.chip}</span>
+                </Dropdown.CheckboxItem>
+              ) : null}
+              {onWebSearch ? (
+                <Dropdown.CheckboxItem
+                  checked={webSearch}
+                  onSelect={(e) => e.preventDefault()}
+                  onCheckedChange={(on) => onWebSearch(on)}
+                  className={menuItemClass}
+                  title={copy.chat.web.chipHint}
+                >
+                  <span className="size-4 shrink-0">
+                    <Dropdown.ItemIndicator>
+                      <Check size={16} strokeWidth={1.5} aria-hidden="true" />
+                    </Dropdown.ItemIndicator>
+                  </span>
+                  <span className="min-w-0 flex-1 truncate">{copy.chat.web.chip}</span>
+                </Dropdown.CheckboxItem>
+              ) : null}
+            </>
+          ) : null}
+          {hasModes && hasSkills ? (
+            <Dropdown.Separator className="my-1 h-px bg-border" />
+          ) : null}
+          {hasSkills
+            ? skillOptions.map((option) => (
+                <Dropdown.CheckboxItem
+                  key={option.value}
+                  checked={skillPacks.includes(option.value)}
+                  onSelect={(e) => e.preventDefault()}
+                  onCheckedChange={(on) =>
+                    onSkillPacks!(
+                      on
+                        ? [...skillPacks, option.value]
+                        : skillPacks.filter((v) => v !== option.value),
+                    )
+                  }
+                  className={menuItemClass}
+                >
+                  <span className="size-4 shrink-0">
+                    <Dropdown.ItemIndicator>
+                      <Check size={16} strokeWidth={1.5} aria-hidden="true" />
+                    </Dropdown.ItemIndicator>
+                  </span>
+                  <span className="min-w-0 flex-1 truncate">{option.label}</span>
+                </Dropdown.CheckboxItem>
+              ))
+            : null}
+        </Dropdown.Content>
+      </Dropdown.Portal>
+    </Dropdown.Root>
   );
 }
 
@@ -377,47 +504,17 @@ export function Composer({
                 }
               />
             )}
-            {onPlanMode ? (
-              <Pill
-                selected={planMode}
-                title={copy.chat.plan.chipHint}
-                onClick={() => onPlanMode(!planMode)}
-              >
-                {copy.chat.plan.chip}
-              </Pill>
-            ) : null}
-            {onTeamMode ? (
-              <Pill
-                selected={teamMode}
-                title={copy.chat.team.chipHint}
-                onClick={() => onTeamMode(!teamMode)}
-              >
-                {copy.chat.team.chip}
-              </Pill>
-            ) : null}
-            {onWebSearch ? (
-              <Pill
-                selected={webSearch}
-                title={copy.chat.web.chipHint}
-                onClick={() => onWebSearch(!webSearch)}
-              >
-                {copy.chat.web.chip}
-              </Pill>
-            ) : null}
-            {onSkillPacks ? (
-              <CheckboxMenu
-                label={copy.chat.skills.label}
-                values={skillPacks}
-                onValuesChange={onSkillPacks}
-                options={skillOptions}
-                trigger={
-                  <Pill selected={skillPacks.length > 0} title={copy.chat.skills.hint}>
-                    {skillPacks.length > 0
-                      ? copy.chat.skills.chipActive(skillPacks.length)
-                      : copy.chat.skills.chip}
-                    <ChevronDown size={12} strokeWidth={1.5} aria-hidden="true" />
-                  </Pill>
-                }
+            {(onPlanMode || onTeamMode || onWebSearch || onSkillPacks) ? (
+              <OptionsMenu
+                planMode={planMode}
+                onPlanMode={onPlanMode}
+                teamMode={teamMode}
+                onTeamMode={onTeamMode}
+                webSearch={webSearch}
+                onWebSearch={onWebSearch}
+                skillPacks={skillPacks}
+                onSkillPacks={onSkillPacks}
+                skillOptions={skillOptions}
               />
             ) : null}
             <span className="ml-auto flex items-center gap-1">

@@ -1,6 +1,8 @@
 import * as Tabs from '@radix-ui/react-tabs';
+import * as Dropdown from '@radix-ui/react-dropdown-menu';
 import {
   Activity,
+  ChevronDown,
   Columns2,
   Eye,
   FolderTree,
@@ -23,6 +25,7 @@ import { DiffPanel } from '../review/DiffPanel';
 import { useUiStore } from '../state/uiStore';
 import { TerminalPanel } from '../terminal/TerminalPanel';
 import { IconButton } from '../ui/IconButton';
+import { menuContentClass, menuItemClass } from '../ui/menuStyles';
 import { MAX_PANES, PANE_TABS, ROOT_ID, countPanes, type PaneNode, type PaneTab } from './tree';
 
 const KEY_STEP = 0.05;
@@ -62,6 +65,7 @@ function Leaf({ id, tab, canSplit, canClose }: LeafProps) {
   const setPaneTab = useUiStore((s) => s.setPaneTab);
   const splitPane = useUiStore((s) => s.splitPane);
   const closePane = useUiStore((s) => s.closePane);
+  const ActiveIcon = TAB_ICONS[tab];
   return (
     <Tabs.Root
       value={tab}
@@ -76,36 +80,61 @@ function Leaf({ id, tab, canSplit, canClose }: LeafProps) {
           if (value) setFocusedTab(value as PaneTab);
         }}
       >
-        <Tabs.List className="flex min-w-0 items-center gap-0.5 overflow-x-auto rounded-full bg-surface-2 p-1">
+        {/* Lebar ≥ 300px: semua tab tampil sebagai pill; lebar < 300px: satu pill aktif + dropdown */}
+        <Tabs.List className="@[300px]:flex hidden min-w-0 items-center gap-0.5 overflow-x-auto rounded-full bg-surface-2 p-1">
           {PANE_TABS.map((t) => {
             const Icon = TAB_ICONS[t];
-            return tab === t ? (
+            return (
               <Tabs.Trigger
                 key={t}
                 value={t}
                 data-pane-tab={t}
                 title={copy.shell.panels[t]}
                 onFocus={() => setFocusedTab(t)}
-                className="group inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-transparent px-2.5 text-ui text-text-2"
+                className="group inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-transparent px-2.5 text-ui text-text-2 data-[state=active]:bg-surface data-[state=active]:text-text data-[state=active]:shadow-sm"
               >
                 <Icon size={14} strokeWidth={1.5} aria-hidden="true" />
-                <span>{copy.shell.panels[t]}</span>
-              </Tabs.Trigger>
-            ) : (
-              <Tabs.Trigger
-                key={t}
-                value={t}
-                data-pane-tab={t}
-                title={copy.shell.panels[t]}
-                onFocus={() => setFocusedTab(t)}
-                className="group inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-transparent px-2.5 text-ui text-text-2"
-              >
-                <Icon size={14} strokeWidth={1.5} aria-hidden="true" />
-                <span className="sr-only">{copy.shell.panels[t]}</span>
+                <span className={tab === t ? undefined : 'sr-only'}>{copy.shell.panels[t]}</span>
               </Tabs.Trigger>
             );
           })}
         </Tabs.List>
+        {/* Lebar < 300px: compact — pill aktif + dropdown pilih tab lain */}
+        <div className="@[300px]:hidden flex min-w-0 items-center gap-1">
+          <div className="inline-flex h-7 items-center gap-1.5 rounded-full bg-surface-2 px-2.5 text-ui text-text">
+            <ActiveIcon size={14} strokeWidth={1.5} aria-hidden="true" />
+            <span className="max-w-24 truncate">{copy.shell.panels[tab]}</span>
+          </div>
+          <Dropdown.Root>
+            <Dropdown.Trigger asChild>
+              <button
+                type="button"
+                title={copy.panes.switchTab}
+                aria-label={copy.panes.switchTab}
+                className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-border bg-surface-2 text-text-2 transition-colors duration-[120ms] ease-aios hover:border-border-strong hover:text-text"
+              >
+                <ChevronDown size={12} strokeWidth={1.5} aria-hidden="true" />
+              </button>
+            </Dropdown.Trigger>
+            <Dropdown.Portal>
+              <Dropdown.Content align="start" sideOffset={4} className={menuContentClass}>
+                {PANE_TABS.map((t) => {
+                  const Icon = TAB_ICONS[t];
+                  return (
+                    <Dropdown.Item
+                      key={t}
+                      onSelect={() => setPaneTab(id, t)}
+                      className={cn(menuItemClass, tab === t && 'text-text font-medium')}
+                    >
+                      <Icon size={14} strokeWidth={1.5} aria-hidden="true" className="shrink-0" />
+                      <span className="min-w-0 flex-1 truncate">{copy.shell.panels[t]}</span>
+                    </Dropdown.Item>
+                  );
+                })}
+              </Dropdown.Content>
+            </Dropdown.Portal>
+          </Dropdown.Root>
+        </div>
         {focusedTab ? (
           <span role="tooltip" className="sr-only">
             {copy.shell.panels[focusedTab]}
