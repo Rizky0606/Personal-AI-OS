@@ -24,6 +24,9 @@
     <string name="activity_tool_data_running">Membaca data AIOS</string>
     <string name="activity_tool_data_done">Data AIOS dibaca</string>
     <string name="activity_tool_data_noun">Pembacaan data AIOS</string>
+    <string name="activity_tool_propose_running">Membuat usulan</string>
+    <string name="activity_tool_propose_done">Usulan dibuat</string>
+    <string name="activity_tool_propose_noun">Pembuatan usulan</string>
     <string name="activity_tool_browser_running">Membuka halaman</string>
     <string name="activity_tool_browser_done">Halaman dibuka</string>
     <string name="activity_tool_browser_noun">Pembukaan halaman</string>

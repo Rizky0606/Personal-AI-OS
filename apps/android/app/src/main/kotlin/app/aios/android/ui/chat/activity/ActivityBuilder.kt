@@ -25,6 +25,7 @@ enum class ToolKind(val id: String) {
     Search("search"),
     Web("web"),
     Data("data"),
+    Propose("propose"),
     Browser("browser"),
     Subagent("subagent"),
     Plan("plan")
@@ -94,11 +95,19 @@ internal fun kindOf(name: String): ToolKind? {
     TOOL_KINDS[key]?.let { return it }
     if (key.startsWith("browser_")) return ToolKind.Browser
     val gatewayTool = aiosToolOf(key) ?: return null
-    return if (gatewayTool in AIOS_NETWORK_TOOLS) ToolKind.Web else ToolKind.Data
+    return when (gatewayTool) {
+        in AIOS_NETWORK_TOOLS -> ToolKind.Web
+        in AIOS_PROPOSE_TOOLS -> ToolKind.Propose
+        else -> ToolKind.Data
+    }
 }
 
 private val AIOS_NETWORK_TOOLS = setOf("web_search", "web_read")
-private val AIOS_TOOL_NAMES = AIOS_NETWORK_TOOLS + setOf("memory_list", "space_search", "task_list", "schedule_list")
+
+/** Tool usulan: agent hanya membuat usulan yang ditinjau pemilik. Cermin `AIOS_PROPOSE_TOOLS` di contracts. */
+private val AIOS_PROPOSE_TOOLS = setOf("memory_propose", "task_propose", "schedule_propose")
+private val AIOS_TOOL_NAMES = AIOS_NETWORK_TOOLS + AIOS_PROPOSE_TOOLS +
+    setOf("memory_list", "space_search", "task_list", "schedule_list")
 
 /**
  * Nama tool gateway (server MCP `aios_tools`) bila [name] salah satunya, selain itu null. omp menamai

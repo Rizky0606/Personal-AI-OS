@@ -42,6 +42,7 @@ fun SettingsScreen(
     onOpenCatalog: () -> Unit,
     onOpenMemory: () -> Unit,
     onOpenSkills: () -> Unit,
+    onOpenAgentProposals: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val session by viewModel.session.collectAsStateWithLifecycle()
@@ -102,6 +103,16 @@ fun SettingsScreen(
                 supporting = stringResource(R.string.skills_settings_supporting),
                 showDivider = false,
                 onClick = onOpenSkills
+            )
+        }
+
+        Section(R.string.agent_proposals_title)
+        Group {
+            AiosListItem(
+                title = stringResource(R.string.agent_proposals_settings_item),
+                supporting = stringResource(R.string.agent_proposals_settings_supporting),
+                showDivider = false,
+                onClick = onOpenAgentProposals
             )
         }
 

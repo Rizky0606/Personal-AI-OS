@@ -78,6 +78,7 @@ import app.aios.android.ui.components.Hairline
 import app.aios.android.ui.components.NavBarItem
 import app.aios.android.ui.memory.MemoryScreen
 import app.aios.android.ui.skills.SkillsScreen
+import app.aios.android.ui.proposals.AgentProposalsScreen
 import app.aios.android.ui.spaces.SpaceDetailScreen
 import app.aios.android.ui.spaces.SpaceListScreen
 import app.aios.android.ui.settings.SettingsScreen
@@ -97,6 +98,7 @@ private object Routes {
     const val SETTINGS = "settings"
     const val MEMORY = "settings/memory"
     const val SKILLS = "settings/skills"
+    const val AGENT_PROPOSALS = "settings/agent-proposals"
 }
 
 private data class Tab(val route: String, @StringRes val label: Int, @DrawableRes val icon: Int)
@@ -336,11 +338,13 @@ fun MainScreen(online: Boolean, sessionKey: String, link: AppLink?, onLinkConsum
                         SettingsScreen(
                             onOpenCatalog = { nav.navigate(DebugFeatures.ROUTE) },
                             onOpenMemory = { nav.navigate(Routes.MEMORY) },
-                            onOpenSkills = { nav.navigate(Routes.SKILLS) }
+                            onOpenSkills = { nav.navigate(Routes.SKILLS) },
+                            onOpenAgentProposals = { nav.navigate(Routes.AGENT_PROPOSALS) }
                         )
                     }
                     composable(Routes.MEMORY) { MemoryScreen(online = online, snackbar = snackbar) }
                     composable(Routes.SKILLS) { SkillsScreen(online = online, snackbar = snackbar) }
+                    composable(Routes.AGENT_PROPOSALS) { AgentProposalsScreen(online = online, snackbar = snackbar) }
                     debugRoutes()
                 }
             }
@@ -366,6 +370,7 @@ private fun titleFor(route: String): Int = when (route) {
     Routes.SETTINGS -> R.string.settings_title
     Routes.MEMORY -> R.string.memory_title
     Routes.SKILLS -> R.string.skills_title
+    Routes.AGENT_PROPOSALS -> R.string.agent_proposals_title
     DebugFeatures.ROUTE -> R.string.catalog_title
     else -> R.string.nav_chat
 }
