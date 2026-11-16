@@ -91,6 +91,7 @@
     <string name="progress_previous_steps">%1$d langkah sebelumnya</string>
     <string name="progress_empty">Belum ada progres untuk percakapan ini.</string>
     <string name="progress_used_memory">Dibaca · %1$d fakta</string>
+    <string name="progress_used_memory_of">Dibaca · %1$d dari %2$d fakta</string>
     <string name="progress_used_engine_model">%1$s · %2$s</string>
 
     <!-- Tentang (Pengaturan) -->

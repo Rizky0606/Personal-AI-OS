@@ -12,7 +12,12 @@ interface MemoryRepository {
 
     suspend fun create(text: String): Memory
 
-    suspend fun update(id: String, text: String? = null, enabled: Boolean? = null): Memory
+    suspend fun update(
+        id: String,
+        text: String? = null,
+        enabled: Boolean? = null,
+        pinned: Boolean? = null
+    ): Memory
 
     suspend fun delete(id: String)
 }
@@ -22,8 +27,8 @@ class RemoteMemoryRepository(private val api: MemoryApi) : MemoryRepository {
 
     override suspend fun create(text: String) = api.create(CreateMemoryRequest(text.trim()))
 
-    override suspend fun update(id: String, text: String?, enabled: Boolean?) =
-        api.update(id, UpdateMemoryRequest(text?.trim(), enabled))
+    override suspend fun update(id: String, text: String?, enabled: Boolean?, pinned: Boolean?) =
+        api.update(id, UpdateMemoryRequest(text?.trim(), enabled, pinned))
 
     override suspend fun delete(id: String) {
         val response = api.delete(id)

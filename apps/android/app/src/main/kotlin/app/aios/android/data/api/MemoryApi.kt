@@ -20,7 +20,9 @@ data class Memory(
     val text: String,
     val enabled: Boolean,
     val createdAt: String,
-    val updatedAt: String
+    val updatedAt: String,
+    /** Tersemat: selalu ikut ke pesan sistem. Bawaan false untuk server lama tanpa field ini. */
+    val pinned: Boolean = false
 )
 
 @Serializable
@@ -30,7 +32,11 @@ data class MemoryList(val items: List<Memory>)
 data class CreateMemoryRequest(val text: String)
 
 @Serializable
-data class UpdateMemoryRequest(val text: String? = null, val enabled: Boolean? = null)
+data class UpdateMemoryRequest(
+    val text: String? = null,
+    val enabled: Boolean? = null,
+    val pinned: Boolean? = null
+)
 
 interface MemoryApi {
     @GET("memories")

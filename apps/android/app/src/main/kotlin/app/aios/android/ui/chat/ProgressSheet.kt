@@ -154,8 +154,14 @@ private fun UsedSection(view: ProgressView) {
             )
         }
         if (used.memoryRead > 0) {
+            // "N dari M" hanya bila sebagian memori aktif tidak ikut (recall di atas anggaran).
+            val total = used.memoryTotal?.takeIf { it > used.memoryRead }
             Text(
-                stringResource(R.string.progress_used_memory, used.memoryRead),
+                if (total != null) {
+                    stringResource(R.string.progress_used_memory_of, used.memoryRead, total)
+                } else {
+                    stringResource(R.string.progress_used_memory, used.memoryRead)
+                },
                 style = AiosTheme.type.ui,
                 color = colors.text2
             )

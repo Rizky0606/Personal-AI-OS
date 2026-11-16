@@ -37,6 +37,8 @@ data class ProgressUsed(
     val uploads: List<Pair<String, String>> = emptyList(),
     val skills: List<String> = emptyList(),
     val memoryRead: Int = 0,
+    /** Memori aktif saat dipilih; null pada data lama. Lebih besar dari [memoryRead] = sebagian tidak ikut. */
+    val memoryTotal: Int? = null,
     val memoryItems: List<Pair<String, String>> = emptyList(),
     val engine: String? = null,
     val model: String? = null,
@@ -193,6 +195,7 @@ fun buildProgress(
         uploads = uploads,
         skills = union(base?.skills.orEmpty(), context?.skills.orEmpty()) { it },
         memoryRead = context?.memory?.read ?: base?.memory?.read ?: 0,
+        memoryTotal = if (context != null) context.memory.total else base?.memory?.total,
         memoryItems = memoryItems,
         engine = context?.engine ?: base?.engine,
         model = context?.model ?: base?.model,
