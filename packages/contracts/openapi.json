@@ -1134,7 +1134,8 @@
                 "type": "string",
                 "enum": [
                   "skill_report",
-                  "skill_proposal"
+                  "skill_proposal",
+                  "memory_proposal"
                 ]
               }
             },
@@ -2320,7 +2321,8 @@
                 "type": "string",
                 "enum": [
                   "skill_report",
-                  "skill_proposal"
+                  "skill_proposal",
+                  "memory_proposal"
                 ]
               }
             },
@@ -8469,6 +8471,38 @@
             "type": "boolean",
             "default": false
           },
+          "source": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "extracted"
+            ],
+            "default": "owner"
+          },
+          "origin": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "conversationId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "messageId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              }
+            },
+            "default": null,
+            "required": [
+              "conversationId",
+              "messageId"
+            ]
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -8515,6 +8549,143 @@
           },
           "pinned": {
             "type": "boolean"
+          }
+        }
+      },
+      "MemoryProposalList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemoryProposal"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "MemoryProposal": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "add",
+              "update"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "approved",
+              "rejected",
+              "auto_saved",
+              "undone"
+            ]
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "evidence": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "targetMemoryId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "targetText": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "previousText": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "resultMemoryId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "conversationId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "messageId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "runId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "model": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "decidedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "status",
+          "text",
+          "evidence",
+          "targetMemoryId",
+          "targetText",
+          "previousText",
+          "resultMemoryId",
+          "conversationId",
+          "messageId",
+          "runId",
+          "model",
+          "createdAt",
+          "decidedAt"
+        ]
+      },
+      "ApproveMemoryProposalRequest": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
           }
         }
       },
@@ -16359,7 +16530,7 @@
         "tags": [
           "Memori"
         ],
-        "summary": "Daftar memori, terlama dulu",
+        "summary": "Daftar memori, terlama dulu (usulan memori tidak pernah muncul di sini)",
         "security": [
           {
             "bearerAuth": []
@@ -16635,6 +16806,370 @@
           },
           "404": {
             "description": "Tidak ditemukan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memories/proposals": {
+      "get": {
+        "operationId": "listMemoryProposals",
+        "tags": [
+          "Memori"
+        ],
+        "summary": "Usulan memori dari ekstraksi fakta di chat umum, terbaru dulu (maks 200). Tanpa query hanya yang menunggu; `status=all` semuanya",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "approved",
+                "rejected",
+                "auto_saved",
+                "undone",
+                "all"
+              ]
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daftar usulan memori",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryProposalList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Permintaan tidak valid",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Belum login atau token tidak berlaku",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token tidak punya scope yang dibutuhkan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memories/proposals/{id}/approve": {
+      "post": {
+        "operationId": "approveMemoryProposal",
+        "tags": [
+          "Memori"
+        ],
+        "summary": "Setujui usulan yang menunggu: `add` menjadi memori baru (source extracted, asal percakapan), `update` mengganti teks memori target. `text` opsional untuk menyunting dulu. Klaim atomik: persetujuan kedua mendapat 409",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveMemoryProposalRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Usulan yang disetujui",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryProposal"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Permintaan tidak valid",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Belum login atau token tidak berlaku",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token tidak punya scope yang dibutuhkan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tidak ditemukan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Konflik dengan status saat ini",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memories/proposals/{id}/reject": {
+      "post": {
+        "operationId": "rejectMemoryProposal",
+        "tags": [
+          "Memori"
+        ],
+        "summary": "Tolak usulan yang menunggu. Fakta yang ditolak tidak diusulkan lagi (90 hari)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Usulan ditolak",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryProposal"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Belum login atau token tidak berlaku",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token tidak punya scope yang dibutuhkan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tidak ditemukan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Konflik dengan status saat ini",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memories/proposals/{id}/undo": {
+      "post": {
+        "operationId": "undoMemoryProposal",
+        "tags": [
+          "Memori"
+        ],
+        "summary": "Urungkan memori yang disimpan otomatis (status auto_saved): memori hasil dihapus atau teks lama memori target dikembalikan. Fakta itu tidak diusulkan lagi (90 hari)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Usulan diurungkan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryProposal"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Belum login atau token tidak berlaku",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token tidak punya scope yang dibutuhkan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tidak ditemukan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Konflik dengan status saat ini",
             "content": {
               "application/problem+json": {
                 "schema": {

@@ -1,5 +1,6 @@
 import type { Memory } from '@aios/contracts';
 import { MEMORY_TEXT_MAX } from '@aios/contracts';
+import { Link } from '@tanstack/react-router';
 import { Pin } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { apiErrorMessage } from '../api/errors';
@@ -13,11 +14,13 @@ import { StateView, type ViewState } from '../ui/StateView';
 import { Switch } from '../ui/Switch';
 import { TextArea } from '../ui/TextArea';
 import { enterDelay } from '../screens/PageLayout';
+import { MemoryProposals } from './MemoryProposals';
 import { useMemoryActions } from './useMemoryActions';
 
 /**
  * Memori yang terlihat (W17): fakta tentang pemilik yang dipilih per pesan untuk pesan sistem. Bisa ditambah,
- * diubah di tempat, disematkan (selalu ikut), dinonaktifkan tanpa dihapus, atau dihapus.
+ * diubah di tempat, disematkan (selalu ikut), dinonaktifkan tanpa dihapus, atau dihapus. Usulan dari ekstraksi fakta
+ * di chat umum tampil di atas daftar; memori yang berasal dari percakapan menautkan ke percakapan itu.
  */
 export function MemorySection() {
   const query = useMemories();
@@ -81,6 +84,13 @@ export function MemorySection() {
           </Button>
         </div>
       </div>
+
+      <MemoryProposals
+        online={online}
+        disabled={!online || actions.busy !== null}
+        onApprove={(id, text) => actions.approveProposal(id, text)}
+        onReject={(id) => void actions.rejectProposal(id)}
+      />
 
       <StateView
         state={view}
@@ -204,6 +214,19 @@ function MemoryRow({ memory, index, disabled, onToggle, onPin, onSave, onDelete 
                 <Pin size={12} strokeWidth={1.5} aria-hidden="true" />
                 {m.pinnedBadge}
               </span>
+            ) : null}
+            {memory.source === 'extracted' ? (
+              memory.origin ? (
+                <Link
+                  to="/chat/$conversationId"
+                  params={{ conversationId: memory.origin.conversationId }}
+                  className="self-start text-meta text-info underline underline-offset-2"
+                >
+                  {m.fromConversation}
+                </Link>
+              ) : (
+                <span className="text-meta text-text-3">{m.fromDeletedConversation}</span>
+              )
             ) : null}
           </div>
           <Switch

@@ -38,6 +38,29 @@ data class UpdateMemoryRequest(
     val pinned: Boolean? = null
 )
 
+/**
+ * Usulan memori dari ekstraksi fakta di chat umum (MemoryProposalSchema). Hanya field yang dipakai layar; field lain
+ * diabaikan (ignoreUnknownKeys).
+ */
+@Serializable
+data class MemoryProposal(
+    val id: String,
+    /** `add` atau `update`. */
+    val kind: String,
+    val text: String,
+    /** Kutipan pesan pemilik yang menjadi dasar fakta. */
+    val evidence: String,
+    /** Teks memori yang akan diganti (kind = update). */
+    val targetText: String? = null
+)
+
+@Serializable
+data class MemoryProposalList(val items: List<MemoryProposal>)
+
+/** Badan setuju; `text` hanya untuk menyunting dulu (Android tidak menyunting, jadi selalu kosong). */
+@Serializable
+data class ApproveMemoryProposalRequest(val text: String? = null)
+
 interface MemoryApi {
     @GET("memories")
     suspend fun list(): MemoryList
@@ -50,4 +73,14 @@ interface MemoryApi {
 
     @DELETE("memories/{id}")
     suspend fun delete(@Path("id") id: String): Response<Unit>
+
+    /** Tanpa query: hanya usulan yang menunggu. */
+    @GET("memories/proposals")
+    suspend fun proposals(): MemoryProposalList
+
+    @POST("memories/proposals/{id}/approve")
+    suspend fun approveProposal(@Path("id") id: String, @Body body: ApproveMemoryProposalRequest): MemoryProposal
+
+    @POST("memories/proposals/{id}/reject")
+    suspend fun rejectProposal(@Path("id") id: String): MemoryProposal
 }

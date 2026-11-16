@@ -6,8 +6,11 @@ import { memories } from '../../db/schema/index.js';
 import { AppError } from '../../errors.js';
 import { createMemoryRecaller, type MemoryRecall, type RecallSelection } from './recall.js';
 
-/** Batas jumlah memori: daftar yang dikelola pemilik harus tetap ringkas. */
-export const MAX_MEMORIES = 200;
+/**
+ * Batas jumlah memori. Pesan sistem dijaga anggaran recall, jadi batas ini hanya menjaga daftar tetap bisa dikelola
+ * (naik dari 200 ke 1.000 bersama ekstraksi fakta, docs/DESIGN_MEMORI_SEMANTIK.md 4.4).
+ */
+export const MAX_MEMORIES = 1000;
 
 export interface MemoryService {
   list(): Promise<Memory[]>;
@@ -27,25 +30,39 @@ export interface MemoryService {
   select(text: string): Promise<RecallSelection & { total: number }>;
 }
 
-const columns = {
+export const memoryColumns = {
   id: memories.id,
   text: memories.text,
   enabled: memories.enabled,
   pinned: memories.pinned,
+  source: memories.source,
+  sourceConversationId: memories.sourceConversationId,
+  sourceMessageId: memories.sourceMessageId,
   createdAt: memories.createdAt,
   updatedAt: memories.updatedAt,
 };
 
-type MemoryRow = Pick<typeof memories.$inferSelect, keyof typeof columns>;
+type MemoryRow = Pick<typeof memories.$inferSelect, keyof typeof memoryColumns>;
 
-const toMemoryDto = (row: MemoryRow): Memory => ({
+export const toMemoryDto = (row: MemoryRow): Memory => ({
   id: row.id,
   text: row.text,
   enabled: row.enabled,
   pinned: row.pinned,
+  source: row.source,
+  origin: row.sourceConversationId
+    ? { conversationId: row.sourceConversationId, messageId: row.sourceMessageId }
+    : null,
   createdAt: row.createdAt.toISOString(),
   updatedAt: row.updatedAt.toISOString(),
 });
+
+export const memoryLimitReached = () =>
+  new AppError(
+    409,
+    'memory_limit',
+    `Memori sudah ${MAX_MEMORIES}. Hapus yang tidak dipakai sebelum menambah yang baru.`,
+  );
 
 const notFound = () => new AppError(404, 'memory_not_found', 'Memori tidak ditemukan.');
 
@@ -67,7 +84,7 @@ export function createMemoryService(deps: {
   return {
     async list() {
       const rows = await db
-        .select(columns)
+        .select(memoryColumns)
         .from(memories)
         .orderBy(asc(memories.createdAt), asc(memories.id));
       return rows.map(toMemoryDto);
@@ -75,17 +92,11 @@ export function createMemoryService(deps: {
 
     async create({ text, pinned }) {
       const [total] = await db.select({ n: count() }).from(memories);
-      if ((total?.n ?? 0) >= MAX_MEMORIES) {
-        throw new AppError(
-          409,
-          'memory_limit',
-          `Memori sudah ${MAX_MEMORIES}. Hapus yang tidak dipakai sebelum menambah yang baru.`,
-        );
-      }
+      if ((total?.n ?? 0) >= MAX_MEMORIES) throw memoryLimitReached();
       const [row] = await db
         .insert(memories)
         .values({ text, ...(pinned !== undefined ? { pinned } : {}) })
-        .returning(columns);
+        .returning(memoryColumns);
       return toMemoryDto(row!);
     },
 
@@ -98,7 +109,7 @@ export function createMemoryService(deps: {
           ...(patch.pinned !== undefined ? { pinned: patch.pinned } : {}),
         })
         .where(eq(memories.id, id))
-        .returning(columns);
+        .returning(memoryColumns);
       if (!row) throw notFound();
       return toMemoryDto(row);
     },

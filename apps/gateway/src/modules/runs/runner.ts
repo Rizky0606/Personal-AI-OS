@@ -81,6 +81,11 @@ export interface LaunchInput {
    * konteks ruang, atau konteks tambahan. Kosong = hanya memori tersemat dan terbaru yang bisa terpilih.
    */
   recallText?: string;
+  /**
+   * Pesan ini ditulis pemilik di chat umum (POST /conversations/:id/messages atau edit), bukan jadwal, kanban,
+   * fleet, tim, atau revisi: hanya run seperti ini yang boleh menjadi sumber ekstraksi fakta memori.
+   */
+  extract?: boolean;
   /** Project percakapan ini; wajib untuk role yang berjalan di worker (omp). */
   projectId: string | null;
   /** Revisi setelah komentar review: melanjutkan worktree dan branch run ini. */
@@ -183,6 +188,11 @@ export interface RunnerDeps {
       };
     }>;
   };
+  /**
+   * Ekstraksi fakta memori: dijadwalkan setelah run chat umum dari pesan pemilik selesai sukses. Galat hanya dicatat;
+   * hasil run tidak pernah berubah karenanya.
+   */
+  memoryExtract?: { schedule(conversationId: string): Promise<void> };
   /** Folder kiriman: berkas buatan agent di server ditempel ke jawaban saat run chat selesai. */
   outbox?: {
     promptFor(runId: string): string;
@@ -773,6 +783,15 @@ export function createRunner(deps: RunnerDeps): Runner {
         status = finalStatus;
         hub.publishLive(`conversation:${input.conversationId}`, stored.event);
         deps.observer?.notify(run.id);
+        // Ekstraksi fakta memori (chat umum, pesan pemilik): hanya dijadwalkan setelah run final, jadi apa pun
+        // yang terjadi di sana tidak bisa mengubah hasil run ini.
+        if (input.extract && !coding && !input.projectId && deps.memoryExtract) {
+          await deps.memoryExtract
+            .schedule(input.conversationId)
+            .catch((err: unknown) =>
+              log?.warn({ err, runId: run.id }, 'ekstraksi memori gagal dijadwalkan'),
+            );
+        }
       } else if (ctl.cancelled) {
         await saveText();
         await advance('cancelled', { usage });

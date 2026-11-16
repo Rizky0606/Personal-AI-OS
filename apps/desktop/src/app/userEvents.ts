@@ -29,6 +29,10 @@ export function handleUserEvent(event: ServerEvent, queryClient: QueryClient): v
       } else if (event.topic === 'skill_report') {
         void queryClient.invalidateQueries({ queryKey: ['skills'] });
         void queryClient.invalidateQueries({ queryKey: ['skillCurator'] });
+      } else if (event.topic === 'memory_proposal') {
+        // Usulan memori baru (mode propose) atau memori yang disimpan otomatis (mode auto).
+        void queryClient.invalidateQueries({ queryKey: ['memoryProposals'] });
+        void queryClient.invalidateQueries({ queryKey: ['memories'] });
       }
       if (event.level === 'info' && !useUiStore.getState().inAppToasts) break;
       useToastStore.getState().push(event.title, event.level === 'info' ? 'info' : 'danger');

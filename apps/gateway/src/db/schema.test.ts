@@ -47,6 +47,8 @@ const DOCUMENTED_TABLES = [
   'routing_decisions',
   'audit_log',
   'memories',
+  'memory_proposals',
+  'memory_extractions',
   'prompt_templates',
   'catalog_skills',
   'catalog_skill_versions',

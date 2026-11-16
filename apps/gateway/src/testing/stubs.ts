@@ -53,6 +53,15 @@ export const unusedMemory: AppDeps['memory'] = {
   recall: unused('memory.recall'),
   select: unused('memory.select'),
 };
+export const unusedMemoryProposals: AppDeps['memoryProposals'] = {
+  mode: 'off',
+  schedule: unused('memoryProposals.schedule'),
+  extract: unused('memoryProposals.extract'),
+  list: unused('memoryProposals.list'),
+  approve: unused('memoryProposals.approve'),
+  reject: unused('memoryProposals.reject'),
+  undo: unused('memoryProposals.undo'),
+};
 export const unusedTemplates: AppDeps['templates'] = {
   list: unused('templates.list'),
   create: unused('templates.create'),

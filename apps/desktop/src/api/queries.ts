@@ -105,6 +105,8 @@ export const useSkillProposals = (params: ProposalQuery = {}) =>
   });
 
 export const useMemories = () => useQuery({ queryKey: ['memories'], queryFn: api.listMemories });
+export const useMemoryProposals = () =>
+  useQuery({ queryKey: ['memoryProposals'], queryFn: api.listMemoryProposals });
 
 /** Run coding untuk Ruang Kerja; dimuat ulang tiap 5 detik selama ada run yang belum final. */
 export const useWorkspaceRuns = () =>

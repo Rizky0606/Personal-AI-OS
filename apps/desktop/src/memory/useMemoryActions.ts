@@ -7,8 +7,8 @@ import { copy } from '../copy';
 import { useToastStore } from '../ui/Toaster';
 
 /**
- * Tambah, ubah, aktif/nonaktif, sematkan, dan hapus memori. Kesalahan jadi toast dan aksi mengembalikan false, supaya
- * editor atau dialog tetap terbuka dan isian tidak hilang.
+ * Tambah, ubah, aktif/nonaktif, sematkan, dan hapus memori, plus setujui/tolak usulan memori dari chat. Kesalahan
+ * jadi toast dan aksi mengembalikan false, supaya editor atau dialog tetap terbuka dan isian tidak hilang.
  */
 export function useMemoryActions() {
   const queryClient = useQueryClient();
@@ -21,7 +21,10 @@ export function useMemoryActions() {
       setBusy(key);
       try {
         await work();
-        await queryClient.invalidateQueries({ queryKey: ['memories'] });
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['memories'] }),
+          queryClient.invalidateQueries({ queryKey: ['memoryProposals'] }),
+        ]);
         if (done) push(done);
         return true;
       } catch (error) {
@@ -45,5 +48,9 @@ export function useMemoryActions() {
     setPinned: (id: string, pinned: boolean) =>
       guarded(`pin:${id}`, () => api.updateMemory(id, { pinned }), pinned ? m.pinned : m.unpinned),
     remove: (id: string) => guarded(`remove:${id}`, () => api.deleteMemory(id), m.removed),
+    approveProposal: (id: string, text?: string) =>
+      guarded(`proposal:${id}`, () => api.approveMemoryProposal(id, text), m.proposalApproved),
+    rejectProposal: (id: string) =>
+      guarded(`proposal:${id}`, () => api.rejectMemoryProposal(id), m.proposalRejected),
   };
 }

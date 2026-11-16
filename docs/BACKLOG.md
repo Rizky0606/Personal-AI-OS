@@ -7,7 +7,12 @@ Ide di luar scope prompt saat ini dan perbedaan temuan verifikasi terhadap asums
 Slice 1 (recall beranggaran leksikal + memori tersemat) selesai di cabang `feat/memori-semantik`. Angka `pnpm --filter @aios/gateway eval:memory` saat slice 1 selesai (anggaran evaluasi 1.500, top-k 12): `lexical` recall@12 64,7% (cocok kata 100%, susulan 100%, parafrase 12,5%, lintas bahasa 16,7%), kueri negatif yang mendapat fakta cocok kata 33,3%; `all` menyuntik ±3.200 karakter. Tersisa:
 
 - [ ] Slice 2: embedding dan recall hibrida untuk memori (tabel `embeddings`, klien `/embeddings` 9Router, backfill pg-boss, RRF); butuh koneksi embedding di 9Router untuk dinyalakan.
-- [ ] Slice 3: ekstraksi fakta menjadi usulan memori (`memory_proposals`, mode `off`/`propose`/`auto`, penjaga injeksi dan rahasia, UI usulan desktop dan Android); `MAX_MEMORIES` naik ke 1.000 di slice ini.
+- [x] Slice 3: ekstraksi fakta menjadi usulan memori (`memory_proposals`, mode `off`/`propose`/`auto`, penjaga injeksi dan rahasia, UI usulan desktop dan Android); `MAX_MEMORIES` naik ke 1.000. Cabang `feat/memori-ekstraksi`, bawaan `MEMORY_EXTRACT_MODE=off`.
+- [ ] Ekstraksi: belum ada set evaluasi ±30 giliran berlabel (precision/recall, nol lolos dari kelompok injeksi/rahasia) lewat model sungguhan; perlu sebelum menyarankan `auto`.
+- [ ] Ekstraksi: urungkan untuk mode `auto` baru ada di REST (`POST /memories/proposals/:id/undo`); desktop dan Android belum punya tombol/snackbar Urungkan, dan Android tidak bisa menyunting usulan sebelum disimpan.
+- [ ] Ekstraksi: notifikasi `memory_proposal` tidak dikirim lewat push FCM (hanya WebSocket); Android belum menyegarkan layar Memori saat notifikasi datang.
+- [ ] Ekstraksi: memori internal Hermes tetap berjalan berdampingan (keputusan terbuka 5 di desain).
+- [ ] Ekstraksi: E2E Playwright (`e2e/tests/memory.spec.ts`, model palsu di `e2e/harness/fakes.ts`) belum diperluas untuk usulan.
 - [ ] Slice 4: ruang pengetahuan hibrida (`SPACES_VECTOR`).
 - [ ] Slice 5 (opsional): pencarian riwayat hibrida.
 - [ ] Android belum menampilkan cara pemilihan (`mode`) dan alasan per fakta (`via`) di lembar Progres; hanya "N dari M". DTO Android baru membaca `total`.
@@ -494,7 +499,7 @@ Isi ditulis sendiri sebagai ringkasan prinsip, bukan salinan; dibaca dari halama
 
 - **Memori milik gateway, terpisah dari memori internal Hermes.** VERIFICATION.md hanya mencatat cakupan memori Hermes lewat header `X-Hermes-Session-Key`, tanpa API untuk membaca isinya, jadi memori Hermes tidak ditampilkan. Memori gateway disuntik ke pesan sistem setiap run (chat dan coding) setelah bundel role, dihitung per run.
 - Memori hanya diisi pemilik (tambah manual atau "Ingat" pada pesan sendiri); AI tidak menulis memori otomatis. Ide lanjutan: usulan memori dari AI yang harus dikonfirmasi pemilik.
-- Batas 200 memori × 500 karakter menjaga pesan sistem tetap pendek; belum ada penghitungan token.
+- Batas 1.000 memori × 500 karakter; panjang pesan sistem dijaga anggaran recall, belum ada penghitungan token.
 - Riset (pipeline terpisah) belum memakai memori.
 
 ## Temuan Fase 27–28 (briefing pagi, jadwal yang ingat)

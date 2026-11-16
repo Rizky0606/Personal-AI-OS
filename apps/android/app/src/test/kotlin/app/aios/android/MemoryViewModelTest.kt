@@ -3,6 +3,7 @@ package app.aios.android
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.aios.android.data.api.Memory
+import app.aios.android.data.api.MemoryProposal
 import app.aios.android.data.memory.MemoryRepository
 import app.aios.android.ui.memory.MemoryEvent
 import app.aios.android.ui.memory.MemoryViewModel
@@ -34,10 +35,15 @@ import java.io.IOException
 
 private fun memory(id: String, text: String = "fakta $id", enabled: Boolean = true) = Memory(id, text, enabled, TS, TS)
 
+private fun proposal(id: String, text: String = "Pemilik tinggal di Bandung.") =
+    MemoryProposal(id = id, kind = "add", text = text, evidence = "saya tinggal di Bandung")
+
 private class FakeMemoryRepo : MemoryRepository {
     val items = mutableListOf<Memory>()
     var failNext: Exception? = null
     val created = mutableListOf<String>()
+    val proposals = mutableListOf<MemoryProposal>()
+    val decisions = mutableListOf<String>()
     private var next = 0
 
     private fun maybeFail() {
@@ -71,6 +77,28 @@ private class FakeMemoryRepo : MemoryRepository {
     override suspend fun delete(id: String) {
         maybeFail()
         items.removeAll { it.id == id }
+    }
+
+    override suspend fun proposals(): List<MemoryProposal> {
+        maybeFail()
+        return proposals.toList()
+    }
+
+    override suspend fun approveProposal(id: String): MemoryProposal {
+        maybeFail()
+        val approved = proposals.first { it.id == id }
+        proposals.remove(approved)
+        decisions += "approve:$id"
+        items += memory("m-$id", approved.text)
+        return approved
+    }
+
+    override suspend fun rejectProposal(id: String): MemoryProposal {
+        maybeFail()
+        val rejected = proposals.first { it.id == id }
+        proposals.remove(rejected)
+        decisions += "reject:$id"
+        return rejected
     }
 }
 
@@ -193,6 +221,45 @@ class MemoryViewModelTest {
         assertTrue(vm.ui.value.items.isEmpty())
         assertTrue(repo.items.isEmpty())
     }
+
+    @Test
+    fun `usulan memori - tampil walau daftar memori kosong, Simpan memuat ulang memori, Tolak menghapus usulan`() =
+        runTest(dispatcher) {
+            repo.proposals += listOf(proposal("p1"), proposal("p2", "Pemilik suka teh."))
+            val vm = vm()
+            runCurrent()
+            assertTrue(vm.ui.value.items.isEmpty())
+            assertEquals(listOf("p1", "p2"), vm.ui.value.proposals.map { it.id })
+
+            vm.approveProposal(vm.ui.value.proposals.first())
+            runCurrent()
+            assertEquals(listOf("p2"), vm.ui.value.proposals.map { it.id })
+            assertEquals(listOf("Pemilik tinggal di Bandung."), vm.ui.value.items.map { it.text })
+            assertTrue(events.contains(MemoryEvent.Notice(R.string.memory_proposal_approved)))
+
+            vm.rejectProposal(vm.ui.value.proposals.single())
+            runCurrent()
+            assertTrue(vm.ui.value.proposals.isEmpty())
+            assertEquals(listOf("approve:p1", "reject:p2"), repo.decisions)
+            assertNull(vm.ui.value.deciding)
+        }
+
+    @Test
+    fun `usulan yang sudah diputuskan di perangkat lain - galat jadi snackbar lalu daftar dimuat ulang`() =
+        runTest(dispatcher) {
+            repo.proposals += proposal("p1")
+            val vm = vm()
+            runCurrent()
+            val stale = vm.ui.value.proposals.single()
+            repo.proposals.clear()
+            repo.failNext = conflict()
+            vm.approveProposal(stale)
+            runCurrent()
+            assertTrue(vm.ui.value.proposals.isEmpty())
+            assertTrue(repo.decisions.isEmpty())
+            assertFalse(events.contains(MemoryEvent.Notice(R.string.memory_proposal_approved)))
+            assertTrue(events.any { it is MemoryEvent.Notice })
+        }
 
     @Test
     fun `Ingat ini - teks pesan dipotong ke batas lalu disimpan`() = runTest(dispatcher) {
