@@ -12,12 +12,7 @@ interface MemoryRepository {
 
     suspend fun create(text: String): Memory
 
-    suspend fun update(
-        id: String,
-        text: String? = null,
-        enabled: Boolean? = null,
-        pinned: Boolean? = null
-    ): Memory
+    suspend fun update(id: String, text: String? = null, enabled: Boolean? = null, pinned: Boolean? = null): Memory
 
     suspend fun delete(id: String)
 }

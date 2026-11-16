@@ -202,7 +202,8 @@ class ProgressBuilderTest {
         val frame = """{"channel":"run:r1","seq":1,"ts":"2026-11-16T00:00:00.000Z","event":{"type":"context.used",
             |"runId":"r1","role":"general","engine":"hermes","model":null,"skills":[],
             |"memory":{"read":2,"total":40,"mode":"lexical","items":[{"id":"m1","title":"Nama saya Rina","via":"pinned"},
-            |{"id":"m2","title":"Server di Jakarta","via":"lexical"}]},"attachments":[]}}""".trimMargin()
+            |{"id":"m2","title":"Server di Jakarta","via":"lexical"}]},"attachments":[]}}
+        """.trimMargin()
         val envelope = Frames.parse(frame, json) as Frame.Envelope
         val trace = RunTrace().reduce(envelope.event, envelope.ts)
         val used = buildProgress(stored, trace, "r1", 0L, texts).used

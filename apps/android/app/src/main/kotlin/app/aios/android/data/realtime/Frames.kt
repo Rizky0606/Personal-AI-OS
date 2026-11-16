@@ -93,6 +93,7 @@ data class TodoTask(val content: String, val status: String, val blocker: String
 @Serializable
 data class TodoPhase(val name: String, val tasks: List<TodoTask>)
 data class ContextMemoryItem(val id: String, val title: String)
+
 /** [total] = memori aktif saat dipilih; null pada server lama. [read] bisa lebih kecil bila tidak semuanya ikut. */
 data class ContextMemory(val read: Int, val items: List<ContextMemoryItem>, val total: Int? = null)
 data class ContextAttachment(val fileId: String, val name: String, val mime: String)
