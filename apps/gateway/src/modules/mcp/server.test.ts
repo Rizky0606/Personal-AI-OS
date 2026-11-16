@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { createMcpServer, type ToolCallRecord } from './server.js';
-import type { WebTools } from './web-tools.js';
+import type { ToolSet } from './tools.js';
 
 const RUN = '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f';
 
 function setup() {
   const calls: { name: string; args: Record<string, unknown>; runId: string }[] = [];
-  const tools: WebTools = {
+  const tools: ToolSet = {
     list: () => [
       {
         name: 'web_search',

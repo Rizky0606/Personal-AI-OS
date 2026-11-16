@@ -42,6 +42,7 @@ export const unusedSpaces: AppDeps['spaces'] = {
   removeDocument: unused('spaces.removeDocument'),
   exists: unused('spaces.exists'),
   contextFor: unused('spaces.contextFor'),
+  search: unused('spaces.search'),
 };
 export const unusedSearch: AppDeps['search'] = { search: unused('search.search') };
 export const unusedMemory: AppDeps['memory'] = {
@@ -50,6 +51,7 @@ export const unusedMemory: AppDeps['memory'] = {
   update: unused('memory.update'),
   remove: unused('memory.remove'),
   recall: unused('memory.recall'),
+  select: unused('memory.select'),
 };
 export const unusedTemplates: AppDeps['templates'] = {
   list: unused('templates.list'),

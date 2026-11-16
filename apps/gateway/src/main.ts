@@ -18,6 +18,8 @@ import { createEnginesService, workersOnlineFrom } from './modules/llm/engines.j
 import { createMemoryService } from './modules/memory/service.js';
 import { createOwnerText } from './modules/mcp/owner-text.js';
 import { createMcpServer } from './modules/mcp/server.js';
+import { createDataTools } from './modules/mcp/data-tools.js';
+import { combineTools } from './modules/mcp/tools.js';
 import { createWebTools } from './modules/mcp/web-tools.js';
 import { createFleetService } from './modules/fleets/service.js';
 import { createForkService } from './modules/fork/service.js';
@@ -366,11 +368,14 @@ async function main(): Promise<void> {
             db,
             server: createMcpServer({
               version: GATEWAY_VERSION,
-              tools: createWebTools({
-                search: createSearxngClient({ baseUrl: config.SEARXNG_URL }),
-                fetchPage,
-                ownerText: createOwnerText(db),
-              }),
+              tools: combineTools(
+                createWebTools({
+                  search: createSearxngClient({ baseUrl: config.SEARXNG_URL }),
+                  fetchPage,
+                  ownerText: createOwnerText(db),
+                }),
+                createDataTools({ memory, spaces, tasks, schedules }),
+              ),
             }),
           },
         }

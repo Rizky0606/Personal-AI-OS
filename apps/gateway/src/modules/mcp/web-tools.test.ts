@@ -3,7 +3,8 @@ import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createPageFetcher, type PageFetcher } from '../research/fetcher.js';
 import type { SearchClient, SearchResult } from '../research/search.js';
-import { WEB_SEARCH_PER_RUN, createWebTools, type ToolOutcome } from './web-tools.js';
+import type { ToolOutcome } from './tools.js';
+import { WEB_SEARCH_PER_RUN, createWebTools } from './web-tools.js';
 
 const RUN = '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f';
 const OTHER_RUN = '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8ea0';

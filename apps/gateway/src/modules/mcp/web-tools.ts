@@ -1,45 +1,30 @@
-import { WebReadInputSchema, WebSearchInputSchema, type AiosToolName } from '@aios/contracts';
-import { z } from 'zod';
+import { WebReadInputSchema, WebSearchInputSchema } from '@aios/contracts';
 import { urlsIn, MAX_LINK_CHARS } from '../chat/links.js';
 import { extractReadable } from '../research/extract.js';
 import type { PageFetcher } from '../research/fetcher.js';
 import type { SearchClient, SearchResult } from '../research/search.js';
 import { isLowQualityDomain, normalizeUrl } from '../research/select.js';
 import { findSecret } from '../skills/proposals.js';
+import {
+  STATE_TTL_MS,
+  failure,
+  fenced,
+  issuesOf,
+  jsonSchema,
+  oneLine,
+  reasonOf,
+  textResult,
+  type ToolContext,
+  type ToolDef,
+  type ToolOutcome,
+  type ToolSet,
+} from './tools.js';
 
 /** Anggaran per run (docs/DESIGN_MCP_TOOLS.md bagian 7): mencegah agent yang berputar menguras SearXNG. */
 export const WEB_SEARCH_PER_RUN = 15;
 export const WEB_READ_PER_RUN = 15;
 const DEFAULT_RESULTS = 5;
 const SNIPPET_CHARS = 500;
-/** Keadaan run yang tidak disentuh selama ini dibuang (run terlama 2 jam, RunStartCommand.timeoutMs). */
-const STATE_TTL_MS = 3 * 60 * 60_000;
-
-export interface ToolDef {
-  name: AiosToolName;
-  title: string;
-  description: string;
-  inputSchema: Record<string, unknown>;
-  annotations: { readOnlyHint: boolean; openWorldHint: boolean };
-}
-
-export interface ToolResult {
-  content: { type: 'text'; text: string }[];
-  isError?: boolean;
-}
-
-/** Hasil satu panggilan tool beserta ringkasan tanpa isi (untuk log dan audit). */
-export interface ToolOutcome {
-  result: ToolResult;
-  ok: boolean;
-  /** Jumlah hasil (pencarian) atau 1 (halaman terbaca); 0 bila gagal. */
-  items: number;
-}
-
-export interface ToolContext {
-  runId: string;
-  signal?: AbortSignal;
-}
 
 export interface WebToolsDeps {
   search: SearchClient;
@@ -47,12 +32,6 @@ export interface WebToolsDeps {
   /** Teks pesan pemilik yang memulai run ini; URL di dalamnya boleh dibaca `web_read`. */
   ownerText: (runId: string) => Promise<string>;
   now?: () => number;
-}
-
-export interface WebTools {
-  list(): ToolDef[];
-  /** Null bila nama tool tidak dikenal (galat protokol, bukan galat tool). */
-  call(name: string, args: Record<string, unknown>, ctx: ToolContext): Promise<ToolOutcome | null>;
 }
 
 interface RunState {
@@ -63,13 +42,6 @@ interface RunState {
   ownerLoaded: boolean;
   touchedAt: number;
 }
-
-/** JSON Schema masukan untuk `tools/list`, tanpa `$schema` (MCP hanya butuh skema objeknya). */
-const jsonSchema = (schema: z.ZodType): Record<string, unknown> => {
-  const out: Record<string, unknown> = z.toJSONSchema(schema, { io: 'input' });
-  delete out.$schema;
-  return out;
-};
 
 const TOOLS: ToolDef[] = [
   {
@@ -94,29 +66,6 @@ const TOOLS: ToolDef[] = [
   },
 ];
 
-const oneLine = (text: string, max: number) => text.replace(/\s+/g, ' ').trim().slice(0, max);
-
-/** Konten luar dipagari `<<< >>>`; pagar di dalam konten dinetralkan supaya tidak bisa ditutup dari dalam. */
-const fenced = (lines: string[]) =>
-  ['<<<', lines.join('\n').replaceAll('<<<', '‹‹‹').replaceAll('>>>', '›››'), '>>>'].join('\n');
-
-const textResult = (text: string, isError = false): ToolResult => ({
-  content: [{ type: 'text', text }],
-  ...(isError ? { isError: true } : {}),
-});
-
-const failure = (text: string): ToolOutcome => ({
-  result: textResult(text, true),
-  ok: false,
-  items: 0,
-});
-
-const reasonOf = (error: unknown) =>
-  error instanceof Error && error.message ? oneLine(error.message, 200) : 'tidak diketahui';
-
-const issuesOf = (error: z.ZodError) =>
-  error.issues.map((i) => `${i.path.join('.') || 'argumen'}: ${i.message}`).join('; ');
-
 /** URL http(s) yang bisa dipakai; selain itu null (hasil SearXNG tidak dipercaya mentah). */
 function httpUrl(raw: string): string | null {
   try {
@@ -133,7 +82,7 @@ function httpUrl(raw: string): string | null {
  * muncul di hasil pencarian run itu atau di pesan pemilik, supaya isi halaman yang tidak tepercaya tidak bisa
  * menyuruh agent membuka alamat buatan penyerang (mis. URL berisi data pribadi).
  */
-export function createWebTools(deps: WebToolsDeps): WebTools {
+export function createWebTools(deps: WebToolsDeps): ToolSet {
   const now = deps.now ?? Date.now;
   const runs = new Map<string, RunState>();
 
