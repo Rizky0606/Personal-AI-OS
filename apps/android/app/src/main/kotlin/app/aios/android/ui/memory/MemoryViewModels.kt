@@ -115,6 +115,18 @@ class MemoryViewModel @Inject constructor(
         }
     }
 
+    /** Sematkan atau lepas: langsung terlihat; dikembalikan bila server menolak. */
+    fun setPinned(memory: Memory, pinned: Boolean) {
+        replace(memory.copy(pinned = pinned))
+        viewModelScope.launch {
+            val updated = attempt { repo.update(memory.id, pinned = pinned) }
+            replace(updated ?: memory)
+            if (updated != null) {
+                notices.trySend(MemoryEvent.Notice(if (pinned) R.string.memory_pinned else R.string.memory_unpinned))
+            }
+        }
+    }
+
     fun startEdit(memory: Memory) = state.update { it.copy(editing = memory, editText = memory.text) }
 
     fun onEditText(value: String) = state.update { it.copy(editText = value.take(MEMORY_TEXT_MAX)) }

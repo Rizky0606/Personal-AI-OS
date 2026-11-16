@@ -39,6 +39,8 @@ import {
 } from './common.js';
 import {
   DiffFileSchema,
+  MemoryRecallModeSchema,
+  MemoryRecallViaSchema,
   QueueNameSchema,
   QuestionAnswerSchema,
   RunEventSchema,
@@ -1008,12 +1010,16 @@ export const UpdatePromptTemplateRequestSchema = z
 export const MemoryListSchema = itemsOf(MemorySchema).meta({ id: 'MemoryList' });
 const MemoryTextSchema = z.string().trim().min(1).max(MEMORY_TEXT_MAX);
 export const CreateMemoryRequestSchema = z
-  .object({ text: MemoryTextSchema })
+  .object({ text: MemoryTextSchema, pinned: z.boolean().optional() })
   .meta({ id: 'CreateMemoryRequest' });
 export const UpdateMemoryRequestSchema = z
-  .object({ text: MemoryTextSchema.optional(), enabled: z.boolean().optional() })
-  .refine((v) => v.text !== undefined || v.enabled !== undefined, {
-    message: 'Isi text atau enabled.',
+  .object({
+    text: MemoryTextSchema.optional(),
+    enabled: z.boolean().optional(),
+    pinned: z.boolean().optional(),
+  })
+  .refine((v) => v.text !== undefined || v.enabled !== undefined || v.pinned !== undefined, {
+    message: 'Isi text, enabled, atau pinned.',
   })
   .meta({ id: 'UpdateMemoryRequest' });
 
@@ -1184,8 +1190,14 @@ export const ConversationProgressSchema = z
       engine: z.string().nullable(),
       model: z.string().nullable(),
       memory: z.object({
+        /** Fakta yang benar-benar disuntik pada run terbaru. */
         read: z.number().int().nonnegative(),
-        items: z.array(z.object({ id: IdSchema, title: z.string() })),
+        /** Jumlah memori aktif saat itu; absen pada data lama. */
+        total: z.number().int().nonnegative().optional(),
+        mode: MemoryRecallModeSchema.optional(),
+        items: z.array(
+          z.object({ id: IdSchema, title: z.string(), via: MemoryRecallViaSchema.optional() }),
+        ),
       }),
       attachments: z.array(z.object({ fileId: IdSchema, name: z.string(), mime: z.string() })),
       /** Nama tool unik dari tool.started (urutan pertama muncul); jenisnya dihitung klien. */

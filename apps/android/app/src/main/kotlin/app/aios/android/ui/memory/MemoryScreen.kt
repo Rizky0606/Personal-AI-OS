@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
@@ -26,12 +27,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.aios.android.R
 import app.aios.android.data.api.MEMORY_TEXT_MAX
 import app.aios.android.data.api.Memory
 import app.aios.android.ui.components.AiosButton
+import app.aios.android.ui.components.AiosIcon
 import app.aios.android.ui.components.AiosTextField
 import app.aios.android.ui.components.ButtonKind
 import app.aios.android.ui.components.Hairline
@@ -40,7 +43,7 @@ import app.aios.android.ui.components.StateHost
 import app.aios.android.ui.theme.AiosTheme
 import app.aios.ui.tokens.Tokens
 
-/** Memori yang terlihat (A9): fakta tentang pemilik yang ikut di setiap pesan sistem. */
+/** Memori yang terlihat (A9): fakta tentang pemilik yang dipilih per pesan untuk pesan sistem; bisa disematkan. */
 @Composable
 fun MemoryScreen(online: Boolean, snackbar: SnackbarHostState, viewModel: MemoryViewModel = hiltViewModel()) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
@@ -91,6 +94,7 @@ fun MemoryScreen(online: Boolean, snackbar: SnackbarHostState, viewModel: Memory
                         memory = memory,
                         enabled = online,
                         onToggle = { viewModel.setEnabled(memory, it) },
+                        onPin = { viewModel.setPinned(memory, it) },
                         onEdit = { viewModel.startEdit(memory) },
                         onDelete = { viewModel.askDelete(memory) }
                     )
@@ -143,6 +147,7 @@ private fun MemoryRow(
     memory: Memory,
     enabled: Boolean,
     onToggle: (Boolean) -> Unit,
+    onPin: (Boolean) -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -160,14 +165,32 @@ private fun MemoryRow(
         verticalArrangement = Arrangement.spacedBy(Tokens.Space.s4)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = memory.text,
-                style = AiosTheme.type.ui.copy(
-                    textDecoration = if (memory.enabled) null else TextDecoration.LineThrough
-                ),
-                color = if (memory.enabled) colors.text else colors.text3,
-                modifier = Modifier.weight(1f)
-            )
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Tokens.Space.s4)) {
+                Text(
+                    text = memory.text,
+                    style = AiosTheme.type.ui.copy(
+                        textDecoration = if (memory.enabled) null else TextDecoration.LineThrough
+                    ),
+                    color = if (memory.enabled) colors.text else colors.text3
+                )
+                if (memory.pinned) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(Tokens.Space.s4)
+                    ) {
+                        AiosIcon(
+                            R.drawable.ic_pin,
+                            contentDescription = null,
+                            modifier = Modifier.size(PIN_BADGE_ICON)
+                        )
+                        Text(
+                            stringResource(R.string.memory_pinned_badge),
+                            style = AiosTheme.type.meta,
+                            color = colors.text2
+                        )
+                    }
+                }
+            }
             Switch(
                 checked = memory.enabled,
                 onCheckedChange = onToggle,
@@ -183,6 +206,12 @@ private fun MemoryRow(
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(Tokens.Space.s8)) {
+            AiosButton(
+                stringResource(if (memory.pinned) R.string.memory_unpin else R.string.memory_pin),
+                onClick = { onPin(!memory.pinned) },
+                kind = ButtonKind.Ghost,
+                enabled = enabled
+            )
             AiosButton(
                 stringResource(R.string.memory_edit),
                 onClick = onEdit,
@@ -200,6 +229,7 @@ private fun MemoryRow(
 }
 
 private const val TOGGLE_LABEL_CHARS = 60
+private val PIN_BADGE_ICON = 12.dp
 
 @Composable
 private fun EditMemoryDialog(

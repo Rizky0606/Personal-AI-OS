@@ -15,6 +15,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.int
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -89,6 +90,7 @@ private fun JsonObject.toView(): ProgressView {
         },
         skills = u["skills"]!!.jsonArray.map { it.jsonPrimitive.content },
         memoryRead = u["memory"]!!.jsonObject["read"]!!.jsonPrimitive.int,
+        memoryTotal = u["memory"]!!.jsonObject["total"]?.jsonPrimitive?.intOrNull,
         memoryItems = u["memory"]!!.jsonObject["items"]!!.jsonArray.map { i ->
             val o = i.jsonObject
             o["id"]!!.jsonPrimitive.content to o["title"]!!.jsonPrimitive.content
@@ -185,5 +187,24 @@ class ProgressBuilderTest {
         val a = buildProgress(response, trace, runId, now, texts)
         val b = buildProgress(response, trace, runId, now, texts)
         assertEquals(a, b)
+    }
+
+    @Test
+    fun memoriDipilihMelaporkanNDariMDanEventLiveMenangDariDataTersimpan() {
+        val stored = json.decodeFromJsonElement<ConversationProgress>(
+            json.parseToJsonElement("""{"plan":null,"outputs":[],"used":{"memory":{"read":3,"total":3,"items":[]}}}""")
+        )
+        assertEquals(3, buildProgress(stored, null, null, 0L, texts).used.memoryTotal)
+
+        val frame = """{"channel":"run:r1","seq":1,"ts":"2026-11-16T00:00:00.000Z","event":{"type":"context.used",
+            |"runId":"r1","role":"general","engine":"hermes","model":null,"skills":[],
+            |"memory":{"read":2,"total":40,"mode":"lexical","items":[{"id":"m1","title":"Nama saya Rina","via":"pinned"},
+            |{"id":"m2","title":"Server di Jakarta","via":"lexical"}]},"attachments":[]}}""".trimMargin()
+        val envelope = Frames.parse(frame, json) as Frame.Envelope
+        val trace = RunTrace().reduce(envelope.event, envelope.ts)
+        val used = buildProgress(stored, trace, "r1", 0L, texts).used
+        assertEquals(2, used.memoryRead)
+        assertEquals(40, used.memoryTotal)
+        assertEquals(listOf("m1" to "Nama saya Rina", "m2" to "Server di Jakarta"), used.memoryItems)
     }
 }

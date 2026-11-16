@@ -2,6 +2,16 @@
 
 Ide di luar scope prompt saat ini dan perbedaan temuan verifikasi terhadap asumsi dokumen.
 
+## Memori semantik (`docs/DESIGN_MEMORI_SEMANTIK.md`)
+
+Slice 1 (recall beranggaran leksikal + memori tersemat) selesai di cabang `feat/memori-semantik`. Angka `pnpm --filter @aios/gateway eval:memory` saat slice 1 selesai (anggaran evaluasi 1.500, top-k 12): `lexical` recall@12 64,7% (cocok kata 100%, susulan 100%, parafrase 12,5%, lintas bahasa 16,7%), kueri negatif yang mendapat fakta cocok kata 33,3%; `all` menyuntik ±3.200 karakter. Tersisa:
+
+- [ ] Slice 2: embedding dan recall hibrida untuk memori (tabel `embeddings`, klien `/embeddings` 9Router, backfill pg-boss, RRF); butuh koneksi embedding di 9Router untuk dinyalakan.
+- [ ] Slice 3: ekstraksi fakta menjadi usulan memori (`memory_proposals`, mode `off`/`propose`/`auto`, penjaga injeksi dan rahasia, UI usulan desktop dan Android); `MAX_MEMORIES` naik ke 1.000 di slice ini.
+- [ ] Slice 4: ruang pengetahuan hibrida (`SPACES_VECTOR`).
+- [ ] Slice 5 (opsional): pencarian riwayat hibrida.
+- [ ] Android belum menampilkan cara pemilihan (`mode`) dan alasan per fakta (`via`) di lembar Progres; hanya "N dari M". DTO Android baru membaca `total`.
+
 ## dsh ACP
 
 - [ ] Ganti fixture sintetis dengan rekaman dsh nyata dari sandbox; verifikasi kompatibilitas setiap upgrade dsh.

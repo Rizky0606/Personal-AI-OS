@@ -1,5 +1,5 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": { "noEmit": false, "outDir": "dist" },
-  "exclude": ["src/**/*.test.ts", "src/testing/**"]
+  "exclude": ["src/**/*.test.ts", "src/testing/**", "src/cli/eval-memory.ts"]
 }

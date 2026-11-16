@@ -49,8 +49,7 @@ export const unusedMemory: AppDeps['memory'] = {
   create: unused('memory.create'),
   update: unused('memory.update'),
   remove: unused('memory.remove'),
-  promptSection: unused('memory.promptSection'),
-  summary: unused('memory.summary'),
+  recall: unused('memory.recall'),
 };
 export const unusedTemplates: AppDeps['templates'] = {
   list: unused('templates.list'),

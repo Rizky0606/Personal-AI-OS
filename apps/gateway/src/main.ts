@@ -141,7 +141,12 @@ async function main(): Promise<void> {
   const workerRelay = createWorkerRelay({ hub: workerHub, projects });
   workerHub.onPresence((deviceId, online) => workerRelay.presence(deviceId, online));
   const observer = createRunObserver(log);
-  const memory = createMemoryService({ db });
+  const memory = createMemoryService({
+    db,
+    recallBudgetChars: config.MEMORY_RECALL_BUDGET_CHARS,
+    recallTopK: config.MEMORY_RECALL_TOP_K,
+    log,
+  });
   const files = createFilesService({ db });
   const outbox =
     config.OUTBOX_DIR && config.OUTBOX_HOST_DIR

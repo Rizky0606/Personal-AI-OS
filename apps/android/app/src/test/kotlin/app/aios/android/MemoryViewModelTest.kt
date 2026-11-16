@@ -58,10 +58,12 @@ private class FakeMemoryRepo : MemoryRepository {
         return memory("n${next++}", text.trim()).also { items += it }
     }
 
-    override suspend fun update(id: String, text: String?, enabled: Boolean?): Memory {
+    override suspend fun update(id: String, text: String?, enabled: Boolean?, pinned: Boolean?): Memory {
         maybeFail()
         val index = items.indexOfFirst { it.id == id }
-        val updated = items[index].let { it.copy(text = text ?: it.text, enabled = enabled ?: it.enabled) }
+        val updated = items[index].let {
+            it.copy(text = text ?: it.text, enabled = enabled ?: it.enabled, pinned = pinned ?: it.pinned)
+        }
         items[index] = updated
         return updated
     }
@@ -152,6 +154,24 @@ class MemoryViewModelTest {
         vm.setEnabled(vm.ui.value.items.single(), true)
         runCurrent()
         assertFalse(vm.ui.value.items.single().enabled)
+    }
+
+    @Test
+    fun `sematkan tersimpan di server dan dikembalikan bila server menolak`() = runTest(dispatcher) {
+        repo.items += memory("a")
+        val vm = vm()
+        runCurrent()
+        vm.setPinned(vm.ui.value.items.single(), true)
+        runCurrent()
+        assertTrue(vm.ui.value.items.single().pinned)
+        assertTrue(repo.items.single().pinned)
+        assertTrue(events.contains(MemoryEvent.Notice(R.string.memory_pinned)))
+
+        repo.failNext = IOException("putus")
+        vm.setPinned(vm.ui.value.items.single(), false)
+        runCurrent()
+        assertTrue(vm.ui.value.items.single().pinned)
+        assertFalse(events.contains(MemoryEvent.Notice(R.string.memory_unpinned)))
     }
 
     @Test

@@ -860,6 +860,18 @@
                     "type": "integer",
                     "minimum": 0
                   },
+                  "total": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "all",
+                      "lexical",
+                      "hybrid"
+                    ]
+                  },
                   "items": {
                     "type": "array",
                     "items": {
@@ -872,6 +884,16 @@
                         "title": {
                           "type": "string",
                           "maxLength": 41
+                        },
+                        "via": {
+                          "type": "string",
+                          "enum": [
+                            "pinned",
+                            "lexical",
+                            "vector",
+                            "hybrid",
+                            "recent"
+                          ]
                         }
                       },
                       "required": [
@@ -2069,6 +2091,18 @@
                     "type": "integer",
                     "minimum": 0
                   },
+                  "total": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "all",
+                      "lexical",
+                      "hybrid"
+                    ]
+                  },
                   "items": {
                     "type": "array",
                     "items": {
@@ -2081,6 +2115,16 @@
                         "title": {
                           "type": "string",
                           "maxLength": 41
+                        },
+                        "via": {
+                          "type": "string",
+                          "enum": [
+                            "pinned",
+                            "lexical",
+                            "vector",
+                            "hybrid",
+                            "recent"
+                          ]
                         }
                       },
                       "required": [
@@ -5393,6 +5437,18 @@
                     "type": "integer",
                     "minimum": 0
                   },
+                  "total": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "all",
+                      "lexical",
+                      "hybrid"
+                    ]
+                  },
                   "items": {
                     "type": "array",
                     "items": {
@@ -5404,6 +5460,16 @@
                         },
                         "title": {
                           "type": "string"
+                        },
+                        "via": {
+                          "type": "string",
+                          "enum": [
+                            "pinned",
+                            "lexical",
+                            "vector",
+                            "hybrid",
+                            "recent"
+                          ]
                         }
                       },
                       "required": [
@@ -8381,6 +8447,10 @@
           "enabled": {
             "type": "boolean"
           },
+          "pinned": {
+            "type": "boolean",
+            "default": false
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -8405,6 +8475,9 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 500
+          },
+          "pinned": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -8420,6 +8493,9 @@
             "maxLength": 500
           },
           "enabled": {
+            "type": "boolean"
+          },
+          "pinned": {
             "type": "boolean"
           }
         }

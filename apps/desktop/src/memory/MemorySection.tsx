@@ -1,5 +1,6 @@
 import type { Memory } from '@aios/contracts';
 import { MEMORY_TEXT_MAX } from '@aios/contracts';
+import { Pin } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { apiErrorMessage } from '../api/errors';
 import { useMemories } from '../api/queries';
@@ -15,8 +16,8 @@ import { enterDelay } from '../screens/PageLayout';
 import { useMemoryActions } from './useMemoryActions';
 
 /**
- * Memori yang terlihat (W17): fakta tentang pemilik yang ikut di setiap pesan sistem. Bisa ditambah, diubah di
- * tempat, dinonaktifkan tanpa dihapus, atau dihapus.
+ * Memori yang terlihat (W17): fakta tentang pemilik yang dipilih per pesan untuk pesan sistem. Bisa ditambah,
+ * diubah di tempat, disematkan (selalu ikut), dinonaktifkan tanpa dihapus, atau dihapus.
  */
 export function MemorySection() {
   const query = useMemories();
@@ -106,6 +107,7 @@ export function MemorySection() {
               memory={memory}
               disabled={!online || actions.busy !== null}
               onToggle={(enabled) => void actions.setEnabled(memory.id, enabled)}
+              onPin={(pinned) => void actions.setPinned(memory.id, pinned)}
               onSave={(text) => actions.edit(memory.id, text)}
               onDelete={() => setToDelete(memory)}
             />
@@ -135,11 +137,12 @@ interface MemoryRowProps {
   index: number;
   disabled: boolean;
   onToggle: (enabled: boolean) => void;
+  onPin: (pinned: boolean) => void;
   onSave: (text: string) => Promise<boolean>;
   onDelete: () => void;
 }
 
-function MemoryRow({ memory, index, disabled, onToggle, onSave, onDelete }: MemoryRowProps) {
+function MemoryRow({ memory, index, disabled, onToggle, onPin, onSave, onDelete }: MemoryRowProps) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(memory.text);
   const m = copy.memory;
@@ -187,20 +190,31 @@ function MemoryRow({ memory, index, disabled, onToggle, onSave, onDelete }: Memo
         </>
       ) : (
         <div className="flex items-start gap-3">
-          <p
-            className={cn(
-              'min-w-0 flex-1 text-ui whitespace-pre-wrap',
-              memory.enabled ? 'text-text' : 'text-text-3 line-through',
-            )}
-          >
-            {memory.text}
-          </p>
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <p
+              className={cn(
+                'text-ui whitespace-pre-wrap',
+                memory.enabled ? 'text-text' : 'text-text-3 line-through',
+              )}
+            >
+              {memory.text}
+            </p>
+            {memory.pinned ? (
+              <span className="inline-flex items-center gap-1 text-meta text-text-2">
+                <Pin size={12} strokeWidth={1.5} aria-hidden="true" />
+                {m.pinnedBadge}
+              </span>
+            ) : null}
+          </div>
           <Switch
             checked={memory.enabled}
             label={m.toggle(memory.text)}
             disabled={disabled}
             onChange={onToggle}
           />
+          <Button variant="ghost" disabled={disabled} onClick={() => onPin(!memory.pinned)}>
+            {memory.pinned ? m.unpin : m.pin}
+          </Button>
           <Button
             variant="ghost"
             disabled={disabled}

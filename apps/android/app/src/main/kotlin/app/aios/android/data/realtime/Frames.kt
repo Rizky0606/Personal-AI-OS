@@ -9,6 +9,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.int
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -92,7 +93,8 @@ data class TodoTask(val content: String, val status: String, val blocker: String
 @Serializable
 data class TodoPhase(val name: String, val tasks: List<TodoTask>)
 data class ContextMemoryItem(val id: String, val title: String)
-data class ContextMemory(val read: Int, val items: List<ContextMemoryItem>)
+/** [total] = memori aktif saat dipilih; null pada server lama. [read] bisa lebih kecil bila tidak semuanya ikut. */
+data class ContextMemory(val read: Int, val items: List<ContextMemoryItem>, val total: Int? = null)
 data class ContextAttachment(val fileId: String, val name: String, val mime: String)
 
 /** Frame dari server di `/v1/ws`. */
@@ -236,7 +238,7 @@ object Frames {
             val o = i as? JsonObject ?: return@mapNotNull null
             ContextMemoryItem(o.str("id"), o.str("title"))
         } ?: emptyList()
-        return ContextMemory(raw["read"]?.jsonPrimitive?.int ?: 0, items)
+        return ContextMemory(raw["read"]?.jsonPrimitive?.int ?: 0, items, raw["total"]?.jsonPrimitive?.intOrNull)
     }
 
     private fun JsonObject.str(key: String): String = this[key]?.jsonPrimitive?.contentOrNull.orEmpty()

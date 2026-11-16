@@ -324,6 +324,25 @@ const agentCases: Record<AgentEventType, Cases> = {
         memory: { read: 2, items: [{ id: ID_B, title: 'Suka jawaban singkat' }] },
         attachments: [{ fileId: ID_B, name: 'desain.png', mime: 'image/png' }],
       },
+      // Recall per pesan: jumlah memori aktif, cara pemilihan, dan alasan tiap fakta.
+      {
+        type: 'context.used',
+        runId: ID_A,
+        role: 'general',
+        engine: 'hermes',
+        model: null,
+        skills: [],
+        memory: {
+          read: 2,
+          total: 143,
+          mode: 'lexical',
+          items: [
+            { id: ID_A, title: 'Nama panggilan Oji', via: 'pinned' },
+            { id: ID_B, title: 'Suka jawaban singkat', via: 'recent' },
+          ],
+        },
+        attachments: [],
+      },
     ],
     invalid: [
       {
@@ -355,6 +374,26 @@ const agentCases: Record<AgentEventType, Cases> = {
         model: null,
         skills: [],
         memory: { read: 1, items: [{ id: ID_B, title: 'x'.repeat(200) }] },
+        attachments: [],
+      },
+      {
+        type: 'context.used',
+        runId: ID_A,
+        role: 'general',
+        engine: 'hermes',
+        model: null,
+        skills: [],
+        memory: { read: 1, total: 1, mode: 'semua' },
+        attachments: [],
+      },
+      {
+        type: 'context.used',
+        runId: ID_A,
+        role: 'general',
+        engine: 'hermes',
+        model: null,
+        skills: [],
+        memory: { read: 1, items: [{ id: ID_B, title: 'Fakta', via: 'tebakan' }] },
         attachments: [],
       },
       {

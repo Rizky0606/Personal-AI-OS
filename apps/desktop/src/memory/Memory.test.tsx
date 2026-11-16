@@ -18,6 +18,7 @@ const memory = (over: Partial<Memory> = {}): Memory => ({
   id: '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f',
   text: 'Saya memakai Windows 11.',
   enabled: true,
+  pinned: false,
   createdAt: TS,
   updatedAt: TS,
   ...over,
@@ -86,6 +87,27 @@ describe('MemorySection', () => {
     const toggle = await screen.findByRole('switch');
     expect(toggle).toHaveAttribute('aria-checked', 'false');
     expect(screen.getByText('Saya memakai Windows 11.')).toHaveClass('line-through');
+  });
+
+  it('sematkan: tombol mengirim pinned, memori tersemat berlencana dan tombolnya melepas sematan', async () => {
+    const user = userEvent.setup();
+    const item = memory();
+    api.listMemories.mockResolvedValue([item]);
+    api.updateMemory.mockResolvedValue({ ...item, pinned: true });
+    const view = await renderScreen(<MemorySection />);
+    const list = await screen.findByRole('list', { name: m.listLabel });
+    expect(within(list).queryByText(m.pinnedBadge)).not.toBeInTheDocument();
+    await user.click(within(list).getByRole('button', { name: m.pin }));
+    expect(api.updateMemory).toHaveBeenCalledWith(item.id, { pinned: true });
+    view.unmount();
+
+    api.listMemories.mockResolvedValue([memory({ pinned: true })]);
+    api.updateMemory.mockResolvedValue(item);
+    await renderScreen(<MemorySection />);
+    const pinnedList = await screen.findByRole('list', { name: m.listLabel });
+    expect(within(pinnedList).getByText(m.pinnedBadge)).toBeInTheDocument();
+    await user.click(within(pinnedList).getByRole('button', { name: m.unpin }));
+    expect(api.updateMemory).toHaveBeenCalledWith(item.id, { pinned: false });
   });
 
   it('error dengan tombol coba lagi; offline tanpa tombol', async () => {

@@ -80,7 +80,12 @@ object ProgressOutputSerializer : JsonContentPolymorphicSerializer<ProgressOutpu
 data class ProgressMemoryItem(val id: String, val title: String)
 
 @Serializable
-data class ProgressMemory(val read: Int, val items: List<ProgressMemoryItem> = emptyList())
+data class ProgressMemory(
+    val read: Int,
+    val items: List<ProgressMemoryItem> = emptyList(),
+    /** Memori aktif saat dipilih; null pada data lama. */
+    val total: Int? = null
+)
 
 @Serializable
 data class ProgressAttachment(val fileId: String, val name: String, val mime: String)

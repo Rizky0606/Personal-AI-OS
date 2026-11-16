@@ -1,6 +1,8 @@
 import {
   isRasterImageMime,
   type ConversationProgress,
+  type MemoryRecallMode,
+  type MemoryRecallVia,
   type ProgressOutput,
   type TodoPhase,
 } from '@aios/contracts';
@@ -46,7 +48,13 @@ export type ToolGroup = 'web' | 'browser' | 'terminal' | 'files' | 'subagent';
 export interface ProgressUsed {
   uploads: { fileId: string; name: string }[];
   skills: string[];
-  memory: { read: number; items: { id: string; title: string }[] };
+  /** `total`/`mode` absen pada data lama; `via` absen bila fakta ikut karena semua memori aktif disuntik. */
+  memory: {
+    read: number;
+    total?: number;
+    mode?: MemoryRecallMode;
+    items: { id: string; title: string; via?: MemoryRecallVia }[];
+  };
   engine: string | null;
   model: string | null;
   tools: ToolGroup[];
@@ -201,7 +209,7 @@ export function buildProgress(
     ),
     skills: union(base?.skills ?? [], context?.skills ?? [], (s) => s),
     memory: context
-      ? { read: context.memory.read, items: context.memory.items ?? [] }
+      ? { ...context.memory, items: context.memory.items ?? [] }
       : (base?.memory ?? { read: 0, items: [] }),
     engine: context?.engine ?? base?.engine ?? null,
     model: context ? context.model : (base?.model ?? null),

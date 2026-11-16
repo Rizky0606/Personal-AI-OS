@@ -451,13 +451,18 @@ export type PromptTemplate = z.infer<typeof PromptTemplateSchema>;
 /** Batas panjang satu fakta memori; cukup untuk satu atau dua kalimat. */
 export const MEMORY_TEXT_MAX = 500;
 
-/** Fakta tentang pemilik yang disuntik ke pesan sistem setiap run (W17). Dikelola pemilik, bukan diisi otomatis. */
+/**
+ * Fakta tentang pemilik (W17). Dikelola pemilik, bukan diisi otomatis. Yang disuntik ke pesan sistem dipilih per
+ * pesan (lihat `context.used.memory`); yang tersemat selalu ikut.
+ */
 export const MemorySchema = z
   .object({
     id: IdSchema,
     text: z.string().min(1).max(MEMORY_TEXT_MAX),
     /** Memori nonaktif tetap tersimpan tetapi tidak disuntik ke agent. */
     enabled: z.boolean(),
+    /** Tersemat: selalu ikut ke pesan sistem, tidak ikut pemeringkatan. Absen pada server lama = false. */
+    pinned: z.boolean().default(false),
     createdAt: TimestampSchema,
     updatedAt: TimestampSchema,
   })

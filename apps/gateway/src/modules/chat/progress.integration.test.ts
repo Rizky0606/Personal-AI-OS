@@ -128,12 +128,12 @@ describe('event context.used', () => {
     expect(types.indexOf('context.used')).toBeLessThan(types.indexOf('message.delta'));
   });
 
-  it('tanpa memori dan lampiran: memory.read 0 tanpa items, attachments kosong', async () => {
+  it('tanpa memori dan lampiran: memory.read 0 dari 0 tanpa items, attachments kosong', async () => {
     const conv = await newConversation();
     const runId = await sendAndFinish(conv.id, [{ type: 'text', text: 'Halo' }]);
     const event = (await eventsOf(runId)).find((e) => e.event.type === 'context.used')!
       .event as Extract<AgentEvent, { type: 'context.used' }>;
-    expect(event.memory).toEqual({ read: 0 });
+    expect(event.memory).toEqual({ read: 0, total: 0, mode: 'all' });
     expect(event.attachments).toEqual([]);
   });
 });
@@ -242,7 +242,7 @@ describe('GET /conversations/:id/progress', () => {
     });
 
     expect(result.used.engine).toBe('hermes');
-    expect(result.used.memory.read).toBe(1);
+    expect(result.used.memory).toMatchObject({ read: 1, total: 1, mode: 'all' });
     expect(result.used.memory.items[0]!.title).toBe('Fakta uji untuk panel progres.');
     expect(result.used.tools).toEqual(['read_file', 'terminal']);
   });
