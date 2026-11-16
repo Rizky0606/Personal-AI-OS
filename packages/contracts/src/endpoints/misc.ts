@@ -13,7 +13,8 @@ import {
 } from '../api-schemas.js';
 import { FileRecordSchema, ResearchJobSchema } from '../entities.js';
 import { PageQuerySchema, pageOf } from '../common.js';
-import { json, type Endpoint } from '../endpoint.js';
+import { json, noContent, type Endpoint } from '../endpoint.js';
+import { McpMessageSchema } from '../tools.js';
 
 export const miscEndpoints: readonly Endpoint[] = [
   {
@@ -137,6 +138,42 @@ export const miscEndpoints: readonly Endpoint[] = [
     auth: true,
     responses: [json(201, 'Screenshot tersimpan', FileRecordSchema)],
     errors: [400, 401, 403, 409, 413],
+  },
+  {
+    operationId: 'mcpMessage',
+    method: 'post',
+    path: '/mcp',
+    tag: 'Worker',
+    summary:
+      'Server MCP `aios_tools` (JSON-RPC 2.0, Streamable HTTP tanpa SSE): initialize, ping, tools/list, tools/call. Hanya token worker dengan header X-Aios-Run-Id run yang sedang berjalan di project worker itu; mati bila MCP_TOOLS_ENABLED=false (404). Isi bukan JSON dijawab 400 berisi galat JSON-RPC -32700',
+    auth: true,
+    body: McpMessageSchema,
+    responses: [
+      json(200, 'Jawaban JSON-RPC (atau batch)', McpMessageSchema),
+      { status: 202, description: 'Hanya notifikasi; tanpa isi' },
+    ],
+    errors: [400, 403, 404, 409, 413],
+  },
+  {
+    operationId: 'mcpStream',
+    method: 'get',
+    path: '/mcp',
+    tag: 'Worker',
+    summary:
+      'Aliran SSE MCP (server ke klien) tidak disediakan: selalu 405, sesuai spesifikasi Streamable HTTP',
+    auth: true,
+    responses: [],
+    errors: [405],
+  },
+  {
+    operationId: 'mcpSessionEnd',
+    method: 'delete',
+    path: '/mcp',
+    tag: 'Worker',
+    summary: 'Server MCP tanpa sesi: tidak ada yang diakhiri, selalu 204',
+    auth: true,
+    responses: [noContent('Tidak ada sesi yang perlu diakhiri')],
+    errors: [],
   },
   {
     operationId: 'healthz',

@@ -11,6 +11,7 @@ import {
   TERMINAL_RUN_STATUSES,
   canTransition,
 } from './run-status.js';
+import { WebReadInputSchema, WebSearchInputSchema, aiosToolOf } from './tools.js';
 import { WorkerCommandSchema } from './worker.js';
 import { ChannelSchema, ClientMessageSchema, EventEnvelopeSchema } from './ws.js';
 
@@ -81,6 +82,9 @@ const DOCUMENTED_ENDPOINTS = [
   'GET /research/:id/export',
   'POST /files',
   'POST /worker/artifacts/screenshot',
+  'POST /mcp',
+  'GET /mcp',
+  'DELETE /mcp',
   'GET /files/:id/download',
   'GET /search',
   'GET /prompt-templates',
@@ -133,6 +137,12 @@ describe('endpoint REST', () => {
     const ids = endpoints.map((e) => e.operationId);
     expect(new Set(ids).size).toBe(ids.length);
     for (const e of endpoints) {
+      // Satu-satunya pengecualian: GET /mcp yang menurut spesifikasi MCP dijawab 405 (tanpa aliran SSE).
+      if (e.operationId === 'mcpStream') {
+        expect(e.responses).toEqual([]);
+        expect(e.errors).toEqual([405]);
+        continue;
+      }
       expect(
         e.responses.some((r) => r.status >= 200 && r.status < 300),
         e.operationId,
@@ -278,6 +288,40 @@ describe('protokol worker', () => {
     expect(WorkerCommandSchema.safeParse(start).success).toBe(true);
     expect(WorkerCommandSchema.safeParse({ ...start, model: '' }).success).toBe(false);
     expect(WorkerCommandSchema.safeParse({ type: 'run.cancel' }).success).toBe(false);
+  });
+
+  it('run.start: gatewayTools opsional dan aditif (worker lama mengabaikannya)', () => {
+    const start = {
+      type: 'run.start',
+      runId: ID_A,
+      projectId: ID_B,
+      prompt: 'Cari dokumentasi',
+      bundle: { role: 'general', systemPrompt: '', skillIds: [] },
+      model: 'coding-main',
+    };
+    const parsed = WorkerCommandSchema.parse({ ...start, gatewayTools: true });
+    expect(parsed).toMatchObject({ gatewayTools: true });
+    expect(WorkerCommandSchema.parse(start)).not.toHaveProperty('gatewayTools');
+    expect(WorkerCommandSchema.safeParse({ ...start, gatewayTools: 'ya' }).success).toBe(false);
+  });
+});
+
+describe('tool gateway (aios_tools)', () => {
+  it('mengenali nama tool omp dan Hermes, menolak yang lain', () => {
+    expect(aiosToolOf('mcp__aios_tools_web_search')).toBe('web_search');
+    expect(aiosToolOf('mcp__aios_tools__web_read')).toBe('web_read');
+    expect(aiosToolOf('mcp__aios_tools_memory_list')).toBeNull();
+    expect(aiosToolOf('mcp__aios_browser_browser_screenshot')).toBeNull();
+    expect(aiosToolOf('web_search')).toBeNull();
+  });
+
+  it('skema masukan membatasi kueri dan menolak argumen asing', () => {
+    expect(WebSearchInputSchema.safeParse({ query: 'vite 7' }).success).toBe(true);
+    expect(WebSearchInputSchema.safeParse({ query: ' ' }).success).toBe(false);
+    expect(WebSearchInputSchema.safeParse({ query: 'x'.repeat(201) }).success).toBe(false);
+    expect(WebSearchInputSchema.safeParse({ query: 'a', limit: 9 }).success).toBe(false);
+    expect(WebSearchInputSchema.safeParse({ query: 'a', host: 'x' }).success).toBe(false);
+    expect(WebReadInputSchema.safeParse({ url: 'https://example.com' }).success).toBe(true);
   });
 });
 

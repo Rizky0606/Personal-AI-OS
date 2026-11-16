@@ -982,4 +982,28 @@ describe('urutan frame sintetis (bentuk frame dari rekaman)', () => {
       'run.completed',
     ]);
   });
+
+  it('izin tool MCP: web aios_tools berjenis network dengan nama tool di baris pertama; MCP lain tetap command', async () => {
+    const { transport, handle } = await boot({ t: 0 });
+    const ask = (id: string, tool: string, args: string) =>
+      frame(transport, {
+        type: 'extension_ui_request',
+        id,
+        method: 'select',
+        title: `Allow tool: ${tool}\nArguments:\n${args}`,
+        options: ['Approve', 'Deny'],
+      });
+    ask('u1', 'mcp__aios_tools_web_search', '{"query":"vite 7"}');
+    ask('u2', 'mcp__aios_tools_web_read', '{"url":"https://vite.dev/"}');
+    ask('u3', 'mcp__aios_browser_browser_click', '{"selector":"#a"}');
+    frame(transport, { id: 'p1', type: 'prompt_result', status: 'completed' });
+
+    const events = await collect(handle);
+    const requests = events.flatMap((e) => (e.type === 'approval.requested' ? [e] : []));
+    expect(requests.map((e) => [e.kind, e.detail.split('\n')[0]])).toEqual([
+      ['network', 'mcp__aios_tools_web_search'],
+      ['network', 'mcp__aios_tools_web_read'],
+      ['command', 'mcp__aios_browser_browser_click'],
+    ]);
+  });
 });

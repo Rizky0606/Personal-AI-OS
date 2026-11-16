@@ -33,6 +33,8 @@ export interface WorkerRelayOptions {
   disconnectGraceMs?: number;
   /** Menunggu worker mengonfirmasi pembatalan sebelum aliran ditutup paksa. */
   cancelGraceMs?: number;
+  /** Gateway menyajikan tool `aios_tools` (POST /v1/mcp): `run.start` membawa `gatewayTools: true`. */
+  gatewayTools?: boolean;
 }
 
 const CAPABILITIES: AdapterCapabilities = {
@@ -146,6 +148,7 @@ export function createWorkerRelayAdapter(options: WorkerRelayOptions): AgentAdap
           ...(input.planOnly ? { planOnly: true } : {}),
           ...(input.history?.length ? { history: [...input.history] } : {}),
           ...(input.timeoutMs ? { timeoutMs: input.timeoutMs } : {}),
+          ...(options.gatewayTools ? { gatewayTools: true } : {}),
         });
       } catch (error) {
         stop();

@@ -1,7 +1,9 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
+  AIOS_NETWORK_TOOLS,
   QuestionSchema,
+  aiosToolOf,
   type QuestionAnswer,
   TODO_MAX_PHASES,
   TODO_MAX_TASKS,
@@ -115,6 +117,9 @@ type ApprovalKind = 'command' | 'file_write' | 'network';
 function approvalKind(tool: string): ApprovalKind {
   if (['write', 'edit', 'delete', 'rm', 'notebook', 'patch'].includes(tool)) return 'file_write';
   if (['fetch', 'web_search', 'browser', 'web'].includes(tool)) return 'network';
+  // Tool gateway (`aios_tools`) yang keluar ke web: izin jaringan, bukan perintah (SECURITY_OPS.md).
+  const gatewayTool = aiosToolOf(tool);
+  if (gatewayTool && AIOS_NETWORK_TOOLS.includes(gatewayTool)) return 'network';
   return 'command';
 }
 

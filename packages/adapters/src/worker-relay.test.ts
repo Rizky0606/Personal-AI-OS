@@ -74,6 +74,16 @@ describe('createWorkerRelayAdapter', () => {
     expect(adapter.capabilities()).toMatchObject({ approvals: true, steer: true });
   });
 
+  it('gatewayTools: run.start membawa gatewayTools hanya bila tool gateway dinyalakan', async () => {
+    const on = fakePort();
+    await createWorkerRelayAdapter({ relay: on.port, gatewayTools: true }).startRun(input());
+    expect(on.sent[0]).toMatchObject({ type: 'run.start', gatewayTools: true });
+
+    const off = fakePort();
+    await createWorkerRelayAdapter({ relay: off.port, gatewayTools: false }).startRun(input());
+    expect(off.sent[0]).not.toHaveProperty('gatewayTools');
+  });
+
   it('event diteruskan berurutan; ID pesan diganti ID asisten gateway; run.status dari worker dibuang', async () => {
     const t = fakePort();
     const handle = await createWorkerRelayAdapter({ relay: t.port }).startRun(input());
