@@ -29,6 +29,15 @@
     <string name="memory_remember">Ingat</string>
     <string name="memory_remember_title">Ingat ini</string>
     <string name="memory_remember_body">Ringkas menjadi satu fakta singkat. AI memakainya di chat berikutnya; sematkan di Memori agar selalu ikut.</string>
+    <!-- Usulan memori dari ekstraksi fakta di chat umum -->
+    <string name="memory_proposals_title">Usulan memori (%1$d)</string>
+    <string name="memory_proposals_intro">Diambil dari pesan Anda di chat umum. Tidak ada yang dipakai AI sebelum Anda simpan.</string>
+    <string name="memory_proposal_evidence">Dari pesan Anda: “%1$s”</string>
+    <string name="memory_proposal_replaces">Mengganti: %1$s</string>
+    <string name="memory_proposal_approve">Simpan</string>
+    <string name="memory_proposal_reject">Tolak</string>
+    <string name="memory_proposal_approved">Usulan disimpan ke memori.</string>
+    <string name="memory_proposal_rejected">Usulan ditolak dan tidak akan diusulkan lagi.</string>
     <!-- Asisten bawaan (A12) -->
     <string name="assistant_section">Asisten bawaan</string>
     <string name="assistant_item">Jadikan asisten digital</string>

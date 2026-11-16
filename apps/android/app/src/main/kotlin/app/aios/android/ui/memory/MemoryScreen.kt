@@ -33,6 +33,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.aios.android.R
 import app.aios.android.data.api.MEMORY_TEXT_MAX
 import app.aios.android.data.api.Memory
+import app.aios.android.data.api.MemoryProposal
 import app.aios.android.ui.components.AiosButton
 import app.aios.android.ui.components.AiosIcon
 import app.aios.android.ui.components.AiosTextField
@@ -54,7 +55,7 @@ fun MemoryScreen(online: Boolean, snackbar: SnackbarHostState, viewModel: Memory
     val state = when {
         ui.loading -> ScreenState.Loading
         ui.error != null -> ScreenState.Error(stringResource(ui.error!!.messageRes))
-        ui.items.isEmpty() -> ScreenState.Empty
+        ui.items.isEmpty() && ui.proposals.isEmpty() -> ScreenState.Empty
         else -> ScreenState.Content
     }
     val colors = AiosTheme.colors
@@ -89,6 +90,35 @@ fun MemoryScreen(online: Boolean, snackbar: SnackbarHostState, viewModel: Memory
             onRetry = viewModel::refresh
         ) {
             LazyColumn {
+                if (ui.proposals.isNotEmpty()) {
+                    item(key = "proposals-header") {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = Tokens.Space.s16, vertical = Tokens.Space.s8),
+                            verticalArrangement = Arrangement.spacedBy(Tokens.Space.s4)
+                        ) {
+                            Text(
+                                stringResource(R.string.memory_proposals_title, ui.proposals.size),
+                                style = AiosTheme.type.section,
+                                color = colors.text
+                            )
+                            Text(
+                                stringResource(R.string.memory_proposals_intro),
+                                style = AiosTheme.type.meta,
+                                color = colors.text2
+                            )
+                        }
+                    }
+                    items(ui.proposals, key = { "proposal-${it.id}" }) { proposal ->
+                        ProposalRow(
+                            proposal = proposal,
+                            enabled = online && ui.deciding == null,
+                            onApprove = { viewModel.approveProposal(proposal) },
+                            onReject = { viewModel.rejectProposal(proposal) }
+                        )
+                    }
+                }
                 items(ui.items, key = { it.id }) { memory ->
                     MemoryRow(
                         memory = memory,
@@ -139,6 +169,51 @@ fun MemoryScreen(online: Boolean, snackbar: SnackbarHostState, viewModel: Memory
                 )
             }
         )
+    }
+}
+
+/** Satu usulan memori: fakta, kutipan pesan pemilik, dan aksi Simpan/Tolak (Android tidak menyunting usulan). */
+@Composable
+private fun ProposalRow(proposal: MemoryProposal, enabled: Boolean, onApprove: () -> Unit, onReject: () -> Unit) {
+    val colors = AiosTheme.colors
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .drawBehind {
+                val y = size.height - Hairline.toPx() / 2
+                val inset = Tokens.Space.s16.toPx()
+                drawLine(colors.border, Offset(inset, y), Offset(size.width - inset, y), Hairline.toPx())
+            }
+            .padding(horizontal = Tokens.Space.s16, vertical = Tokens.Space.s12),
+        verticalArrangement = Arrangement.spacedBy(Tokens.Space.s4)
+    ) {
+        Text(proposal.text, style = AiosTheme.type.ui, color = colors.text)
+        if (proposal.kind == "update" && proposal.targetText != null) {
+            Text(
+                stringResource(R.string.memory_proposal_replaces, proposal.targetText),
+                style = AiosTheme.type.meta,
+                color = colors.text2
+            )
+        }
+        Text(
+            stringResource(R.string.memory_proposal_evidence, proposal.evidence),
+            style = AiosTheme.type.meta,
+            color = colors.text3
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(Tokens.Space.s8)) {
+            AiosButton(
+                stringResource(R.string.memory_proposal_approve),
+                onClick = onApprove,
+                kind = ButtonKind.Primary,
+                enabled = enabled
+            )
+            AiosButton(
+                stringResource(R.string.memory_proposal_reject),
+                onClick = onReject,
+                kind = ButtonKind.Ghost,
+                enabled = enabled
+            )
+        }
     }
 }
 

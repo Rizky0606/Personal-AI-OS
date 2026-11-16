@@ -1,8 +1,10 @@
 package app.aios.android.data.memory
 
+import app.aios.android.data.api.ApproveMemoryProposalRequest
 import app.aios.android.data.api.CreateMemoryRequest
 import app.aios.android.data.api.Memory
 import app.aios.android.data.api.MemoryApi
+import app.aios.android.data.api.MemoryProposal
 import app.aios.android.data.api.UpdateMemoryRequest
 import retrofit2.HttpException
 
@@ -15,6 +17,13 @@ interface MemoryRepository {
     suspend fun update(id: String, text: String? = null, enabled: Boolean? = null, pinned: Boolean? = null): Memory
 
     suspend fun delete(id: String)
+
+    /** Usulan memori yang menunggu persetujuan (ekstraksi fakta dari chat umum). */
+    suspend fun proposals(): List<MemoryProposal>
+
+    suspend fun approveProposal(id: String): MemoryProposal
+
+    suspend fun rejectProposal(id: String): MemoryProposal
 }
 
 class RemoteMemoryRepository(private val api: MemoryApi) : MemoryRepository {
@@ -29,4 +38,10 @@ class RemoteMemoryRepository(private val api: MemoryApi) : MemoryRepository {
         val response = api.delete(id)
         if (!response.isSuccessful) throw HttpException(response)
     }
+
+    override suspend fun proposals() = api.proposals().items
+
+    override suspend fun approveProposal(id: String) = api.approveProposal(id, ApproveMemoryProposalRequest())
+
+    override suspend fun rejectProposal(id: String) = api.rejectProposal(id)
 }

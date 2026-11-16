@@ -8,6 +8,7 @@ import app.aios.android.data.Connectivity
 import app.aios.android.data.api.ApiError
 import app.aios.android.data.api.MEMORY_TEXT_MAX
 import app.aios.android.data.api.Memory
+import app.aios.android.data.api.MemoryProposal
 import app.aios.android.data.api.toApiError
 import app.aios.android.data.memory.MemoryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -40,10 +41,17 @@ data class MemoryUi(
     val editText: String = "",
     val saving: Boolean = false,
     /** Memori yang menunggu konfirmasi hapus. */
-    val deleting: Memory? = null
+    val deleting: Memory? = null,
+    /** Usulan memori dari chat umum yang menunggu persetujuan. */
+    val proposals: List<MemoryProposal> = emptyList(),
+    /** Usulan yang sedang disetujui atau ditolak; tombol lain dinonaktifkan sampai selesai. */
+    val deciding: String? = null
 )
 
-/** Layar Memori (A9): daftar, tambah, ubah, aktif/nonaktif, hapus. Gagal = snackbar; isian tidak dibuang. */
+/**
+ * Layar Memori (A9): daftar, tambah, ubah, aktif/nonaktif, hapus, serta setujui/tolak usulan memori dari chat.
+ * Gagal = snackbar; isian tidak dibuang.
+ */
 @HiltViewModel
 class MemoryViewModel @Inject constructor(
     private val repo: MemoryRepository,
@@ -79,7 +87,41 @@ class MemoryViewModel @Inject constructor(
                         it.copy(loading = false)
                     }
                 }
+                return@launch
             }
+            loadProposals()
+        }
+    }
+
+    /** Usulan dimuat terpisah: gagal memuatnya jadi snackbar, daftar memori tetap tampil. */
+    private suspend fun loadProposals() {
+        val proposals = attempt { repo.proposals() } ?: return
+        state.update { it.copy(proposals = proposals) }
+    }
+
+    /** Setujui apa adanya (tanpa sunting); memori baru atau teks target berubah, jadi daftar dimuat ulang. */
+    fun approveProposal(proposal: MemoryProposal) = decide(proposal, R.string.memory_proposal_approved) {
+        repo.approveProposal(proposal.id)
+        val items = repo.list()
+        state.update { it.copy(items = items) }
+    }
+
+    fun rejectProposal(proposal: MemoryProposal) = decide(proposal, R.string.memory_proposal_rejected) {
+        repo.rejectProposal(proposal.id)
+    }
+
+    private fun decide(proposal: MemoryProposal, @StringRes done: Int, work: suspend () -> Unit) {
+        if (state.value.deciding != null) return
+        state.update { it.copy(deciding = proposal.id) }
+        viewModelScope.launch {
+            if (attempt { work() } != null) {
+                state.update { s -> s.copy(proposals = s.proposals.filterNot { it.id == proposal.id }) }
+                notices.trySend(MemoryEvent.Notice(done))
+            } else {
+                // Mis. sudah diputuskan dari perangkat lain (409): ambil daftar terbaru.
+                loadProposals()
+            }
+            state.update { it.copy(deciding = null) }
         }
     }
 
