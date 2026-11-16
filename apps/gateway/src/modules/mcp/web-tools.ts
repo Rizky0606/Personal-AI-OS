@@ -213,7 +213,7 @@ export function createWebTools(deps: WebToolsDeps): WebTools {
       ].join('\n'),
     );
     return {
-      result: textResult([...header, '', ...sections].join('\n\n')),
+      result: textResult([header.join('\n'), ...sections].join('\n\n')),
       ok: true,
       items: picked.length,
     };

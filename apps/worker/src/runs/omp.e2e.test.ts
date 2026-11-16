@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { promises as fs } from 'node:fs';
 import { tmpdir } from 'node:os';
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import path from 'node:path';
 import type { AgentEvent, WorkerCommand } from '@aios/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -40,6 +41,8 @@ describe.skipIf(ompPath === null)('run coding dengan omp sungguhan', () => {
   let llm: ReturnType<typeof mockLlm>;
   let steps: (toolResults: number, request: ChatRequest) => MockStep;
   let accessToken: string;
+  /** Penangan `POST /v1/mcp` gateway tiruan (tool gateway); tanpa ini dijawab 404. */
+  let mcp: ((req: IncomingMessage, res: ServerResponse) => void) | undefined;
 
   const git = (cwd: string, ...args: string[]) =>
     execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...args], {
@@ -107,6 +110,7 @@ describe.skipIf(ompPath === null)('run coding dengan omp sungguhan', () => {
     );
 
   beforeEach(async () => {
+    mcp = undefined;
     base = await fs.realpath(await fs.mkdtemp(path.join(tmpdir(), 'aios-e2e-')));
     repo = path.join(base, 'izin', 'aplikasi');
     await fs.mkdir(repo, { recursive: true });
@@ -128,6 +132,8 @@ describe.skipIf(ompPath === null)('run coding dengan omp sungguhan', () => {
       if (req.url?.startsWith('/llm/v1/')) {
         req.url = req.url.slice('/llm'.length);
         llm.handler(req, res);
+      } else if (req.url === '/v1/mcp' && mcp) {
+        mcp(req, res);
       } else {
         res.writeHead(404).end();
       }
@@ -200,6 +206,93 @@ describe.skipIf(ompPath === null)('run coding dengan omp sungguhan', () => {
     // Tidak ada berkas omp di repo kerja maupun worktree.
     expect(await fs.readdir(wt.cwd)).not.toContain('.omp');
     expect(await fs.readdir(repo)).not.toContain('.omp');
+  }, 120_000);
+
+  it('tool gateway: omp memanggil web_search lewat relay worker; gateway menerima token perangkat dan run id, hasil sampai ke model', async () => {
+    const seen: { auth: string | undefined; runId: string | undefined; method: string }[] = [];
+    mcp = (req, res) => {
+      let raw = '';
+      req.on('data', (c: Buffer) => (raw += c.toString('utf8')));
+      req.on('end', () => {
+        const message = JSON.parse(raw) as {
+          id?: number;
+          method: string;
+          params?: { protocolVersion?: string; name?: string; arguments?: { query?: string } };
+        };
+        seen.push({
+          auth: req.headers.authorization,
+          runId: req.headers['x-aios-run-id'] as string | undefined,
+          method: message.method,
+        });
+        if (message.id === undefined) return void res.writeHead(202).end();
+        const result =
+          message.method === 'initialize'
+            ? {
+                protocolVersion: message.params?.protocolVersion,
+                capabilities: { tools: { listChanged: false } },
+                serverInfo: { name: 'aios_tools', version: 'e2e' },
+              }
+            : message.method === 'tools/list'
+              ? {
+                  tools: [
+                    {
+                      name: 'web_search',
+                      description: 'Cari di web',
+                      inputSchema: {
+                        type: 'object',
+                        properties: { query: { type: 'string' } },
+                        required: ['query'],
+                      },
+                    },
+                  ],
+                }
+              : message.method === 'tools/call'
+                ? {
+                    content: [
+                      {
+                        type: 'text',
+                        text: `Hasil web_search untuk: ${message.params?.arguments?.query}\n[1] https://vite.dev/guide/`,
+                      },
+                    ],
+                  }
+                : {};
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ jsonrpc: '2.0', id: message.id, result }));
+      });
+    };
+    steps = (toolResults) =>
+      toolResults === 0
+        ? { tool: { name: 'mcp__aios_tools_web_search', args: { query: 'vite 7 config' } } }
+        : { text: 'Menurut https://vite.dev/guide/ caranya begini.' };
+    const answers = autoAnswer(RUN_1, () => ({ decision: 'allow', remember: false }));
+
+    sendCommand(startCommand(RUN_1, { gatewayTools: true }));
+    await until(() => finished(RUN_1), 'run selesai', 90_000);
+    answers.stop();
+
+    expect(eventsOf(RUN_1).at(-1)).toMatchObject({ type: 'run.completed' });
+    // Izin jaringan dengan nama tool di baris pertama (bukan perintah).
+    expect(answers.asked.map((a) => [a.kind, a.detail.split('\n')[0]])).toEqual([
+      ['network', 'mcp__aios_tools_web_search'],
+    ]);
+    expect(eventsOf(RUN_1).find((e) => e.type === 'tool.started')).toMatchObject({
+      name: 'mcp__aios_tools_web_search',
+      target: 'vite 7 config',
+    });
+    // Setiap permintaan MCP sampai ke gateway lewat relay: token perangkat dan run id dari worker.
+    expect(seen.map((s) => s.method)).toEqual(
+      expect.arrayContaining(['initialize', 'tools/list', 'tools/call']),
+    );
+    for (const s of seen) {
+      expect(s.auth).toBe(`Bearer ${accessToken}`);
+      expect(s.runId).toBe(RUN_1);
+    }
+    // Model melihat tool-nya dan menerima hasilnya.
+    expect(JSON.stringify(llm.requests[0]?.body.tools)).toContain('mcp__aios_tools_web_search');
+    const toolMessage = llm.requests[1]?.body.messages.find((m) => m.role === 'tool');
+    expect(JSON.stringify(toolMessage?.content)).toContain('Hasil web_search untuk: vite 7 config');
+    const system = llm.requests[0]?.body.messages.find((m) => m.role === 'system');
+    expect(JSON.stringify(system?.content)).toContain('# Tool web');
   }, 120_000);
 
   it('LLM dipanggil lewat proxy lokal dengan token perangkat segar (bukan kunci lokal) dan role ada di system prompt', async () => {
