@@ -19,6 +19,20 @@ test('run coding: izin → diff → terima membuat commit Conventional di branch
   await dialog.getByRole('button', { name: 'Daftarkan project' }).click();
   await expect(page.getByText('Project terdaftar.').first()).toBeVisible();
 
+  // Mode worktree: matikan "Kerja langsung di branch aktif" (bawaannya nyala) di setup project.
+  await page
+    .getByRole('button', { name: /^Aksi project: / })
+    .first()
+    .click();
+  await page.getByRole('menuitem', { name: 'Atur setup' }).click();
+  const setup = page.getByRole('dialog', { name: /^Setup run coding / });
+  const inPlace = setup.getByRole('switch', { name: 'Kerja langsung di branch aktif' });
+  await expect(inPlace).toHaveAttribute('aria-checked', 'true');
+  await inPlace.click();
+  await expect(inPlace).toHaveAttribute('aria-checked', 'false');
+  await setup.getByRole('button', { name: 'Simpan setup' }).click();
+  await expect(page.getByText('Setup run coding disimpan.').first()).toBeVisible();
+
   // Pilih project di tab Project: chat-nya sesuai folder project itu.
   await page.keyboard.press('Control+2');
   await page.getByRole('list', { name: 'Daftar project' }).getByRole('link').first().click();
@@ -33,14 +47,20 @@ test('run coding: izin → diff → terima membuat commit Conventional di branch
   // Selesai: panel Diff terbuka otomatis dengan berkas baru.
   const diff = page.getByRole('complementary');
   await expect(diff.getByText('catatan-e2e.txt').first()).toBeVisible({ timeout: 60_000 });
-  // Branch kerja pengguna belum berubah.
+  await expect(page.getByText(/^Di salinan aios\//).first()).toBeVisible();
+  // Branch kerja pengguna belum berubah, berkasnya juga tidak ada di folder project.
   expect(await control.git(repo, 'rev-parse', 'main')).toBe(mainBefore);
+  expect(await control.readFile(`${repo}/catatan-e2e.txt`)).toBeNull();
 
   await diff.getByRole('button', { name: 'Terima', exact: true }).click();
   const accept = page.getByRole('dialog', { name: 'Terima perubahan' });
   await expect(accept.getByLabel('Pesan commit')).toHaveValue('docs: tambah catatan e2e');
+  // Gabungkan ke branch kerja bawaannya nyala untuk run chat; uji ini memeriksa hasil tetap di branch run.
+  const merge = accept.getByRole('switch', { name: 'Gabungkan ke main' });
+  await expect(merge).toHaveAttribute('aria-checked', 'true');
+  await merge.click();
   await accept.getByRole('button', { name: 'Terima', exact: true }).click();
-  await expect(page.getByText(/Diterima. Perubahan ada di branch/).first()).toBeVisible();
+  await expect(page.getByText(/Diterima. Perubahan ada di branch aios\//).first()).toBeVisible();
 
   // Satu commit Conventional di branch aios/..., main tetap.
   const branches = await control.git(repo, 'branch', '--list', 'aios/*');

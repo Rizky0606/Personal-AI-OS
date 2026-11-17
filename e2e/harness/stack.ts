@@ -1,7 +1,7 @@
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { crc32, deflateSync } from 'node:zlib';
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import {
   createServer as createHttpServer,
   type IncomingMessage,
@@ -298,6 +298,27 @@ export async function startStack(): Promise<Stack> {
           const cwd = path.resolve(body.cwd);
           if (!cwd.startsWith(base)) return void res.writeHead(403).end();
           return send({ out: git(cwd, ...body.args) });
+        }
+        if (url.pathname === '/file') {
+          // Berkas di repo uji (hanya di folder sementara stack): baca (content absen), tulis, atau hapus (null).
+          const body = JSON.parse(await readBody(req)) as { path: string; content?: string | null };
+          const target = path.resolve(body.path);
+          if (!target.startsWith(base + path.sep)) return void res.writeHead(403).end();
+          if (body.content === undefined) {
+            let content: string | null = null;
+            try {
+              content = readFileSync(target, 'utf8');
+            } catch {
+              content = null;
+            }
+            return send({ content });
+          }
+          if (body.content === null) rmSync(target, { force: true });
+          else {
+            mkdirSync(path.dirname(target), { recursive: true });
+            writeFileSync(target, body.content);
+          }
+          return send({ ok: true });
         }
         if (url.pathname === '/http') {
           const body = JSON.parse(await readBody(req)) as {
