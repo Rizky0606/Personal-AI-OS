@@ -30,7 +30,8 @@ Sebuah tahap dianggap selesai hanya bila semua kotaknya tercentang. Checklist in
 
 - [ ] Login sekali, tersambung kembali sendiri setelah PC tidur atau idle lama
 - [x] Worker menolak path di luar folder yang diizinkan, termasuk symlink _(apps/worker paths.test.ts)_
-- [x] Run coding tidak pernah mengubah branch kerja sebelum diterima _(E2E desktop coding.spec.ts dengan omp nyata)_
+- [x] Run coding mode worktree tidak pernah mengubah branch kerja sebelum diterima _(E2E desktop coding.spec.ts dengan omp nyata)_
+- [x] Run coding mode branch aktif (bawaan chat project) tidak membuat commit sebelum diterima, terima menjadi satu commit di branch yang sedang checkout tanpa branch `aios/*`, dan tolak mengembalikan isi folder ke awal tanpa menyentuh berkas yang diabaikan git _(E2E desktop coding-branch-aktif.spec.ts dan apps/worker omp.e2e.test.ts dengan omp nyata)_
 - [ ] Setiap perintah non-baca meminta izin kecuali ada aturan "selalu"
 - [ ] Komentar diff per baris diperbaiki agent dengan tepat
 - [ ] Dua kartu kanban berjalan paralel tanpa konflik
@@ -53,7 +54,7 @@ Sebuah tahap dianggap selesai hanya bila semua kotaknya tercentang. Checklist in
 | Skill spesialis tidak termuat | Jawaban kurang tajam | Pola kata kunci lebar; pengguna menambah skill lewat `skills[]` |
 | RAM VPS 12 GB penuh saat riset mendalam + banyak run | Layanan lambat | Batas paralelisme job, Chromium hanya saat perlu, swap, tes beban di Fase 23 |
 | Kuota provider habis | Run gagal | Combo fallback di 9Router, dasbor kuota, error yang jelas |
-| Agent menjalankan perintah berbahaya | Kerusakan data PC | Worktree, daftar folder, approval wajib, batas waktu run |
+| Agent menjalankan perintah berbahaya | Kerusakan data PC | Worktree (wajib untuk kanban, armada, tim, jadwal), mode branch aktif hanya di pohon kerja bersih dengan perintah git pemindah HEAD ditolak, daftar folder, approval wajib, batas waktu run |
 | Fitur melebar ke mana-mana | Proyek tidak selesai | Satu fase per sesi, BACKLOG.md untuk ide di luar scope |
 | Pemakaian MITM atau pooling langganan di 9Router | Melanggar ToS provider | Gunakan API key resmi untuk combo gateway |
 

@@ -23,7 +23,7 @@ flowchart TB
   subgraph pc["PC Windows (lokal)"]
     worker["Worker sidecar<br/>IPC lokal ke aplikasi<br/>WSS keluar ke gateway"]
     aomp["Adapter omp<br/>omp --mode rpc"]
-    wt["Git worktree<br/>Satu per run"]
+    wt["Folder kerja run<br/>Branch aktif atau git worktree"]
     prev["Preview<br/>WebView2 + uji"]
   end
 
@@ -96,14 +96,14 @@ export interface RunHandle {
 ```
 
 - **Adapter Hermes** (di gateway): HTTP streaming ke 127.0.0.1:8642. Role dan skill disuntik sebagai pesan sistem.
-- **Adapter omp** (di worker): menjalankan `omp --mode rpc` dengan cwd = worktree, lalu membaca event dari stdio. Cara menyuntik role dan skill tanpa mengotori worktree diverifikasi di Fase 0. Fallback: role dikirim sebagai pesan sistem pertama lewat RPC.
+- **Adapter omp** (di worker): menjalankan `omp --mode rpc` dengan cwd = folder kerja run (folder project pada mode `in_place`, atau worktree), lalu membaca event dari stdio. Cara menyuntik role dan skill tanpa mengotori folder kerja diverifikasi di Fase 0. Fallback: role dikirim sebagai pesan sistem pertama lewat RPC.
 - **Adapter dsh** (di gateway): meluncurkan `dsh --profile acp` per run, cwd terisolasi, memetakan ACP ke event kontrak. Developer preview, tidak diaudit; plan, mode, todo, dan subagent ACP tidak tersedia. Project run ditolak.
 - Versi setiap mesin dikunci. Perubahan protokol hanya boleh menyentuh adapter.
 
 ## Alur utama
 
 1. **Chat umum:** klien kirim pesan, gateway memilih agent dan skill, adapter Hermes mengalirkan jawaban, event disimpan dan disiarkan lewat WebSocket.
-2. **Run coding:** klien Windows membuat run, gateway menetapkan role, worker membuat worktree dan menjalankan omp, approval ditanyakan di aplikasi Windows, hasil berupa diff menunggu review.
+2. **Run coding:** klien Windows membuat run, gateway menetapkan role, worker menyiapkan folder kerja (bawaan chat project: folder project di branch aktif setelah dicek bersih, tidak detached, dan tidak dipakai run lain; kartu kanban, armada, tim, jadwal, atau pilihan eksplisit: git worktree baru), mengirim `workspace.ready`, lalu menjalankan omp. Approval ditanyakan di aplikasi Windows, hasil berupa diff menunggu review; commit baru dibuat saat diterima.
 3. **Deep research:** gateway membuat job, research engine merencanakan sub-pertanyaan, mencari lewat SearXNG, membaca halaman, lalu menyusun laporan bersitasi.
 4. **Jadwal:** pg-boss memicu job sesuai cron, menjalankan prompt di Hermes atau research engine, menyimpan hasil, lalu mengirim notifikasi.
 

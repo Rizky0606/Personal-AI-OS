@@ -28,7 +28,7 @@ Produk ini adalah satu asisten AI pribadi dengan dua wajah: Windows untuk kerja 
 | --- | --- | --- | --- |
 | W1 | Chat umum | P0 | Chat dengan agent umum dan skill otomatis, pilih model, lampiran |
 | W2 | Chat per folder project | P0 | Agent bekerja di folder terpilih via adapter omp |
-| W3 | Run di git worktree | P0 | Satu worktree per run atau kartu, tidak menyentuh branch kerja |
+| W3 | Folder kerja run | P0 | Run chat project bawaannya bekerja langsung di branch aktif folder project (tanpa commit sebelum diterima); git worktree terpisah per run untuk kartu, armada, tim, jadwal, atau bila dipilih per project/per pesan |
 | W4 | Review diff | P0 | Diff per file, komentar per baris dikirim balik ke agent, terima atau tolak |
 | W5 | Tool approvals | P0 | Izin per perintah atau tool, dengan aturan izinkan selalu per project |
 | W6 | Kanban AI | P1 | Backlog, Todo, Running, Review, Done; tombol Kerjakan dengan AI; AI memecah ide jadi kartu |
@@ -97,6 +97,6 @@ Produk ini adalah satu asisten AI pribadi dengan dua wajah: Windows untuk kerja 
 - Pemilihan agent deterministik: chat per folder project di Windows selalu memakai agent project, selain itu agent umum (aturan tetap tanpa model, tercakup tes otomatis). Router role otomatis beserta target akurasi routing 90% sudah dihapus (`docs/BACKLOG.md` Fase 48).
 - Skill yang ditawarkan mengikuti paket kata kunci pesan dan pilihan pengguna; ketepatan skill yang benar-benar dibuka agent diukur dengan `pnpm eval:skills` (20 pesan contoh, bukan gerbang CI, belum ada ambang lulus).
 - Token pertama chat muncul di bawah 2 detik di jaringan normal.
-- Nol perubahan file di luar worktree tanpa persetujuan.
+- Nol perubahan file di luar folder kerja run (folder project pada mode branch aktif, atau worktree) tanpa persetujuan; tidak ada commit ke branch pemilik sebelum diterima.
 - Reconnect otomatis setelah koneksi putus dalam 10 detik, tanpa langkah manual.
 - Jadwal berjalan tepat waktu dengan toleransi 1 menit.
