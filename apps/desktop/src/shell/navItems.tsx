@@ -4,6 +4,7 @@ import {
   Kanban,
   Library,
   MessageSquare,
+  Plug,
   Search,
   Settings,
   Sparkles,
@@ -20,6 +21,7 @@ export interface NavItem {
     | '/research'
     | '/spaces'
     | '/skills'
+    | '/connectors'
     | '/settings';
   label: string;
   icon: ReactNode;
@@ -52,6 +54,13 @@ export const skillsItem: NavItem = {
   to: '/skills',
   label: copy.nav.skills,
   icon: <Sparkles {...ICON} />,
+};
+
+/** Konektor MCP: tautan di kaki sidebar, bersebelahan dengan Skill. */
+export const connectorsItem: NavItem = {
+  to: '/connectors',
+  label: copy.nav.connectors,
+  icon: <Plug {...ICON} />,
 };
 
 /** Pengaturan: tautan di kaki sidebar. */

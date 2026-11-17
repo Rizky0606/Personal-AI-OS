@@ -27,6 +27,7 @@ const PATHS = [
   '/status',
   '/compare',
   '/skills',
+  '/connectors',
 ];
 
 /**
