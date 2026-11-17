@@ -1,3 +1,4 @@
+import { aiosToolOf } from '@aios/contracts';
 import { ShieldAlert } from 'lucide-react';
 import { copy } from '../copy';
 import type { PendingApproval } from '../realtime/liveRun';
@@ -12,10 +13,14 @@ export interface ApprovalPanelProps {
 
 /**
  * Panel inline berwarna `warning` (DESIGN_SYSTEM.md: Permintaan izin): perintah persis dan folder kerjanya,
- * lalu tiga pilihan. Satu tombol primer (Izinkan sekali); "Selalu" hanya untuk perintah yang persis sama.
+ * lalu tiga pilihan. Satu tombol primer (Izinkan sekali); "Selalu" hanya untuk perintah yang persis sama,
+ * atau untuk semua panggilan tool gateway di project ini.
  */
 export function ApprovalPanel({ approval, busy, onResolve }: ApprovalPanelProps) {
-  const title = copy.approval.title[approval.kind];
+  const gatewayTool = aiosToolOf(approval.detail.split('\n')[0] ?? '');
+  const title = gatewayTool
+    ? copy.approval.gatewayTitle(gatewayTool)
+    : copy.approval.title[approval.kind];
   return (
     <section
       role="group"
@@ -43,14 +48,16 @@ export function ApprovalPanel({ approval, busy, onResolve }: ApprovalPanelProps)
           {copy.approval.allowOnce}
         </Button>
         <Button variant="secondary" disabled={busy} onClick={() => onResolve('allow', true)}>
-          {copy.approval.allowAlways}
+          {gatewayTool ? copy.approval.allowAlwaysTool(gatewayTool) : copy.approval.allowAlways}
         </Button>
         <Button variant="danger" disabled={busy} onClick={() => onResolve('deny', false)}>
           {copy.approval.deny}
         </Button>
       </div>
-      {approval.kind === 'command' ? (
-        <p className="text-caption text-text-3">{copy.approval.alwaysHint}</p>
+      {gatewayTool || approval.kind === 'command' ? (
+        <p className="text-caption text-text-3">
+          {gatewayTool ? copy.approval.gatewayHint(gatewayTool) : copy.approval.alwaysHint}
+        </p>
       ) : null}
     </section>
   );

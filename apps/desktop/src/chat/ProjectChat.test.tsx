@@ -264,7 +264,13 @@ describe('lampiran konteks dari preview', () => {
 });
 
 describe('panel izin inline', () => {
-  async function runWithApproval(extra: () => void = () => undefined) {
+  async function runWithApproval(
+    extra: () => void = () => undefined,
+    approval: { kind: 'command' | 'network'; detail: string } = {
+      kind: 'command',
+      detail: 'node --test',
+    },
+  ) {
     useUiStore.getState().setActiveProject(PROJECT);
     api.listMessages.mockResolvedValue(
       page(message({ author: 'user', text: 'tambahkan tes', runId: RUN_X })),
@@ -289,8 +295,8 @@ describe('panel izin inline', () => {
       emit(`run:${RUN_X}`, {
         type: 'approval.requested',
         approvalId: APPROVAL,
-        kind: 'command',
-        detail: 'node --test',
+        kind: approval.kind,
+        detail: approval.detail,
         cwd: 'C:\\work\\aplikasi',
         toolCallId: 'c1',
       });
@@ -318,6 +324,23 @@ describe('panel izin inline', () => {
     expect(api.resolveApproval).toHaveBeenCalledWith(RUN_X, APPROVAL, {
       decision: 'allow',
       remember: false,
+    });
+  });
+
+  it('tool gateway memakai judul, tombol, dan cakupan spesifik tool', async () => {
+    api.resolveApproval.mockResolvedValue({} as never);
+    const user = userEvent.setup();
+    await runWithApproval(undefined, { kind: 'command', detail: 'mcp__aios_tools_task_list\n{}' });
+    const panel = await screen.findByRole('group', {
+      name: copy.approval.gatewayTitle('task_list'),
+    });
+    expect(within(panel).getByText(copy.approval.gatewayHint('task_list'))).toBeTruthy();
+    await user.click(
+      within(panel).getByRole('button', { name: copy.approval.allowAlwaysTool('task_list') }),
+    );
+    expect(api.resolveApproval).toHaveBeenLastCalledWith(RUN_X, APPROVAL, {
+      decision: 'allow',
+      remember: true,
     });
   });
 
