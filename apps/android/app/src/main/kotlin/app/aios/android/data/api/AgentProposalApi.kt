@@ -10,8 +10,8 @@ import retrofit2.http.Query
 /*
  * Usulan kartu dan jadwal dari agent (tool `task_propose`/`schedule_propose` di server MCP `aios_tools`), mengikuti
  * packages/contracts (AgentProposalSchema, endpoint /agent-proposals). Ubah bersama kontrak. Usulan memori tidak di
- * sini: masuk ke usulan memori biasa. Android hanya menyetujui apa adanya atau menolak; menyunting dari aplikasi
- * Windows. Nilai enum dibaca sebagai teks supaya nilai baru dari server tidak merusak daftar.
+ * sini: masuk ke usulan memori biasa. Usulan bisa disetujui apa adanya, disunting dulu lalu disetujui, atau ditolak.
+ * Nilai enum dibaca sebagai teks supaya nilai baru dari server tidak merusak daftar.
  */
 
 const val AGENT_PROPOSAL_TASK = "task"
@@ -19,8 +19,18 @@ const val AGENT_PROPOSAL_SCHEDULE = "schedule"
 const val AGENT_PROPOSAL_PENDING = "pending"
 const val AGENT_HERMES = "hermes"
 
+/** Batas isian saat pemilik menyunting usulan sebelum menyetujui; sama dengan packages/contracts. */
+const val TASK_PROPOSAL_TITLE_MAX = 200
+const val TASK_PROPOSAL_BODY_MAX = 4000
+const val SCHEDULE_PROPOSAL_NAME_MAX = 120
+const val SCHEDULE_PROPOSAL_PROMPT_MAX = 2000
+
 /** Kode galat server bila usulan sudah disetujui atau ditolak sebelumnya (409). */
 const val CODE_PROPOSAL_DECIDED = "proposal_decided"
+
+/** Kode galat server (400) bila cron atau zona waktu hasil suntingan pemilik tidak valid. */
+const val CODE_INVALID_CRON = "invalid_cron"
+const val CODE_INVALID_TIMEZONE = "invalid_timezone"
 
 @Serializable
 data class AgentProposalTask(val title: String, val body: String = "")
@@ -67,13 +77,26 @@ data class AgentProposal(
 @Serializable
 data class AgentProposalList(val items: List<AgentProposal>)
 
-/** Bagian jadwal pada persetujuan; Android hanya mengirim [enabled], selebihnya apa adanya dari usulan. */
+/** Bagian kartu pada persetujuan: hanya kolom yang disunting pemilik yang dikirim; null tidak ikut ke JSON. */
 @Serializable
-data class ApproveScheduleOverride(val enabled: Boolean? = null)
+data class ApproveTaskOverride(val title: String? = null, val body: String? = null)
+
+/** Bagian jadwal pada persetujuan: kolom yang disunting pemilik plus [enabled]; null tidak ikut ke JSON. */
+@Serializable
+data class ApproveScheduleOverride(
+    val name: String? = null,
+    val cron: String? = null,
+    val timezone: String? = null,
+    val prompt: String? = null,
+    val enabled: Boolean? = null
+)
 
 /** Body kosong `{}` = setujui apa adanya. */
 @Serializable
-data class ApproveAgentProposalRequest(val schedule: ApproveScheduleOverride? = null)
+data class ApproveAgentProposalRequest(
+    val task: ApproveTaskOverride? = null,
+    val schedule: ApproveScheduleOverride? = null
+)
 
 interface AgentProposalApi {
     /** Terbaru dulu; [status] bawaan server `pending`, [kind] kosong = semua jenis. */

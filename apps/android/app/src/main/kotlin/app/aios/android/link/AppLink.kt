@@ -20,6 +20,9 @@ sealed interface AppLink {
 
     /** Usulan memori baru dari chat: layar Memori, yang memuat ulang usulannya. */
     data object OpenMemory : AppLink
+
+    /** Usulan kartu atau jadwal baru dari agent: layar Usulan agent, yang memuat ulang daftarnya. */
+    data object OpenAgentProposals : AppLink
 }
 
 /** Kunci data FCM (sama dengan payload gateway: apps/gateway/src/modules/push/service.ts). */
@@ -31,6 +34,7 @@ object PushKeys {
     const val TYPE_SCHEDULE_RESULT = "schedule.result"
     const val TYPE_RESEARCH_COMPLETED = "research.completed"
     const val TYPE_MEMORY_PROPOSAL = "memory_proposal"
+    const val TYPE_AGENT_PROPOSAL = "agent_proposal"
 }
 
 object AppLinks {
@@ -45,6 +49,7 @@ object AppLinks {
                 value(PushKeys.CONVERSATION_ID)?.let(AppLink::OpenConversation)
                     ?: value(PushKeys.SCHEDULE_ID)?.let(AppLink::OpenSchedule)
             PushKeys.TYPE_MEMORY_PROPOSAL -> AppLink.OpenMemory
+            PushKeys.TYPE_AGENT_PROPOSAL -> AppLink.OpenAgentProposals
             else -> null
         }
     }
