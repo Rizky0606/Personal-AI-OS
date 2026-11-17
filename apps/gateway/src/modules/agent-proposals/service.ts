@@ -32,6 +32,7 @@ export interface AgentProposalService {
     status?: AgentProposalStatus | 'all' | undefined;
     kind?: AgentProposalKind | undefined;
     projectId?: string | undefined;
+    conversationId?: string | undefined;
   }): Promise<AgentProposal[]>;
   get(id: string): Promise<AgentProposal>;
   approve(
@@ -108,9 +109,20 @@ export function createAgentProposalService(deps: {
   hub: Pick<EventHub, 'publishLive'>;
   tasks: Pick<TasksService, 'create'>;
   schedules: Pick<ScheduleService, 'create'>;
+  /**
+   * Push FCM saat usulan baru dibuat: PushService menggabungkan usulan dari satu giliran menjadi satu notifikasi
+   * dan hanya mengirim jumlah serta ID, tidak pernah isi usulan. Tanpa FCM tidak melakukan apa pun.
+   */
+  push?: {
+    agentProposals(input: {
+      runId: string | null;
+      conversationId: string | null;
+      proposalId: string;
+    }): void;
+  };
   now?: () => number;
 }): AgentProposalService {
-  const { db, hub, tasks, schedules } = deps;
+  const { db, hub, tasks, schedules, push } = deps;
   const now = deps.now ?? Date.now;
 
   const notFound = () => new AppError(404, 'proposal_not_found', 'Usulan tidak ditemukan.');
@@ -176,14 +188,20 @@ export function createAgentProposalService(deps: {
             ? `Agent mengusulkan kartu: ${clip(input.task.title, NOTIFY_TEXT_MAX)}`
             : `Agent mengusulkan jadwal: ${clip(input.schedule.name, NOTIFY_TEXT_MAX)}`,
       });
+      push?.agentProposals({
+        runId: input.runId,
+        conversationId: input.conversationId,
+        proposalId: row!.id,
+      });
       return toDto(row!);
     },
 
-    async list({ status = 'pending', kind, projectId }) {
+    async list({ status = 'pending', kind, projectId, conversationId }) {
       const filters = [
         status === 'all' ? undefined : eq(agentProposals.status, status),
         kind ? eq(agentProposals.kind, kind) : undefined,
         projectId ? eq(agentProposals.projectId, projectId) : undefined,
+        conversationId ? eq(agentProposals.conversationId, conversationId) : undefined,
       ].filter((f) => f !== undefined);
       const rows = await db
         .select()

@@ -159,7 +159,7 @@ Nama server `aios_tools` (tidak berawalan sama dengan `aios_browser`, sehingga p
 ### Rate limit
 
 - Route `/v1/mcp`: `config.rateLimit` 60/menit per principal (`worker:<deviceId>` atau `hermes`), di samping batas umum 120/menit (`app.ts:81,212-224`) dan zona nginx `aios_api`.
-- Anggaran per run (in-memory per `runId`, hilang saat run selesai): 15 `web_search`, 15 `web_read`, 30 baca internal, 3 usulan. Hermes (tanpa run): jendela geser per jam dengan angka yang sama ×4.
+- Anggaran per run: 15 `web_search`, 15 `web_read`, 30 baca internal, 3 usulan. Hitungan dan allowlist `web_read` per run disimpan di tabel `run_web_state` (migrasi 0021) dan dimuat ulang setelah restart gateway (bagian 20). Hermes (tanpa run): jendela geser per jam dengan angka yang sama ×4, tetap di memori.
 - Usulan: 10 per `kind` per 24 jam (bergulir, seperti `PROPOSALS_PER_DAY`).
 
 ### Audit dan log
@@ -343,3 +343,9 @@ Sejak desain ini ditulis, `main` mendapat usulan memori dari ekstraksi fakta (`m
 - **Config**: `MCP_HERMES_TOKEN_SHA256` (opsional, 64 heks, `ConfigError` tanpa nilai) di `gateway.env.example`. Runbook: `docs/RUNBOOK_HERMES_MCP.md`.
 - **Kompatibilitas** (menutup **[INFERENSI]** baris 49 dan bagian 14): proses `hermes gateway run` memakai Python 3.14.9 dari `~/.hermes/tools/` dengan venv `~/.hermes/installs/…/venv/lib/python3.14/site-packages` berisi `mcp` 2.3.0 (dibaca dari `/proc/<pid>/maps` dan dist-info). Klien itu sendiri (dibaca saja, `python -I -B`) terhadap gateway tes lokal: preflight `HEAD`/`GET` 405 lolos, `initialize` (`2025-11-25`), `tools/list` 7 tool dengan `readOnlyHint` benar, `tools/call` berhasil, tool kanban = galat protokol. Rinciannya di runbook.
 - Belum: rekaman SSE `hermes.tool.progress` dengan tool MCP sungguhan (perlu config Hermes produksi menyala); perangkat layanan yang bisa dicabut dari halaman Perangkat (keputusan pemilik #2, BACKLOG).
+
+## 20. Catatan BL 918–920
+
+- **BL 918 (izin):** judul, tombol, dan petunjuk izin untuk `mcp__aios_tools_*` menyebut nama tool (`aiosToolOf`). Aturan tetap per nama tool; tidak ada perluasan izin.
+- **BL 919 (label browser):** `mcp__aios_browser_browser_*` masuk jenis `browser` dan bukan Konektor. Konstanta `AIOS_BROWSER_OMP_PREFIX` di `packages/contracts/src/tools.ts`; Android memakai literal dengan komentar cermin. `aios_tools` tidak berubah.
+- **BL 920 (anggaran durable):** tabel `run_web_state` (`runId` PK, `searches`, `reads`, `allowed` jsonb). Tidak memakai `run_events` karena tabel itu berisi `AgentEvent` untuk timeline. `WebRunStore` (`modules/mcp/web-state.ts`) dimuat sekali per proses dan ditulis sebelum setiap pencarian dan baca, sehingga restart tidak melewati batas. Allowlist disimpan setelah hasil pencarian. Hermes tetap di memori.

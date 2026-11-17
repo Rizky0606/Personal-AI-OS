@@ -5,8 +5,14 @@ import androidx.lifecycle.viewModelScope
 import app.aios.android.data.api.AgentProposal
 import app.aios.android.data.api.AgentProposalApi
 import app.aios.android.data.api.AgentProposalList
+import app.aios.android.data.api.AgentProposalSchedule
 import app.aios.android.data.api.AgentProposalTask
 import app.aios.android.data.api.ApproveAgentProposalRequest
+import app.aios.android.data.api.SCHEDULE_PROPOSAL_NAME_MAX
+import app.aios.android.data.api.SCHEDULE_PROPOSAL_PROMPT_MAX
+import app.aios.android.data.api.TASK_PROPOSAL_BODY_MAX
+import app.aios.android.data.api.TASK_PROPOSAL_TITLE_MAX
+import app.aios.android.data.proposals.AgentProposalEdits
 import app.aios.android.data.proposals.AgentProposalRepository
 import app.aios.android.data.proposals.RemoteAgentProposalRepository
 import app.aios.android.data.realtime.Backoff
@@ -67,6 +73,10 @@ private const val DECIDED_409 = """
 {"type":"urn:aios:problem:proposal_decided","title":"Konflik dengan status saat ini","status":409,"detail":"Usulan sudah diputuskan.","code":"proposal_decided"}
 """
 
+private const val INVALID_CRON_400 = """
+{"type":"urn:aios:problem:invalid_cron","title":"Isian tidak valid","status":400,"detail":"Cron tidak valid.","code":"invalid_cron"}
+"""
+
 private fun proposal(id: String, kind: String = "task") = AgentProposal(
     id = id,
     kind = kind,
@@ -74,7 +84,12 @@ private fun proposal(id: String, kind: String = "task") = AgentProposal(
     agent = "omp",
     reason = "alasan $id",
     createdAt = TS,
-    task = if (kind == "task") AgentProposalTask("kartu $id", "isi") else null
+    task = if (kind == "task") AgentProposalTask("kartu $id", "isi") else null,
+    schedule = if (kind == "schedule") {
+        AgentProposalSchedule("jadwal $id", "0 7 * * 1", "Asia/Jakarta", "Ringkas berita.", "chat")
+    } else {
+        null
+    }
 )
 
 private class FakeAgentProposalRepo : AgentProposalRepository {
@@ -82,6 +97,7 @@ private class FakeAgentProposalRepo : AgentProposalRepository {
     var listCalls = 0
     var failNext: Exception? = null
     val approved = mutableListOf<String>()
+    val editsSent = mutableListOf<AgentProposalEdits?>()
     val rejected = mutableListOf<String>()
 
     private fun maybeFail() {
@@ -97,9 +113,10 @@ private class FakeAgentProposalRepo : AgentProposalRepository {
         return items.toList()
     }
 
-    override suspend fun approve(proposal: AgentProposal): AgentProposal {
+    override suspend fun approve(proposal: AgentProposal, edits: AgentProposalEdits?): AgentProposal {
         maybeFail()
         approved += proposal.id
+        editsSent += edits
         items.removeAll { it.id == proposal.id }
         return proposal.copy(status = "approved", resultId = "hasil-${proposal.id}")
     }
@@ -174,6 +191,39 @@ class AgentProposalModelsTest {
         repo.approve(proposal("s1", kind = "schedule"))
         val encoded = api.bodies.map { testJson.encodeToString(ApproveAgentProposalRequest.serializer(), it) }
         assertEquals(listOf("{}", """{"schedule":{"enabled":true}}"""), encoded)
+    }
+
+    @Test
+    fun `setujui kartu yang disunting mengirim ubahan task`() = runBlocking {
+        val api = FakeAgentProposalApi()
+        RemoteAgentProposalRepository(api).approve(
+            proposal("t1"),
+            AgentProposalEdits(title = "Judul baru", body = "Isi baru")
+        )
+        assertEquals(
+            """{"task":{"title":"Judul baru","body":"Isi baru"}}""",
+            testJson.encodeToString(ApproveAgentProposalRequest.serializer(), api.bodies.single())
+        )
+    }
+
+    @Test
+    fun `setujui jadwal yang disunting mengirim ubahan schedule beserta enabled`() = runBlocking {
+        val api = FakeAgentProposalApi()
+        RemoteAgentProposalRepository(api).approve(
+            proposal("s1", kind = "schedule"),
+            AgentProposalEdits(
+                name = "Berita pagi",
+                cron = "0 6 * * 1",
+                timezone = "Asia/Makassar",
+                prompt = "Ringkas berita.",
+                enabled = false
+            )
+        )
+        assertEquals(
+            """{"schedule":{"name":"Berita pagi","cron":"0 6 * * 1","timezone":"Asia/Makassar",""" +
+                """"prompt":"Ringkas berita.","enabled":false}}""",
+            testJson.encodeToString(ApproveAgentProposalRequest.serializer(), api.bodies.single())
+        )
     }
 
     @Test
@@ -326,5 +376,125 @@ class AgentProposalViewModelTest {
         )
         runCurrent()
         assertEquals(listOf("baru"), vm.ui.value.items.map { it.id })
+    }
+
+    @Test
+    fun `ubah lalu setujui kartu mengirim judul dan isi hasil suntingan`() = runTest(dispatcher) {
+        repo.items += proposal("t1")
+        val vm = vm()
+        runCurrent()
+        vm.startEdit(vm.ui.value.items.single())
+        assertEquals("kartu t1", vm.ui.value.edit.title)
+        vm.onTitleChange("  Judul baru  ")
+        vm.onBodyChange("Isi baru")
+        vm.approveEdited()
+        runCurrent()
+        assertEquals(listOf(AgentProposalEdits(title = "Judul baru", body = "Isi baru")), repo.editsSent)
+        assertNull(vm.ui.value.editing)
+        assertFalse(vm.ui.value.saving)
+        assertTrue(vm.ui.value.items.isEmpty())
+        assertEquals(listOf(R.string.agent_proposal_approved_task), notices())
+    }
+
+    @Test
+    fun `ubah lalu setujui jadwal nonaktif mengirim semua kolom dan pesan nonaktif`() = runTest(dispatcher) {
+        repo.items += proposal("s1", kind = "schedule")
+        val vm = vm()
+        runCurrent()
+        vm.startEdit(vm.ui.value.items.single())
+        assertEquals("0 7 * * 1", vm.ui.value.edit.cron)
+        vm.onNameChange("Berita pagi")
+        vm.onCronChange("0 6 * * 1")
+        vm.onTimezoneChange("Asia/Makassar")
+        vm.onPromptChange("Ringkas berita pagi.")
+        vm.onEnabledChange(false)
+        vm.approveEdited()
+        runCurrent()
+        assertEquals(
+            listOf(
+                AgentProposalEdits(
+                    name = "Berita pagi",
+                    cron = "0 6 * * 1",
+                    timezone = "Asia/Makassar",
+                    prompt = "Ringkas berita pagi.",
+                    enabled = false
+                )
+            ),
+            repo.editsSent
+        )
+        assertEquals(listOf(R.string.agent_proposal_approved_schedule_disabled), notices())
+    }
+
+    @Test
+    fun `kolom wajib kosong tidak dikirim dan dialog tetap terbuka`() = runTest(dispatcher) {
+        repo.items += listOf(proposal("t1"), proposal("s1", kind = "schedule"))
+        val vm = vm()
+        runCurrent()
+        vm.startEdit(vm.ui.value.items.first { it.id == "t1" })
+        vm.onTitleChange("   ")
+        vm.approveEdited()
+        runCurrent()
+        assertTrue(repo.approved.isEmpty())
+        assertNotNull(vm.ui.value.editing)
+
+        vm.cancelEdit()
+        vm.startEdit(vm.ui.value.items.first { it.id == "s1" })
+        vm.onCronChange("")
+        vm.approveEdited()
+        runCurrent()
+        assertTrue(repo.approved.isEmpty())
+        assertNotNull(vm.ui.value.editing)
+    }
+
+    @Test
+    fun `isian dipotong pada batas kontrak`() = runTest(dispatcher) {
+        repo.items += listOf(proposal("t1"), proposal("s1", kind = "schedule"))
+        val vm = vm()
+        runCurrent()
+        vm.startEdit(vm.ui.value.items.first { it.id == "t1" })
+        vm.onTitleChange("a".repeat(TASK_PROPOSAL_TITLE_MAX + 50))
+        vm.onBodyChange("b".repeat(TASK_PROPOSAL_BODY_MAX + 50))
+        assertEquals(TASK_PROPOSAL_TITLE_MAX, vm.ui.value.edit.title.length)
+        assertEquals(TASK_PROPOSAL_BODY_MAX, vm.ui.value.edit.body.length)
+
+        vm.cancelEdit()
+        vm.startEdit(vm.ui.value.items.first { it.id == "s1" })
+        vm.onNameChange("c".repeat(SCHEDULE_PROPOSAL_NAME_MAX + 50))
+        vm.onPromptChange("d".repeat(SCHEDULE_PROPOSAL_PROMPT_MAX + 50))
+        assertEquals(SCHEDULE_PROPOSAL_NAME_MAX, vm.ui.value.edit.name.length)
+        assertEquals(SCHEDULE_PROPOSAL_PROMPT_MAX, vm.ui.value.edit.prompt.length)
+    }
+
+    @Test
+    fun `409 saat menyetujui hasil suntingan menutup dialog dengan pesan sudah diputuskan`() = runTest(dispatcher) {
+        repo.items += proposal("t1")
+        val vm = vm()
+        runCurrent()
+        vm.startEdit(vm.ui.value.items.single())
+        vm.onTitleChange("Judul baru")
+        repo.items.clear()
+        repo.failNext = problem(409, DECIDED_409)
+        vm.approveEdited()
+        runCurrent()
+        assertEquals(listOf(R.string.agent_proposal_decided), notices())
+        assertNull(vm.ui.value.editing)
+        assertFalse(vm.ui.value.saving)
+    }
+
+    @Test
+    fun `cron salah dari server jadi pesan sendiri dan isian tidak hilang`() = runTest(dispatcher) {
+        repo.items += proposal("s1", kind = "schedule")
+        val vm = vm()
+        runCurrent()
+        vm.startEdit(vm.ui.value.items.single())
+        vm.onCronChange("99 7 * * 1")
+        repo.failNext = problem(400, INVALID_CRON_400)
+        vm.approveEdited()
+        runCurrent()
+        assertEquals(listOf(R.string.agent_proposal_invalid_cron), notices())
+        assertNotNull(vm.ui.value.editing)
+        assertEquals("99 7 * * 1", vm.ui.value.edit.cron)
+        assertFalse(vm.ui.value.saving)
+        assertEquals(listOf("s1"), vm.ui.value.items.map { it.id })
     }
 }

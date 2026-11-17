@@ -116,6 +116,7 @@ export const useAgentProposals = (params: AgentProposalQuery = {}) =>
       params.status ?? 'pending',
       params.kind ?? null,
       params.projectId ?? null,
+      params.conversationId ?? null,
     ],
     queryFn: () => api.listAgentProposals(params),
   });

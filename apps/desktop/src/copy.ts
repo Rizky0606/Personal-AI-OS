@@ -405,9 +405,9 @@ export const copy = {
     },
     install: {
       intro:
-        'Tempel id skills.sh (pemilik/repo@skill) atau URL GitHub ke SKILL.md. Hanya github.com, raw.githubusercontent.com, dan skills.sh yang diizinkan.',
+        'Tempel id skills.sh (pemilik/repo@skill), id aitmpl.com (kategori/nama), atau URL GitHub atau aitmpl.com ke SKILL.md. Hanya github.com, raw.githubusercontent.com, skills.sh, dan www.aitmpl.com yang diizinkan; dari aitmpl.com hanya tipe skills.',
       source: 'Sumber',
-      sourcePlaceholder: 'pemilik/repo@skill atau https://github.com/…/SKILL.md',
+      sourcePlaceholder: 'pemilik/repo@skill, kategori/nama, atau https://github.com/…/SKILL.md',
       preview: 'Pratinjau',
       previewing: 'Mengunduh…',
       install: 'Pasang',
@@ -1025,6 +1025,16 @@ export const copy = {
     waiting: 'Run menunggu jawaban Anda.',
     failed: 'Keputusan belum terkirim.',
     alwaysHint: 'Hanya untuk perintah yang persis sama di project ini.',
+    gatewayTitle: (tool: string) => `Agent meminta izin memakai tool ${tool}`,
+    allowAlwaysTool: (tool: string) => `Selalu untuk ${tool} di project ini`,
+    gatewayHint: (tool: string) =>
+      tool === 'web_search'
+        ? 'Berlaku untuk semua kueri web_search di project ini, bukan hanya kueri ini.'
+        : tool === 'web_read'
+          ? 'Berlaku untuk semua web_read di project ini, bukan hanya URL ini. Gateway tetap hanya membuka URL dari hasil pencarian run ini atau pesan Anda.'
+          : tool.endsWith('_propose')
+            ? `Berlaku untuk semua panggilan ${tool} di project ini. Usulannya tetap menunggu tinjauan Anda.`
+            : `Berlaku untuk semua panggilan ${tool} di project ini, bukan hanya panggilan ini.`,
   },
   review: {
     refresh: 'Muat ulang',
@@ -1224,6 +1234,20 @@ export const copy = {
       review: 'Tinjau',
       reviewLabel: (name: string) => `Tinjau usulan skill ${name}`,
       status: { pending: 'Menunggu keputusan', approved: 'Disetujui', rejected: 'Ditolak' },
+    },
+    /** Kartu usulan kartu/jadwal dari agent di bawah jawaban; keputusan tetap di layar Kanban atau Jadwal. */
+    agentProposal: {
+      list: 'Usulan agent dari jawaban ini',
+      cardTask: (title: string) => `Agent mengusulkan kartu: ${title}`,
+      cardSchedule: (name: string) => `Agent mengusulkan jadwal: ${name}`,
+      review: 'Tinjau',
+      reviewLabel: (name: string) => `Tinjau usulan agent ${name}`,
+      status: { pending: 'Menunggu keputusan', approved: 'Disetujui', rejected: 'Ditolak' },
+    },
+    /** Memori yang disimpan otomatis dari pesan ini (mode auto), lengkap dengan Urungkan. */
+    autoMemory: {
+      list: 'Memori yang disimpan otomatis dari pesan ini',
+      title: 'Disimpan otomatis ke memori',
     },
     emptyThread: 'Tulis pesan di bawah. Agent dan skill dipilih otomatis.',
     loadOlder: 'Muat pesan lebih lama',

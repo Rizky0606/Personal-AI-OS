@@ -5,6 +5,7 @@ import { createPageFetcher, type PageFetcher } from '../research/fetcher.js';
 import type { SearchClient, SearchResult } from '../research/search.js';
 import { hermesContext, workerContext, type ToolOutcome } from './tools.js';
 import { WEB_SEARCH_PER_RUN, createWebTools } from './web-tools.js';
+import type { RunWebState, WebRunStore } from './web-state.js';
 
 const RUN = '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f';
 const OTHER_RUN = '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8ea0';
@@ -18,11 +19,23 @@ const result = (url: string, over: Partial<SearchResult> = {}): SearchResult => 
   ...over,
 });
 
+const memoryStore = (): WebRunStore => {
+  const saved = new Map<string, RunWebState>();
+  return {
+    load: (runId) => Promise.resolve(saved.get(runId) ?? null),
+    save: (runId, state) => {
+      saved.set(runId, structuredClone(state));
+      return Promise.resolve();
+    },
+  };
+};
+
 function setup(
   options: {
     results?: SearchResult[];
     owner?: string;
     fetchPage?: PageFetcher;
+    store?: WebRunStore;
   } = {},
 ) {
   const queries: string[] = [];
@@ -48,6 +61,7 @@ function setup(
     search,
     fetchPage,
     ownerText: () => Promise.resolve(options.owner ?? ''),
+    store: options.store ?? memoryStore(),
   });
   return { tools, queries, fetched };
 }
@@ -147,6 +161,7 @@ describe('web_search', () => {
           truncated: false,
         }),
       ownerText: () => Promise.resolve(owner),
+      store: memoryStore(),
     });
     const ctx = hermesContext(0);
     const before = await tools.call('web_read', { url: 'https://contoh.id/a' }, ctx);
@@ -160,6 +175,7 @@ describe('web_search', () => {
       search: { search: () => Promise.reject(new Error('SearXNG tidak terjangkau')) },
       fetchPage: () => Promise.reject(new Error('tidak dipakai')),
       ownerText: () => Promise.resolve(''),
+      store: memoryStore(),
     });
     const out = await tools.call('web_search', { query: 'x' }, workerContext(RUN));
     expect(out).toMatchObject({ ok: false, result: { isError: true } });
@@ -261,5 +277,28 @@ describe('web_read: SSRF lewat pengambil halaman riset sungguhan', () => {
       expect(text(out), url).toContain('Halaman tidak bisa dibuka');
     }
     expect(hits).toBe(0);
+  });
+});
+
+describe('anggaran web per run bertahan setelah restart (BL 920)', () => {
+  it('kuota pencarian dan URL hasil pencarian tetap berlaku pada instance gateway baru', async () => {
+    const store = memoryStore();
+    const first = setup({ store, results: [result('https://vite.dev/guide/?utm_source=x')] });
+    for (let i = 0; i < WEB_SEARCH_PER_RUN; i++) {
+      await first.tools.call('web_search', { query: `vite ${i}` }, workerContext(RUN));
+    }
+
+    // Simulasi restart: instance baru dengan penyimpanan yang sama, tanpa keadaan di memori.
+    const second = setup({ store, results: [result('https://vite.dev/guide/')] });
+    const blocked = await second.tools.call('web_search', { query: 'baru' }, workerContext(RUN));
+    expect(blocked).toMatchObject({ ok: false, result: { isError: true } });
+    expect(second.queries).toEqual([]);
+
+    const read = await second.tools.call(
+      'web_read',
+      { url: 'https://vite.dev/guide' },
+      workerContext(RUN),
+    );
+    expect(read).toMatchObject({ ok: true, items: 1 });
   });
 });

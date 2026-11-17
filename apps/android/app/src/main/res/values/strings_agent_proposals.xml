@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Usulan kartu dan jadwal dari agent (tool aios_tools): setujui apa adanya atau tolak -->
+    <!-- Usulan kartu dan jadwal dari agent (tool aios_tools): setujui apa adanya, ubah dulu, atau tolak -->
     <string name="agent_proposals_title">Usulan agent</string>
     <string name="agent_proposals_settings_item">Usulan agent</string>
     <string name="agent_proposals_settings_supporting">Kartu dan jadwal yang diusulkan agent; setujui atau tolak</string>
-    <string name="agent_proposals_intro">Agent hanya bisa mengusulkan. Kartu dan jadwal baru dibuat setelah kamu setujui. Untuk mengubah isi usulan, buka aplikasi Windows.</string>
+    <string name="agent_proposals_intro">Agent hanya bisa mengusulkan. Kartu dan jadwal baru dibuat setelah kamu setujui. Pakai Ubah lalu setujui untuk memperbaiki isinya dulu.</string>
     <string name="agent_proposals_empty">Tidak ada usulan yang menunggu.</string>
     <string name="agent_proposal_kind_task">Kartu</string>
     <string name="agent_proposal_kind_schedule">Jadwal</string>
@@ -23,4 +23,24 @@
     <string name="agent_proposal_approved_schedule">Jadwal dibuat dan aktif.</string>
     <string name="agent_proposal_rejected">Usulan ditolak.</string>
     <string name="agent_proposal_decided">Usulan ini sudah diputuskan</string>
+    <string name="agent_proposal_approved_schedule_disabled">Jadwal dibuat dalam keadaan nonaktif.</string>
+    <string name="agent_proposal_invalid_cron">Pola cron tidak valid. Periksa lima bagiannya, mis. 0 7 * * 1.</string>
+    <string name="agent_proposal_invalid_timezone">Zona waktu tidak dikenal. Pakai nama seperti Asia/Jakarta.</string>
+    <string name="agent_proposal_edit_approve">Ubah lalu setujui</string>
+    <string name="agent_proposal_edit_label">Ubah lalu setujui usulan: %1$s</string>
+    <string name="agent_proposal_edit_task_title">Ubah kartu sebelum disetujui</string>
+    <string name="agent_proposal_edit_schedule_title">Ubah jadwal sebelum disetujui</string>
+    <string name="agent_proposal_title_label">Judul kartu</string>
+    <string name="agent_proposal_body_label">Deskripsi</string>
+    <string name="agent_proposal_name_label">Nama jadwal</string>
+    <string name="agent_proposal_cron_label">Cron</string>
+    <string name="agent_proposal_cron_placeholder">Mis. 0 7 * * 1</string>
+    <string name="agent_proposal_timezone_label">Zona waktu</string>
+    <string name="agent_proposal_timezone_placeholder">Mis. Asia/Jakarta</string>
+    <string name="agent_proposal_prompt_label">Instruksi</string>
+    <string name="agent_proposal_enable">Aktifkan setelah disetujui</string>
+    <string name="agent_proposal_counter">%1$d/%2$d karakter</string>
+    <string name="agent_proposal_save">Simpan dan setujui</string>
+    <string name="agent_proposal_saving">Menyimpan…</string>
+    <string name="agent_proposal_cancel">Batal</string>
 </resources>

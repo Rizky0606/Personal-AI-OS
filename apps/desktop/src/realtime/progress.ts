@@ -1,4 +1,5 @@
 import {
+  AIOS_BROWSER_OMP_PREFIX,
   aiosToolOf,
   isRasterImageMime,
   type ConversationProgress,
@@ -204,8 +205,12 @@ export function buildProgress(
   const groups = new Set<ToolGroup>();
   const connectors: string[] = [];
   for (const name of toolNames) {
-    // Tool `aios_tools` milik sistem sendiri: dihitung ke grup alat (web, data, atau usulan), bukan konektor.
-    if (name.startsWith('mcp__') && !aiosToolOf(name)) {
+    // Tool `aios_tools` dan browser worker milik sistem sendiri: dihitung ke grup alat, bukan konektor.
+    if (
+      name.startsWith('mcp__') &&
+      !aiosToolOf(name) &&
+      !name.startsWith(AIOS_BROWSER_OMP_PREFIX)
+    ) {
       connectors.push(name.split('__')[1] ?? name);
       continue;
     }

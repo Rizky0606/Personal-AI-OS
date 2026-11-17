@@ -62,6 +62,11 @@ Tinjauan source terbaru untuk persiapan rilis: `docs/SECURITY_REVIEW.md` (bukan 
 - File service account FCM di `secrets/`, tidak pernah masuk image Docker.
 - Log tidak pernah mencetak token, isi `.env`, atau header Authorization.
 
+## Pasang skill dari luar
+
+- Sumber luar (skills.sh, GitHub, aitmpl.com) hanya diunduh gateway dari daftar domain tetap; pengalihan ke domain lain ditolak.
+- aitmpl.com hanya mengimpor tipe `skills`. Tipe lain (agents, commands, hooks, mcps, settings, dan sejenisnya) yang bisa membawa kode atau mengubah konfigurasi ditolak `422 skill_type_not_importable` sebelum ada permintaan jaringan.
+
 ## Backup dan pemulihan
 
 | Apa | Cara | Frekuensi | Retensi |

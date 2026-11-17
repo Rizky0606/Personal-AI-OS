@@ -138,4 +138,44 @@ describe.skipIf(!live)('pasang skill dari sumber nyata', () => {
     expect((await preview(`${REPO}@skill-yang-tidak-ada-xyz`)).statusCode).toBe(404);
     expect((await preview('https://example.com/SKILL.md')).statusCode).toBe(422);
   }, 60_000);
+
+  it('aitmpl.com: id kategori/nama dipasang dari component-content nyata, origin kanonis', async () => {
+    const source = 'creative-design/algorithmic-art';
+    const p = SkillInstallPreviewSchema.parse((await preview(source)).json());
+    expect(p.source).toMatchObject({
+      kind: 'aitmpl',
+      input: 'https://www.aitmpl.com/component/skills/creative-design/algorithmic-art',
+    });
+    expect(p.installable, JSON.stringify(p.scan)).toBe(true);
+
+    const res = await env.post(
+      '/skills/install',
+      {
+        source,
+        checksum: p.candidate.checksum,
+        ...(p.scan.verdict === 'warning' ? { acknowledge: true } : {}),
+      },
+      app,
+    );
+    expect(res.statusCode, res.body).toBe(201);
+    expect(SkillSaveResultSchema.parse(res.json())).toMatchObject({
+      id: 'algorithmic-art',
+      source: 'installed',
+      trust: 'community',
+      origin: 'https://www.aitmpl.com/component/skills/creative-design/algorithmic-art',
+    });
+    const again = SkillInstallPreviewSchema.parse((await preview(source)).json());
+    expect(again.action).toBe('update');
+    expect(again.candidate.checksum).toBe(p.candidate.checksum);
+    const second = await env.post(
+      '/skills/install',
+      {
+        source,
+        checksum: again.candidate.checksum,
+        ...(again.scan.verdict === 'warning' ? { acknowledge: true } : {}),
+      },
+      app,
+    );
+    expect(second.statusCode, second.body).not.toBe(409);
+  }, 60_000);
 });

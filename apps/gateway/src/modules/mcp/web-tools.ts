@@ -5,6 +5,7 @@ import type { PageFetcher } from '../research/fetcher.js';
 import type { SearchClient, SearchResult } from '../research/search.js';
 import { isLowQualityDomain, normalizeUrl } from '../research/select.js';
 import { findSecret } from '../skills/proposals.js';
+import type { RunWebState, WebRunStore } from './web-state.js';
 import {
   STATE_TTL_MS,
   failure,
@@ -34,6 +35,8 @@ export interface WebToolsDeps {
    * URL di dalamnya boleh dibaca `web_read`.
    */
   ownerText: (ctx: Pick<ToolContext, 'runId'>) => Promise<string>;
+  /** Penyimpanan anggaran per run supaya kuota dan URL yang diizinkan bertahan setelah restart. */
+  store: WebRunStore;
   now?: () => number;
 }
 
@@ -44,6 +47,10 @@ interface RunState {
   allowed: Set<string>;
   ownerLoaded: boolean;
   touchedAt: number;
+  /** Pemuatan dari penyimpanan selesai (langsung selesai untuk Hermes tanpa run). */
+  ready: Promise<void>;
+  /** Penulisan terakhir ke penyimpanan. */
+  written: Promise<void>;
 }
 
 const TOOLS: ToolDef[] = [
@@ -90,17 +97,55 @@ export function createWebTools(deps: WebToolsDeps): ToolSet & {
   usedWeb(budgetKey: string): boolean;
 } {
   const now = deps.now ?? Date.now;
+  const store = deps.store;
   const runs = new Map<string, RunState>();
 
-  function stateOf(key: string): RunState {
+  /** Simpan keadaan run; penulisan per run berurutan sehingga penulisan terakhir selalu keadaan terbaru. */
+  function persist(runId: string | null, state: RunState): Promise<void> {
+    if (runId === null) return Promise.resolve();
+    const snapshot: RunWebState = {
+      searches: state.searches,
+      reads: state.reads,
+      allowed: [...state.allowed],
+    };
+    const next = state.written.catch(() => undefined).then(() => store.save(runId, snapshot));
+    state.written = next;
+    return next;
+  }
+
+  /** Keadaan anggaran `ctx`. Run dimuat dari penyimpanan saat pertama kali dipakai di proses ini. */
+  async function stateOf(ctx: Pick<ToolContext, 'budgetKey' | 'runId'>): Promise<RunState> {
     const at = now();
-    for (const [id, state] of runs) if (at - state.touchedAt > STATE_TTL_MS) runs.delete(id);
-    let state = runs.get(key);
+    for (const [key, state] of runs) if (at - state.touchedAt > STATE_TTL_MS) runs.delete(key);
+    let state = runs.get(ctx.budgetKey);
     if (!state) {
-      state = { searches: 0, reads: 0, allowed: new Set(), ownerLoaded: false, touchedAt: at };
-      runs.set(key, state);
+      const created: RunState = {
+        searches: 0,
+        reads: 0,
+        allowed: new Set(),
+        ownerLoaded: false,
+        touchedAt: at,
+        ready: Promise.resolve(),
+        written: Promise.resolve(),
+      };
+      if (ctx.runId !== null) {
+        created.ready = store.load(ctx.runId).then((saved) => {
+          if (!saved) return;
+          created.searches = saved.searches;
+          created.reads = saved.reads;
+          for (const url of saved.allowed) created.allowed.add(url);
+        });
+      }
+      runs.set(ctx.budgetKey, created);
+      state = created;
     }
     state.touchedAt = at;
+    try {
+      await state.ready;
+    } catch (error) {
+      runs.delete(ctx.budgetKey);
+      throw error;
+    }
     return state;
   }
 
@@ -115,7 +160,7 @@ export function createWebTools(deps: WebToolsDeps): ToolSet & {
         `Kueri ditolak karena tampak memuat rahasia (${secret}). Kueri dikirim ke mesin pencari luar; tulis ulang tanpa rahasia.`,
       );
     }
-    const state = stateOf(ctx.budgetKey);
+    const state = await stateOf(ctx);
     const limit = WEB_SEARCH_PER_RUN * ctx.budgetScale;
     if (state.searches >= limit) {
       return failure(
@@ -123,6 +168,7 @@ export function createWebTools(deps: WebToolsDeps): ToolSet & {
       );
     }
     state.searches += 1;
+    await persist(ctx.runId, state);
 
     let results: SearchResult[];
     try {
@@ -146,6 +192,7 @@ export function createWebTools(deps: WebToolsDeps): ToolSet & {
       if (picked.length >= (parsed.data.limit ?? DEFAULT_RESULTS)) break;
     }
     for (const { url } of picked) state.allowed.add(normalizeUrl(url));
+    await persist(ctx.runId, state);
 
     const header = [
       `Hasil web_search untuk: ${query}`,
@@ -181,7 +228,7 @@ export function createWebTools(deps: WebToolsDeps): ToolSet & {
     const url = httpUrl(parsed.data.url);
     if (!url) return failure('URL harus http atau https.');
 
-    const state = stateOf(ctx.budgetKey);
+    const state = await stateOf(ctx);
     // Pesan pemilik run tidak berubah, jadi dibaca sekali; untuk Hermes (tanpa run) pesan terbaru dibaca ulang.
     if (!state.ownerLoaded) {
       for (const u of urlsIn(await deps.ownerText(ctx))) state.allowed.add(normalizeUrl(u));
@@ -199,6 +246,7 @@ export function createWebTools(deps: WebToolsDeps): ToolSet & {
       );
     }
     state.reads += 1;
+    await persist(ctx.runId, state);
 
     try {
       const page = await deps.fetchPage(url, ctx.signal);

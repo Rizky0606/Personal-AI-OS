@@ -154,7 +154,7 @@ export const catalogEndpoints: readonly Endpoint[] = [
     path: '/skills/install/preview',
     tag: 'Skill',
     summary:
-      'Pratinjau pemasangan dari luar: gateway mengunduh SKILL.md (hanya github.com, raw.githubusercontent.com, skills.sh; maks 64 KB; teks saja; tidak ada yang dijalankan), memindainya, dan mengembalikan isi lengkap + versi terpasang untuk diff',
+      'Pratinjau pemasangan dari luar: gateway mengunduh SKILL.md (hanya github.com, raw.githubusercontent.com, skills.sh, www.aitmpl.com; maks 64 KB; teks saja; tidak ada yang dijalankan), memindainya, dan mengembalikan isi lengkap + versi terpasang untuk diff',
     auth: true,
     body: PreviewSkillInstallRequestSchema,
     responses: [json(200, 'Pratinjau', SkillInstallPreviewSchema)],

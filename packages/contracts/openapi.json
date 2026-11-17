@@ -4262,7 +4262,8 @@
                 "enum": [
                   "skills.sh",
                   "github",
-                  "raw"
+                  "raw",
+                  "aitmpl"
                 ]
               },
               "input": {
@@ -10657,7 +10658,7 @@
         "tags": [
           "Skill"
         ],
-        "summary": "Pratinjau pemasangan dari luar: gateway mengunduh SKILL.md (hanya github.com, raw.githubusercontent.com, skills.sh; maks 64 KB; teks saja; tidak ada yang dijalankan), memindainya, dan mengembalikan isi lengkap + versi terpasang untuk diff",
+        "summary": "Pratinjau pemasangan dari luar: gateway mengunduh SKILL.md (hanya github.com, raw.githubusercontent.com, skills.sh, www.aitmpl.com; maks 64 KB; teks saja; tidak ada yang dijalankan), memindainya, dan mengembalikan isi lengkap + versi terpasang untuk diff",
         "security": [
           {
             "bearerAuth": []
@@ -17541,7 +17542,7 @@
         "tags": [
           "Usulan agent"
         ],
-        "summary": "Daftar usulan kartu dan jadwal dari agent, terbaru dulu (bawaan: menunggu)",
+        "summary": "Daftar usulan kartu dan jadwal dari agent, terbaru dulu (bawaan: menunggu); `conversationId` menyaring usulan dari satu percakapan",
         "security": [
           {
             "bearerAuth": []
@@ -17581,6 +17582,15 @@
             },
             "required": false,
             "name": "projectId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "conversationId",
             "in": "query"
           }
         ],

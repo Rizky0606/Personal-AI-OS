@@ -23,6 +23,9 @@ export const AIOS_TOOLS_SERVER = 'aios_tools';
 /** Awalan nama tool server ini di omp (dipakai mengenali permintaan izin dan langkah tool). */
 export const AIOS_TOOLS_OMP_PREFIX = `mcp__${AIOS_TOOLS_SERVER}_`;
 
+/** Awalan nama tool browser worker di omp (server `aios_browser`, `mcp__aios_browser_<tool>`): langkah browser, bukan konektor. */
+export const AIOS_BROWSER_OMP_PREFIX = 'mcp__aios_browser_';
+
 /** Header run yang disisipkan relay worker (bukan omp); sama dengan header proxy LLM. */
 export const RUN_ID_HEADER = 'x-aios-run-id';
 

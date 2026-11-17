@@ -19,6 +19,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import app.aios.android.R
 import app.aios.android.ui.chat.activity.TraceApproval
+import app.aios.android.ui.chat.activity.aiosToolOf
 import app.aios.android.ui.components.AiosButton
 import app.aios.android.ui.components.ButtonKind
 import app.aios.android.ui.components.Hairline
@@ -48,7 +49,12 @@ fun ApprovalPanel(
 ) {
     val colors = AiosTheme.colors
     val shape = RoundedCornerShape(Tokens.Radius.md)
-    val title = stringResource(titleRes(approval.kind))
+    val gatewayTool = aiosToolOf(approval.detail.lineSequence().firstOrNull().orEmpty())
+    val title = if (gatewayTool != null) {
+        stringResource(R.string.approval_title_gateway, gatewayTool)
+    } else {
+        stringResource(titleRes(approval.kind))
+    }
     val description = buildString {
         append(title)
         append(". ")
@@ -99,7 +105,11 @@ fun ApprovalPanel(
                 enabled = !busy
             )
             AiosButton(
-                text = stringResource(R.string.approval_allow_always),
+                text = if (gatewayTool != null) {
+                    stringResource(R.string.approval_allow_always_tool, gatewayTool)
+                } else {
+                    stringResource(R.string.approval_allow_always)
+                },
                 onClick = { onResolve(ApprovalDecision("allow", true)) },
                 kind = ButtonKind.Secondary,
                 enabled = !busy
@@ -111,9 +121,15 @@ fun ApprovalPanel(
                 enabled = !busy
             )
         }
-        if (approval.kind == "command") {
+        if (gatewayTool != null || approval.kind == "command") {
             Text(
-                text = stringResource(R.string.approval_always_hint),
+                text = when {
+                    gatewayTool == null -> stringResource(R.string.approval_always_hint)
+                    gatewayTool == "web_search" -> stringResource(R.string.approval_hint_web_search)
+                    gatewayTool == "web_read" -> stringResource(R.string.approval_hint_web_read)
+                    gatewayTool.endsWith("_propose") -> stringResource(R.string.approval_hint_propose, gatewayTool)
+                    else -> stringResource(R.string.approval_hint_tool, gatewayTool)
+                },
                 style = AiosTheme.type.caption,
                 color = colors.text3
             )

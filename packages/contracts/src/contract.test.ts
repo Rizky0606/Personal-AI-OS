@@ -611,6 +611,14 @@ describe('entitas', () => {
     );
     expect(AgentProposalQuerySchema.safeParse({ status: 'all', kind: 'task' }).success).toBe(true);
     expect(AgentProposalQuerySchema.safeParse({ kind: 'memory' }).success).toBe(false);
+    expect(
+      AgentProposalQuerySchema.safeParse({
+        conversationId: '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f',
+      }).success,
+    ).toBe(true);
+    expect(AgentProposalQuerySchema.safeParse({ conversationId: 'bukan-uuid' }).success).toBe(
+      false,
+    );
   });
 
   it('pagination: default 50, maksimum 100', () => {

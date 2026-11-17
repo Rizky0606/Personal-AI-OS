@@ -43,6 +43,7 @@ import type { PageRenderer } from '../modules/research/render.js';
 import { createSearxngClient, type SearchClient } from '../modules/research/search.js';
 import type { PageFetcher } from '../modules/research/fetcher.js';
 import { createOwnerText } from '../modules/mcp/owner-text.js';
+import { createWebRunStore } from '../modules/mcp/web-state.js';
 import { createMcpServer } from '../modules/mcp/server.js';
 import { createAiosTools } from '../modules/mcp/aios-tools.js';
 import { createAgentMemoryProposals } from '../modules/memory/agent-proposals.js';
@@ -490,7 +491,7 @@ export async function createAuthEnv(
     queues: boss,
     now,
   });
-  const agentProposals = createAgentProposalService({ db, hub, tasks, schedules, now });
+  const agentProposals = createAgentProposalService({ db, hub, tasks, schedules, push, now });
   const app = buildApp({
     config: { LOG_LEVEL: options.logStream ? 'info' : 'silent', NODE_ENV: 'test' },
     health: { readiness: () => Promise.reject(new Error('tidak dipakai')) },
@@ -565,6 +566,7 @@ export async function createAuthEnv(
                   fetchPage:
                     options.mcpTools.fetchPage ??
                     (() => Promise.reject(new Error('tes: halaman web tidak tersedia'))),
+                  store: createWebRunStore(db),
                   ownerText: createOwnerText(db, now),
                   now,
                 },

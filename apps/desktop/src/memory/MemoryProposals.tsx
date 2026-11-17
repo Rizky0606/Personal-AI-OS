@@ -1,6 +1,7 @@
 import type { MemoryProposal } from '@aios/contracts';
 import { MEMORY_TEXT_MAX } from '@aios/contracts';
 import { useState } from 'react';
+import { AfterWebNote } from '../agentProposals/AfterWebNote';
 import { apiErrorMessage } from '../api/errors';
 import { useMemoryProposals } from '../api/queries';
 import { copy } from '../copy';
@@ -183,6 +184,10 @@ function ProposalRow({
         <p className="text-meta text-text-2">{m.proposalReplaces(proposal.targetText)}</p>
       ) : null}
       <p className="text-meta text-text-3">{m.proposalEvidence(proposal.evidence)}</p>
+      {proposal.source === 'agent' && proposal.agent ? (
+        <p className="text-meta text-text-3">{copy.agentProposals.agents[proposal.agent]}</p>
+      ) : null}
+      {proposal.afterWeb ? <AfterWebNote /> : null}
       <div className="flex flex-wrap gap-2">
         {editing ? (
           <>

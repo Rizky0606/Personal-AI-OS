@@ -366,7 +366,7 @@ export const PreviewSkillInstallRequestSchema = z
 export const SkillInstallPreviewSchema = z
   .object({
     source: z.object({
-      kind: z.enum(['skills.sh', 'github', 'raw']),
+      kind: z.enum(['skills.sh', 'github', 'raw', 'aitmpl']),
       input: z.string(),
       /** URL SKILL.md yang benar-benar diunduh. */
       url: z.string(),
@@ -1173,6 +1173,8 @@ export const AgentProposalQuerySchema = z.object({
   status: z.enum([...AgentProposalStatusSchema.options, 'all']).optional(),
   kind: AgentProposalKindSchema.optional(),
   projectId: IdSchema.optional(),
+  /** Menyaring usulan yang lahir dari satu percakapan (kartu usulan di chat). */
+  conversationId: IdSchema.optional(),
 });
 /**
  * Setujui, opsional dengan ubahan pemilik. Field `task`/`schedule` hanya untuk jenis yang sesuai; `enabled` (jadwal)

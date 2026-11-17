@@ -235,6 +235,19 @@ class ProgressBuilderTest {
     }
 
     @Test
+    fun toolBrowserWorkerMasukGrupBrowserBukanKonektor() {
+        assertEquals(ToolKind.Browser, kindOf("mcp__aios_browser_browser_screenshot"))
+        val response = ConversationProgress(
+            used = app.aios.android.data.api.ProgressUsedDto(
+                tools = listOf("mcp__aios_browser_browser_screenshot", "mcp__github__x")
+            )
+        )
+        val view = buildProgress(response, null, null, 0, texts)
+        assertEquals(listOf(ToolGroup.Browser), view.used.tools)
+        assertEquals(listOf("github"), view.used.connectors)
+    }
+
+    @Test
     fun toolDataAiosToolsMasukGrupDataSetelahWebBukanKonektor() {
         val response = ConversationProgress(
             used = app.aios.android.data.api.ProgressUsedDto(
