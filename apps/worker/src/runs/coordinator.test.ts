@@ -190,7 +190,10 @@ beforeEach(async () => {
   await build();
 });
 afterEach(async () => {
-  await until(() => coordinator.activeRunIds.length === 0, 'run dilepas', 3000).catch(
+  // Run yang dibiarkan menggantung oleh tes dihentikan dulu, supaya pembersihannya (termasuk catatan
+  // workspaces.json di folder data) selesai sebelum folder sementara dihapus, juga saat mesin sibuk.
+  for (const runId of coordinator.activeRunIds) coordinator.cancel(runId);
+  await until(() => coordinator.activeRunIds.length === 0, 'run dilepas', 10_000).catch(
     () => undefined,
   );
   await fs.rm(base, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
