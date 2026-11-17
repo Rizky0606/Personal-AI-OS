@@ -17541,7 +17541,7 @@
         "tags": [
           "Usulan agent"
         ],
-        "summary": "Daftar usulan kartu dan jadwal dari agent, terbaru dulu (bawaan: menunggu)",
+        "summary": "Daftar usulan kartu dan jadwal dari agent, terbaru dulu (bawaan: menunggu); `conversationId` menyaring usulan dari satu percakapan",
         "security": [
           {
             "bearerAuth": []
@@ -17581,6 +17581,15 @@
             },
             "required": false,
             "name": "projectId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "conversationId",
             "in": "query"
           }
         ],

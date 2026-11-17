@@ -17,7 +17,8 @@ export const agentProposalEndpoints: readonly Endpoint[] = [
     method: 'get',
     path: '/agent-proposals',
     tag: 'Usulan agent',
-    summary: 'Daftar usulan kartu dan jadwal dari agent, terbaru dulu (bawaan: menunggu)',
+    summary:
+      'Daftar usulan kartu dan jadwal dari agent, terbaru dulu (bawaan: menunggu); `conversationId` menyaring usulan dari satu percakapan',
     auth: true,
     query: AgentProposalQuerySchema,
     responses: [json(200, 'Daftar usulan agent', AgentProposalListSchema)],
