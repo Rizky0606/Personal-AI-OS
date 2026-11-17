@@ -958,3 +958,5 @@ Slice 1 selesai di cabang `feat/mcp-konektor`: konektor HTTP jarak jauh dengan t
 - [ ] **Pemilik yang mengedit folder project selama run `in_place` ikut tercampur ke diff run** (diff = `base..tree` seluruh folder); tolak juga membuang suntingan itu. Belum ada peringatan di UI.
 - [ ] **Tulisan agent ke berkas yang diabaikan git** (mis. `node_modules`, build) pada mode `in_place` tidak dibatalkan oleh tolak.
 - [ ] **Android tidak bisa meninjau** hasil run `in_place` (diff hanya dibaca dari worker lokal), padahal hasil itu memblokir run berikutnya di repo yang sama (`workspace_busy`) sampai diputuskan dari desktop.
+- [ ] **Aksi tab Git pemilik tidak dikunci selama run `in_place`** (stage, commit, checkout, pull). Commit atau pindah branch pemilik di tengah run ditangani saat tinjauan (`headMoved`: maju = commit di atas HEAD terbaru; berganti/ditulis ulang = `head_moved`), tetapi tab Git belum memperingatkan bahwa run sedang memakai folder itu.
+- [ ] **Penolakan `workspace_busy`/`workspace_dirty` belum memberi tautan ke run yang memblokir**; tombol satu klik hanya "Jalankan sekali ini di worktree terpisah" dan "Buka tab Git".
