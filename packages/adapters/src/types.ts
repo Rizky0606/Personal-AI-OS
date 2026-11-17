@@ -1,4 +1,10 @@
-import type { AgentEvent, QueueName, QuestionAnswer, SteerMode } from '@aios/contracts';
+import type {
+  AgentEvent,
+  QueueName,
+  QuestionAnswer,
+  RunWorkspace,
+  SteerMode,
+} from '@aios/contracts';
 
 /** Antarmuka adapter persis seperti ARCHITECTURE.md ("Agent Adapter"). UI tidak pernah tahu mesin mana yang berjalan. */
 
@@ -32,8 +38,10 @@ export interface StartRunInput {
   projectId?: string | undefined;
   /** Role yang dipilih router; worker memakainya untuk memberi nama run. */
   role?: string | undefined;
-  /** Run lanjutan: memakai worktree run ini (revisi setelah komentar review). Hanya omp via worker. */
+  /** Run lanjutan: memakai folder kerja run ini (revisi atau pesan lanjutan). Hanya omp via worker. */
   continueFromRunId?: string | undefined;
+  /** Tempat run coding mengubah berkas; kosong = setelan project di worker. Hanya omp via worker. */
+  workspace?: RunWorkspace | undefined;
   /** Mode rencana: worker menolak semua permintaan izin. Hanya omp via worker. */
   planOnly?: boolean | undefined;
   /** Folder kerja agent (worktree). Hanya omp; wajib di sana. */

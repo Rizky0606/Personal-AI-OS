@@ -141,6 +141,8 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
               finished={chat.finished}
               now={now}
               failure={chat.failure}
+              onRetryInWorktree={chat.retryInWorktree}
+              onOpenGit={chat.openGit}
               editableUserId={chat.editableUserId}
               onResendLast={chat.resendLast}
               canModify={chat.canModify}

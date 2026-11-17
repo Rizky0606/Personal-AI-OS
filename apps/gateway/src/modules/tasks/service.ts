@@ -231,7 +231,8 @@ export function createTasksService(deps: {
         parts: [{ type: 'text', text: promptOf(task) }],
         ...(model ? { model } : {}),
       },
-      { taskId: task.id },
+      // Kartu kanban bisa berjalan paralel: selalu worktree sendiri, tidak pernah di branch aktif.
+      { taskId: task.id, workspace: 'worktree' },
     );
     const row = await place(task, 'running', undefined, {
       runId: run.id,

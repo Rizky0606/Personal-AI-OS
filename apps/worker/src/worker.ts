@@ -84,8 +84,15 @@ export async function startWorker(options: WorkerOptions): Promise<RunningWorker
       }
     },
   });
-  const worktrees = new WorktreeManager({ processes, allowed, dataDir: options.dataDir });
+  const worktrees = new WorktreeManager({ processes, allowed, dataDir: options.dataDir, log });
   holder.worktrees = worktrees;
+  // Sebelum run apa pun: hasil yang menunggu tinjauan dipulihkan, worktree sisa run yang terputus dibersihkan.
+  const recovered = await worktrees.recover(
+    (await bindings.list()).filter((b) => b.available).map((b) => b.path),
+  );
+  if (recovered.length > 0) {
+    log(`run in_place yang terputus menunggu tinjauan: ${recovered.join(', ')}`);
+  }
 
   const link: GatewayLink = new GatewayLink({
     onCommand: (command) => dispatch(command),
@@ -176,6 +183,7 @@ export async function startWorker(options: WorkerOptions): Promise<RunningWorker
     terminal,
     tools: toolsRelay,
     send: (runId, event) => link.sendEvent(runId, event),
+    reportPending: (runs) => link.sendWorkspacePending({ type: 'workspace.pending', runs }),
     dataDir: options.dataDir,
     skills: createSkillCache(nodePath.join(options.dataDir, 'skills-cache'), {
       list: () => link.listSkills(),
@@ -254,8 +262,12 @@ export async function startWorker(options: WorkerOptions): Promise<RunningWorker
     });
   link.onState((state) => {
     pushStatus();
-    // Koneksi pulih: kirim event run yang tertahan selama putus.
-    if (state === 'connected') coordinator.flushAll();
+    // Koneksi pulih: kirim event run yang tertahan selama putus, lalu laporkan hasil in_place yang menunggu
+    // keputusan (termasuk run yang terputus karena worker dimulai ulang).
+    if (state === 'connected') {
+      coordinator.flushAll();
+      void coordinator.reportPending();
+    }
   });
   link.onSession((session) => {
     const message: LocalPush = {

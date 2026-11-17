@@ -17,6 +17,7 @@ import {
   type QuestionAnswer,
   type QueueName,
   type RunStatus,
+  type RunWorkspace,
   type SteerMode,
   type Usage,
 } from '@aios/contracts';
@@ -88,8 +89,15 @@ export interface LaunchInput {
   extract?: boolean;
   /** Project percakapan ini; wajib untuk role yang berjalan di worker (omp). */
   projectId: string | null;
-  /** Revisi setelah komentar review: melanjutkan worktree dan branch run ini. */
+  /** Lanjutan: memakai folder kerja (worktree atau folder project) dan branch run ini. */
   continueFromRunId?: string | undefined;
+  /**
+   * Pesan lanjutan biasa (bukan revisi dari tinjauan): bila run ternyata run coding, run `continueFromRunId` yang
+   * masih `needs_review` ditutup (`rejected`) seperti alur revisi. Sudah diputuskan lebih dulu = run ini mulai baru.
+   */
+  supersedePrevious?: boolean | undefined;
+  /** Run coding: tempat mengubah berkas. Kosong = setelan project di worker (bawaan `in_place`). */
+  workspace?: RunWorkspace | undefined;
   /** Batas waktu run ini (ms), menimpa bawaan worker (SECURITY_OPS.md: 30 menit). Dipakai tim Orca per-Worker. */
   timeoutMs?: number | undefined;
   /** Menentukan agent dan skill (aturan tetap, tanpa model) dan menyimpannya; dipanggil pada status `routing`. */
@@ -380,6 +388,10 @@ export function createRunner(deps: RunnerDeps): Runner {
     // tidak punya hasil untuk ditinjau: langsung selesai.
     let changed = false;
     const reviewable = () => coding && !run.planOnly && changed;
+    // Mode folder kerja dari worker (`workspace.ready`). Run in_place yang berhenti sebelum selesai (dihentikan,
+    // gagal, batas waktu, worker terputus) dengan perubahan tetap bisa ditinjau: perubahannya ada di folder project.
+    let inPlace = false;
+    let continueFrom = input.continueFromRunId;
     /** Langkah tool run ini, disimpan sebagai bagian pesan asisten supaya tetap terlihat setelah dimuat ulang. */
     const toolParts = new Map<string, Extract<MessagePart, { type: 'tool' }>>();
 
@@ -566,19 +578,44 @@ export function createRunner(deps: RunnerDeps): Runner {
           } else {
             runnable = true;
             coding = true;
-            // Revisi memakai branch run sebelumnya; run baru pertama kali memakai branch dari id-nya sendiri.
-            const [previous] = input.continueFromRunId
+            // Pesan lanjutan biasa: hasil run sebelumnya yang belum ditinjau dilanjutkan dan run itu ditutup seperti
+            // alur revisi. Bila sudah diputuskan lebih dulu (terima/tolak bersamaan), run ini mulai baru.
+            if (continueFrom && input.supersedePrevious) {
+              const [settled] = await db
+                .update(runs)
+                .set({ status: 'rejected' })
+                .where(and(eq(runs.id, continueFrom), eq(runs.status, 'needs_review')))
+                .returning({ id: runs.id, conversationId: runs.conversationId });
+              if (settled) {
+                const stored = await store.append(settled.id, {
+                  type: 'run.status',
+                  status: 'rejected',
+                });
+                if (settled.conversationId) {
+                  hub.publishLive(`conversation:${settled.conversationId}`, stored.event);
+                }
+                deps.observer?.notify(settled.id);
+              } else {
+                continueFrom = undefined;
+              }
+            }
+            // Lanjutan memakai branch dan mode run sebelumnya. Run baru: branch dan mode pasti dilaporkan worker
+            // (`workspace.ready`); sebelum itu `aios/<id>` hanya bila mode worktree diminta.
+            const [previous] = continueFrom
               ? await db
-                  .select({ branch: runs.branch })
+                  .select({ branch: runs.branch, workspace: runs.workspace })
                   .from(runs)
-                  .where(eq(runs.id, input.continueFromRunId))
+                  .where(eq(runs.id, continueFrom))
               : [];
             await db
               .update(runs)
               .set({
                 kind: 'coding',
                 engine: 'omp',
-                branch: previous?.branch ?? workerBranchFor(run.id),
+                branch:
+                  previous?.branch ??
+                  (input.workspace === 'worktree' ? workerBranchFor(run.id) : null),
+                workspace: previous?.workspace ?? input.workspace ?? null,
               })
               .where(eq(runs.id, run.id));
           }
@@ -674,9 +711,8 @@ export function createRunner(deps: RunnerDeps): Runner {
             ...(input.images?.length ? { images: input.images } : {}),
             ...(coding && input.projectId ? { projectId: input.projectId, role: chosenRole } : {}),
             ...(dshCwd ? { cwd: dshCwd } : {}),
-            ...(coding && input.continueFromRunId
-              ? { continueFromRunId: input.continueFromRunId }
-              : {}),
+            ...(coding && continueFrom ? { continueFromRunId: continueFrom } : {}),
+            ...(coding && !continueFrom && input.workspace ? { workspace: input.workspace } : {}),
             ...(planOnly ? { planOnly: true } : {}),
             ...(model ? { model } : {}),
             ...(input.timeoutMs ? { timeoutMs: input.timeoutMs } : {}),
@@ -770,6 +806,14 @@ export function createRunner(deps: RunnerDeps): Runner {
             changed = event.files.length > 0;
             deps.observer?.notify(run.id);
           }
+          if (event.type === 'workspace.ready' && coding) {
+            inPlace = event.mode === 'in_place';
+            await db
+              .update(runs)
+              .set({ branch: event.branch, workspace: event.mode })
+              .where(eq(runs.id, run.id));
+            deps.observer?.notify(run.id);
+          }
           if (event.type === 'approval.requested' || event.type === 'approval.resolved') {
             await onApproval(event);
           }
@@ -792,6 +836,19 @@ export function createRunner(deps: RunnerDeps): Runner {
               log?.warn({ err, runId: run.id }, 'ekstraksi memori gagal dijadwalkan'),
             );
         }
+      } else if (inPlace && reviewable()) {
+        // In_place yang berhenti sebelum selesai dengan perubahan: perubahan setengah jadi ada di folder project,
+        // jadi run menunggu keputusan (terima atau tolak) alih-alih ditinggal. Alasannya tetap tercatat.
+        await saveText();
+        if (failure) await emit({ type: 'error', ...failure });
+        await db
+          .update(runs)
+          .set({ status: 'needs_review', usage, ...(failure ? { error: failure } : {}) })
+          .where(eq(runs.id, run.id));
+        const stored = await emit({ type: 'run.status', status: 'needs_review' });
+        status = 'needs_review';
+        hub.publishLive(`conversation:${input.conversationId}`, stored.event);
+        deps.observer?.notify(run.id);
       } else if (ctl.cancelled) {
         await saveText();
         await advance('cancelled', { usage });
@@ -899,14 +956,25 @@ export function createRunner(deps: RunnerDeps): Runner {
           .update(messages)
           .set({ parts: [{ type: 'text', text }] })
           .where(and(eq(messages.runId, run.id), eq(messages.author, 'assistant')));
+        // Run in_place yang meninggalkan perubahan di folder project tetap bisa ditinjau; selain itu gagal.
+        const lastDiff = events.findLast((e) => e.event.type === 'diff.updated')?.event;
+        const pending =
+          run.kind === 'coding' &&
+          run.workspace === 'in_place' &&
+          !run.planOnly &&
+          lastDiff?.type === 'diff.updated' &&
+          lastDiff.files.length > 0;
         const error: RunError = {
           code: 'gateway_restarted',
-          message: 'Gateway dimulai ulang saat run berjalan. Kirim ulang pesan.',
+          message: pending
+            ? 'Gateway dimulai ulang saat run berjalan. Perubahan yang sudah dibuat menunggu tinjauan.'
+            : 'Gateway dimulai ulang saat run berjalan. Kirim ulang pesan.',
           retryable: true,
         };
-        await db.update(runs).set({ status: 'failed', error }).where(eq(runs.id, run.id));
+        const status = pending ? 'needs_review' : 'failed';
+        await db.update(runs).set({ status, error }).where(eq(runs.id, run.id));
         await store.append(run.id, { type: 'error', ...error });
-        await store.append(run.id, { type: 'run.status', status: 'failed' });
+        await store.append(run.id, { type: 'run.status', status });
         deps.observer?.notify(run.id);
       }
       return orphans.length;

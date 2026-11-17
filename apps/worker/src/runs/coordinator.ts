@@ -9,6 +9,7 @@ import {
   connectorServerName,
   connectorToolOf,
   type AgentEvent,
+  type DiffFile,
   type SteerMode,
   type WorkerCommand,
   type WorkerReviewResultFrame,
@@ -29,7 +30,13 @@ import { OmpNotFoundError } from './omp-path.js';
 import { ReviewError, type ReviewService } from './review.js';
 import type { ApprovalRules, RuleKind } from './rules.js';
 import { linkNodeModules } from '../preview/nodemodules.js';
-import { WorktreeError, type Worktree, type WorktreeManager } from './worktree.js';
+import {
+  WorktreeError,
+  movesHead,
+  type Workspace,
+  type Worktree,
+  type WorktreeManager,
+} from './worktree.js';
 import { runSetup, type ProjectSetupStore } from './setup.js';
 import { dependencyInstruction } from './dependencies.js';
 import type { CatalogSkill } from '../skills/cache.js';
@@ -63,6 +70,11 @@ export interface CoordinatorDeps {
   };
   /** Mengirim event ke gateway; false bila tidak tersambung (event disimpan dan dikirim saat tersambung). */
   send: (runId: string, event: AgentEvent) => boolean;
+  /**
+   * Melaporkan run in_place yang perubahannya menunggu keputusan (frame `workspace.pending`); false bila tidak
+   * tersambung (laporan diulang saat tersambung lagi).
+   */
+  reportPending?: (runs: { runId: string; files: DiffFile[] }[]) => boolean;
   dataDir: string;
   /** Batas waktu satu run (SECURITY_OPS.md: 30 menit). */
   maxRunMs?: number;
@@ -103,6 +115,10 @@ interface RunState {
   toolsMcp: McpRegistration | undefined;
   /** Pendaftaran satu titik relay per konektor aktif run ini. */
   connectorMcp: McpRegistration[];
+  /** Folder kerja run ini (worktree atau folder project), setelah dibuka. */
+  workspace: Workspace | undefined;
+  /** Mesin menyelesaikan run (`run.completed`), bukan dihentikan atau gagal. */
+  completed: boolean;
 }
 
 /** Satu frame WebSocket gateway maksimal 16 KB; event dipecah bila serialisasinya mendekati itu. */
@@ -132,9 +148,10 @@ function splitEvent(event: AgentEvent): AgentEvent[] {
 }
 
 /**
- * Menjalankan run coding di PC ini: worktree terpisah, omp lewat adapter, approval (aturan project lebih
- * dulu, selain itu ditanyakan ke pengguna), batas waktu, dan pembersihan. Event dikirim ke gateway; selama
- * koneksi putus event ditahan dan dikirim berurutan saat tersambung lagi.
+ * Menjalankan run coding di PC ini: folder kerja (langsung di folder project pada branch aktif, atau worktree
+ * terpisah), omp lewat adapter, approval (aturan project lebih dulu, selain itu ditanyakan ke pengguna), batas
+ * waktu, dan pembersihan. Event dikirim ke gateway; selama koneksi putus event ditahan dan dikirim berurutan saat
+ * tersambung lagi.
  */
 export class RunCoordinator {
   private readonly runs = new Map<string, RunState>();
@@ -177,11 +194,13 @@ export class RunCoordinator {
       mcp: undefined,
       toolsMcp: undefined,
       connectorMcp: [],
+      workspace: undefined,
+      completed: false,
     };
     this.runs.set(cmd.runId, run);
     void this.execute(cmd.runId, run).catch((error: unknown) => {
       this.deps.log?.(`run ${cmd.runId} gagal tak terduga: ${String(error)}`);
-      this.fail(cmd.runId, run, 'worker_internal', 'Worker mengalami kesalahan tak terduga.');
+      void this.fail(cmd.runId, run, 'worker_internal', 'Worker mengalami kesalahan tak terduga.');
     });
   }
 
@@ -248,9 +267,9 @@ export class RunCoordinator {
   }
 
   /**
-   * Hasil ditinjau. Diterima: perubahan jadi satu commit di branch kerja agent (branch kerja pengguna tidak
-   * disentuh kecuali merge diminta dan fast-forward) lalu worktree dibersihkan. Ditolak: worktree dan branch
-   * dihapus. Hasilnya dikembalikan sebagai frame `review.result` untuk gateway.
+   * Hasil ditinjau. In_place: diterima = satu commit di branch aktif project; ditolak = folder project dikembalikan
+   * ke base. Worktree: diterima = satu commit di branch `aios/...` (digabung ke branch kerja pengguna bila diminta)
+   * lalu worktree dibersihkan; ditolak = worktree dan branch dihapus. Hasilnya frame `review.result` untuk gateway.
    */
   async reviewApply(cmd: ReviewCommand): Promise<WorkerReviewResultFrame> {
     const cached = this.results.get(cmd.runId);
@@ -314,28 +333,47 @@ export class RunCoordinator {
           throw error instanceof PathError ? error : new Error('bind');
         });
       if (projectPath === undefined) {
-        return this.fail(
+        return await this.fail(
           runId,
           run,
           'project_not_bound',
           'Project ini belum terikat ke folder di PC ini. Ikat folder di layar Project.',
         );
       }
-      if (run.cancelRequested) return this.cancelled(runId, run);
+      if (run.cancelRequested) return await this.cancelled(runId, run);
 
-      let worktree: Worktree;
+      let worktree: Workspace;
       if (cmd.continueFromRunId) {
+        if (this.isWorking(cmd.continueFromRunId)) {
+          throw new WorktreeError('workspace_busy', 'Run sebelumnya masih berjalan.');
+        }
         await this.deps.preview?.stopByRun(cmd.continueFromRunId).catch(() => undefined);
         this.deps.terminal?.closeByRun(cmd.continueFromRunId);
-        worktree = this.deps.worktrees.adopt(cmd.continueFromRunId, runId);
+        worktree = await this.deps.worktrees.adopt(cmd.continueFromRunId, runId);
         this.deps.review.inherit(cmd.continueFromRunId, runId);
       } else {
-        worktree = await this.deps.worktrees.create(runId, projectPath);
+        // Kosong = setelan project di worker; run chat project bawaannya langsung di branch aktif.
+        const mode = cmd.workspace ?? this.deps.setup?.get(cmd.projectId).workspace ?? 'in_place';
+        const options = { projectId: cmd.projectId, planOnly: cmd.planOnly === true };
+        worktree =
+          mode === 'in_place'
+            ? await this.deps.worktrees.openInPlace(runId, projectPath, options)
+            : await this.deps.worktrees.create(runId, projectPath, options);
+      }
+      run.workspace = worktree;
+      // Gateway mencatat mode dan branch run dari sini (kolom `workspace` dan `branch`).
+      this.forward(runId, run, {
+        type: 'workspace.ready',
+        mode: worktree.kind,
+        branch: worktree.branch,
+        base: worktree.base,
+      });
+      if (!cmd.continueFromRunId && worktree.kind === 'worktree') {
         await this.prepareWorktree(runId, run, worktree, projectPath);
       }
       const runDir = nodePath.join(this.deps.dataDir, 'runs', runId);
       await fs.mkdir(runDir, { recursive: true });
-      if (run.cancelRequested) return this.cancelled(runId, run);
+      if (run.cancelRequested) return await this.cancelled(runId, run);
 
       run.mcp = await this.deps.preview
         ?.registerRun({ projectId: cmd.projectId, runId })
@@ -405,7 +443,8 @@ export class RunCoordinator {
           (run.mcp ? BROWSER_INSTRUCTION : '') +
           (run.toolsMcp ? TOOLS_INSTRUCTION : '') +
           (connectorNames.length > 0 ? connectorInstruction(connectorNames) : '') +
-          dependencies,
+          dependencies +
+          (worktree.kind === 'in_place' ? inPlaceInstruction(worktree.branch) : ''),
         ...(Object.keys(mcpServers).length > 0 ? { mcpServers } : {}),
         model: cmd.model,
         skills,
@@ -420,29 +459,32 @@ export class RunCoordinator {
 
       const runTimeoutMs = cmd.timeoutMs ?? this.deps.maxRunMs ?? DEFAULT_MAX_RUN_MS;
       run.timer = setTimeout(() => {
-        run.terminal = true;
-        run.finished = true;
-        this.forward(runId, run, {
-          type: 'error',
-          code: 'run_timeout',
-          message: `Run melewati batas waktu ${Math.round(runTimeoutMs / 60_000)} menit dan dihentikan.`,
-          retryable: false,
-        });
-        void run.handle?.cancel();
+        void this.fail(
+          runId,
+          run,
+          'run_timeout',
+          `Run melewati batas waktu ${Math.round(runTimeoutMs / 60_000)} menit dan dihentikan.`,
+        ).finally(() => void run.handle?.cancel());
       }, runTimeoutMs);
 
       for await (const event of run.handle.events) await this.onEvent(runId, run, event);
 
       if (!run.terminal) {
-        if (run.cancelRequested) this.cancelled(runId, run);
+        if (run.cancelRequested) await this.cancelled(runId, run);
         else
-          this.fail(runId, run, 'omp_ended_early', 'omp berhenti tanpa menyelesaikan run.', true);
+          await this.fail(
+            runId,
+            run,
+            'omp_ended_early',
+            'omp berhenti tanpa menyelesaikan run.',
+            true,
+          );
       }
     } catch (error) {
       this.deps.log?.(
         `run ${runId} gagal: ${error instanceof Error ? error.message : String(error)}`,
       );
-      this.fail(runId, run, ...describe(error));
+      await this.fail(runId, run, ...describe(error));
     } finally {
       await this.cleanup(runId, run);
     }
@@ -507,6 +549,18 @@ export class RunCoordinator {
         void run.handle?.resolveApproval(event.approvalId, 'deny').catch(() => undefined);
         return;
       }
+      // Mode in_place: agent bekerja di branch pemilik. Perintah git yang memindahkan HEAD atau branch (commit,
+      // checkout, reset, stash, rebase, ...) ditolak, termasuk bila ada aturan "izinkan selalu": hasil hanya
+      // masuk ke branch lewat tinjauan pemilik.
+      if (
+        run.workspace?.kind === 'in_place' &&
+        event.kind === 'command' &&
+        movesHead(event.detail)
+      ) {
+        run.silent.add(event.approvalId);
+        void run.handle?.resolveApproval(event.approvalId, 'deny').catch(() => undefined);
+        return;
+      }
       // Tool browser worker hanya menyentuh preview localhost run ini: tidak perlu mengganggu pengguna tiap screenshot.
       // Tool data gateway hanya membaca data sistem sendiri (memori, ruang, kanban project ini, jadwal) dan tidak
       // mengirim apa pun keluar; tool usulan hanya membuat usulan yang menunggu pemilik. Keduanya diizinkan tanpa
@@ -550,12 +604,15 @@ export class RunCoordinator {
       await this.publishDiff(runId, run);
       run.terminal = true;
       run.finished = true;
+      run.completed = true;
     } else if (event.type === 'error') {
       run.terminal = true;
       run.finished = true;
+      // Run in_place yang gagal dengan perubahan tetap bisa ditinjau: gateway butuh diff terakhir sebelum penutup.
+      await this.publishDiff(runId, run);
     }
     this.forward(runId, run, event);
-    if (event.type === 'tool.finished' && event.status === 'ok') {
+    if (event.type === 'tool.finished' && event.status === 'ok' && !run.cmd.planOnly) {
       await this.checkpoint(runId, run, run.steps.get(event.toolCallId) ?? 'langkah agent');
     }
   }
@@ -577,6 +634,8 @@ export class RunCoordinator {
   }
 
   private async publishDiff(runId: string, run: RunState): Promise<void> {
+    // Mode rencana tidak mengubah berkas; di in_place isinya bisa memuat perubahan pemilik, jadi tidak dilaporkan.
+    if (!run.workspace || run.workspace.planOnly) return;
     try {
       const files = await this.deps.review.stat(runId);
       const key = JSON.stringify(files);
@@ -588,22 +647,28 @@ export class RunCoordinator {
     }
   }
 
-  private fail(
+  /**
+   * Penutup gagal. Status `terminal`/`finished` di-set lebih dulu (lihat `RunState.finished`), lalu diff terakhir
+   * dikirim sebelum event error: gateway memutuskan run in_place yang berhenti dengan perubahan tetap bisa ditinjau.
+   */
+  private async fail(
     runId: string,
     run: RunState,
     code: string,
     message: string,
     retryable = false,
-  ): void {
+  ): Promise<void> {
     if (run.terminal) return;
     run.terminal = true;
     run.finished = true;
+    await this.publishDiff(runId, run);
     this.forward(runId, run, { type: 'error', code, message, retryable });
   }
 
-  private cancelled(runId: string, run: RunState): void {
+  private async cancelled(runId: string, run: RunState): Promise<void> {
     run.terminal = true;
     run.finished = true;
+    await this.publishDiff(runId, run);
     this.forward(runId, run, { type: 'run.status', status: 'cancelled' });
   }
 
@@ -654,10 +719,21 @@ export class RunCoordinator {
     // jaring pengaman jika suatu saat ada jalur baru yang lolos dari situ.
     run.finished = true;
     this.deps.review.setMeta(runId, run.text);
-    // Tanpa perubahan apa pun, tidak ada yang perlu ditinjau: worktree dan branch dibuang.
-    if (await this.deps.worktrees.isPristine(runId)) {
-      await this.deps.worktrees.remove(runId, { deleteBranch: true });
-      this.deps.review.forget(runId);
+    const workspace = this.deps.worktrees.get(runId);
+    if (workspace) {
+      if (workspace.planOnly || (await this.deps.worktrees.isPristine(runId))) {
+        // Tanpa perubahan (atau mode rencana) tidak ada yang perlu ditinjau: worktree dan branch `aios/...`
+        // dibuang; in_place hanya melepas catatannya (folder project dan branch pemilik tidak disentuh).
+        await this.deps.worktrees.remove(runId, { deleteBranch: true });
+        this.deps.review.forget(runId);
+      } else if (workspace.kind === 'in_place' || run.completed) {
+        // In_place yang dihentikan atau gagal tetap bisa ditinjau: perubahannya ada di folder project pemilik.
+        await this.deps.worktrees.setState(runId, 'review');
+        if (workspace.kind === 'in_place' && !run.completed) await this.reportPending();
+      } else {
+        // Worktree run yang dihentikan atau gagal tidak bisa ditinjau; dibersihkan saat worker mulai berikutnya.
+        await this.deps.worktrees.setState(runId, 'stale');
+      }
     }
     await fs
       .rm(nodePath.join(this.deps.dataDir, 'runs', runId), { recursive: true, force: true })
@@ -670,6 +746,35 @@ export class RunCoordinator {
     };
     release();
   }
+
+  /**
+   * Melaporkan run in_place yang perubahannya menunggu keputusan dan tidak sedang dikerjakan mesin (frame
+   * `workspace.pending`). Dipanggil saat tersambung ke gateway (termasuk setelah worker dimulai ulang) dan saat run
+   * in_place berhenti sebelum selesai; gateway menjadikan run itu `needs_review`.
+   */
+  async reportPending(): Promise<void> {
+    if (!this.deps.reportPending) return;
+    const runs: { runId: string; files: DiffFile[] }[] = [];
+    for (const ws of this.deps.worktrees.pendingInPlace()) {
+      if (this.isWorking(ws.runId)) continue;
+      const files = await this.deps.review.stat(ws.runId).catch(() => []);
+      if (files.length > 0) runs.push({ runId: ws.runId, files });
+    }
+    if (runs.length > 0) this.deps.reportPending(runs.slice(0, 100));
+  }
+}
+
+/**
+ * Catatan pesan sistem untuk run in_place: agent bekerja di folder project pemilik pada branch aktif, bukan salinan.
+ * Perintah git yang memindahkan HEAD ditolak worker (`movesHead`); catatan ini mencegah agent membuang langkah.
+ */
+function inPlaceInstruction(branch: string): string {
+  return [
+    '',
+    '',
+    '# Folder kerja',
+    `Anda bekerja langsung di folder project pemilik, di branch \`${branch}\` yang sedang aktif (bukan salinan). Jangan menjalankan perintah git yang memindahkan HEAD atau branch (commit, checkout, switch, reset, stash, rebase, merge, pull, cherry-pick, revert): worker menolaknya. Perubahan Anda di-commit ke branch ini oleh pemilik setelah ia meninjaunya.`,
+  ].join('\n');
 }
 
 function describe(error: unknown): [code: string, message: string, retryable: boolean] {

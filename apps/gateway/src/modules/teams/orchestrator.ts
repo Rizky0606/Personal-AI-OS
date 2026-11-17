@@ -267,6 +267,8 @@ export function createTeamOrchestrator(deps: TeamOrchestratorDeps): TeamOrchestr
         conversation.id,
         { parts: [{ type: 'text', text: prompt }] },
         {
+          // Worker tim selalu di worktree sendiri (ORCA_DESIGN.md: project root tidak pernah jadi cwd).
+          workspace: 'worktree',
           ...(runId ? { continueFromRunId: runId } : {}),
           ...(limits.memberTimeoutMinutes
             ? { timeoutMs: limits.memberTimeoutMinutes * 60_000 }

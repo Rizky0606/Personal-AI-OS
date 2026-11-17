@@ -1,10 +1,5 @@
 import { withAttachments } from '../preview/attachment';
-import {
-  workerBranchFor,
-  type QueueName,
-  type QuestionAnswer,
-  type RichAnswerFollowUp,
-} from '@aios/contracts';
+import type { QueueName, QuestionAnswer, RichAnswerFollowUp, RunWorkspace } from '@aios/contracts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -14,7 +9,7 @@ import { useEngines, useMessages, useModels, useRoles } from '../api/queries';
 import { useFinishedRun, useLiveRun, useOnline, useRunFailure } from '../app/hooks';
 import { api, runs } from '../app/services';
 import { copy } from '../copy';
-import { isSettled } from '../realtime/liveRun';
+import { isSettled, workspaceOfRun } from '../realtime/liveRun';
 import { useUiStore } from '../state/uiStore';
 import { useToastStore } from '../ui/Toaster';
 import { NEW_CHAT_ENGINE_KEY, engineView, wireEngine, type EngineChoice } from './engineChoice';
@@ -33,6 +28,16 @@ import {
 const checkedRuns = new Set<string>();
 
 /**
+ * Run coding yang ditolak karena folder project tidak bisa dipakai langsung; bisa diulang sekali di worktree
+ * terpisah. Nilainya: penolakan bisa diselesaikan pemilik di tab Git (berkas belum di-commit, HEAD terlepas).
+ */
+const WORKSPACE_REFUSALS: Record<string, boolean> = {
+  workspace_dirty: true,
+  workspace_busy: false,
+  workspace_detached: true,
+};
+
+/**
  * Seluruh logika layar chat (pesan, kirim, hentikan, jalankan ulang, edit pesan terakhir) di luar komponen
  * tampilan. `conversationId` kosong berarti percakapan baru; percakapan dibuat saat pesan pertama dikirim.
  */
@@ -44,6 +49,7 @@ export function useChatController(conversationId: string | undefined) {
   const newChatSignal = useUiStore((s) => s.newChatSignal);
   const activeProjectId = useUiStore((s) => s.activeProjectId);
   const setRunBranch = useUiStore((s) => s.setActiveRunBranch);
+  const openPanel = useUiStore((s) => s.openPanel);
   const attachments = useUiStore((s) => s.attachments);
   const removeAttachment = useUiStore((s) => s.removeAttachment);
   const clearAttachments = useUiStore((s) => s.clearAttachments);
@@ -103,18 +109,23 @@ export function useChatController(conversationId: string | undefined) {
     [rolesQuery.data, activeProjectId],
   );
 
-  // Status bar menampilkan branch kerja agent selama run coding berjalan.
+  // Folder kerja run coding: dari event `workspace.ready` selama run hidup, selain itu dari DTO run.
+  const workspace = live?.workspace ?? workspaceOfRun(planRun.data);
+
+  // Status bar menampilkan branch yang sedang dipakai agent selama run coding berjalan (branch aktif project
+  // untuk run langsung, `aios/<id>` untuk worktree), dari laporan worker, bukan tebakan.
   const liveRunId = live?.runId;
   const codingLive =
     streaming &&
     activeProjectId !== null &&
     roles.find((r) => r.id === live?.role)?.group === 'coding';
+  const runBranch = workspace?.branch ?? null;
   useEffect(() => {
     if (!codingLive || !liveRunId) return;
-    // Run revisi memakai branch run sebelumnya; panel review sudah mengisinya, jangan ditimpa.
-    if (useUiStore.getState().activeRunBranch === null) setRunBranch(workerBranchFor(liveRunId));
+    // Sebelum worker melapor, branch run revisi yang diisi panel review dibiarkan.
+    if (runBranch !== null) setRunBranch(runBranch);
     return () => setRunBranch(null);
-  }, [codingLive, liveRunId, setRunBranch]);
+  }, [codingLive, liveRunId, runBranch, setRunBranch]);
 
   // Status bar menampilkan role yang dipakai: keputusan router untuk jawaban ini.
   const shownRole = live?.role ?? null;
@@ -379,10 +390,15 @@ export function useChatController(conversationId: string | undefined) {
 
   /**
    * Mengubah pesan pengguna mana pun: pesan itu dan semua sesudahnya dibuang, lalu teks baru dikirim. Agent
-   * memulai sesi baru dengan riwayat sisanya, jadi bagian yang dibuang tidak diingat. true bila berhasil.
+   * memulai sesi baru dengan riwayat sisanya, jadi bagian yang dibuang tidak diingat. `workspace` memilih
+   * folder kerja run coding untuk kiriman ini saja. true bila berhasil.
    */
   const editMessage = useCallback(
-    async (messageId: string, text: string): Promise<boolean> => {
+    async (
+      messageId: string,
+      text: string,
+      options?: { workspace?: RunWorkspace },
+    ): Promise<boolean> => {
       const body = text.trim();
       if (!conversationId || !body || sending || streaming) return false;
       if (!online) {
@@ -398,6 +414,7 @@ export function useChatController(conversationId: string | undefined) {
           files: original?.parts.flatMap((part) => (part.type === 'file' ? [part] : [])),
           model: model ?? undefined,
           engine: engineWire,
+          workspace: options?.workspace,
         });
         dropFrom(conversationId, messageId);
         addMessageToCache(queryClient, conversationId, response.message);
@@ -460,11 +477,24 @@ export function useChatController(conversationId: string | undefined) {
 
   const loadOlder = useCallback(() => void messagesQuery.fetchNextPage(), [messagesQuery]);
 
+  // Folder project tidak bisa dipakai langsung: tawarkan mengulang pesan itu sekali di worktree terpisah.
+  // Lewat edit pesan, jadi giliran yang gagal diganti, bukan digandakan.
+  const refusal = failure && Object.hasOwn(WORKSPACE_REFUSALS, failure.code) ? failure.code : null;
+  const retryInWorktree = useCallback(() => {
+    if (!lastUser) return;
+    void editMessage(lastUser.id, messageText(lastUser), { workspace: 'worktree' });
+  }, [lastUser, editMessage]);
+  const openGit = useCallback(() => openPanel('git'), [openPanel]);
+
   return {
     messages,
     live,
     finished,
     failure: failure ? failure.message : null,
+    /** Kode kegagalan run terakhir (mis. `workspace_dirty`), bila ada. */
+    failureCode: failure ? failure.code : null,
+    retryInWorktree: refusal !== null && lastUser ? retryInWorktree : undefined,
+    openGit: refusal !== null && WORKSPACE_REFUSALS[refusal] ? openGit : undefined,
     pending,
     draft,
     setDraft,

@@ -8,6 +8,7 @@ import {
   type GatewayState,
   type WorkerCommand,
   type WorkerReviewResultFrame,
+  type WorkerWorkspacePendingFrame,
 } from '@aios/contracts';
 import { WebSocket } from 'ws';
 
@@ -161,6 +162,14 @@ export class GatewayLink {
     this.socket.send(JSON.stringify({ type: 'run.event', runId, event }));
     return true;
   }
+
+  /** Melaporkan run in_place yang menunggu keputusan; false bila tidak tersambung (diulang saat tersambung). */
+  sendWorkspacePending(frame: WorkerWorkspacePendingFrame): boolean {
+    if (this.current !== 'connected' || this.socket?.readyState !== WebSocket.OPEN) return false;
+    this.socket.send(JSON.stringify(frame));
+    return true;
+  }
+
   /** Katalog skill dari gateway (GET /skills) lewat token worker; null bila tidak ada sesi. */
   async listSkills(): Promise<{ id: string; checksum: string }[]> {
     const body = (await this.authedGet('/v1/skills')) as {

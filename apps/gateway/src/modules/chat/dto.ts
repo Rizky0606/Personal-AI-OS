@@ -53,6 +53,7 @@ export function toRunDto(row: typeof runs.$inferSelect): Run {
     conversationId: row.conversationId,
     taskId: row.taskId,
     branch: row.branch,
+    workspace: row.workspace,
     usage: row.usage,
     error: row.error,
     planOnly: row.planOnly && row.kind === 'coding',

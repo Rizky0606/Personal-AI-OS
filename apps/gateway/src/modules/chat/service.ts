@@ -57,6 +57,11 @@ export interface ChatService {
       continueFromRunId?: string;
       taskId?: string;
       /**
+       * Mode folder kerja yang diwajibkan pemanggil: armada, kartu kanban, tim Orca, dan jadwal selalu `worktree`
+       * (berjalan paralel atau tanpa pemilik di depan layar). `workspace: in_place` di pesan ditolak untuk mereka.
+       */
+      workspace?: 'worktree';
+      /**
        * Konteks tambahan untuk agent pada giliran ini saja (mis. data briefing, hasil run jadwal sebelumnya).
        * Dikirim setelah teks pesan tetapi tidak disimpan di pesan pengguna, jadi riwayat tetap ringkas.
        */
@@ -557,6 +562,49 @@ export function createChatService(deps: {
           'Agent omp hanya bisa dipakai di percakapan project. Pilih project lalu mulai chat dari sana.',
         );
       }
+      if (
+        input.workspace === 'in_place' &&
+        (options?.workspace === 'worktree' || conversation.teamId)
+      ) {
+        throw new AppError(
+          422,
+          'workspace_not_allowed',
+          'Tim, armada, kartu kanban, dan jadwal selalu bekerja di worktree terpisah, tidak di branch aktif.',
+        );
+      }
+      // Pesan lanjutan pemilik di project: hasil run coding terakhir yang belum ditinjau dilanjutkan (folder kerja dan
+      // branch yang sama), jadi agent melihat perubahannya sendiri dan satu percakapan = satu branch. Mode rencana
+      // hanya membaca, jadi tidak melanjutkan (dan tidak menutup) hasil itu. Kanban, armada, tim, dan jadwal mengatur
+      // lanjutannya sendiri.
+      let continueFromRunId = options?.continueFromRunId;
+      let supersedePrevious = false;
+      if (
+        !continueFromRunId &&
+        options?.fromOwner === true &&
+        conversation.projectId &&
+        input.planOnly !== true &&
+        input.engine !== 'hermes'
+      ) {
+        const [last] = await db
+          .select({ id: runs.id, status: runs.status, workspace: runs.workspace })
+          .from(runs)
+          .where(and(eq(runs.conversationId, conversationId), eq(runs.kind, 'coding')))
+          .orderBy(desc(runs.createdAt))
+          .limit(1);
+        if (last?.status === 'needs_review') {
+          if (input.workspace && input.workspace !== (last.workspace ?? 'worktree')) {
+            throw new AppError(
+              409,
+              'review_pending',
+              'Hasil run sebelumnya di percakapan ini belum ditinjau. Terima atau tolak dulu sebelum memilih tempat kerja lain.',
+            );
+          }
+          continueFromRunId = last.id;
+          supersedePrevious = true;
+        }
+      }
+      // Percakapan tim selalu worktree (ORCA_DESIGN.md); selain itu pilihan pemanggil, lalu pilihan pesan.
+      const workspace = options?.workspace ?? (conversation.teamId ? 'worktree' : input.workspace);
 
       const { run, userMessage, assistantMessageId } = await db.transaction(async (tx) => {
         // Agent belum diketahui: ditentukan pada status `routing` di dalam run.
@@ -628,7 +676,9 @@ export function createChatService(deps: {
           !conversation.projectId &&
           !conversation.spaceId &&
           !conversation.teamId,
-        ...(options?.continueFromRunId ? { continueFromRunId: options.continueFromRunId } : {}),
+        ...(continueFromRunId ? { continueFromRunId } : {}),
+        ...(supersedePrevious ? { supersedePrevious: true } : {}),
+        ...(workspace ? { workspace } : {}),
         ...(options?.timeoutMs ? { timeoutMs: options.timeoutMs } : {}),
         resolveRole: makeResolver({
           conversation,

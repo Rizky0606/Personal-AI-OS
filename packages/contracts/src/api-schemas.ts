@@ -21,6 +21,7 @@ import {
   ResearchSourceSchema,
   RunKindSchema,
   RunSchema,
+  RunWorkspaceSchema,
   ScheduleNotifySchema,
   ScheduleTargetSchema,
   StackSchema,
@@ -644,6 +645,13 @@ export const SendMessageRequestSchema = z
      * (obrolan tanpa folder project); `dsh` hanya di chat umum (ditolak 422 `engine_not_for_project` di project).
      */
     engine: z.enum(['hermes', 'omp', 'dsh']).optional(),
+    /**
+     * Run coding: tempat run ini mengubah berkas, menimpa setelan project di worker untuk pesan ini saja (mis.
+     * "jalankan sekali ini di worktree terpisah" saat folder project kotor). Kosong = setelan project (bawaan
+     * `in_place`). `in_place` ditolak 422 `workspace_not_allowed` di percakapan tim. Pesan lanjutan yang
+     * melanjutkan hasil yang belum ditinjau memakai mode run itu; pilihan lain ditolak 409 `review_pending`.
+     */
+    workspace: RunWorkspaceSchema.optional(),
     /** Aksi komponen rich answer; dikirim sebagai pesan user baru, bukan efek samping lokal. */
     followUp: RichAnswerFollowUpSchema.optional(),
   })

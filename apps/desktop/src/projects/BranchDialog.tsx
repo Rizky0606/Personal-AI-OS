@@ -13,7 +13,7 @@ import { TextField } from '../ui/TextField';
 import { useToastStore } from '../ui/Toaster';
 
 export interface BranchDialogProps {
-  /** Project yang branch kerjanya diganti; null = dialog tertutup. */
+  /** Project yang label branch-nya diganti; null = dialog tertutup. */
   project: Project | null;
   /** Folder project di PC ini, bila terikat: daftar branch lokal dibaca dari sana. */
   path: string | null;
@@ -21,8 +21,9 @@ export interface BranchDialogProps {
 }
 
 /**
- * Ganti branch kerja project: dasar worktree tiap run dan tujuan merge saat review diterima. Branch lokal dibaca
- * worker dari folder project; nama juga bisa diketik (mis. folder belum terikat di PC ini).
+ * Ganti label branch project (`defaultBranch`): tampil di bilah atas saat tidak ada run. Agent tidak memakainya;
+ * run bekerja di branch yang sedang aktif di folder project. Branch lokal dibaca worker dari folder project; nama
+ * juga bisa diketik (mis. folder belum terikat di PC ini).
  */
 export function BranchDialog({ project, path, onClose }: BranchDialogProps) {
   const [value, setValue] = useState('');

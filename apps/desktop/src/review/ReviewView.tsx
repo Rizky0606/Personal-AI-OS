@@ -1,12 +1,14 @@
-import type { ReviewComment, ReviewState } from '@aios/contracts';
+import type { HeadMoved, ReviewComment, ReviewState } from '@aios/contracts';
 import * as Tabs from '@radix-ui/react-tabs';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { useOnline } from '../app/hooks';
+import { api } from '../app/services';
 import { copy } from '../copy';
 import { Button } from '../ui/Button';
 import { Chip } from '../ui/Chip';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { ErrorBanner } from '../ui/ErrorBanner';
 import { StateView, type ViewState } from '../ui/StateView';
 import { workerErrorMessage } from '../worker/errors';
 import { useWorker } from '../worker/hooks';
@@ -27,6 +29,15 @@ interface Editing {
 
 const commentKey = (c: { path: string; line: number }) => `${c.path}:${c.line}`;
 
+/** Penjelasan HEAD yang berpindah selama run langsung di branch aktif. */
+function headMovedMessage(moved: HeadMoved, branch: string): string {
+  const text =
+    moved.state === 'advanced'
+      ? copy.review.headMoved.advanced(moved.branch ?? branch, moved.commits)
+      : copy.review.headMoved[moved.state](moved.branch);
+  return `${text} ${copy.review.headMoved.locked}`;
+}
+
 /** Tinjauan satu run: daftar file, diff unified/split dengan komentar per baris, checkpoint, terima/tolak. */
 export function ReviewView({ runId }: { runId: string }) {
   const online = useOnline();
@@ -40,6 +51,12 @@ export function ReviewView({ runId }: { runId: string }) {
   const [dialog, setDialog] = useState<Dialogs>(null);
 
   const state: ReviewState | undefined = query.data;
+  // Run chat (bukan kartu kanban) menggabungkan hasil worktree ke branch kerja secara bawaan.
+  const run = useQuery({
+    queryKey: ['run', runId],
+    queryFn: () => api.getRun(runId),
+    retry: false,
+  });
   const actions = useReviewActions(runId, () => {
     // Komentar menunjuk nomor baris pada versi sebelumnya; setelah isi berubah tidak lagi berlaku.
     setComments([]);
@@ -90,6 +107,12 @@ export function ReviewView({ runId }: { runId: string }) {
   const additions = state?.files.reduce((n, f) => n + f.additions, 0) ?? 0;
   const deletions = state?.files.reduce((n, f) => n + f.deletions, 0) ?? 0;
   const busy = actions.busy || !online;
+  const inPlace = state?.workspace === 'in_place';
+  const headMoved = state?.headMoved ?? null;
+  // Branch berganti atau riwayat ditulis ulang: worker menolak Terima/Tolak sampai pemilik membereskannya.
+  const blocked = headMoved !== null && headMoved.state !== 'advanced';
+  // Checkpoint dan batalkan per file hanya bila HEAD tidak berpindah sama sekali.
+  const locked = busy || headMoved !== null;
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -106,14 +129,26 @@ export function ReviewView({ runId }: { runId: string }) {
         </div>
         {state ? (
           <p className="truncate font-mono text-meta text-text-3">
-            {state.branch}
-            {state.targetBranch ? ` → ${state.targetBranch}` : ''}
+            {inPlace
+              ? copy.review.inPlaceBranch(state.branch)
+              : `${state.branch}${state.targetBranch ? ` → ${state.targetBranch}` : ''}`}
           </p>
+        ) : null}
+        {state && headMoved ? (
+          <ErrorBanner
+            tone="warning"
+            message={headMovedMessage(headMoved, state.branch)}
+            action={
+              <Button variant="secondary" onClick={refresh}>
+                {copy.review.refresh}
+              </Button>
+            }
+          />
         ) : null}
         <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="primary"
-            disabled={!state || busy || state.files.length === 0}
+            disabled={!state || busy || blocked || state.files.length === 0}
             onClick={() => setDialog({ kind: 'accept' })}
           >
             {copy.review.accept}
@@ -127,7 +162,7 @@ export function ReviewView({ runId }: { runId: string }) {
           </Button>
           <Button
             variant="danger"
-            disabled={!state || busy}
+            disabled={!state || busy || blocked}
             onClick={() => setDialog({ kind: 'reject' })}
           >
             {copy.review.reject}
@@ -192,7 +227,7 @@ export function ReviewView({ runId }: { runId: string }) {
                     key={file.path}
                     file={file}
                     view={view}
-                    busy={busy}
+                    busy={locked}
                     comments={byFile.get(file.path) ?? new Map<number, string>()}
                     editing={editing?.path === file.path ? editing.line : null}
                     onStartComment={(line) => setEditing({ path: file.path, line })}
@@ -219,7 +254,7 @@ export function ReviewView({ runId }: { runId: string }) {
           {state ? (
             <CheckpointList
               checkpoints={state.checkpoints}
-              busy={busy}
+              busy={locked}
               onRestore={(id) => void actions.restore(id)}
               onRefresh={refresh}
             />
@@ -232,6 +267,7 @@ export function ReviewView({ runId }: { runId: string }) {
           open
           onOpenChange={(open) => !open && setDialog(null)}
           state={state}
+          chatRun={run.data?.taskId === null}
           busy={actions.busy}
           onAccept={(options) =>
             void actions.accept(options, state.targetBranch).then((ok) => ok && setDialog(null))
@@ -242,7 +278,7 @@ export function ReviewView({ runId }: { runId: string }) {
         open={dialog?.kind === 'reject'}
         onOpenChange={(open) => !open && setDialog(null)}
         title={copy.review.rejectTitle}
-        body={copy.review.rejectBody}
+        body={inPlace ? copy.review.rejectBodyInPlace : copy.review.rejectBody}
         confirmLabel={copy.review.rejectConfirm}
         cancelLabel={copy.review.cancel}
         destructive

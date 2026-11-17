@@ -3,6 +3,7 @@ import { IdSchema, RoleIdSchema, RunErrorSchema, TimestampSchema, UsageSchema } 
 import {
   ApprovalDecisionSchema,
   ApprovalKindSchema,
+  RunWorkspaceSchema,
   ScheduleRunStatusSchema,
   TaskSchema,
 } from './entities.js';
@@ -105,6 +106,17 @@ export const CheckpointCreatedEventSchema = z.object({
   type: z.literal('checkpoint.created'),
   checkpointId: z.string().min(1),
   label: z.string(),
+});
+
+/**
+ * Run coding: folder kerja siap (worker, sebelum agent mulai). `in_place` = langsung di folder project pada branch
+ * aktif `branch`; `worktree` = salinan terpisah di branch `aios/<id>`. `base` = commit awal yang menjadi dasar diff.
+ */
+export const WorkspaceReadyEventSchema = z.object({
+  type: z.literal('workspace.ready'),
+  mode: RunWorkspaceSchema,
+  branch: z.string().min(1),
+  base: z.string().min(1),
 });
 
 export const TodoStatusSchema = z.enum([
@@ -318,6 +330,7 @@ export const AgentEventSchema = z
     ApprovalResolvedEventSchema,
     DiffUpdatedEventSchema,
     CheckpointCreatedEventSchema,
+    WorkspaceReadyEventSchema,
     TodoUpdatedEventSchema,
     QueueUpdatedEventSchema,
     SubagentUpdatedEventSchema,

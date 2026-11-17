@@ -53,18 +53,34 @@ describe('ProjectSetupStore', () => {
   it('menyimpan per project, bertahan setelah dimuat ulang, dan setelan kosong menghapus entri', async () => {
     const file = path.join(dir, 'setup.json');
     const store = new ProjectSetupStore(file);
-    expect(store.get(PROJECT)).toEqual({ commands: [], linkNodeModules: false, lsp: true });
+    expect(store.get(PROJECT)).toEqual({
+      commands: [],
+      linkNodeModules: false,
+      lsp: true,
+      workspace: 'in_place',
+    });
 
-    await store.set(PROJECT, { commands: ['pnpm install'], linkNodeModules: true, lsp: false });
+    await store.set(PROJECT, {
+      commands: ['pnpm install'],
+      linkNodeModules: true,
+      lsp: false,
+      workspace: 'worktree',
+    });
     const reloaded = new ProjectSetupStore(file);
     await reloaded.load();
     expect(reloaded.get(PROJECT)).toEqual({
       commands: ['pnpm install'],
       linkNodeModules: true,
       lsp: false,
+      workspace: 'worktree',
     });
 
-    await reloaded.set(PROJECT, { commands: [], linkNodeModules: false, lsp: true });
+    await reloaded.set(PROJECT, {
+      commands: [],
+      linkNodeModules: false,
+      lsp: true,
+      workspace: 'in_place',
+    });
     expect(JSON.parse(await fs.readFile(file, 'utf8'))).toEqual({ version: 1, projects: {} });
   });
 
@@ -74,5 +90,19 @@ describe('ProjectSetupStore', () => {
     const store = new ProjectSetupStore(file);
     await store.load();
     expect(store.get(PROJECT).commands).toEqual([]);
+  });
+
+  it('berkas lama tanpa `workspace` dibaca dengan bawaan in_place', async () => {
+    const file = path.join(dir, 'setup.json');
+    await fs.writeFile(
+      file,
+      JSON.stringify({
+        version: 1,
+        projects: { [PROJECT]: { commands: ['pnpm i'], linkNodeModules: false, lsp: true } },
+      }),
+    );
+    const store = new ProjectSetupStore(file);
+    await store.load();
+    expect(store.get(PROJECT).workspace).toBe('in_place');
   });
 });

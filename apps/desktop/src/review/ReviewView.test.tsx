@@ -60,6 +60,8 @@ const state = (over: Partial<ReviewState> = {}): ReviewState => ({
     { id: SHA_1, label: 'write math.js', ts: TS },
     { id: SHA_2, label: 'edit math.js', ts: TS },
   ],
+  workspace: 'worktree',
+  headMoved: null,
   ...over,
 });
 
@@ -79,6 +81,10 @@ beforeEach(() => {
   useUiStore.getState().setReviewRunId(RUN);
   setWorker({ local: 'connected', status: null });
   workerApi.reviewGet.mockImplementation(() => Promise.resolve(state()));
+  // Run dari percakapan (bukan kartu kanban).
+  api.getRun.mockImplementation((id) =>
+    Promise.resolve(run({ id, kind: 'coding', engine: 'omp', status: 'needs_review' })),
+  );
   Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
 });
 
@@ -227,23 +233,26 @@ describe('Tinjau perubahan: komentar per baris', () => {
 });
 
 describe('Tinjau perubahan: terima dan tolak', () => {
-  it('Terima: pesan commit usulan agent bisa diubah; tanpa merge secara bawaan', async () => {
+  it('Terima: pesan commit usulan agent bisa diubah; run chat digabungkan secara bawaan', async () => {
     api.reviewRun.mockResolvedValue(accepted);
     const user = userEvent.setup();
     await open();
 
     await user.click(screen.getByRole('button', { name: copy.review.accept }));
     const dialog = await screen.findByRole('dialog', { name: copy.review.acceptTitle });
+    expect(within(dialog).getByText(copy.review.acceptBody('aios/abcd1234'))).toBeInTheDocument();
     const message = within(dialog).getByRole('textbox', { name: copy.review.commitMessage });
     expect(message).toHaveValue('feat: tambah sub dan mul');
-    expect(within(dialog).getByRole('switch')).toHaveAttribute('aria-checked', 'false');
+    await waitFor(() =>
+      expect(within(dialog).getByRole('switch')).toHaveAttribute('aria-checked', 'true'),
+    );
     await user.clear(message);
     await user.type(message, 'feat(math): tambah sub');
     await user.click(within(dialog).getByRole('button', { name: copy.review.accept }));
 
     expect(api.reviewRun).toHaveBeenCalledWith(RUN, {
       decision: 'accept',
-      merge: false,
+      merge: true,
       commitMessage: 'feat(math): tambah sub',
     });
     expect(
@@ -252,13 +261,36 @@ describe('Tinjau perubahan: terima dan tolak', () => {
     await waitFor(() => expect(useUiStore.getState().reviewRunId).toBeNull());
   });
 
+  it('Terima run kartu kanban: tanpa merge secara bawaan', async () => {
+    api.getRun.mockImplementation((id) =>
+      Promise.resolve(run({ id, kind: 'coding', status: 'needs_review', taskId: uid() })),
+    );
+    api.reviewRun.mockResolvedValue(accepted);
+    const user = userEvent.setup();
+    await open();
+    await waitFor(() => expect(api.getRun).toHaveBeenCalledWith(RUN));
+
+    await user.click(screen.getByRole('button', { name: copy.review.accept }));
+    const dialog = await screen.findByRole('dialog', { name: copy.review.acceptTitle });
+    expect(within(dialog).getByRole('switch')).toHaveAttribute('aria-checked', 'false');
+    await user.click(within(dialog).getByRole('button', { name: copy.review.accept }));
+
+    expect(api.reviewRun).toHaveBeenCalledWith(RUN, {
+      decision: 'accept',
+      merge: false,
+      commitMessage: 'feat: tambah sub dan mul',
+    });
+  });
+
   it('Terima + gabungkan ke branch kerja; hasil digabung dan merge dilewati dilaporkan jelas', async () => {
     api.reviewRun.mockResolvedValueOnce({ ...accepted, merged: true });
     const user = userEvent.setup();
     await open();
     await user.click(screen.getByRole('button', { name: copy.review.accept }));
     const dialog = await screen.findByRole('dialog', { name: copy.review.acceptTitle });
-    await user.click(within(dialog).getByRole('switch'));
+    await waitFor(() =>
+      expect(within(dialog).getByRole('switch')).toHaveAttribute('aria-checked', 'true'),
+    );
     await user.click(within(dialog).getByRole('button', { name: copy.review.accept }));
 
     expect(api.reviewRun).toHaveBeenLastCalledWith(RUN, {
@@ -275,7 +307,9 @@ describe('Tinjau perubahan: terima dan tolak', () => {
     await open();
     await user.click(screen.getByRole('button', { name: copy.review.accept }));
     const dialog = await screen.findByRole('dialog', { name: copy.review.acceptTitle });
-    await user.click(within(dialog).getByRole('switch'));
+    await waitFor(() =>
+      expect(within(dialog).getByRole('switch')).toHaveAttribute('aria-checked', 'true'),
+    );
     await user.click(within(dialog).getByRole('button', { name: copy.review.accept }));
 
     expect(
@@ -339,6 +373,85 @@ describe('Tinjau perubahan: terima dan tolak', () => {
     expect(
       await screen.findByText(`${copy.review.failed} Hasil run ini sudah tidak ada.`),
     ).toBeInTheDocument();
+  });
+});
+
+describe('Tinjau perubahan: langsung di branch aktif', () => {
+  const inPlace = (over: Partial<ReviewState> = {}) =>
+    state({ workspace: 'in_place', branch: 'main', targetBranch: 'main', ...over });
+
+  it('kepala: langsung di branch; Terima tanpa sakelar merge, commit di branch itu', async () => {
+    workerApi.reviewGet.mockResolvedValue(inPlace());
+    api.reviewRun.mockResolvedValue({ ...accepted, branch: 'main' });
+    const user = userEvent.setup();
+    await open();
+
+    expect(screen.getByText(copy.review.inPlaceBranch('main'))).toBeInTheDocument();
+    expect(screen.queryByText('main → main')).toBeNull();
+    await user.click(screen.getByRole('button', { name: copy.review.accept }));
+    const dialog = await screen.findByRole('dialog', { name: copy.review.acceptTitle });
+    expect(within(dialog).getByText(copy.review.acceptBodyInPlace('main'))).toBeInTheDocument();
+    expect(within(dialog).queryByRole('switch')).toBeNull();
+    await user.click(within(dialog).getByRole('button', { name: copy.review.accept }));
+
+    expect(api.reviewRun).toHaveBeenCalledWith(RUN, {
+      decision: 'accept',
+      merge: false,
+      commitMessage: 'feat: tambah sub dan mul',
+    });
+    expect(await screen.findByText(copy.review.acceptedBranch('main'))).toBeInTheDocument();
+  });
+
+  it('Tolak: konfirmasi menjelaskan folder project dikembalikan', async () => {
+    workerApi.reviewGet.mockResolvedValue(inPlace());
+    const user = userEvent.setup();
+    await open();
+
+    await user.click(screen.getByRole('button', { name: copy.review.reject }));
+    const dialog = await screen.findByRole('dialog', { name: copy.review.rejectTitle });
+    expect(within(dialog).getByText(copy.review.rejectBodyInPlace)).toBeInTheDocument();
+    expect(within(dialog).queryByText(copy.review.rejectBody)).toBeNull();
+  });
+
+  it('branch maju selama run: banner menjelaskan; Terima tetap bisa, checkpoint dan batalkan file dikunci', async () => {
+    workerApi.reviewGet.mockResolvedValue(
+      inPlace({ headMoved: { state: 'advanced', head: SHA_2, branch: 'main', commits: 2 } }),
+    );
+    const user = userEvent.setup();
+    await open();
+
+    const banner = screen.getByRole('alert');
+    expect(banner).toHaveTextContent(copy.review.headMoved.advanced('main', 2));
+    expect(screen.getByRole('button', { name: copy.review.accept })).toBeEnabled();
+    expect(screen.getByRole('button', { name: copy.review.reject })).toBeEnabled();
+    const article = screen.getByRole('article', { name: 'math.js' });
+    expect(within(article).getByRole('button', { name: copy.review.revertFile })).toBeDisabled();
+
+    await user.click(screen.getByRole('tab', { name: new RegExp(copy.review.tabs.checkpoints) }));
+    expect(
+      await screen.findByRole('button', {
+        name: `${copy.review.checkpoints.restore}: write math.js`,
+      }),
+    ).toBeDisabled();
+  });
+
+  it('branch berganti: Terima dan Tolak diblokir sampai pemilik kembali; periksa lagi membaca ulang', async () => {
+    workerApi.reviewGet.mockResolvedValue(
+      inPlace({ headMoved: { state: 'switched', head: SHA_2, branch: 'fitur', commits: 0 } }),
+    );
+    const user = userEvent.setup();
+    await open();
+
+    expect(screen.getByRole('alert')).toHaveTextContent(copy.review.headMoved.switched('fitur'));
+    expect(screen.getByRole('button', { name: copy.review.accept })).toBeDisabled();
+    expect(screen.getByRole('button', { name: copy.review.reject })).toBeDisabled();
+
+    workerApi.reviewGet.mockResolvedValue(inPlace());
+    await user.click(
+      within(screen.getByRole('alert')).getByRole('button', { name: copy.review.refresh }),
+    );
+    await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
+    expect(screen.getByRole('button', { name: copy.review.accept })).toBeEnabled();
   });
 });
 

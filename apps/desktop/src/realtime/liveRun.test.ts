@@ -91,4 +91,13 @@ describe('izin di LiveRun', () => {
     const run = reduceLiveRun(newLiveRun('artifact'), event, 1);
     expect(run.artifacts).toEqual([event]);
   });
+  it('workspace.ready mencatat mode dan branch folder kerja run', () => {
+    const run = reduceLiveRun(newLiveRun('ws'), {
+      type: 'workspace.ready',
+      mode: 'in_place',
+      branch: 'main',
+      base: 'f'.repeat(40),
+    });
+    expect(run.workspace).toEqual({ mode: 'in_place', branch: 'main' });
+  });
 });

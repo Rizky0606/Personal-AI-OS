@@ -407,7 +407,8 @@ export function createScheduleService(deps: ScheduleServiceDeps): ScheduleServic
         const { run } = await deps.chat.sendMessage(
           conversationId,
           { parts: [{ type: 'text', text: row.prompt }] },
-          context ? { context } : undefined,
+          // Jadwal berjalan tanpa pemilik di depan layar: run coding (jadwal di percakapan project) di worktree.
+          { workspace: 'worktree', ...(context ? { context } : {}) },
         );
         await db
           .update(scheduleRuns)

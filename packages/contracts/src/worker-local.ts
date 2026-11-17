@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { IdSchema } from './common.js';
-import { StackSchema } from './entities.js';
+import { RunWorkspaceSchema, StackSchema } from './entities.js';
 
 /*
  * Protokol lokal antara aplikasi desktop dan worker sidecar (API_CONTRACT.md, "Protokol worker"):
@@ -86,16 +86,19 @@ export const SetupCommandSchema = z
   .regex(/^[^\0\r\n&|;<>`$^%"'()!]+$/, 'Perintah memuat karakter yang tidak diizinkan.');
 
 /**
- * Penyiapan worktree baru per project (hanya untuk PC ini): perintah yang dijalankan sebelum agent mulai
- * (mis. `pnpm install --offline`), opsi menautkan node_modules project ke worktree (memberi agent akses tulis
- * ke node_modules asli, jadi bawaannya mati), dan LSP omp (bawaan nyala; hanya aktif bila server bahasa
- * ditemukan di worktree atau PATH).
+ * Penyiapan run coding per project (hanya untuk PC ini). `workspace`: tempat run chat project mengubah berkas,
+ * bawaan `in_place` (langsung di folder project pada branch aktif); `worktree` = salinan terpisah di branch
+ * `aios/<id>`. Sisanya hanya berlaku untuk worktree baru: perintah yang dijalankan sebelum agent mulai (mis.
+ * `pnpm install --offline`), opsi menautkan node_modules project ke worktree (memberi agent akses tulis ke
+ * node_modules asli, jadi bawaannya mati), dan LSP omp (bawaan nyala; hanya aktif bila server bahasa ditemukan di
+ * folder kerja atau PATH).
  */
 export const ProjectSetupSchema = z
   .object({
     commands: z.array(SetupCommandSchema).max(SETUP_MAX_COMMANDS),
     linkNodeModules: z.boolean(),
     lsp: z.boolean(),
+    workspace: RunWorkspaceSchema.default('in_place'),
   })
   .meta({ id: 'ProjectSetup' });
 export type ProjectSetup = z.infer<typeof ProjectSetupSchema>;
@@ -358,6 +361,8 @@ export const LocalErrorCodeSchema = z.enum([
   'review_not_found',
   'git_failed',
   'run_active',
+  /** Mode branch aktif: branch atau HEAD project berpindah sejak run dimulai; keputusan perlu tindakan pemilik. */
+  'head_moved',
   'preview_unavailable',
   'terminal_unavailable',
   'internal',
@@ -396,10 +401,24 @@ export const CheckpointSchema = z.object({
 });
 export type Checkpoint = z.infer<typeof CheckpointSchema>;
 
+/**
+ * HEAD project berpindah sejak run mode `in_place` dimulai. `advanced`: branch yang sama maju `commits` commit
+ * (terima meng-commit perubahan yang belum di-commit di atasnya; tolak hanya membuang yang belum di-commit).
+ * `diverged`: riwayat branch ditulis ulang sehingga base bukan lagi leluhur HEAD. `switched`: branch lain yang
+ * sedang aktif (`branch`, null bila detached). Dua yang terakhir menolak terima/tolak sampai pemilik kembali.
+ */
+export const HeadMovedSchema = z.object({
+  state: z.enum(['advanced', 'diverged', 'switched']),
+  head: z.string(),
+  branch: z.string().nullable(),
+  commits: z.number().int().nonnegative(),
+});
+export type HeadMoved = z.infer<typeof HeadMovedSchema>;
+
 export const ReviewStateSchema = z
   .object({
     runId: IdSchema,
-    /** Branch kerja agent (aios/<id>). */
+    /** Branch tempat perubahan run berada: branch aktif project (`in_place`) atau `aios/<id>` (`worktree`). */
     branch: z.string(),
     base: z.string(),
     /** Branch kerja pengguna di repo asli saat ini; null bila detached. */
@@ -409,6 +428,10 @@ export const ReviewStateSchema = z
     files: z.array(ReviewFileSchema),
     /** Dari yang paling lama; base tidak termasuk. */
     checkpoints: z.array(CheckpointSchema),
+    /** Tempat run mengubah berkas. */
+    workspace: RunWorkspaceSchema.default('worktree'),
+    /** Hanya `in_place`: HEAD project berpindah sejak run dimulai; null bila tidak. */
+    headMoved: HeadMovedSchema.nullable().default(null),
   })
   .meta({ id: 'ReviewState' });
 export type ReviewState = z.infer<typeof ReviewStateSchema>;

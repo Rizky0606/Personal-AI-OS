@@ -162,6 +162,13 @@
       "when": 1794896054238,
       "tag": "0022_mcp_connectors",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1794919816184,
+      "tag": "0023_run_workspace",
+      "breakpoints": true
     }
   ]
 }

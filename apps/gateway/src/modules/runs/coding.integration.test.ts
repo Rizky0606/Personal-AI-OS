@@ -13,7 +13,7 @@ import { eq } from 'drizzle-orm';
 import type { AddressInfo } from 'node:net';
 import { WebSocket } from 'ws';
 import { afterAll, beforeAll, beforeEach, describe, expect, inject, it } from 'vitest';
-import { approvals, messages, runs } from '../../db/schema/index.js';
+import { approvals, conversations, messages, runs } from '../../db/schema/index.js';
 import { createAuthEnv, type AuthEnv } from '../../testing/auth-env.js';
 
 let env: AuthEnv;
@@ -74,6 +74,13 @@ class FakeWorker {
 
   emit(runId: string, event: AgentEvent) {
     this.socket.send(JSON.stringify({ type: 'run.event', runId, event }));
+  }
+
+  /** Laporan `workspace.pending` (run in_place yang perubahannya menunggu keputusan). */
+  pending(
+    runs: { runId: string; files: { path: string; additions: number; deletions: number }[] }[],
+  ) {
+    this.socket.send(JSON.stringify({ type: 'workspace.pending', runs }));
   }
 
   drop() {
@@ -171,13 +178,23 @@ describe('run coding lewat worker', () => {
     // Run coding menulis berkas di folder project di PC: tanpa aturan berkas server.
     expect(start.bundle.systemPrompt).not.toContain('# Berkas untuk pemilik');
 
-    // Run ditandai coding di omp, lengkap dengan branch kerjanya.
+    // Run ditandai coding di omp; branch dan mode folder kerja baru pasti setelah worker melapor.
     await until(async () => (await statusOf(run.id)) === 'running', 'running');
+    expect(start.workspace).toBeUndefined(); // pesan pemilik: setelan project di worker (bawaan in_place)
     expect(await getRun(run.id)).toMatchObject({
       kind: 'coding',
       engine: 'omp',
-      branch: workerBranchFor(run.id),
+      branch: null,
+      workspace: null,
     });
+    fake.emit(run.id, {
+      type: 'workspace.ready',
+      mode: 'in_place',
+      branch: 'main',
+      base: 'abc1234',
+    });
+    await until(async () => (await getRun(run.id)).branch === 'main', 'branch dari worker');
+    expect(await getRun(run.id)).toMatchObject({ branch: 'main', workspace: 'in_place' });
 
     fake.emit(run.id, {
       type: 'tool.started',
@@ -679,5 +696,257 @@ describe('run coding lewat worker', () => {
     expect(await statusOf(review!.id)).toBe('needs_review');
     const [row] = await db.select().from(approvals).where(eq(approvals.runId, hanging!.id));
     expect(row?.status).toBe('cancelled');
+  });
+});
+
+describe('folder kerja run coding: in_place dan worktree', () => {
+  const file = { path: 'a.ts', additions: 1, deletions: 0 };
+  const ready = (mode: 'in_place' | 'worktree', branch: string) =>
+    ({ type: 'workspace.ready', mode, branch, base: 'abc1234' }) as const;
+  const starts = (fake: FakeWorker) => fake.commands.filter((c) => c.type === 'run.start');
+  async function needsReview(
+    fake: FakeWorker,
+    conversationId: string,
+    mode: 'in_place' | 'worktree',
+  ) {
+    const run = await startRun(conversationId);
+    await until(() => starts(fake).some((c) => c.runId === run.id), 'run.start');
+    fake.emit(run.id, ready(mode, mode === 'in_place' ? 'main' : workerBranchFor(run.id)));
+    fake.emit(run.id, { type: 'diff.updated', files: [file] });
+    fake.emit(run.id, { type: 'run.completed', summary: 'selesai' });
+    await until(async () => (await statusOf(run.id)) === 'needs_review', 'needs_review');
+    await env.runner.idle();
+    return run;
+  }
+
+  it('in_place dihentikan dengan perubahan: run menunggu tinjauan, bukan cancelled', async () => {
+    const { fake, conversationId } = await setup('Folder Batal');
+    const run = await startRun(conversationId);
+    await until(() => fake.command('run.start') !== undefined, 'run.start');
+    fake.emit(run.id, ready('in_place', 'main'));
+    await until(async () => (await statusOf(run.id)) === 'running', 'running');
+
+    const cancelling = env.post(`/runs/${run.id}/cancel`, {}, desktop);
+    await until(() => fake.command('run.cancel') !== undefined, 'run.cancel');
+    // Worker mengirim diff terakhir sebelum penutup.
+    fake.emit(run.id, { type: 'diff.updated', files: [file] });
+    fake.emit(run.id, { type: 'run.status', status: 'cancelled' });
+
+    expect((await cancelling).statusCode).toBe(200);
+    await until(async () => (await statusOf(run.id)) === 'needs_review', 'needs_review');
+    expect(await getRun(run.id)).toMatchObject({ workspace: 'in_place', branch: 'main' });
+    fake.close();
+  });
+
+  it('in_place gagal dengan perubahan: alasan tercatat dan run menunggu tinjauan; tanpa perubahan tetap failed', async () => {
+    const { fake, conversationId } = await setup('Folder Gagal');
+    const run = await startRun(conversationId);
+    await until(() => fake.command('run.start') !== undefined, 'run.start');
+    fake.emit(run.id, ready('in_place', 'main'));
+    fake.emit(run.id, { type: 'diff.updated', files: [file] });
+    fake.emit(run.id, {
+      type: 'error',
+      code: 'run_timeout',
+      message: 'Run melewati batas waktu.',
+      retryable: false,
+    });
+    await until(async () => (await statusOf(run.id)) === 'needs_review', 'needs_review');
+    expect((await getRun(run.id)).error).toMatchObject({ code: 'run_timeout' });
+    await env.runner.idle();
+
+    const plain = await startRun(conversationId, 'coba lagi');
+    await until(() => starts(fake).length === 2, 'run.start kedua');
+    fake.emit(plain.id, ready('in_place', 'main'));
+    fake.emit(plain.id, { type: 'error', code: 'x', message: 'gagal', retryable: false });
+    await until(async () => (await statusOf(plain.id)) === 'failed', 'failed');
+    fake.close();
+  });
+
+  it('worktree dihentikan dengan perubahan tetap cancelled (tidak bisa ditinjau)', async () => {
+    const { fake, conversationId } = await setup('Folder Worktree Batal');
+    const run = await startRun(conversationId);
+    await until(() => fake.command('run.start') !== undefined, 'run.start');
+    fake.emit(run.id, ready('worktree', workerBranchFor(run.id)));
+    await until(async () => (await statusOf(run.id)) === 'running', 'running');
+    const cancelling = env.post(`/runs/${run.id}/cancel`, {}, desktop);
+    await until(() => fake.command('run.cancel') !== undefined, 'run.cancel');
+    fake.emit(run.id, { type: 'diff.updated', files: [file] });
+    fake.emit(run.id, { type: 'run.status', status: 'cancelled' });
+    expect((await cancelling).statusCode).toBe(200);
+    expect(await statusOf(run.id)).toBe('cancelled');
+    fake.close();
+  });
+
+  it('workspace.pending: run in_place yang sudah gagal menjadi needs_review; perangkat lain dan run worktree diabaikan', async () => {
+    const { fake, conversationId } = await setup('Folder Pulih');
+    const other = await setup('Folder Pulih Lain');
+    const run = await startRun(conversationId);
+    await until(() => fake.command('run.start') !== undefined, 'run.start');
+    fake.emit(run.id, ready('in_place', 'main'));
+    fake.emit(run.id, { type: 'error', code: 'x', message: 'gagal', retryable: false });
+    await until(async () => (await statusOf(run.id)) === 'failed', 'failed');
+    await env.runner.idle();
+
+    // Perangkat lain tidak bisa menghidupkan run milik project perangkat ini.
+    other.fake.pending([{ runId: run.id, files: [file] }]);
+    await sleep(200);
+    expect(await statusOf(run.id)).toBe('failed');
+
+    fake.pending([{ runId: run.id, files: [file] }]);
+    await until(async () => (await statusOf(run.id)) === 'needs_review', 'needs_review');
+    const events = (await env.get(`/runs/${run.id}/events`, desktop)).json<{
+      items: { event: AgentEvent }[];
+    }>().items;
+    expect(events.at(-2)?.event).toEqual({ type: 'diff.updated', files: [file] });
+
+    const wt = await startRun(other.conversationId);
+    await until(() => other.fake.command('run.start') !== undefined, 'run.start lain');
+    other.fake.emit(wt.id, ready('worktree', workerBranchFor(wt.id)));
+    other.fake.emit(wt.id, { type: 'error', code: 'x', message: 'gagal', retryable: false });
+    await until(async () => (await statusOf(wt.id)) === 'failed', 'failed worktree');
+    other.fake.pending([{ runId: wt.id, files: [file] }]);
+    await sleep(200);
+    expect(await statusOf(wt.id)).toBe('failed');
+    fake.close();
+    other.fake.close();
+  });
+
+  it('workspace.pending saat runner masih menunggu (worker dimulai ulang): run diakhiri dan bisa ditinjau', async () => {
+    const { fake, conversationId } = await setup('Folder Restart');
+    const run = await startRun(conversationId);
+    await until(() => fake.command('run.start') !== undefined, 'run.start');
+    fake.emit(run.id, ready('in_place', 'main'));
+    await until(async () => (await statusOf(run.id)) === 'running', 'running');
+
+    fake.pending([{ runId: run.id, files: [file] }]);
+
+    await until(async () => (await statusOf(run.id)) === 'needs_review', 'needs_review');
+    expect((await getRun(run.id)).error).toMatchObject({ code: 'worker_restarted' });
+    fake.close();
+  });
+
+  it('pesan lanjutan pemilik melanjutkan hasil yang belum ditinjau: folder kerja dan branch sama, run lama ditutup', async () => {
+    const { fake, conversationId } = await setup('Folder Lanjut');
+    const first = await needsReview(fake, conversationId, 'worktree');
+
+    const second = await startRun(conversationId, 'ganti juga judulnya');
+
+    await until(() => starts(fake).length === 2, 'run.start kedua');
+    const command = starts(fake)[1]!;
+    expect(command.continueFromRunId).toBe(first.id);
+    expect(command.workspace).toBeUndefined();
+    await until(async () => (await statusOf(first.id)) === 'rejected', 'run lama ditutup');
+    expect(await getRun(second.id)).toMatchObject({
+      branch: workerBranchFor(first.id),
+      workspace: 'worktree',
+    });
+    fake.close();
+  });
+
+  it('mode rencana tidak melanjutkan dan tidak menutup hasil yang belum ditinjau', async () => {
+    const { fake, conversationId } = await setup('Folder Rencana');
+    const first = await needsReview(fake, conversationId, 'in_place');
+
+    const res = await env.post(
+      `/conversations/${conversationId}/messages`,
+      { parts: [{ type: 'text', text: 'rencanakan langkah berikutnya' }], planOnly: true },
+      desktop,
+    );
+    expect(res.statusCode, res.body).toBe(201);
+    await until(() => starts(fake).length === 2, 'run.start kedua');
+    expect(starts(fake)[1]!.continueFromRunId).toBeUndefined();
+    expect(await statusOf(first.id)).toBe('needs_review');
+    fake.close();
+  });
+
+  it('pilihan per pesan: worktree diteruskan ke worker; pilihan lain saat ada hasil belum ditinjau ditolak 409', async () => {
+    const { fake, conversationId } = await setup('Folder Pilihan');
+    const res = await env.post(
+      `/conversations/${conversationId}/messages`,
+      { parts: [{ type: 'text', text: 'tambahkan tes' }], workspace: 'worktree' },
+      desktop,
+    );
+    expect(res.statusCode, res.body).toBe(201);
+    const run = SendMessageResponseSchema.parse(res.json()).run;
+    await until(() => fake.command('run.start') !== undefined, 'run.start');
+    expect(fake.command('run.start')?.workspace).toBe('worktree');
+    await until(async () => (await statusOf(run.id)) === 'running', 'running');
+    expect(await getRun(run.id)).toMatchObject({
+      branch: workerBranchFor(run.id),
+      workspace: 'worktree',
+    });
+    fake.emit(run.id, ready('worktree', workerBranchFor(run.id)));
+    fake.emit(run.id, { type: 'diff.updated', files: [file] });
+    fake.emit(run.id, { type: 'run.completed', summary: 'selesai' });
+    await until(async () => (await statusOf(run.id)) === 'needs_review', 'needs_review');
+    await env.runner.idle();
+
+    const conflict = await env.post(
+      `/conversations/${conversationId}/messages`,
+      { parts: [{ type: 'text', text: 'lanjut' }], workspace: 'in_place' },
+      desktop,
+    );
+    expect(conflict.statusCode).toBe(409);
+    expect(problem(conflict).code).toBe('review_pending');
+    fake.close();
+  });
+
+  it('percakapan tim dan armada selalu worktree: in_place ditolak 422, armada mengirim workspace worktree', async () => {
+    const { fake, conversationId, project } = await setup('Folder Tim');
+    await env.database.handle.db
+      .update(conversations)
+      .set({ teamId: '0192f0c4-7a1b-7c2d-a0bb-4a5b6c7d8e01' })
+      .where(eq(conversations.id, conversationId));
+    const team = await env.post(
+      `/conversations/${conversationId}/messages`,
+      { parts: [{ type: 'text', text: 'kerjakan' }], workspace: 'in_place' },
+      desktop,
+    );
+    expect(team.statusCode).toBe(422);
+    expect(problem(team).code).toBe('workspace_not_allowed');
+
+    const fleet = await env.post(
+      '/fleets',
+      { projectId: project.id, tasks: [{ prompt: 'tambahkan tes untuk fungsi add' }] },
+      desktop,
+    );
+    expect(fleet.statusCode, fleet.body).toBe(201);
+    await until(() => fake.command('run.start') !== undefined, 'run.start armada');
+    expect(fake.command('run.start')?.workspace).toBe('worktree');
+    fake.close();
+  });
+
+  it('restart gateway: run in_place dengan perubahan menunggu tinjauan, tanpa perubahan gagal', async () => {
+    const { conversationId } = await setup('Folder Gateway Restart', { connect: false });
+    const { db } = env.database.handle;
+    const [changed] = await db
+      .insert(runs)
+      .values({
+        kind: 'coding',
+        engine: 'omp',
+        status: 'running',
+        conversationId,
+        workspace: 'in_place',
+        branch: 'main',
+      })
+      .returning();
+    await env.store.append(changed!.id, { type: 'diff.updated', files: [file] });
+    const [clean] = await db
+      .insert(runs)
+      .values({
+        kind: 'coding',
+        engine: 'omp',
+        status: 'running',
+        conversationId,
+        workspace: 'in_place',
+        branch: 'main',
+      })
+      .returning();
+
+    await env.runner.recoverOrphans();
+
+    expect(await statusOf(changed!.id)).toBe('needs_review');
+    expect((await getRun(changed!.id)).error).toMatchObject({ code: 'gateway_restarted' });
+    expect(await statusOf(clean!.id)).toBe('failed');
   });
 });

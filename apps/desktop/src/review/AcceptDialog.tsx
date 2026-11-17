@@ -10,16 +10,31 @@ export interface AcceptDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   state: ReviewState;
+  /** Run dari percakapan (bukan kartu kanban): hasil worktree digabungkan ke branch kerja secara bawaan. */
+  chatRun: boolean;
   busy: boolean;
   onAccept: (options: { merge: boolean; commitMessage: string }) => void;
 }
 
-/** Terima: pesan commit (usulan agent, bisa diubah) dan pilihan menggabungkan ke branch kerja atau membiarkan sebagai branch. */
-export function AcceptDialog({ open, onOpenChange, state, busy, onAccept }: AcceptDialogProps) {
+/**
+ * Terima: pesan commit (usulan agent, bisa diubah). Run langsung di branch aktif di-commit di branch itu; run
+ * worktree bisa digabungkan ke branch kerja atau dibiarkan sebagai branch.
+ */
+export function AcceptDialog({
+  open,
+  onOpenChange,
+  state,
+  chatRun,
+  busy,
+  onAccept,
+}: AcceptDialogProps) {
   const [message, setMessage] = useState(state.commitMessage);
-  const [merge, setMerge] = useState(false);
+  // null = belum disentuh: ikut bawaan, yang bisa baru diketahui setelah data run termuat.
+  const [mergeChoice, setMergeChoice] = useState<boolean | null>(null);
   const [touched, setTouched] = useState(false);
+  const inPlace = state.workspace === 'in_place';
   const target = state.targetBranch;
+  const merge = !inPlace && target !== null && (mergeChoice ?? chatRun);
   const empty = message.trim() === '';
 
   return (
@@ -31,7 +46,9 @@ export function AcceptDialog({ open, onOpenChange, state, busy, onAccept }: Acce
             {copy.review.acceptTitle}
           </Dialog.Title>
           <Dialog.Description className="text-ui text-text-2">
-            {copy.review.acceptBody(state.branch)}
+            {inPlace
+              ? copy.review.acceptBodyInPlace(state.branch)
+              : copy.review.acceptBody(state.branch)}
           </Dialog.Description>
           <TextField
             label={copy.review.commitMessage}
@@ -44,20 +61,22 @@ export function AcceptDialog({ open, onOpenChange, state, busy, onAccept }: Acce
               setTouched(true);
             }}
           />
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-ui text-text">
-                {target ? copy.review.merge(target) : copy.review.mergeDetached}
-              </p>
-              <p className="text-caption text-text-3">{copy.review.mergeHint}</p>
+          {inPlace ? null : (
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-ui text-text">
+                  {target ? copy.review.merge(target) : copy.review.mergeDetached}
+                </p>
+                <p className="text-caption text-text-3">{copy.review.mergeHint}</p>
+              </div>
+              <Switch
+                checked={merge}
+                onChange={setMergeChoice}
+                disabled={target === null}
+                label={target ? copy.review.merge(target) : copy.review.mergeDetached}
+              />
             </div>
-            <Switch
-              checked={merge && target !== null}
-              onChange={setMerge}
-              disabled={target === null}
-              label={target ? copy.review.merge(target) : copy.review.mergeDetached}
-            />
-          </div>
+          )}
           <div className="mt-2 flex justify-end gap-2">
             <Dialog.Close asChild>
               <Button variant="secondary">{copy.review.cancel}</Button>
@@ -65,9 +84,7 @@ export function AcceptDialog({ open, onOpenChange, state, busy, onAccept }: Acce
             <Button
               variant="primary"
               disabled={busy || empty}
-              onClick={() =>
-                onAccept({ merge: merge && target !== null, commitMessage: message.trim() })
-              }
+              onClick={() => onAccept({ merge, commitMessage: message.trim() })}
             >
               {busy ? copy.review.accepting : copy.review.accept}
             </Button>
