@@ -558,13 +558,18 @@ test('panel kanan: tab tidak pernah bergulir mendatar; deret penuh hanya bila mu
     expect(h.layout).toBe('compact');
   }
 
-  // Ringkas tetap bisa dipakai dengan keyboard: dropdown membuka, panah memilih, Enter berpindah tab.
+  // Ringkas tetap bisa dipakai dengan keyboard: dropdown membuka dengan fokus di item pertama, End ke item
+  // terakhir, Enter berpindah tab. Fokus dipindahkan Radix ke menu sesudah menu tampil (efek React, bisa lewat
+  // satu frame); tombol berikutnya baru ditekan setelah fokus benar-benar di item, bukan masih di pemicu.
   const switcher = panel.getByRole('button', { name: 'Ganti tab' }).first();
   await switcher.focus();
   await page.keyboard.press('Enter');
-  await expect(page.getByRole('menu')).toBeVisible();
+  const menu = page.getByRole('menu');
+  await expect(menu).toBeVisible();
+  await expect(menu.getByRole('menuitem').first()).toBeFocused();
   await page.keyboard.press('End');
+  await expect(menu.getByRole('menuitem', { name: 'Aktivitas' })).toBeFocused();
   await page.keyboard.press('Enter');
-  await expect(page.getByRole('menu')).toBeHidden();
+  await expect(menu).toBeHidden();
   await expect(panel.getByRole('tabpanel').first()).toHaveAccessibleName('Aktivitas');
 });
