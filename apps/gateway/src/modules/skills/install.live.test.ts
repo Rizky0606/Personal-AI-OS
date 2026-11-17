@@ -164,5 +164,18 @@ describe.skipIf(!live)('pasang skill dari sumber nyata', () => {
       trust: 'community',
       origin: 'https://www.aitmpl.com/component/skills/creative-design/algorithmic-art',
     });
+    const again = SkillInstallPreviewSchema.parse((await preview(source)).json());
+    expect(again.action).toBe('update');
+    expect(again.candidate.checksum).toBe(p.candidate.checksum);
+    const second = await env.post(
+      '/skills/install',
+      {
+        source,
+        checksum: again.candidate.checksum,
+        ...(again.scan.verdict === 'warning' ? { acknowledge: true } : {}),
+      },
+      app,
+    );
+    expect(second.statusCode, second.body).not.toBe(409);
   }, 60_000);
 });
