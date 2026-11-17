@@ -35,6 +35,10 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/); ve
 - **Label tool browser worker (BL 919):** `mcp__aios_browser_browser_*` tampil sebagai langkah browser di Aktivitas dan Progres, tidak lagi sebagai Konektor. Server `aios_tools` tidak berubah. Kontrak aditif: `AIOS_BROWSER_OMP_PREFIX` di `packages/contracts`.
 - **Anggaran web per run bertahan setelah restart (BL 920):** hitungan `web_search`/`web_read` per run dan URL yang sudah diizinkan untuk `web_read` disimpan di `run_web_state` (migrasi `0021_run_web_state`), sehingga restart gateway tidak mengembalikan kuota penuh atau mencabut izin baca di tengah run. Angka anggaran dan kebijakan allowlist tidak berubah; anggaran per jam Hermes tetap di memori.
 
+### Diperbaiki
+
+- **Tab panel kanan tidak lagi bergulir mendatar:** pilihan antara deret tab penuh dan tata letak ringkas (pill aktif + dropdown "Ganti tab") kini diukur dari ruang nyata di header pane (ResizeObserver, histeresis 8 px), bukan ambang container query 300 px. Dulu, di antara 300 px dan lebar deret sebenarnya (sekitar 325–330 px tergantung label tab aktif, termasuk lebar bawaan 420 px), deret pill meluap dan menampilkan scrollbar. Deret penuh hanya tampil bila muat; fokus keyboard pindah ke padanannya saat tata letak berganti. Isi panel tetap bergulir tegak seperti biasa.
+
 ## [1.1.0] - 2026-11-15
 
 Merangkum pekerjaan sesi P1 sampai P11 (dikerjakan di cabang `fix/*` dan `feat/*`; **sudah digabung ke `main`**, `b26d61e`, 2026-11-13). **Perombakan "Command Center" yang tercatat di sini sebelumnya sudah ditulis ulang total** menjadi shell "pulau" (lihat Diubah); catatan lama dihapus karena tidak lagi menggambarkan kode yang ada.

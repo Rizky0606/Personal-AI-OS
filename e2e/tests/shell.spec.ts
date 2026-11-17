@@ -176,8 +176,9 @@ test('panel kanan: Ctrl+J melebar mulus ke lebar tersimpan dan tombol toggle di 
     'aria-pressed',
     'true',
   );
-  // Tab panel: yang aktif berlabel, ada 7 tab (Progres pertama).
-  await expect(page.getByRole('tab')).toHaveCount(7);
+  // Tab panel: ada 7 tab (Progres pertama); di lebar yang tidak memuat deret penuh, tab disembunyikan dan dipilih
+  // lewat dropdown ringkas, jadi dihitung termasuk yang tersembunyi.
+  await expect(page.getByRole('tab', { includeHidden: true })).toHaveCount(7);
 
   await page.keyboard.press('Control+j');
   await expect(panel).toBeHidden();
@@ -461,4 +462,109 @@ test('lebar 1024: tanpa gulir mendatar, pulau tidak saling menimpa, judul tidak 
     await overlapFree();
     expect(await clipped()).toEqual([]);
   }
+});
+
+test('panel kanan: tab tidak pernah bergulir mendatar; deret penuh hanya bila muat, selain itu ringkas', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await prepare(page);
+  await login(page);
+  const panel = page.getByRole('complementary', { name: 'Panel kanan' });
+
+  // Lebar panel tersimpan diubah lalu dimuat ulang: tata letak awal dihitung dari ukuran nyata, bukan sisa sebelumnya.
+  const openAt = async (width: number) => {
+    await page.evaluate((width) => {
+      const raw = JSON.parse(localStorage.getItem('aios.ui') ?? '{"state":{},"version":1}') as {
+        state: Record<string, unknown>;
+      };
+      Object.assign(raw.state, { rightPanelWidth: width, rightPanelOpen: true, paneTree: null });
+      localStorage.setItem('aios.ui', JSON.stringify(raw));
+    }, width);
+    await page.reload();
+    await expect.poll(async () => Math.round((await panel.boundingBox())?.width ?? 0)).toBe(width);
+  };
+  const headers = () =>
+    page.evaluate(() =>
+      Array.from(
+        document.querySelectorAll<HTMLElement>('aside[aria-label="Panel kanan"] [data-pane-tabs]'),
+      ).map((slot) => {
+        const strip = slot.querySelector<HTMLElement>('[role="tablist"]')!;
+        const header = slot.parentElement!;
+        return {
+          layout: slot.dataset.paneTabs,
+          leaf: header.getBoundingClientRect().width,
+          needed: strip.getBoundingClientRect().width,
+          available: slot.getBoundingClientRect().width,
+          stripVisible: strip.checkVisibility({ visibilityProperty: true }),
+          stripScrolls: strip.scrollWidth > strip.clientWidth,
+          headerScrolls: header.scrollWidth > header.clientWidth,
+          switcher: slot.querySelector('button[aria-label="Ganti tab"]') !== null,
+        };
+      }),
+    );
+  // Tidak ada elemen di panel yang bisa digulir mendatar (isi panjang hanya bergulir tegak).
+  const horizontalScrollers = () =>
+    page.evaluate(() =>
+      Array.from(document.querySelectorAll<HTMLElement>('aside[aria-label="Panel kanan"] *'))
+        .filter((el) => {
+          const x = getComputedStyle(el).overflowX;
+          return (x === 'auto' || x === 'scroll') && el.scrollWidth > el.clientWidth + 1;
+        })
+        .map((el) => el.className),
+    );
+  const check = async () => {
+    const all = await headers();
+    expect(all.length).toBeGreaterThan(0);
+    for (const h of all) {
+      expect(h.headerScrolls).toBe(false);
+      expect(h.stripScrolls).toBe(false);
+      if (h.layout === 'full') {
+        expect(h.stripVisible).toBe(true);
+        expect(h.needed).toBeLessThanOrEqual(h.available);
+      } else {
+        // Ringkas hanya bila deret penuh memang tidak muat.
+        expect(h.layout).toBe('compact');
+        expect(h.stripVisible).toBe(false);
+        expect(h.switcher).toBe(true);
+        expect(h.needed).toBeGreaterThan(h.available);
+      }
+    }
+    expect(await horizontalScrollers()).toEqual([]);
+    return all;
+  };
+
+  for (const width of [300, 340, 400, 520]) {
+    await openAt(width);
+    const [h] = await check();
+    if (width === 300) expect(h!.layout).toBe('compact');
+    if (width === 520) expect(h!.layout).toBe('full');
+  }
+
+  // Tepat di batas: deret yang pas tetap penuh tanpa gulir; kurang 1 px menjadi ringkas.
+  const [wide] = await headers();
+  const fit = 520 - Math.floor(wide!.available - wide!.needed);
+  await openAt(fit);
+  expect((await check())[0]!.layout).toBe('full');
+  await openAt(fit - 1);
+  expect((await check())[0]!.layout).toBe('compact');
+
+  // Pane 260 px: panel dibagi dua ke samping.
+  await openAt(523);
+  await panel.getByRole('button', { name: 'Bagi ke samping' }).click();
+  await expect.poll(async () => (await headers()).length).toBe(2);
+  for (const h of await check()) {
+    expect(Math.round(h.leaf)).toBe(260);
+    expect(h.layout).toBe('compact');
+  }
+
+  // Ringkas tetap bisa dipakai dengan keyboard: dropdown membuka, panah memilih, Enter berpindah tab.
+  const switcher = panel.getByRole('button', { name: 'Ganti tab' }).first();
+  await switcher.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('menu')).toBeVisible();
+  await page.keyboard.press('End');
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('menu')).toBeHidden();
+  await expect(panel.getByRole('tabpanel').first()).toHaveAccessibleName('Aktivitas');
 });
