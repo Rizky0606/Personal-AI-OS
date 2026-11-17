@@ -12,6 +12,8 @@ Aplikasi punya **dua agent tetap**. Yang membedakannya hanya ada tidaknya projec
 
 **Aturan pemilihan agent** (`pickAgent`, `packages/roles/src/agents.ts`; tanpa model dan tanpa jaringan): `surface = windows` dan ada project → `project`; selain itu → `general`. Android dengan atau tanpa project tetap `general` karena tidak punya akses ke folder.
 
+**Aturan kerja kode agent `project`** (bagian "Cara kerja" di `packages/roles/roles/project.md`, docs/DESIGN_PRESISI_AGENT.md): pahami dulu (berkas + pemanggil), diff minimal, protokol perubahan tanda tangan (cari semua pemakai lewat `lsp` references dan grep nama + alias, perbarui semuanya di run yang sama atau jangan ubah tanda tangannya), subagent hanya membaca, verifikasi wajib dengan perintah dan hasilnya, baca ulang diff. Blok ini menyatakan diri mengalahkan aturan bawaan omp yang bertentangan ("hapus kode mati", "hapus tes lama"). Worker menambah bagian "Dependensi worktree" bila worktree punya `package.json` tanpa `node_modules` (bukan mode rencana): agent diarahkan menjalankan perintah instal sesuai lockfile lewat approval sebelum typecheck.
+
 ## Paket skill: skill spesialis dipilih dari kata kunci
 
 `selectSkills` memeriksa teks pesan terhadap pola kata kunci (`SKILL_PACKS`) dan memilih skill dari paket yang cocok, berurutan, tanpa duplikat. Paket `frontend` dan `backend` hanya untuk agent `project`.

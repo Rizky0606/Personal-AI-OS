@@ -215,8 +215,13 @@ test('[skenario:rencana]: chip maju "Langkah 1 dari 9" sampai "9 dari 9", panel 
   await chip.click();
   const panel = page.getByRole('region', { name: 'Progres percakapan' });
   await expect(panel).toBeVisible();
-  await expect(page.getByRole('tab', { name: 'Progres', selected: true })).toBeVisible();
-  await expect(page.getByRole('tab').first()).toHaveAccessibleName('Progres');
+  // Deret tab penuh atau ringkas tergantung ruang; tab aktif tetap Progres dan menjadi tab pertama (tab yang
+  // tersembunyi di tata letak ringkas tidak punya nama aksesibel, jadi dicek lewat judulnya).
+  await expect(page.getByRole('tabpanel', { name: 'Progres' })).toBeVisible();
+  await expect(page.getByRole('tab', { includeHidden: true }).first()).toHaveAttribute(
+    'title',
+    'Progres',
+  );
 
   const assertPanel = async () => {
     // (1) Progres: 9 selesai, dua terakhir terlihat, sisanya diringkas.
