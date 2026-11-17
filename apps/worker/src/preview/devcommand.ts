@@ -26,7 +26,7 @@ async function exists(file: string): Promise<boolean> {
   }
 }
 
-async function packageManagerOf(
+export async function packageManagerOf(
   dir: string,
   pkg: Record<string, unknown>,
 ): Promise<PackageManager> {

@@ -341,6 +341,36 @@ describe('RunCoordinator: setup worktree', () => {
   it('node_modules tidak ditautkan secara bawaan (tautan memberi agent akses tulis ke folder asli)', async () => {
     expect(await linkedAfterStart(false)).toBe(false);
   });
+
+  async function promptWithPackage(over: { linkNodeModules?: boolean; planOnly?: boolean }) {
+    await fs.writeFile(path.join(repo, 'package.json'), '{"name":"aplikasi"}\n');
+    await fs.writeFile(path.join(repo, 'pnpm-lock.yaml'), "lockfileVersion: '9.0'\n");
+    await fs.writeFile(path.join(repo, '.gitignore'), 'node_modules/\n');
+    git(repo, 'add', '-A');
+    git(repo, 'commit', '-q', '-m', 'paket');
+    await fs.mkdir(path.join(repo, 'node_modules'));
+    await withSetup({ commands: [], linkNodeModules: over.linkNodeModules ?? false });
+
+    coordinator.start(command(over.planOnly ? { planOnly: true } : {}));
+    await until(() => adapter.inputs.length === 1, 'adapter dimulai');
+    return adapter.inputs[0]?.systemPrompt ?? '';
+  }
+
+  it('worktree tanpa node_modules: agent diarahkan meminta izin instal sesuai lockfile sebelum verifikasi', async () => {
+    const prompt = await promptWithPackage({});
+    expect(prompt).toContain('# Dependensi worktree');
+    expect(prompt).toContain('`pnpm install --frozen-lockfile`');
+  });
+
+  it('node_modules sudah ada di worktree (ditautkan): tanpa catatan dependensi', async () => {
+    expect(await promptWithPackage({ linkNodeModules: true })).not.toContain(
+      '# Dependensi worktree',
+    );
+  });
+
+  it('mode rencana: tanpa catatan dependensi (semua perintah ditolak)', async () => {
+    expect(await promptWithPackage({ planOnly: true })).not.toContain('# Dependensi worktree');
+  });
 });
 
 describe('RunCoordinator: event dan approval', () => {

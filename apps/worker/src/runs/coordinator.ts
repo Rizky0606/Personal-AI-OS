@@ -31,6 +31,7 @@ import type { ApprovalRules, RuleKind } from './rules.js';
 import { linkNodeModules } from '../preview/nodemodules.js';
 import { WorktreeError, type Worktree, type WorktreeManager } from './worktree.js';
 import { runSetup, type ProjectSetupStore } from './setup.js';
+import { dependencyInstruction } from './dependencies.js';
 import type { CatalogSkill } from '../skills/cache.js';
 
 type StartCommand = Extract<WorkerCommand, { type: 'run.start' }>;
@@ -391,6 +392,8 @@ export class RunCoordinator {
           this.deps.log?.(`katalog skill tidak dimuat untuk run ${runId}: ${String(error)}`);
         }
       }
+      // Mode rencana menolak semua perintah, jadi ajakan meminta izin instal tidak berguna di sana.
+      const dependencies = cmd.planOnly ? '' : await dependencyInstruction(worktree.cwd);
       run.handle = await this.deps.adapter.startRun({
         runId,
         messageId: uuidv7(),
@@ -401,7 +404,8 @@ export class RunCoordinator {
           LINK_INSTRUCTION +
           (run.mcp ? BROWSER_INSTRUCTION : '') +
           (run.toolsMcp ? TOOLS_INSTRUCTION : '') +
-          (connectorNames.length > 0 ? connectorInstruction(connectorNames) : ''),
+          (connectorNames.length > 0 ? connectorInstruction(connectorNames) : '') +
+          dependencies,
         ...(Object.keys(mcpServers).length > 0 ? { mcpServers } : {}),
         model: cmd.model,
         skills,

@@ -934,3 +934,13 @@ Slice 1 selesai di cabang `feat/mcp-konektor`: konektor HTTP jarak jauh dengan t
 - [ ] **Konektor berlaku untuk semua run coding**, belum bisa dibatasi per project.
 - [ ] **Anggaran per run konektor ada di memori gateway** (restart mengosongkannya); anggaran harian tahan restart karena dihitung dari tabel audit.
 - [ ] **Hermes belum bisa memakai konektor**: koneksi MCP Hermes global per proses, bukan per run, jadi panggilannya tidak bisa ditanyakan ke pemilik per run.
+
+## Presisi agent coding (desain `docs/DESIGN_PRESISI_AGENT.md`)
+
+- [x] **Aturan kerja kode di role `project`**: pahami dulu, diff minimal, protokol perubahan tanda tangan (lsp references + grep nama dan alias, perbarui semua pemakai atau jangan ubah), subagent hanya membaca, verifikasi wajib, baca ulang diff; menimpa eksplisit aturan bawaan omp yang mendorong scope creep.
+- [x] **Catatan "Dependensi worktree"**: worktree dengan `package.json` tanpa `node_modules` membuat agent menjalankan perintah instal sesuai lockfile (lewat approval, tanpa membuat lockfile baru) sebelum typecheck.
+- [ ] **Perintah verifikasi milik pemilik di Setup worktree**, dijalankan worker setelah agent selesai; hasil tampil di tinjauan dan dikirim balik ke agent bila gagal. Satu-satunya lapis yang tidak bergantung pada kepatuhan model.
+- [ ] **Server bahasa TypeScript tidak ada di PC pemilik**: LSP omp nyala bawaan tetapi `typescript-language-server` jarang ada di `devDependencies`; tanpa server di PATH, `lsp` menjawab "No language server found". Belum ada pemeriksaan atau petunjuk di desktop.
+- [ ] **`reasoning: false` untuk semua model di `models.yml` run omp** (`packages/adapters/src/omp.ts`): belum diukur apakah combo 9Router mendukung penalaran dan apakah menyalakannya memperdalam analisis.
+- [ ] **Tanda "hanya format" per berkas di tinjauan** (hunk yang berbeda hanya spasi), bila scope creep jenis format ulang teramati di project nyata.
+- [ ] **`fallback_model: coding-cheap` tidak dipakai saat run** dan combo itu tidak ada di 9Router: hapus dari role atau terapkan sebagai fallback sungguhan.
