@@ -279,3 +279,26 @@ describe('web_read: SSRF lewat pengambil halaman riset sungguhan', () => {
     expect(hits).toBe(0);
   });
 });
+
+describe('anggaran web per run bertahan setelah restart (BL 920)', () => {
+  it('kuota pencarian dan URL hasil pencarian tetap berlaku pada instance gateway baru', async () => {
+    const store = memoryStore();
+    const first = setup({ store, results: [result('https://vite.dev/guide/?utm_source=x')] });
+    for (let i = 0; i < WEB_SEARCH_PER_RUN; i++) {
+      await first.tools.call('web_search', { query: `vite ${i}` }, workerContext(RUN));
+    }
+
+    // Simulasi restart: instance baru dengan penyimpanan yang sama, tanpa keadaan di memori.
+    const second = setup({ store, results: [result('https://vite.dev/guide/')] });
+    const blocked = await second.tools.call('web_search', { query: 'baru' }, workerContext(RUN));
+    expect(blocked).toMatchObject({ ok: false, result: { isError: true } });
+    expect(second.queries).toEqual([]);
+
+    const read = await second.tools.call(
+      'web_read',
+      { url: 'https://vite.dev/guide' },
+      workerContext(RUN),
+    );
+    expect(read).toMatchObject({ ok: true, items: 1 });
+  });
+});

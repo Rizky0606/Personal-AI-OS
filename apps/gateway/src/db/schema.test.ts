@@ -70,7 +70,7 @@ const DOCUMENTED_TABLES = [
 
 describe('skema Drizzle', () => {
   /** Tabel internal gateway yang tidak ada di "Model data inti" karena tidak diekspos lewat API. */
-  const INTERNAL_TABLES = ['owner_account'];
+  const INTERNAL_TABLES = ['owner_account', 'run_web_state'];
 
   it('memuat tabel "Model data inti" ditambah tabel internal yang disebut eksplisit', () => {
     expect(tables.map((t) => getTableName(t)).sort()).toEqual(
