@@ -13,6 +13,8 @@ import { ErrorBanner } from '../ui/ErrorBanner';
 import { RememberDialog } from '../memory/RememberDialog';
 import { ApprovalPanel } from './ApprovalPanel';
 import { QuestionPanel } from './QuestionPanel';
+import { AgentProposalCards } from './AgentProposalCards';
+import { MemoryAutoSavedCards } from './MemoryAutoSavedCards';
 import { SkillProposalCards } from './SkillProposalCards';
 import { orbStateOf } from './AgentOrb';
 import { AssistantMessage, type AssistantPart } from './AssistantMessage';
@@ -306,10 +308,17 @@ export function MessageList({
               onSuggest={message.id === lastAssistantId ? onSuggest : undefined}
               onRichFollowUp={message.id === lastAssistantId ? onRichFollowUp : undefined}
               footer={
-                <SkillProposalCards
-                  conversationId={message.conversationId}
-                  messageId={message.id}
-                />
+                <>
+                  <SkillProposalCards
+                    conversationId={message.conversationId}
+                    messageId={message.id}
+                  />
+                  <AgentProposalCards
+                    conversationId={message.conversationId}
+                    runId={message.runId}
+                  />
+                  <MemoryAutoSavedCards messageId={message.id} />
+                </>
               }
             />
           ) : message.author === 'system' && isHandoffNote(messageText(message)) ? (

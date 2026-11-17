@@ -6,7 +6,6 @@ import {
   type AgentProposal,
 } from '@aios/contracts';
 import type { UseQueryResult } from '@tanstack/react-query';
-import { TriangleAlert } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { apiErrorMessage } from '../api/errors';
 import { useAgentProposals } from '../api/queries';
@@ -16,6 +15,7 @@ import { Button } from '../ui/Button';
 import { Switch } from '../ui/Switch';
 import { TextArea } from '../ui/TextArea';
 import { TextField } from '../ui/TextField';
+import { AfterWebNote } from './AfterWebNote';
 import { useAgentProposalActions, type AgentProposalActions } from './useAgentProposalActions';
 
 type TaskItem = Extract<AgentProposal, { kind: 'task' }>;
@@ -142,20 +142,7 @@ function ProposalMeta({ proposal }: { proposal: AgentProposal }) {
     <>
       <p className="text-meta text-text-2 whitespace-pre-wrap">{a.reason(proposal.reason)}</p>
       <p className="text-meta text-text-3">{a.agents[proposal.agent]}</p>
-      {proposal.afterWeb ? (
-        <p
-          role="note"
-          className="flex items-start gap-2 rounded-control border border-warning/40 bg-warning/10 px-3 py-2 text-meta text-text"
-        >
-          <TriangleAlert
-            size={14}
-            strokeWidth={1.5}
-            aria-hidden="true"
-            className="mt-0.5 shrink-0 text-warning"
-          />
-          {a.afterWeb}
-        </p>
-      ) : null}
+      {proposal.afterWeb ? <AfterWebNote /> : null}
     </>
   );
 }
