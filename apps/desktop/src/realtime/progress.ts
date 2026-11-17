@@ -1,6 +1,7 @@
 import {
   AIOS_BROWSER_OMP_PREFIX,
   aiosToolOf,
+  connectorToolOf,
   isRasterImageMime,
   type ConversationProgress,
   type MemoryRecallMode,
@@ -211,7 +212,8 @@ export function buildProgress(
       !aiosToolOf(name) &&
       !name.startsWith(AIOS_BROWSER_OMP_PREFIX)
     ) {
-      connectors.push(name.split('__')[1] ?? name);
+      // Konektor milik pemilik memakai awalan `konektor_`: tampilkan slug-nya saja (`github`), bukan `konektor_github_create_issue`.
+      connectors.push(connectorToolOf(name)?.connector ?? name.split('__')[1] ?? name);
       continue;
     }
     const kind = toolKindOf(name);

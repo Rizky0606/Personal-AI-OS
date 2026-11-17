@@ -19,6 +19,9 @@ import {
   MemoryListSchema,
   MemoryProposalListSchema,
   MemoryProposalSchema,
+  McpConnectorListSchema,
+  McpConnectorProbeSchema,
+  McpConnectorSchema,
   MemorySchema,
   OpinionResponseSchema,
   PromptTemplateListSchema,
@@ -63,6 +66,8 @@ import {
   SkillSaveResultSchema,
   SkillScanSchema,
   SkillVersionListSchema,
+  type CreateMcpConnectorRequestSchema,
+  type UpdateMcpConnectorRequestSchema,
   type SkillEngine,
   type SkillStatus,
   type UpdateSkillRequestSchema,
@@ -146,6 +151,8 @@ export interface AgentProposalQuery {
 export type ApproveAgentProposalInput = z.input<typeof ApproveAgentProposalRequestSchema>;
 export type UpdateSkillInput = z.input<typeof UpdateSkillRequestSchema>;
 export type HermesSkillList = z.infer<typeof HermesSkillListSchema>;
+export type CreateMcpConnectorInput = z.input<typeof CreateMcpConnectorRequestSchema>;
+export type UpdateMcpConnectorInput = z.input<typeof UpdateMcpConnectorRequestSchema>;
 export type SkillVersion = z.infer<typeof SkillVersionListSchema>['items'][number];
 
 export const PAGE_SIZE = 50;
@@ -549,6 +556,36 @@ export function createGatewayApi(call: Call) {
       get('/skills/hermes/import', SkillSaveResultSchema, {
         method: 'POST',
         body: { name, ...(acknowledge ? { acknowledge: true } : {}) },
+      }),
+
+    /** Konektor MCP pihak ketiga milik pemilik; token write-only dan tidak pernah dikembalikan server. */
+    listMcpConnectors: async () => (await get('/mcp-connectors', McpConnectorListSchema)).items,
+    createMcpConnector: (input: CreateMcpConnectorInput) =>
+      get('/mcp-connectors', McpConnectorSchema, { method: 'POST', body: input }),
+    probeMcpConnector: (url: string, token?: string) =>
+      get('/mcp-connectors/probe', McpConnectorProbeSchema, {
+        method: 'POST',
+        body: { url, ...(token ? { token } : {}) },
+      }),
+    getMcpConnector: (id: string) =>
+      get(`/mcp-connectors/${encodeURIComponent(id)}`, McpConnectorSchema),
+    updateMcpConnector: (id: string, patch: UpdateMcpConnectorInput) =>
+      get(`/mcp-connectors/${encodeURIComponent(id)}`, McpConnectorSchema, {
+        method: 'PATCH',
+        body: patch,
+      }),
+    deleteMcpConnector: async (id: string) => {
+      await call(`/mcp-connectors/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    },
+    setMcpConnectorEnabled: (id: string, enabled: boolean) =>
+      get(`/mcp-connectors/${encodeURIComponent(id)}/enable`, McpConnectorSchema, {
+        method: 'POST',
+        body: { enabled },
+      }),
+    /** Periksa ulang konektor tersimpan; token diambil gateway dari penyimpanan. */
+    reprobeMcpConnector: (id: string) =>
+      get(`/mcp-connectors/${encodeURIComponent(id)}/probe`, McpConnectorProbeSchema, {
+        method: 'POST',
       }),
 
     createResearch: (question: string, depth: ResearchDepth) =>

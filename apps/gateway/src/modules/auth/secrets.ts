@@ -6,12 +6,18 @@ export interface AuthKeys {
   jwt: Uint8Array;
   /** Enkripsi AES-256-GCM untuk secret TOTP di database. */
   totp: Buffer;
+  /** Enkripsi AES-256-GCM untuk token konektor MCP di database (docs/DESIGN_MCP_KONEKTOR.md bagian 4). */
+  connector: Buffer;
 }
 
 export function deriveAuthKeys(authSecret: string): AuthKeys {
   const derive = (info: string) =>
     Buffer.from(hkdfSync('sha256', authSecret, 'aios-gateway', info, 32));
-  return { jwt: new Uint8Array(derive('jwt-hs256')), totp: derive('totp-secret-aes256gcm') };
+  return {
+    jwt: new Uint8Array(derive('jwt-hs256')),
+    totp: derive('totp-secret-aes256gcm'),
+    connector: derive('mcp-connector-token-aes256gcm'),
+  };
 }
 
 const b64 = (b: Buffer) => b.toString('base64url');

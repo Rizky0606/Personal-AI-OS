@@ -10,3 +10,4 @@ export * from './rich-answers.js';
 export * from './fixtures/rich-answers.js';
 export * from './mime.js';
 export * from './tools.js';
+export * from './connectors.js';

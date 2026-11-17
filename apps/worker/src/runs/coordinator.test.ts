@@ -923,6 +923,14 @@ describe('RunCoordinator: tool gateway (aios_tools)', () => {
         unregister: () => released.push(runId),
       });
     },
+    registerConnector: (runId: string, connectorId: string) => {
+      registered.push(`${runId}/${connectorId}`);
+      return Promise.resolve({
+        url: `http://127.0.0.1:1/mcp/${runId}/konektor/${connectorId}`,
+        headers: { Authorization: `Bearer lokal-${connectorId}` },
+        unregister: () => released.push(`${runId}/${connectorId}`),
+      });
+    },
   };
   const ask = (approvalId: string, tool: string, args: string) => ({
     type: 'approval.requested' as const,
@@ -1128,6 +1136,140 @@ describe('RunCoordinator: tool gateway (aios_tools)', () => {
     });
     await until(() => types().includes('approval.requested'), 'ditanyakan');
     expect(adapter.handle.resolved).toEqual([]);
+  });
+});
+
+describe('RunCoordinator: konektor MCP', () => {
+  const registered: string[] = [];
+  const released: string[] = [];
+  const tools = {
+    register: (runId: string) => {
+      registered.push(runId);
+      return Promise.resolve({
+        url: `http://127.0.0.1:1/mcp/${runId}`,
+        headers: { Authorization: 'Bearer lokal-per-run' },
+        unregister: () => released.push(runId),
+      });
+    },
+    registerConnector: (runId: string, connectorId: string) => {
+      registered.push(`${runId}/${connectorId}`);
+      return Promise.resolve({
+        url: `http://127.0.0.1:1/mcp/${runId}/konektor/${connectorId}`,
+        headers: { Authorization: `Bearer lokal-${connectorId}` },
+        unregister: () => released.push(`${runId}/${connectorId}`),
+      });
+    },
+  };
+  const konektor = [
+    { id: 'k1', name: 'github', displayName: 'GitHub pemilik' },
+    { id: 'k2', name: 'linear', displayName: 'Linear' },
+  ];
+  const ask = (approvalId: string, tool: string, args: string) => ({
+    type: 'approval.requested' as const,
+    approvalId,
+    kind: 'network' as const,
+    detail: `${tool}\nArguments:\n${args}`,
+  });
+
+  beforeEach(async () => {
+    registered.length = 0;
+    released.length = 0;
+    await build({ tools });
+  });
+
+  it('satu titik relay per konektor, server konektor_<slug> dan instruksi ikut ke omp, dilepas saat run selesai', async () => {
+    coordinator.start(command({ connectors: konektor }));
+    await until(() => adapter.handles.length === 1, 'adapter dimulai');
+
+    expect(registered).toEqual([`${RUN}/k1`, `${RUN}/k2`]);
+    expect(adapter.inputs[0]?.mcpServers).toEqual({
+      konektor_github: {
+        url: `http://127.0.0.1:1/mcp/${RUN}/konektor/k1`,
+        headers: { Authorization: 'Bearer lokal-k1' },
+      },
+      konektor_linear: {
+        url: `http://127.0.0.1:1/mcp/${RUN}/konektor/k2`,
+        headers: { Authorization: 'Bearer lokal-k2' },
+      },
+    });
+    const prompt = adapter.inputs[0]?.systemPrompt ?? '';
+    expect(prompt).toContain('# Konektor');
+    expect(prompt).toContain('GitHub pemilik, Linear');
+    expect(prompt).not.toContain('# Tool web');
+
+    adapter.handle.events.push({ type: 'run.completed', summary: 'selesai' });
+    adapter.handle.events.end();
+    await until(() => coordinator.activeRunIds.length === 0, 'run dilepas');
+    expect(released).toEqual([`${RUN}/k1`, `${RUN}/k2`]);
+  });
+
+  it('tanpa konektor aktif: tidak ada pendaftaran, server MCP, atau instruksi konektor', async () => {
+    coordinator.start(command());
+    await until(() => adapter.handles.length === 1, 'adapter dimulai');
+
+    expect(registered).toEqual([]);
+    expect(adapter.inputs[0]?.mcpServers).toBeUndefined();
+    expect(adapter.inputs[0]?.systemPrompt).not.toContain('# Konektor');
+  });
+
+  it('izin konektor ditanyakan; "selalu" diingat per nama tool, bukan per argumen', async () => {
+    coordinator.start(command({ connectors: konektor }));
+    await until(() => adapter.handles.length === 1, 'adapter dimulai');
+    const handle = adapter.handle;
+
+    handle.events.push(ask(APPROVAL, 'mcp__konektor_github_create_issue', '{"title":"bug"}'));
+    await until(() => types().includes('approval.requested'), 'permintaan izin');
+    expect(handle.resolved).toEqual([]);
+    await coordinator.resolveApproval({
+      type: 'approval.resolve',
+      runId: RUN,
+      approvalId: APPROVAL,
+      decision: 'allow',
+      remember: true,
+    });
+    await until(() => handle.resolved.length === 1, 'dijawab');
+    expect(rules.list(PROJECT)).toEqual([
+      { projectId: PROJECT, kind: 'network', pattern: 'mcp__konektor_github_create_issue' },
+    ]);
+
+    // Argumen lain untuk tool yang sama dijawab otomatis; tool lain tetap ditanyakan.
+    const before = types().filter((t) => t === 'approval.requested').length;
+    handle.events.push(ask(APPROVAL_2, 'mcp__konektor_github_create_issue', '{"title":"lain"}'));
+    await until(() => handle.resolved.length === 2, 'dijawab otomatis');
+    expect(handle.resolved[1]).toEqual([APPROVAL_2, 'allow', undefined]);
+    const ketiga = '0192f0c4-7a1b-7c2d-a005-4a5b6c7d8e95';
+    handle.events.push(ask(ketiga, 'mcp__konektor_linear_create_issue', '{"title":"bug"}'));
+    await until(
+      () => types().filter((t) => t === 'approval.requested').length === before + 1,
+      'konektor lain ditanyakan',
+    );
+  });
+
+  it('tautan dari pesan pemilik tidak membuat tool konektor diizinkan diam-diam', async () => {
+    coordinator.start(
+      command({ connectors: konektor, prompt: 'lihat https://contoh.test/a lalu buat isu' }),
+    );
+    await until(() => adapter.handles.length === 1, 'adapter dimulai');
+    const handle = adapter.handle;
+
+    handle.events.push(
+      ask(APPROVAL, 'mcp__konektor_github_create_issue', '{"url":"https://contoh.test/a"}'),
+    );
+    await until(() => types().includes('approval.requested'), 'ditanyakan');
+    expect(handle.resolved).toEqual([]);
+  });
+
+  it('mode rencana: tool konektor ditolak tanpa bertanya (gateway yang tahu baca atau tulis)', async () => {
+    coordinator.start(command({ connectors: konektor, planOnly: true }));
+    await until(() => adapter.handles.length === 1, 'adapter dimulai');
+    const handle = adapter.handle;
+
+    handle.events.push(ask(APPROVAL, 'mcp__konektor_github_search_issues', '{"q":"bug"}'));
+    handle.events.push(ask(APPROVAL_2, 'mcp__konektor_github_create_issue', '{"title":"bug"}'));
+    await until(() => handle.resolved.length === 2, 'keduanya dijawab');
+
+    expect(handle.resolved.map((r) => r[1])).toEqual(['deny', 'deny']);
+    expect(types()).not.toContain('approval.requested');
   });
 });
 

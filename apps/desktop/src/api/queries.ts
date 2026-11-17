@@ -104,6 +104,10 @@ export const useSkillProposals = (params: ProposalQuery = {}) =>
     enabled: params.conversationId !== '',
   });
 
+/** Konektor MCP pihak ketiga yang terdaftar (halaman Konektor). */
+export const useMcpConnectors = () =>
+  useQuery({ queryKey: ['mcpConnectors'], queryFn: api.listMcpConnectors });
+
 export const useMemories = () => useQuery({ queryKey: ['memories'], queryFn: api.listMemories });
 export const useMemoryProposals = () =>
   useQuery({ queryKey: ['memoryProposals'], queryFn: api.listMemoryProposals });

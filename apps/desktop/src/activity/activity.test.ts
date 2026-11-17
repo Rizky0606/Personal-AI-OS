@@ -31,6 +31,9 @@ describe('toolKind', () => {
     expect(toolKind('mcp__aios_tools__schedule_propose')).toBe('propose');
     expect(toolKind('mcp__aios_tools_memory_propose')).toBe('propose');
     expect(toolKind('mcp__github__create_issue')).toBe('other');
+    expect(toolKind('mcp__konektor_github_create_issue')).toBe('connector');
+    expect(toolKind('MCP__KONEKTOR_LINEAR2_SEARCH')).toBe('connector');
+    expect(toolKind('mcp__konektor_github')).toBe('other');
     expect(toolKind('baca_tautan')).toBe('web');
     expect(toolKind('bash')).toBe('command');
     expect(toolKind('mcp__aios-browser__screenshot')).toBe('other');

@@ -17,25 +17,55 @@ export interface GatewayToolsRelayDeps {
   log?: (message: string) => void;
 }
 
+/** Satu titik relay terdaftar: token lokalnya, run pemiliknya, dan jalur gateway tujuannya. */
+interface RelayEndpoint {
+  runId: string;
+  /** Token acak per pendaftaran (bukan per run): token satu jalur tidak berlaku di jalur lain. */
+  token: Buffer;
+  /** Jalur di gateway, relatif terhadap `serverUrl()`. */
+  upstream: string;
+}
+
 /**
- * Relay MCP lokal untuk tool gateway (`aios_tools`, POST /v1/mcp). omp bicara ke
- * `127.0.0.1:<port>/mcp/<runId>` dengan token acak per run; relay meneruskan isi JSON-RPC apa adanya ke gateway
- * dengan token perangkat worker yang selalu segar dan `X-Aios-Run-Id` dari pendaftaran (bukan dari omp). Token
- * perangkat tidak pernah masuk berkas atau lingkungan omp (pola `LlmProxy`), dan token satu run tidak bisa
- * dipakai untuk run lain (pola server MCP browser).
+ * Relay MCP lokal untuk server MCP yang disajikan gateway: tool gateway (`aios_tools`, POST /v1/mcp) dan
+ * satu titik per konektor pemilik (POST /v1/mcp/connector/<id>, DESIGN_MCP_KONEKTOR.md #3). omp bicara ke
+ * `127.0.0.1:<port>/mcp/<runId>` atau `127.0.0.1:<port>/mcp/<runId>/konektor/<id>` dengan token acak per
+ * pendaftaran; relay meneruskan isi JSON-RPC apa adanya ke gateway dengan token perangkat worker yang selalu
+ * segar dan `X-Aios-Run-Id` dari pendaftaran (bukan dari omp). Token perangkat tidak pernah masuk berkas atau
+ * lingkungan omp (pola `LlmProxy`), token konektor tidak pernah sampai ke worker sama sekali, dan token satu
+ * jalur tidak bisa dipakai untuk jalur atau run lain (pola server MCP browser).
  */
 export class GatewayToolsRelay {
   private readonly server: Server;
   private port = 0;
   private starting: Promise<void> | undefined;
-  private readonly runs = new Map<string, Buffer>();
+  /** Kunci peta adalah jalur loopback persis seperti yang dipanggil omp. */
+  private readonly endpoints = new Map<string, RelayEndpoint>();
 
   constructor(private readonly deps: GatewayToolsRelayDeps) {
     this.server = createServer((req, res) => void this.handle(req, res));
   }
 
-  /** Didaftarkan per run oleh koordinator; server loopback dijalankan saat pendaftaran pertama. */
+  /** Tool gateway (`aios_tools`) untuk satu run; server loopback dijalankan saat pendaftaran pertama. */
   async register(runId: string): Promise<McpRegistration> {
+    return this.add(runId, `/mcp/${encodeURIComponent(runId)}`, '/v1/mcp');
+  }
+
+  /**
+   * Satu konektor pemilik untuk satu run. Worker hanya tahu id-nya: URL dan token server pihak ketiga tetap
+   * di gateway, yang menjadi klien MCP sebenarnya.
+   */
+  async registerConnector(runId: string, connectorId: string): Promise<McpRegistration> {
+    const id = encodeURIComponent(connectorId);
+    return this.add(
+      runId,
+      `/mcp/${encodeURIComponent(runId)}/konektor/${id}`,
+      `/v1/mcp/connector/${id}`,
+    );
+  }
+
+  /** Pendaftaran satu jalur loopback dengan token acaknya sendiri. */
+  private async add(runId: string, path: string, upstream: string): Promise<McpRegistration> {
     this.starting ??= new Promise<void>((resolve, reject) => {
       this.server.once('error', reject);
       this.server.listen(0, '127.0.0.1', () => {
@@ -45,31 +75,33 @@ export class GatewayToolsRelay {
     });
     await this.starting;
     const token = randomBytes(24).toString('hex');
-    this.runs.set(runId, Buffer.from(token));
+    this.endpoints.set(path, { runId, token: Buffer.from(token), upstream });
     return {
-      url: `http://127.0.0.1:${this.port}/mcp/${encodeURIComponent(runId)}`,
+      url: `http://127.0.0.1:${this.port}${path}`,
       headers: { Authorization: `Bearer ${token}` },
       unregister: () => {
-        this.runs.delete(runId);
+        this.endpoints.delete(path);
       },
     };
   }
 
   async close(): Promise<void> {
-    this.runs.clear();
+    this.endpoints.clear();
     if (!this.starting) return;
     this.server.closeAllConnections();
     await new Promise<void>((resolve) => this.server.close(() => resolve()));
   }
 
-  /** Run pemilik permintaan bila path dan token per run cocok (perbandingan waktu-konstan). */
-  private runOf(req: IncomingMessage): string | undefined {
-    const match = /^\/mcp\/([^/?#]+)$/.exec(req.url ?? '');
-    const runId = match?.[1] ? decodeURIComponent(match[1]) : undefined;
-    const expected = runId ? this.runs.get(runId) : undefined;
+  /**
+   * Titik relay pemilik permintaan bila jalur terdaftar dan tokennya cocok (perbandingan waktu-konstan).
+   * Token diikat ke jalur, jadi token tool gateway tidak berlaku di jalur konektor dan sebaliknya.
+   */
+  private endpointOf(req: IncomingMessage): RelayEndpoint | undefined {
+    const expected = this.endpoints.get(req.url ?? '');
     const given = Buffer.from(/^Bearer (.+)$/i.exec(req.headers.authorization ?? '')?.[1] ?? '');
-    if (given.length !== expected?.length || !timingSafeEqual(given, expected)) return undefined;
-    return runId;
+    if (given.length !== expected?.token.length || !timingSafeEqual(given, expected.token))
+      return undefined;
+    return expected;
   }
 
   private async handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -84,8 +116,8 @@ export class GatewayToolsRelay {
       });
       res.end(body === undefined ? undefined : JSON.stringify(body));
     };
-    const runId = this.runOf(req);
-    if (!runId) return reply(401, { error: 'unauthorized' });
+    const endpoint = this.endpointOf(req);
+    if (!endpoint) return reply(401, { error: 'unauthorized' });
     // Gateway tidak menyediakan aliran SSE maupun sesi; dijawab lokal tanpa perjalanan ke gateway.
     if (req.method === 'GET') return reply(405, undefined, { allow: 'POST, DELETE' });
     if (req.method === 'DELETE') return reply(204);
@@ -112,9 +144,9 @@ export class GatewayToolsRelay {
       if (typeof value === 'string') passed[name] = value;
     }
     const send = (token: string) =>
-      (this.deps.fetch ?? fetch)(`${base}/v1/mcp`, {
+      (this.deps.fetch ?? fetch)(`${base}${endpoint.upstream}`, {
         method: 'POST',
-        headers: { ...passed, authorization: `Bearer ${token}`, [RUN_ID_HEADER]: runId },
+        headers: { ...passed, authorization: `Bearer ${token}`, [RUN_ID_HEADER]: endpoint.runId },
         body: new Uint8Array(body),
         signal: aborter.signal,
       });

@@ -217,6 +217,8 @@ describe('buildActivity: aksi saat ini dan langkah', () => {
     expect(label('mcp__aios_tools_task_propose')).toBe('Membuat usulan');
     expect(label('mcp__aios_tools__schedule_propose')).toBe('Membuat usulan');
     expect(label('mcp__aios_tools_memory_propose')).toBe('Membuat usulan');
+    expect(label('mcp__konektor_github_create_issue')).toBe('Memakai konektor');
+    expect(label('mcp__konektor_notion_search')).toBe('Memakai konektor');
     expect(label('mcp__aios_tools_lain')).toBe('Menjalankan alat: mcp__aios_tools_lain');
     expect(label('')).toBe('Menjalankan alat');
   });

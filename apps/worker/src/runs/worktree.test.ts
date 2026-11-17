@@ -241,6 +241,44 @@ describe('ApprovalRules', () => {
     expect(broken.matches('p1', 'command', 'npm test')).toBe(false);
   });
 
+  it('tool konektor diingat per konektor dan per nama tool, bukan per argumen', async () => {
+    await rules.add(
+      'p1',
+      'network',
+      'mcp__konektor_github_create_issue\nArguments:\n{"title":"bug","body":"a"}',
+    );
+
+    expect(rules.list('p1')).toEqual([
+      { projectId: 'p1', kind: 'network', pattern: 'mcp__konektor_github_create_issue' },
+    ]);
+    expect(
+      rules.matches(
+        'p1',
+        'network',
+        'mcp__konektor_github_create_issue\nArguments:\n{"title":"lain sekali","repo":"x/y"}',
+      ),
+    ).toBe(true);
+    // Tool lain di konektor yang sama, dan konektor lain, tetap ditanyakan.
+    expect(rules.matches('p1', 'network', 'mcp__konektor_github_delete_repo\nArguments:\n{}')).toBe(
+      false,
+    );
+    expect(
+      rules.matches('p1', 'network', 'mcp__konektor_linear_create_issue\nArguments:\n{}'),
+    ).toBe(false);
+    expect(rules.matches('p2', 'network', 'mcp__konektor_github_create_issue')).toBe(false);
+  });
+
+  it('tool mcp di luar konektor terdaftar tetap cocok hanya pada detail penuh yang sama', async () => {
+    await rules.add('p1', 'command', 'mcp__github__x\nArguments:\n{"a":1}');
+
+    expect(rules.list('p1')).toEqual([
+      { projectId: 'p1', kind: 'command', pattern: 'mcp__github__x Arguments: {"a":1}' },
+    ]);
+    expect(rules.matches('p1', 'command', 'mcp__github__x\nArguments:\n{"a":1}')).toBe(true);
+    expect(rules.matches('p1', 'command', 'mcp__github__x\nArguments:\n{"a":2}')).toBe(false);
+    expect(rules.matches('p1', 'command', 'mcp__github__x')).toBe(false);
+  });
+
   it('normalizeDetail tidak mengubah huruf besar/kecil', () => {
     expect(normalizeDetail('  Git   Status\n')).toBe('Git Status');
   });

@@ -66,6 +66,7 @@ const DOCUMENTED_TABLES = [
   'team_events',
   'team_assignments',
   'team_reviews',
+  'mcp_connectors',
 ];
 
 describe('skema Drizzle', () => {

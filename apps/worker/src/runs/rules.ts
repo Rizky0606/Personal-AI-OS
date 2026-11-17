@@ -1,14 +1,15 @@
 import { promises as fs } from 'node:fs';
 import nodePath from 'node:path';
-import { aiosToolOf } from '@aios/contracts';
+import { aiosToolOf, connectorToolOf } from '@aios/contracts';
 import { z } from 'zod';
 
 const RuleSchema = z.object({
   projectId: z.string().min(1),
   kind: z.enum(['command', 'file_write', 'network']),
   /**
-   * Perintah/URL persis (spasi dinormalkan), `*` untuk semua penulisan file di worktree, atau nama tool gateway
-   * (`mcp__aios_tools_web_search`) untuk semua panggilan tool itu.
+   * Perintah/URL persis (spasi dinormalkan), `*` untuk semua penulisan file di worktree, nama tool gateway
+   * (`mcp__aios_tools_web_search`), atau nama tool konektor (`mcp__konektor_github_create_issue`) untuk semua
+   * panggilan tool itu.
    */
   pattern: z.string().min(1),
 });
@@ -22,13 +23,16 @@ export type RuleKind = ApprovalRule['kind'];
 export const normalizeDetail = (detail: string): string => detail.trim().replace(/\s+/g, ' ');
 
 /**
- * Pola aturan dari permintaan izin. Tool gateway (`aios_tools`) diingat per nama tool, karena detailnya memuat
- * argumen (kueri, URL) yang hampir tidak pernah sama; gateway tetap membatasi apa yang boleh dibuka.
+ * Pola aturan dari permintaan izin. Tool gateway (`aios_tools`) dan tool konektor diingat per nama tool, karena
+ * detailnya memuat argumen (kueri, URL, badan isu) yang hampir tidak pernah sama; gateway tetap membatasi apa
+ * yang boleh dibuka dan konektor mana yang hidup. Untuk konektor polanya mencakup slug konektor sekaligus nama
+ * tool (`mcp__konektor_<slug>_<tool>`), jadi izin satu tool tidak pernah berlaku untuk tool atau konektor lain.
+ * Nama `mcp__*` di luar konektor terdaftar tetap memakai detail penuh seperti sebelumnya.
  */
 function patternOf(kind: RuleKind, detail: string): string {
   if (kind === 'file_write') return '*';
   const tool = detail.split('\n')[0]?.trim() ?? '';
-  return aiosToolOf(tool) ? tool : normalizeDetail(detail);
+  return aiosToolOf(tool) || connectorToolOf(tool) ? tool : normalizeDetail(detail);
 }
 
 /**
@@ -37,6 +41,8 @@ function patternOf(kind: RuleKind, detail: string): string {
  * - perintah dan URL: cocok persis, bukan awalan, jadi `pnpm test` tidak membuka `pnpm test && rm -rf`.
  * - penulisan file: seluruh penulisan agent di worktree project itu (sudah terisolasi dan ditinjau sebelum diterima).
  * - tool gateway (web_search, web_read): per nama tool; batas URL dan kueri ditegakkan gateway.
+ * - tool konektor: per konektor dan per nama tool, tidak pernah per argumen (DESIGN_MCP_KONEKTOR.md #6);
+ *   allowlist tool, anggaran, dan mode rencana tetap ditegakkan gateway.
  * Hanya keputusan "izinkan" yang disimpan; "tolak" selalu ditanyakan ulang.
  */
 export class ApprovalRules {

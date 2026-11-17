@@ -10,6 +10,7 @@ export const copy = {
     research: 'Riset',
     spaces: 'Ruang',
     skills: 'Skill',
+    connectors: 'Konektor',
     settings: 'Pengaturan',
     catalog: 'Katalog komponen',
   },
@@ -261,6 +262,72 @@ export const copy = {
     error: 'Tidak bisa memuat. Periksa koneksi lalu coba lagi.',
   },
   screens: {},
+  /** Halaman Konektor: server MCP pihak ketiga yang didaftarkan pemilik. */
+  connectorsPage: {
+    title: 'Konektor',
+    summary:
+      'Hubungkan agent ke server MCP pihak ketiga. Token disimpan di gateway dan tidak pernah dikirim ke PC Anda.',
+    sidebar:
+      'Konektor baru selalu mati sampai Anda menyalakannya. Token tidak pernah ditampilkan lagi.',
+    tabs: { mine: 'Konektor saya', add: 'Tambah' },
+    mine: {
+      intro:
+        'Konektor yang aktif ikut ke setiap run coding; agent tetap meminta izin tiap panggilan.',
+      listLabel: 'Daftar konektor',
+      loading: 'Memuat konektor',
+      empty: 'Belum ada konektor. Tambahkan server MCP di tab Tambah.',
+      addAction: 'Tambah konektor',
+      slug: (name: string) => `Slug: ${name}`,
+      host: (host: string) => `Host: ${host}`,
+      toolCount: (n: number) => `${n} tool diizinkan`,
+      readWrite: (read: number, write: number) => `${read} baca · ${write} tulis`,
+      lastError: (message: string) => `Galat terakhir: ${message}`,
+      toggle: (name: string) => `Nyalakan konektor ${name}`,
+      enabled: 'Konektor dinyalakan.',
+      disabled: 'Konektor dimatikan.',
+      reprobe: 'Periksa ulang',
+      reprobing: 'Memeriksa…',
+      reprobed: (n: number) =>
+        `Server menjawab dengan ${n} tool. Buka tab Tambah untuk memilih ulang.`,
+      delete: 'Hapus',
+      deleteTitle: 'Hapus konektor',
+      deleteBody:
+        'Konektor ini dihapus beserta tokennya. Run yang sedang berjalan kehilangan aksesnya.',
+      deleteConfirm: 'Hapus konektor',
+      cancel: 'Batal',
+      deleted: 'Konektor dihapus.',
+    },
+    add: {
+      intro:
+        'Periksa server lebih dulu, centang tool yang boleh dipakai, lalu simpan. Konektor baru dibuat dalam keadaan mati.',
+      name: 'Nama slug',
+      nameHint: 'Huruf kecil dan angka, diawali huruf, 2–24 karakter. Contoh: github, linear2.',
+      namePlaceholder: 'github',
+      displayName: 'Nama tampilan',
+      displayNamePlaceholder: 'GitHub',
+      url: 'URL server MCP',
+      urlHint: 'Harus https, tanpa nama pengguna atau sandi di URL, port 443.',
+      urlPlaceholder: 'https://api.githubcopilot.com/mcp/',
+      token: 'Token (opsional)',
+      tokenHint: 'Disimpan terenkripsi di gateway dan tidak pernah ditampilkan lagi.',
+      probe: 'Periksa',
+      probing: 'Memeriksa…',
+      previewTitle: 'Hasil pemeriksaan',
+      server: (name: string, version: string) => `Server: ${name} ${version}`,
+      protocol: (version: string) => `Protokol: ${version}`,
+      toolsLabel: 'Tool yang diizinkan',
+      noTools: 'Server ini tidak menyajikan satu pun tool.',
+      truncated: 'Server menyajikan lebih banyak tool daripada batas; sisanya dipotong.',
+      read: 'baca',
+      write: 'tulis',
+      writeWarning: 'Tanpa penanda hanya-baca, jadi dianggap menulis.',
+      selected: (n: number) => `${n} tool dipilih`,
+      save: 'Simpan',
+      saving: 'Menyimpan…',
+      saved: 'Konektor disimpan dalam keadaan mati. Nyalakan di tab Konektor saya.',
+      needTool: 'Pilih minimal satu tool sebelum menyimpan.',
+    },
+  },
   skillsPage: {
     title: 'Skill',
     summary:
@@ -843,6 +910,12 @@ export const copy = {
         running: 'Memperbarui rencana',
         done: 'Rencana diperbarui',
         noun: 'Pembaruan rencana',
+      },
+      /** Tool dari konektor MCP pihak ketiga yang didaftarkan pemilik (`mcp__konektor_<slug>_<tool>`). */
+      connector: {
+        running: 'Memakai konektor',
+        done: 'Konektor dipakai',
+        noun: 'Konektor',
       },
     },
     /** Nama tool yang tidak dikenal; `name` kosong bila event mulai belum diterima. */

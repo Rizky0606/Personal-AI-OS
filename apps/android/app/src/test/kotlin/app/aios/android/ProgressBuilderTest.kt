@@ -298,4 +298,24 @@ class ProgressBuilderTest {
         assertEquals(ToolKind.Propose, kindOf(" MCP__AIOS_TOOLS_SCHEDULE_PROPOSE "))
         assertEquals(null, kindOf("mcp__aios_tools_space_propose"))
     }
+
+    @Test
+    fun jenisToolKonektorKitaAdalahConnector() {
+        assertEquals(ToolKind.Connector, kindOf("mcp__konektor_github_create_issue"))
+        assertEquals(ToolKind.Connector, kindOf(" MCP__KONEKTOR_GITHUB_CREATE_ISSUE "))
+        assertEquals(null, kindOf("mcp__konektor_github"))
+        assertEquals(null, kindOf("mcp__github__x"))
+    }
+
+    @Test
+    fun konektorKitaDicatatSebagaiSlugTelanjang() {
+        val response = ConversationProgress(
+            used = app.aios.android.data.api.ProgressUsedDto(
+                tools = listOf("mcp__konektor_github_create_issue")
+            )
+        )
+        val view = buildProgress(response, null, null, 0, texts)
+        assertEquals(listOf("github"), view.used.connectors)
+        assertEquals(emptyList<ToolGroup>(), view.used.tools)
+    }
 }

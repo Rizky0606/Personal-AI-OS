@@ -6,6 +6,8 @@ import {
   AIOS_PROPOSE_TOOLS,
   AIOS_TOOLS_SERVER,
   aiosToolOf,
+  connectorServerName,
+  connectorToolOf,
   type AgentEvent,
   type SteerMode,
   type WorkerCommand,
@@ -19,7 +21,7 @@ import type { McpRegistration } from '../preview/mcp.js';
 import { BROWSER_TOOL_PREFIX, MCP_SERVER_NAME } from '../preview/mcp.js';
 import type { PreviewService } from '../preview/service.js';
 import type { TerminalService } from '../terminal/service.js';
-import { TOOLS_INSTRUCTION } from '../tools/instruction.js';
+import { TOOLS_INSTRUCTION, connectorInstruction } from '../tools/instruction.js';
 import { COMMIT_INSTRUCTION } from './commit-message.js';
 import { withHistory } from './history.js';
 import { LINK_INSTRUCTION, isLinkFromPrompt } from './links.js';
@@ -50,8 +52,14 @@ export interface CoordinatorDeps {
   preview?: PreviewService;
   /** Terminal di worktree run ditutup sebelum worktree dihapus. */
   terminal?: TerminalService;
-  /** Relay MCP lokal ke tool gateway (`aios_tools`); dipakai hanya bila run.start membawa `gatewayTools`. */
-  tools?: { register(runId: string): Promise<McpRegistration> };
+  /**
+   * Relay MCP lokal ke server MCP yang disajikan gateway: tool gateway (`aios_tools`, dipakai hanya bila
+   * run.start membawa `gatewayTools`) dan satu titik per konektor pemilik (run.start.connectors).
+   */
+  tools?: {
+    register(runId: string): Promise<McpRegistration>;
+    registerConnector(runId: string, connectorId: string): Promise<McpRegistration>;
+  };
   /** Mengirim event ke gateway; false bila tidak tersambung (event disimpan dan dikirim saat tersambung). */
   send: (runId: string, event: AgentEvent) => boolean;
   dataDir: string;
@@ -92,6 +100,8 @@ interface RunState {
   mcp: McpRegistration | undefined;
   /** Pendaftaran run di relay tool gateway (`aios_tools`). */
   toolsMcp: McpRegistration | undefined;
+  /** Pendaftaran satu titik relay per konektor aktif run ini. */
+  connectorMcp: McpRegistration[];
 }
 
 /** Satu frame WebSocket gateway maksimal 16 KB; event dipecah bila serialisasinya mendekati itu. */
@@ -165,6 +175,7 @@ export class RunCoordinator {
       timer: undefined,
       mcp: undefined,
       toolsMcp: undefined,
+      connectorMcp: [],
     };
     this.runs.set(cmd.runId, run);
     void this.execute(cmd.runId, run).catch((error: unknown) => {
@@ -338,11 +349,36 @@ export class RunCoordinator {
           return undefined;
         });
       }
+      // Satu titik relay per konektor aktif (run.start.connectors). Worker hanya tahu id dan slug-nya:
+      // URL dan token server pihak ketiga tetap di gateway (DESIGN_MCP_KONEKTOR.md #3).
+      const connectorServers: Record<string, { url: string; headers: Record<string, string> }> = {};
+      const connectorNames: string[] = [];
+      const relay = this.deps.tools;
+      if (relay && cmd.connectors?.length) {
+        for (const connector of cmd.connectors) {
+          const registration = await relay
+            .registerConnector(runId, connector.id)
+            .catch((error: unknown) => {
+              this.deps.log?.(
+                `konektor ${connector.name} tidak tersedia untuk run ${runId}: ${String(error)}`,
+              );
+              return undefined;
+            });
+          if (!registration) continue;
+          run.connectorMcp.push(registration);
+          connectorServers[connectorServerName(connector.name)] = {
+            url: registration.url,
+            headers: registration.headers,
+          };
+          connectorNames.push(connector.displayName);
+        }
+      }
       const mcpServers = {
         ...(run.mcp ? { [MCP_SERVER_NAME]: { url: run.mcp.url, headers: run.mcp.headers } } : {}),
         ...(run.toolsMcp
           ? { [AIOS_TOOLS_SERVER]: { url: run.toolsMcp.url, headers: run.toolsMcp.headers } }
           : {}),
+        ...connectorServers,
       };
 
       // Skill yang ditawarkan di indeks dipasang ke folder skill milik run ini. Gagal memuat katalog tidak
@@ -364,7 +400,8 @@ export class RunCoordinator {
           COMMIT_INSTRUCTION +
           LINK_INSTRUCTION +
           (run.mcp ? BROWSER_INSTRUCTION : '') +
-          (run.toolsMcp ? TOOLS_INSTRUCTION : ''),
+          (run.toolsMcp ? TOOLS_INSTRUCTION : '') +
+          (connectorNames.length > 0 ? connectorInstruction(connectorNames) : ''),
         ...(Object.keys(mcpServers).length > 0 ? { mcpServers } : {}),
         model: cmd.model,
         skills,
@@ -451,10 +488,15 @@ export class RunCoordinator {
       if (id && run.cmd.bundle.skillIds.includes(id)) run.openedSkills.add(id);
     }
     if (event.type === 'approval.requested') {
+      const toolName = event.detail.split('\n')[0] ?? '';
       // Mode rencana: agent hanya boleh membaca. Semua izin ditolak, termasuk aturan "izinkan selalu" project,
       // kecuali tool gateway yang hanya membaca (web_*, tool data): riset saat merencanakan tetap boleh. Tool usulan
-      // tetap ditolak (keputusan pemilik, DESIGN_MCP_TOOLS.md #5).
-      const gatewayTool = run.toolsMcp ? aiosToolOf(event.detail.split('\n')[0] ?? '') : null;
+      // tetap ditolak (keputusan pemilik, DESIGN_MCP_TOOLS.md #5). Tool konektor juga selalu ditolak di mode
+      // rencana: yang tahu sebuah tool konektor hanya membaca atau ikut menulis adalah gateway (kolom `readOnly`
+      // hasil probe), bukan worker, jadi worker menolak semuanya dan gateway menegakkan pemisahan baca/tulis
+      // sebagai lapis kedua (DESIGN_MCP_KONEKTOR.md #5).
+      const gatewayTool = run.toolsMcp ? aiosToolOf(toolName) : null;
+      const connectorTool = connectorToolOf(toolName);
       const proposeTool = gatewayTool !== null && AIOS_PROPOSE_TOOLS.includes(gatewayTool);
       if (run.cmd.planOnly && (!gatewayTool || proposeTool)) {
         run.silent.add(event.approvalId);
@@ -474,8 +516,13 @@ export class RunCoordinator {
         void run.handle?.resolveApproval(event.approvalId, 'allow').catch(() => undefined);
         return;
       }
-      // Tautan yang pemilik tulis sendiri di pesannya boleh dibaca tanpa bertanya lagi.
-      if (event.kind === 'network' && isLinkFromPrompt(event.detail, run.cmd.prompt)) {
+      // Tautan yang pemilik tulis sendiri di pesannya boleh dibaca tanpa bertanya lagi. Tool konektor tidak
+      // pernah ikut jalur ini: pihak ketiga selalu ditanyakan, walau argumennya memuat tautan dari pemilik.
+      if (
+        !connectorTool &&
+        event.kind === 'network' &&
+        isLinkFromPrompt(event.detail, run.cmd.prompt)
+      ) {
         run.silent.add(event.approvalId);
         void run.handle?.resolveApproval(event.approvalId, 'allow').catch(() => undefined);
         return;
@@ -594,6 +641,9 @@ export class RunCoordinator {
     run.mcp?.unregister();
     // Token relay tool gateway run ini berhenti berlaku; gateway juga menolak run yang tidak lagi berjalan.
     run.toolsMcp?.unregister();
+    // Begitu pula titik relay tiap konektor: tokennya hanya berlaku selama run ini.
+    for (const connector of run.connectorMcp) connector.unregister();
+    run.connectorMcp = [];
     await this.deps.preview?.stopRun(run.cmd.projectId, runId).catch(() => undefined);
     await this.deps.processes.killRun(runId).catch(() => undefined);
     // Sudah di-set serentak dengan `terminal` (onEvent/fail/cancelled/timeout); diulang di sini hanya sebagai

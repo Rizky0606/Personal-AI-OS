@@ -3,6 +3,7 @@ import {
   AIOS_NETWORK_TOOLS,
   AIOS_PROPOSE_TOOLS,
   aiosToolOf,
+  connectorToolOf,
 } from '@aios/contracts';
 import { copy } from '../copy';
 import { isSettled, type LiveRun, type ToolStep } from './liveRun';
@@ -127,6 +128,8 @@ export function toolKindOf(name: string): ToolKind | null {
     if (AIOS_NETWORK_TOOLS.includes(gatewayTool)) return 'web';
     return AIOS_PROPOSE_TOOLS.includes(gatewayTool) ? 'propose' : 'data';
   }
+  // Konektor MCP milik pemilik: `mcp__konektor_<slug>_<tool>`.
+  if (connectorToolOf(key)) return 'connector';
   return null;
 }
 

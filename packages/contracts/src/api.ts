@@ -10,6 +10,7 @@ import { spaceEndpoints } from './endpoints/spaces.js';
 import { miscEndpoints } from './endpoints/misc.js';
 import { teamEndpoints } from './endpoints/teams.js';
 import { agentProposalEndpoints } from './endpoints/agent-proposals.js';
+import { mcpConnectorEndpoints } from './endpoints/mcp-connectors.js';
 import type { Endpoint } from './endpoint.js';
 
 /** Semua endpoint REST, urut per area seperti tabel di API_CONTRACT.md. */
@@ -22,6 +23,7 @@ export const endpoints: readonly Endpoint[] = [
   ...teamEndpoints,
   ...memoryEndpoints,
   ...agentProposalEndpoints,
+  ...mcpConnectorEndpoints,
   ...templateEndpoints,
   ...spaceEndpoints,
 ];

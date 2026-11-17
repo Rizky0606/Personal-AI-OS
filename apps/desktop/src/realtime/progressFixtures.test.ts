@@ -98,6 +98,26 @@ describe('buildProgress: aturan penggabungan', () => {
     expect(view.used.connectors).toEqual(['github']);
   });
 
+  it('konektor kita sendiri tampil sebagai slug saja, bukan nama server penuh', () => {
+    const base = response(['completed']);
+    const view = buildProgress(
+      {
+        ...base,
+        used: {
+          ...base.used,
+          tools: [
+            'mcp__konektor_github_create_issue',
+            'mcp__konektor_github_list_repos',
+            'mcp__konektor_linear2_search',
+          ],
+        },
+      },
+      undefined,
+      0,
+    );
+    expect(view.used.connectors).toEqual(['github', 'linear2']);
+  });
+
   it('tool data aios_tools masuk grup "Data AIOS" setelah web, bukan konektor', () => {
     const base = response(['completed']);
     const view = buildProgress(

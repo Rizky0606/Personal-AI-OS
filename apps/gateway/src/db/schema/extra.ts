@@ -3,6 +3,7 @@ import type {
   AgentProposalStatus,
   MemoryProposalKind,
   MemoryProposalSource,
+  McpConnectorTool,
   MemoryProposalStatus,
   MemorySource,
   ProposalAgent,
@@ -494,4 +495,32 @@ export const skillCuratorReports = pgTable(
     report: jsonb('report').notNull(),
   },
   (t) => [index('skill_curator_reports_created_idx').on(t.createdAt)],
+);
+
+/**
+ * Konektor MCP pihak ketiga yang didaftarkan pemilik (docs/DESIGN_MCP_KONEKTOR.md bagian 4). Gateway yang
+ * menjadi klien MCP-nya, jadi tokennya tidak pernah meninggalkan VPS. `token_enc` berisi AES-256-GCM dengan
+ * kunci HKDF dari `AUTH_SECRET` (pola `owner_account.totp_secret_enc`) dan tidak pernah dikembalikan lewat API.
+ * `tools` adalah allowlist yang dipilih pemilik saat pratinjau: hanya nama di sini yang dilihat dan boleh
+ * dipanggil agent.
+ */
+export const mcpConnectors = pgTable(
+  'mcp_connectors',
+  {
+    id: id(),
+    /** Slug yang ikut ke nama tool di mesin agent (`mcp__konektor_<name>_<tool>`). */
+    name: text('name').notNull(),
+    displayName: text('display_name').notNull(),
+    url: text('url').notNull(),
+    /** Null = konektor tanpa autentikasi. */
+    tokenEnc: text('token_enc'),
+    tools: jsonb('tools').$type<McpConnectorTool[]>().notNull().default([]),
+    enabled: boolean('enabled').notNull().default(false),
+    lastProbeAt: timestamp('last_probe_at', { withTimezone: true }),
+    /** Pesan kegagalan terakhir, sudah dibersihkan dari rahasia. */
+    lastError: text('last_error'),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [uniqueIndex('mcp_connectors_name_idx').on(t.name)],
 );

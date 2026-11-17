@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { IdSchema, RoleIdSchema } from './common.js';
+import { CONNECTORS_PER_RUN_MAX, ConnectorNameSchema } from './connectors.js';
 import { ApprovalDecisionSchema, SteerModeSchema } from './entities.js';
 import { AgentEventSchema, QueueNameSchema, QuestionAnswerSchema } from './events.js';
 
@@ -48,6 +49,20 @@ export const RunStartCommandSchema = z.object({
    * dan omp boleh memanggil `web_search`/`web_read`. Kosong = fitur mati (MCP_TOOLS_ENABLED=false).
    */
   gatewayTools: z.boolean().optional(),
+  /**
+   * Konektor MCP pihak ketiga yang aktif untuk run ini (docs/DESIGN_MCP_KONEKTOR.md). Hanya identitas:
+   * URL dan token tetap di gateway, worker cuma membangun relay loopback per konektor. Kosong = tidak ada.
+   */
+  connectors: z
+    .array(
+      z.object({
+        id: IdSchema,
+        name: ConnectorNameSchema,
+        displayName: z.string().min(1).max(80),
+      }),
+    )
+    .max(CONNECTORS_PER_RUN_MAX)
+    .optional(),
 });
 
 export const RunSteerCommandSchema = z.object({

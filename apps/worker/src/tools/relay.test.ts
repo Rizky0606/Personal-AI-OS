@@ -156,4 +156,44 @@ describe('GatewayToolsRelay', () => {
     expect(big.status).toBe(413);
     expect(seen).toHaveLength(0);
   });
+
+  it('konektor: diteruskan ke /v1/mcp/connector/<id>; token jalur lain ditolak 401; unregister melepas satu jalur saja', async () => {
+    const tools = await relay.register(RUN_A);
+    const github = await relay.registerConnector(RUN_A, 'kon-1');
+    const linear = await relay.registerConnector(RUN_A, 'kon-2');
+    const post = (url: string, headers: Record<string, string>) =>
+      fetch(url, { method: 'POST', headers, body: ping });
+
+    expect(github.url).toMatch(/\/mcp\/[^/]+\/konektor\/kon-1$/);
+    expect((await post(github.url, github.headers)).status).toBe(200);
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toMatchObject({ method: 'POST', url: '/v1/mcp/connector/kon-1', body: ping });
+    expect(seen[0]?.headers['x-aios-run-id']).toBe(RUN_A);
+    expect(seen[0]?.headers.authorization).toBe('Bearer token-perangkat-1');
+
+    // Token satu jalur tidak berlaku di jalur lain, meski run-nya sama.
+    expect((await post(github.url, tools.headers)).status).toBe(401);
+    expect((await post(github.url, linear.headers)).status).toBe(401);
+    expect((await post(tools.url, github.headers)).status).toBe(401);
+    // Konektor run lain memakai jalur lain: tokennya tidak bisa dipindah.
+    const lain = await relay.registerConnector(RUN_B, 'kon-1');
+    expect((await post(github.url, lain.headers)).status).toBe(401);
+    expect(seen).toHaveLength(1);
+
+    // GET dan DELETE tetap dijawab lokal untuk jalur konektor.
+    expect((await fetch(github.url, { headers: github.headers })).status).toBe(405);
+    expect((await fetch(github.url, { method: 'DELETE', headers: github.headers })).status).toBe(
+      204,
+    );
+
+    github.unregister();
+    expect((await post(github.url, github.headers)).status).toBe(401);
+    expect((await post(linear.url, linear.headers)).status).toBe(200);
+    expect((await post(tools.url, tools.headers)).status).toBe(200);
+    expect(seen.map((s) => s.url)).toEqual([
+      '/v1/mcp/connector/kon-1',
+      '/v1/mcp/connector/kon-2',
+      '/v1/mcp',
+    ]);
+  });
 });

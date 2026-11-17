@@ -33,8 +33,8 @@ function expectedScope(method: string, url: string): Expected {
   if (url.startsWith('/llm/v1')) return 'llm';
   if (url.startsWith('/v1/worker/')) return 'worker';
   if (url === '/v1/worker/ws') return 'worker';
-  // Tool gateway MCP: hanya worker (dengan run miliknya), bukan aplikasi.
-  if (url === '/v1/mcp') return 'worker';
+  // Tool gateway MCP dan konektor MCP: hanya worker (dengan run miliknya), bukan aplikasi.
+  if (url === '/v1/mcp' || url.startsWith('/v1/mcp/connector/')) return 'worker';
   return 'app';
 }
 

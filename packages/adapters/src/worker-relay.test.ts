@@ -84,6 +84,47 @@ describe('createWorkerRelayAdapter', () => {
     expect(off.sent[0]).not.toHaveProperty('gatewayTools');
   });
 
+  it('connectors: dibaca saat run dimulai, dibatasi 8, dan kait yang gagal tidak menggagalkan run', async () => {
+    const konektor = (i: number) => ({
+      id: `c${i}`,
+      name: `konektor${i}`,
+      displayName: `Konektor ${i}`,
+    });
+
+    const kosong = fakePort();
+    await createWorkerRelayAdapter({
+      relay: kosong.port,
+      connectors: () => Promise.resolve([]),
+    }).startRun(input());
+    expect(kosong.sent[0]).not.toHaveProperty('connectors');
+
+    const aktif = fakePort();
+    await createWorkerRelayAdapter({
+      relay: aktif.port,
+      connectors: () => Promise.resolve([konektor(1), konektor(2)]),
+    }).startRun(input());
+    expect(aktif.sent[0]).toMatchObject({
+      type: 'run.start',
+      connectors: [konektor(1), konektor(2)],
+    });
+
+    const banyak = fakePort();
+    await createWorkerRelayAdapter({
+      relay: banyak.port,
+      connectors: () => Promise.resolve(Array.from({ length: 12 }, (_value, i) => konektor(i + 1))),
+    }).startRun(input());
+    const dikirim = banyak.sent[0];
+    expect(dikirim?.type === 'run.start' ? dikirim.connectors : undefined).toHaveLength(8);
+
+    const gagal = fakePort();
+    const handle = await createWorkerRelayAdapter({
+      relay: gagal.port,
+      connectors: () => Promise.reject(new Error('gateway sibuk')),
+    }).startRun(input());
+    expect(handle.runId).toBe(RUN);
+    expect(gagal.sent[0]).not.toHaveProperty('connectors');
+  });
+
   it('event diteruskan berurutan; ID pesan diganti ID asisten gateway; run.status dari worker dibuang', async () => {
     const t = fakePort();
     const handle = await createWorkerRelayAdapter({ relay: t.port }).startRun(input());

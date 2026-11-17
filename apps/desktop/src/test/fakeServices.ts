@@ -60,6 +60,14 @@ export const api: FakeApi = {
   getSkillCuratorReport: fn<'getSkillCuratorReport'>(),
   runSkillCurator: fn<'runSkillCurator'>(),
   importHermesSkill: fn<'importHermesSkill'>(),
+  listMcpConnectors: fn<'listMcpConnectors'>(),
+  createMcpConnector: fn<'createMcpConnector'>(),
+  probeMcpConnector: fn<'probeMcpConnector'>(),
+  getMcpConnector: fn<'getMcpConnector'>(),
+  updateMcpConnector: fn<'updateMcpConnector'>(),
+  deleteMcpConnector: fn<'deleteMcpConnector'>(),
+  setMcpConnectorEnabled: fn<'setMcpConnectorEnabled'>(),
+  reprobeMcpConnector: fn<'reprobeMcpConnector'>(),
   registerWorker: fn<'registerWorker'>(),
   listProjects: fn<'listProjects'>(),
   createProject: fn<'createProject'>(),
@@ -266,6 +274,7 @@ export function resetApi(): void {
   api.listSkills.mockResolvedValue([]);
   api.listSkillProposals.mockResolvedValue([]);
   api.getSkillCuratorReport.mockResolvedValue(null);
+  api.listMcpConnectors.mockResolvedValue([]);
   api.listSpaces.mockResolvedValue([]);
   api.search.mockResolvedValue([]);
   api.listSpaceDocuments.mockResolvedValue([]);

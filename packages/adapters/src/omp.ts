@@ -4,6 +4,7 @@ import {
   AIOS_NETWORK_TOOLS,
   QuestionSchema,
   aiosToolOf,
+  connectorToolOf,
   type QuestionAnswer,
   TODO_MAX_PHASES,
   TODO_MAX_TASKS,
@@ -120,6 +121,9 @@ function approvalKind(tool: string): ApprovalKind {
   // Tool gateway (`aios_tools`) yang keluar ke web: izin jaringan, bukan perintah (SECURITY_OPS.md).
   const gatewayTool = aiosToolOf(tool);
   if (gatewayTool && AIOS_NETWORK_TOOLS.includes(gatewayTool)) return 'network';
+  // Tool konektor (`mcp__konektor_<slug>_<tool>`) benar-benar keluar dari mesin ini: izin jaringan juga
+  // (DESIGN_MCP_KONEKTOR.md #6). Nama `mcp__*` lain tetap `command`, jadi tidak ada izin yang dilonggarkan.
+  if (connectorToolOf(tool)) return 'network';
   return 'command';
 }
 
