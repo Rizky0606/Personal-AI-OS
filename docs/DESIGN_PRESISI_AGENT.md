@@ -1,6 +1,6 @@
 # Desain: presisi agent coding (omp lewat worker)
 
-Status: **investigasi selesai** (fase A). Disusun 2026-11-17 di branch `feat/presisi-agent` dari `main` (e0a8bb8, rilis v1.1.5). Semua rujukan `berkas:baris` dibaca di commit itu. Perilaku omp diamati dengan omp 18.12.6 sungguhan di host ini (arm64); PC pemilik memakai omp 18.13.2 (docs/VERIFICATION.md:260). Yang tidak teramati langsung ditandai **[INFERENSI]**.
+Status: **investigasi selesai** (fase A) dan **tingkat 1 terimplementasi** (fase B, bagian 7). Disusun 2026-11-17 di branch `feat/presisi-agent` dari `main` (e0a8bb8, rilis v1.1.5). Semua rujukan `berkas:baris` dibaca di commit itu. Perilaku omp diamati dengan omp 18.12.6 sungguhan di host ini (arm64); PC pemilik memakai omp 18.13.2 (docs/VERIFICATION.md:260). Yang tidak teramati langsung ditandai **[INFERENSI]**.
 
 ## 0. Ringkasan
 
@@ -10,7 +10,8 @@ Status: **investigasi selesai** (fase A). Disusun 2026-11-17 di branch `feat/pre
   1. **Worktree run tidak punya dependensi.** `node_modules` tidak ikut git, setup worktree bawaan kosong, tautan `node_modules` sengaja mati. Akibatnya typecheck/tes gagal dijalankan dan **LSP omp yang "nyala bawaan" tidak pernah menemukan server bahasa** ("No language server found"). Agent berhenti tanpa verifikasi.
   2. **Tidak ada protokol perubahan tanda tangan** di prompt AIOS. Aturan "minimal diff" dan "verifikasi" ada tetapi umum; tidak ada perintah mencari semua pemakai (termasuk alias/re-export) sebelum mengubah tanda tangan.
   3. **Prompt bawaan omp mendorong ke arah sebaliknya**: "Delete dead weight", "Default clean cutover … remove obsolete code/comments/aliases", "Existing … tests: MUST delete", dan delegasi ke subagent yang **tidak menerima prompt AIOS**.
-- **Rekomendasi tingkat 1 (dikerjakan di branch ini):** blok "aturan kerja kode" di role `project` (pahami dulu, diff minimal, protokol tanda tangan, verifikasi wajib, tanpa subagent untuk menulis, periksa diff) dan catatan worker "Dependensi worktree" yang mengarahkan agent meminta izin instal dependensi sebelum verifikasi.
+- **Rekomendasi tingkat 1 (dikerjakan di branch ini):** blok "aturan kerja kode" di role `project` (pahami dulu, diff minimal, protokol tanda tangan, verifikasi wajib, tanpa subagent untuk menulis, periksa diff) dan catatan worker "Dependensi worktree" yang membuat agent menjalankan instal dependensi (lewat approval) sebelum typecheck.
+- **Hasil.** Dengan prompt akhir, 3 dari 3 run sungguhan memperbarui keempat pemakai, menjalankan typecheck sampai lulus, dan tidak menyentuh berkas lain; di satu run typecheck itulah yang menangkap alias yang terlewat, lalu agent memperbaikinya sendiri (bagian 7). Sebelumnya 2 dari 3 run menyerahkan refactor rusak dan 0 dari 3 menjalankan typecheck.
 - **Di luar kendali AIOS:** kualitas model hulu combo `coding-main`, server bahasa TypeScript yang tidak ada di PC pemilik, dan isi prompt bawaan omp.
 
 ## 1. Masalah
@@ -83,7 +84,7 @@ Header omp di atas teks AIOS ("authoritative and supersede conflicting guidance 
 - Setup bawaan (LSP nyala, tanpa `node_modules` di worktree): `lsp references` → `No language server found for this action`; `lsp diagnostics` → `✘ src/pages/home.ts: No language server found`. Hasil `write` tanpa diagnostik.
 - Dengan `node_modules` yang memuat `typescript` + `typescript-language-server` (tautan node_modules dinyalakan): `references` → `Found 6 reference(s)` (definisi, 2 import, 3 pemanggilan di `cart.ts` dan `home.ts`); `diagnostics src/pages/home.ts` → 2 galat TS2345 tepat di dua pemanggilan lama. Server dingin selesai jauh di bawah 60 detik di host ini.
 
-Jadi LSP **berfungsi** bila server ada, tetapi di jalur produksi bawaan ia praktis mati untuk project TypeScript. Bahkan setelah dependensi dipasang, `typescript-language-server` jarang ada di `devDependencies` project biasa, jadi PC pemilik butuh server itu di PATH **[INFERENSI: tidak bisa diperiksa dari sini; PC pemilik Windows]**.
+Jadi LSP **berfungsi** bila server ada, tetapi di jalur produksi bawaan ia praktis mati untuk project TypeScript. Bahkan setelah dependensi dipasang, `typescript-language-server` jarang ada di `devDependencies` project biasa. **Teramati:** dengan `typescript-language-server` + `typescript` di PATH (meniru instal global) dan worktree **tanpa** `node_modules`, `lsp references` menemukan 10 referensi termasuk alias `renderList` di `promo.ts` lewat re-ekspor, dan `diagnostics` menunjuk dua pemanggilan lama. Apakah PC pemilik punya server itu di PATH tidak bisa diperiksa dari sini **[INFERENSI: kemungkinan tidak]**.
 
 ### 2.5 Verifikasi dan tinjauan
 
@@ -144,12 +145,12 @@ Pola: agent jujur bahwa typecheck tidak berjalan, tetapi tetap menyerahkan refac
 ### Tingkat 1: kode AIOS, kecil, dikerjakan di branch ini
 
 1. **Blok "aturan kerja kode" di role `project`** (bagian "Cara kerja" dan DoD), pendek dan imperatif: mengalahkan aturan bawaan mesin yang bertentangan; pahami dulu (baca berkas + pemanggil); diff minimal (tanpa format ulang/rename/hapus kode, komentar, tes yang tidak diminta); **protokol tanda tangan** (cari semua pemakai dengan `lsp` references bila ada DAN grep nama + alias; perbarui pemanggil/import/tipe/mock/tes di run yang sama; bila tidak mungkin, jangan ubah tanda tangan); subagent hanya membaca; verifikasi wajib dengan laporan perintah + hasil; baca ulang diff. AGENTS.md disebut "sudah ada di konteks" (omp memuatnya) alih-alih "baca".
-2. **Catatan worker "Dependensi worktree"**: bila worktree punya `package.json` tetapi belum punya `node_modules` (dan bukan mode rencana), pesan sistem diberi satu paragraf: dependensi belum terpasang, minta izin menjalankan perintah instal sesuai lockfile (`pnpm install --frozen-lockfile`, `yarn/bun install --frozen-lockfile`, `npm ci`, atau `npm install`), lalu `lsp reload`; bila ditolak, katakan verifikasi belum dijalankan. Perintahnya tetap lewat approval; kebijakan keamanan tidak berubah.
+2. **Catatan worker "Dependensi worktree"**: bila worktree punya `package.json` tetapi belum punya `node_modules` (dan bukan mode rencana), pesan sistem diberi satu paragraf: "dependensi belum terpasang" bukan alasan melewati verifikasi; jalankan perintah instal lewat tool bash (izin pemilik diminta otomatis), lalu typecheck dan tes; hanya izin ditolak atau instal gagal yang boleh berakhir tanpa verifikasi. Perintahnya sesuai lockfile (`pnpm install --frozen-lockfile`, `yarn/bun install --frozen-lockfile`, `npm ci`); tanpa lockfile dipakai varian yang tidak membuat lockfile baru (`npm install --no-package-lock`, `pnpm install --lockfile=false`, `yarn install --no-lockfile`, `bun install --no-save`). Perintah tetap lewat approval; kebijakan keamanan tidak berubah.
 
 ### Tingkat 2: konfigurasi pemilik (tanpa kode)
 
 1. Isi **Setup worktree** per project kode dengan perintah instal (mis. `pnpm install --frozen-lockfile --prefer-offline`), supaya worktree selalu siap typecheck tanpa izin tambahan per run. Atau nyalakan tautan `node_modules` bila risikonya diterima (`docs/SECURITY_OPS.md:25`).
-2. Pasang `typescript-language-server` + `typescript` di PATH PC pemilik (`npm i -g typescript typescript-language-server`) supaya LSP omp aktif untuk project TypeScript (referensi dan diagnostik setelah edit). Aturan "selalu izinkan" untuk perintah typecheck project (`npm run typecheck`) mengurangi gangguan izin.
+2. Pasang `typescript-language-server` + `typescript` di PATH PC pemilik (`npm i -g typescript typescript-language-server`) supaya LSP omp aktif untuk project TypeScript (referensi lintas re-ekspor dan diagnostik), bahkan sebelum dependensi worktree dipasang (teramati, 2.4 dan run `sesudah-lsp` di bagian 7). Aturan "selalu izinkan" untuk perintah instal dan typecheck project mengurangi gangguan izin.
 3. Bila hasil masih lemah, pilih model lain untuk combo `coding-main` di 9Router, atau pilih model langsung di composer; buat combo `coding-cheap` atau hapus dari role (tidak dipakai saat run).
 
 ### Tingkat 3: fitur berikutnya (dicatat, tidak dikerjakan)
@@ -166,3 +167,28 @@ Pola: agent jujur bahwa typecheck tidak berjalan, tetapi tetap menyerahkan refac
 - **Tidak mengubah skill inti** (`scope-guard`, `minimal-diff`, `verify-before-done`): dipakai juga oleh role Umum dan Riset di Hermes; aturan khusus kode cukup di role `project`.
 - **Tidak mengganti prompt bawaan omp** (`--system-prompt`): kehilangan tool policy omp yang berguna dan rapuh terhadap versi omp; cukup ditimpa eksplisit lewat teks yang ditambahkan.
 - **Tidak mengubah model atau combo 9Router** (di luar repo, bukan wewenang branch ini).
+- **Tidak menyuruh agent memanggil `lsp reload` setelah instal**: aksi itu meminta izin tulis (teramati sebagai izin "Action: reload") dan tidak berguna bila `typescript-language-server` tidak ada di dependensi project.
+
+## 7. Implementasi dan bukti sesudah
+
+**Perubahan.** `packages/roles/roles/project.md` (bagian "Cara kerja", DoD, format output); `apps/worker/src/runs/dependencies.ts` (catatan "Dependensi worktree", memakai `packageManagerOf` yang kini diekspor dari `apps/worker/src/preview/devcommand.ts`); `apps/worker/src/runs/coordinator.ts` (catatan ditambahkan ke pesan sistem, kecuali mode rencana). Tanpa perubahan kontrak, tanpa dependensi baru. Tes: `apps/worker/src/runs/dependencies.test.ts`, tiga kasus baru di `apps/worker/src/runs/coordinator.test.ts`.
+
+**Prompt sampai ke omp.** Pesan sistem permintaan pertama omp ke model (ditangkap di proxy) memuat blok "Ubah tanda tangan …" dan "# Dependensi worktree" dengan perintah `npm install --no-package-lock`, di bawah header omp "## User Instructions" (24.413 karakter, sebelumnya 22.755).
+
+**Run sungguhan** (jalur dan fixture bagian 3; semua izin diizinkan; model hulu `gpt-6-luna` di setiap run):
+
+| Run | Prompt | Pemakai diperbarui (dari 4) | Berkas lain | Typecheck oleh agent | `tsc --noEmit` akhir |
+| --- | --- | --- | --- | --- | --- |
+| sebelum-2 | `main` | 3 | – | `tsc: not found` | exit 2 |
+| sebelum-3 | `main` | 0 | – | `tsc: not found` | exit 2 |
+| sebelum-4 | `main` | 4 | – | `tsc: not found` | exit 0 |
+| sesudah-1 | akhir | 4 | – | instal → typecheck **gagal** (alias `renderList` terlewat) → diperbaiki → lulus | exit 0 |
+| sesudah-2 | akhir | 4 | – | instal → lulus | exit 0 |
+| sesudah-3 | akhir | 4 | – | instal → lulus; agent juga membaca `git diff` sebelum selesai | exit 0 |
+| sesudah-lsp | akhir, server TS di PATH | 4 (`lsp references` sebelum edit: 10 referensi termasuk alias) | – | instal → lulus | exit 0 |
+
+"Berkas lain" = berkas di luar `render.ts` dan ketiga pemanggilnya; umpan (`var`, `==`, `src/util/format.ts`) tidak disentuh di run mana pun.
+
+**Iterasi yang ditolak** (dicatat apa adanya): versi pertama catatan berbunyi "minta izin menjalankan …"; di dua run agent memperbarui keempat pemakai tetapi hanya *menulis* bahwa ia butuh izin `npm install`, tanpa menjalankannya (run ketiga tidak selesai dalam 20 menit dan dihentikan; penyebabnya tidak diperiksa). Versi kedua ("jalankan … dengan tool bash") membuat dua dari tiga run menginstal dan typecheck menangkap alias yang terlewat, tetapi `npm install` tanpa lockfile menambah `package-lock.json` ke diff (perubahan yang tidak diminta, akibat instruksi itu sendiri), dan satu run tetap melewatinya. Versi akhir menyebut "dependensi belum terpasang bukan alasan melewati verifikasi" dan memakai perintah yang tidak membuat lockfile baru.
+
+**Batas bukti.** Satu fixture kecil, satu model hulu, tiga sampai empat run per kondisi; ini menunjukkan arah, bukan tingkat keberhasilan di repo besar. Scope creep yang dilaporkan pemilik tidak tereproduksi di fixture ini, jadi efek aturan "diff minimal" belum terukur.
