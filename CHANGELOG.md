@@ -23,6 +23,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/); ve
 - **Push FCM usulan agent**: usulan dari satu giliran digabung menjadi satu push; judul hanya jumlah usulan, data hanya `type: agent_proposal`, `conversationId` (bila ada), dan `proposalIds` — tanpa isi usulan. Usulan Hermes (tanpa run dan tanpa percakapan) tetap dikirim, tanpa kunci `conversationId`. Android: ketukan membuka layar Usulan agent.
 - **Android: Ubah lalu setujui** untuk usulan agent: judul dan deskripsi kartu, atau nama, cron, zona waktu, instruksi, dan aktif/nonaktif jadwal, dengan batas yang sama dengan kontrak (judul 200, deskripsi 4.000, nama 120, instruksi 2.000). Cron atau zona waktu yang ditolak server dijelaskan di snackbar dan isian dipertahankan.
 - **Push FCM memori mode `auto`** dan **Urungkan langsung di chat**: satu push per giliran dengan judul berisi jumlah memori saja dan data hanya ID; di desktop, memori yang disimpan otomatis dari sebuah pesan muncul di bawah jawaban itu dengan tombol Urungkan, sejalan dengan blok "Disimpan otomatis dari chat" di Pengaturan > Memori.
+- **Pasang skill dari aitmpl.com (tipe `skills` saja):** id `kategori/nama` atau URL halaman komponen `www.aitmpl.com/component/skills/...` lewat pratinjau dan pasang yang sama dengan sumber lain. Tipe lain (agents, commands, hooks, mcps, settings, dan seterusnya) ditolak `422 skill_type_not_importable` tanpa permintaan jaringan. Hanya `SKILL.md` yang diambil; `LICENSE.txt` dan `templates/` tidak ikut.
 
 ### Diubah
 

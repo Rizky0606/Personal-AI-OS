@@ -366,7 +366,7 @@ export const PreviewSkillInstallRequestSchema = z
 export const SkillInstallPreviewSchema = z
   .object({
     source: z.object({
-      kind: z.enum(['skills.sh', 'github', 'raw']),
+      kind: z.enum(['skills.sh', 'github', 'raw', 'aitmpl']),
       input: z.string(),
       /** URL SKILL.md yang benar-benar diunduh. */
       url: z.string(),
