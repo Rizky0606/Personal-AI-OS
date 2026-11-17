@@ -1,6 +1,14 @@
 import { createHash } from 'node:crypto';
 import { SKILL_BODY_MAX_BYTES } from '@aios/contracts';
 import { AppError } from '../../errors.js';
+import {
+  AITMPL_HOST,
+  aitmplContentUrl,
+  aitmplIdOf,
+  aitmplPageUrl,
+  aitmplUrlOf,
+  skillMdOfComponent,
+} from './aitmpl.js';
 
 /**
  * Pemasangan skill dari luar (P10). HANYA gateway yang mengunduh; klien tidak pernah. Yang diterima:
@@ -8,6 +16,8 @@ import { AppError } from '../../errors.js';
  *   - URL skills.sh:       https://skills.sh/pemilik/repo/skill
  *   - URL GitHub folder:   https://github.com/pemilik/repo/tree/<ref>/<jalur-folder>
  *   - URL SKILL.md:        https://github.com/.../blob/<ref>/.../SKILL.md atau raw.githubusercontent.com/...
+ *   - id aitmpl.com:       kategori/nama (hanya tipe skills; tipe lain ditolak)
+ *   - URL aitmpl.com:      https://www.aitmpl.com/component/skills/<kategori>/<nama>
  * Yang diunduh hanya `SKILL.md` (teks, maks 64 KB). Folder `scripts/` dan berkas eksekusi TIDAK diunduh dan
  * tidak pernah dijalankan; bila isi skill merujuknya, pratinjau memberi peringatan. Tidak menjalankan apa pun.
  */
@@ -15,6 +25,7 @@ export const ALLOWED_HOSTS: readonly string[] = [
   'github.com',
   'raw.githubusercontent.com',
   'skills.sh',
+  'www.aitmpl.com',
 ];
 export const MAX_SKILL_MD_BYTES = SKILL_BODY_MAX_BYTES;
 /** Batas total semua berkas dari satu pemasangan (SKILL.md + berkas teks pendukung bila kelak diunduh). */
@@ -28,8 +39,8 @@ export type FetchLike = (
 ) => Promise<Response>;
 
 export interface ResolvedSource {
-  kind: 'skills.sh' | 'github' | 'raw';
-  /** Sumber seperti yang dimasukkan pengguna (disimpan sebagai `origin`). */
+  kind: 'skills.sh' | 'github' | 'raw' | 'aitmpl';
+  /** Sumber seperti yang dimasukkan pengguna (disimpan sebagai `origin`). Untuk aitmpl: URL kanonis komponen. */
   input: string;
   /** Kandidat URL SKILL.md, dicoba berurutan. */
   candidates: string[];
@@ -75,6 +86,9 @@ export function resolveSource(input: string): ResolvedSource {
       ]),
     };
   }
+  const aitmpl = aitmplIdOf(text);
+  if (aitmpl)
+    return { kind: 'aitmpl', input: aitmplPageUrl(aitmpl), candidates: [aitmplContentUrl(aitmpl)] };
 
   let url: URL;
   try {
@@ -91,6 +105,10 @@ export function resolveSource(input: string): ResolvedSource {
   const parts = url.pathname.split('/').filter(Boolean);
   if (parts.some((p) => p === '..' || !SEGMENT.test(p.replace(/%20/g, '_'))))
     throw invalid('Jalur URL tidak valid.');
+  if (url.hostname === AITMPL_HOST) {
+    const ref = aitmplUrlOf(parts);
+    return { kind: 'aitmpl', input: aitmplPageUrl(ref), candidates: [aitmplContentUrl(ref)] };
+  }
 
   if (url.hostname === 'skills.sh') {
     const [owner, repo, skill] = parts;
@@ -273,7 +291,15 @@ export async function fetchSkill(
   for (const candidate of source.candidates) {
     const result = await fetchSkillText(candidate, fetchImpl);
     if (result.status === 'missing') continue;
-    const parsed = parseSkillMd(result.text);
+    let text = result.text;
+    if (source.kind === 'aitmpl') {
+      // Balasan JSON aitmpl: SKILL.md ada di `content`; batas dan cek teks berlaku ke isi itu.
+      text = skillMdOfComponent(result.text);
+      if (text.includes('\u0000'))
+        throw new AppError(422, 'skill_not_text', 'Isi SKILL.md dari aitmpl.com bukan teks.');
+      if (Buffer.byteLength(text) > MAX_SKILL_MD_BYTES) throw tooLarge();
+    }
+    const parsed = parseSkillMd(text);
     return {
       ...parsed,
       url: result.url,

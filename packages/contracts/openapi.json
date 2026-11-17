@@ -4262,7 +4262,8 @@
                 "enum": [
                   "skills.sh",
                   "github",
-                  "raw"
+                  "raw",
+                  "aitmpl"
                 ]
               },
               "input": {
