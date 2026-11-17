@@ -920,3 +920,17 @@ Slice 1–4 selesai (web, baca data sistem, dan usulan untuk omp lewat worker; p
 - [x] **Tool browser worker (`mcp__aios_browser_browser_*`)** masih tampil sebagai Konektor dengan nama `aios_browser_browser_screenshot` di Progres dan "Menjalankan alat" di Aktivitas (pemetaan hanya ditambahkan untuk `aios_tools`).
 - [x] **Anggaran per run disimpan di memori gateway**: restart gateway mengosongkan hitungan dan allowlist hasil pencarian run yang sedang berjalan (agent perlu mencari ulang sebelum `web_read`).
 
+
+## Konektor MCP pihak ketiga (AIOS sebagai klien, desain `docs/DESIGN_MCP_KONEKTOR.md`)
+
+Slice 1 selesai di cabang `feat/mcp-konektor`: konektor HTTP jarak jauh dengan token statis, klien MCP di gateway, relay per konektor di worker, izin per konektor + nama tool, layar Konektor desktop, jenis langkah `connector` di desktop dan Android. Yang dikerjakan dan yang tersisa:
+
+- [x] **Slice 1: konektor HTTP jarak jauh.** Tabel `mcp_connectors` (migrasi 0022, token AES-256-GCM berkunci HKDF dari `AUTH_SECRET`, tidak bisa dibaca balik), REST `/mcp-connectors` + `probe`, klien MCP tulisan tangan (JSON-RPC 2.0 atas Streamable HTTP, jawaban JSON maupun SSE, sesi `Mcp-Session-Id`, redirect dicek ulang dan terkunci origin, `guardedLookup`), server MCP per konektor di `/v1/mcp/connector/:id`, `run.start.connectors` (hanya identitas), relay worker per konektor, `rules.ts` per konektor + nama tool, anggaran per run dan per hari, pemagaran keluaran, audit tanpa argumen.
+- [ ] **Jembatan konektor stdio di sisi desktop** (Blender, Roblox Studio, dan server MCP lokal lain). Sengaja ditunda di slice 1: server stdio butuh proses di mesin pemilik, jadi gateway VPS tidak bisa menjalankannya dan tidak boleh (`AGENTS.md`, `SECURITY_OPS.md`). Bentuk yang diusulkan: aplikasi desktop memulai prosesnya, menyajikannya sebagai server MCP loopback, lalu mendaftarkannya ke worker di PC yang sama; kebijakan (allowlist tool, anggaran, audit) harus tetap bisa ditegakkan, dan UI pendaftarannya berbeda (perintah + argumen + env, bukan URL + token). Alasan lengkap di `docs/DESIGN_MCP_KONEKTOR.md` bagian 2.
+- [ ] **Konektor belum pernah dicoba dengan server MCP terkelola sungguhan** (mis. `https://api.githubcopilot.com/mcp/`): butuh token pemilik. Bukti slice 1 memakai server MCP sungguhan sekali pakai di loopback. Bentuk jawaban SSE dan sesi sudah ditangani, tetapi perilaku server nyata tetap **[INFERENSI]** sampai dicoba.
+- [ ] **OAuth 2.1 (PKCE/DCR) untuk konektor**: hanya token statis yang didukung; server yang mewajibkan OAuth tidak bisa didaftarkan.
+- [ ] **`notifications/tools/list_changed` tidak diikuti**: daftar tool hanya berubah saat pemilik menekan "Periksa ulang" dan menyimpan ulang pilihannya.
+- [ ] **Android belum punya layar pengelolaan konektor** (hanya render aktivitas); pendaftaran kredensial masih pekerjaan desktop.
+- [ ] **Konektor berlaku untuk semua run coding**, belum bisa dibatasi per project.
+- [ ] **Anggaran per run konektor ada di memori gateway** (restart mengosongkannya); anggaran harian tahan restart karena dihitung dari tabel audit.
+- [ ] **Hermes belum bisa memakai konektor**: koneksi MCP Hermes global per proses, bukan per run, jadi panggilannya tidak bisa ditanyakan ke pemilik per run.
