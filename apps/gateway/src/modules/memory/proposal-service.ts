@@ -104,10 +104,14 @@ export function createMemoryProposalService(deps: {
   /** Menaruh pekerjaan ekstraksi di antrean (pg-boss di produksi; langsung dijalankan di tes). */
   enqueue: (conversationId: string) => Promise<void>;
   /**
-   * Push FCM saat giliran ini menghasilkan usulan `pending` baru (mode propose): paling banyak sekali per ekstraksi,
-   * hanya ID. PushService sendiri tidak melakukan apa pun bila FCM tidak dikonfigurasi.
+   * Push FCM untuk hasil giliran ini: usulan `pending` baru (mode propose) atau memori yang disimpan otomatis
+   * (mode auto). Paling banyak sekali per ekstraksi untuk masing-masing, hanya jumlah dan ID.
+   * PushService sendiri tidak melakukan apa pun bila FCM tidak dikonfigurasi.
    */
-  push?: { memoryProposals(input: { conversationId: string; proposalIds: string[] }): void };
+  push?: {
+    memoryProposals(input: { conversationId: string; proposalIds: string[] }): void;
+    memoryAutoSaved(input: { conversationId: string; proposalIds: string[] }): void;
+  };
   dailyMax?: number | undefined;
   now?: () => number;
   log?: {
@@ -254,8 +258,11 @@ export function createMemoryProposalService(deps: {
     return content;
   }
 
-  /** Mode auto: fakta langsung diterapkan; usulan dicatat `auto_saved` agar bisa diurungkan. */
-  async function autoSave(fact: AcceptedFact, conversationId: string): Promise<boolean> {
+  /**
+   * Mode auto: fakta langsung diterapkan; usulan dicatat `auto_saved` agar bisa diurungkan.
+   * Mengembalikan ID usulan yang dicatat, atau null bila fakta tidak jadi disimpan.
+   */
+  async function autoSave(fact: AcceptedFact, conversationId: string): Promise<string | null> {
     return db.transaction(async (tx) => {
       const at = new Date(now());
       const origin = {
@@ -267,7 +274,7 @@ export function createMemoryProposalService(deps: {
       };
       if (fact.kind === 'add') {
         const [total] = await tx.select({ n: count() }).from(memories);
-        if ((total?.n ?? 0) >= MAX_MEMORIES) return false;
+        if ((total?.n ?? 0) >= MAX_MEMORIES) return null;
         const [memory] = await tx
           .insert(memories)
           .values({
@@ -277,36 +284,42 @@ export function createMemoryProposalService(deps: {
             sourceMessageId: fact.source.id,
           })
           .returning({ id: memories.id });
-        await tx.insert(memoryProposals).values({
-          ...origin,
-          kind: 'add',
-          status: 'auto_saved',
-          text: fact.text,
-          resultMemoryId: memory!.id,
-          createdAt: at,
-          decidedAt: at,
-        });
-        return true;
+        const [created] = await tx
+          .insert(memoryProposals)
+          .values({
+            ...origin,
+            kind: 'add',
+            status: 'auto_saved',
+            text: fact.text,
+            resultMemoryId: memory!.id,
+            createdAt: at,
+            decidedAt: at,
+          })
+          .returning({ id: memoryProposals.id });
+        return created!.id;
       }
       const [current] = await tx
         .select({ text: memories.text })
         .from(memories)
         .where(eq(memories.id, fact.target!.id))
         .for('update');
-      if (!current) return false;
+      if (!current) return null;
       await tx.update(memories).set({ text: fact.text }).where(eq(memories.id, fact.target!.id));
-      await tx.insert(memoryProposals).values({
-        ...origin,
-        kind: 'update',
-        status: 'auto_saved',
-        text: fact.text,
-        targetMemoryId: fact.target!.id,
-        previousText: current.text,
-        resultMemoryId: fact.target!.id,
-        createdAt: at,
-        decidedAt: at,
-      });
-      return true;
+      const [created] = await tx
+        .insert(memoryProposals)
+        .values({
+          ...origin,
+          kind: 'update',
+          status: 'auto_saved',
+          text: fact.text,
+          targetMemoryId: fact.target!.id,
+          previousText: current.text,
+          resultMemoryId: fact.target!.id,
+          createdAt: at,
+          decidedAt: at,
+        })
+        .returning({ id: memoryProposals.id });
+      return created!.id;
     });
   }
 
@@ -398,10 +411,14 @@ export function createMemoryProposalService(deps: {
 
       let saved = 0;
       const pendingIds: string[] = [];
+      const autoIds: string[] = [];
       for (const fact of accepted) {
         if (mode === 'auto') {
-          if (await autoSave(fact, conversationId)) saved += 1;
-          else
+          const autoId = await autoSave(fact, conversationId);
+          if (autoId) {
+            autoIds.push(autoId);
+            saved += 1;
+          } else
             log?.warn(
               { conversationId },
               'fakta memori tidak disimpan: batas memori atau target hilang',
@@ -447,6 +464,7 @@ export function createMemoryProposalService(deps: {
         log?.info({ conversationId, saved, mode }, 'ekstraksi memori selesai');
         if (pendingIds.length > 0)
           push?.memoryProposals({ conversationId, proposalIds: pendingIds });
+        if (autoIds.length > 0) push?.memoryAutoSaved({ conversationId, proposalIds: autoIds });
       }
       return saved;
     },
