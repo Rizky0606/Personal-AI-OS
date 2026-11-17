@@ -19,6 +19,7 @@ import { memoryExtractEnqueue, startMemoryExtractJobs } from './modules/memory/j
 import { createMemoryProposalService } from './modules/memory/proposal-service.js';
 import { createMemoryService } from './modules/memory/service.js';
 import { createOwnerText } from './modules/mcp/owner-text.js';
+import { createWebRunStore } from './modules/mcp/web-state.js';
 import { createMcpServer } from './modules/mcp/server.js';
 import { createAiosTools } from './modules/mcp/aios-tools.js';
 import { createAgentMemoryProposals } from './modules/memory/agent-proposals.js';
@@ -391,6 +392,7 @@ async function main(): Promise<void> {
                 web: {
                   search: createSearxngClient({ baseUrl: config.SEARXNG_URL }),
                   fetchPage,
+                  store: createWebRunStore(db),
                   ownerText: createOwnerText(db),
                 },
                 data: { memory, spaces, tasks, schedules },

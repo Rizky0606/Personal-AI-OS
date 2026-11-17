@@ -292,6 +292,25 @@ export const memoryExtractions = pgTable(
   (t) => [index('memory_extractions_created_idx').on(t.createdAt)],
 );
 
+/**
+ * Anggaran web satu run (BL 920): kuota pencarian/baca dan URL yang boleh dibaca `web_read`. Disimpan supaya
+ * restart gateway tidak mengembalikan kuota atau mencabut URL yang sudah diizinkan di tengah run. Hanya run;
+ * anggaran per jam Hermes tetap di memori (tanpa run, berumur pendek).
+ */
+export const runWebState = pgTable('run_web_state', {
+  runId: uuid('run_id')
+    .primaryKey()
+    .references(() => runs.id, { onDelete: 'cascade' }),
+  searches: integer('searches').notNull().default(0),
+  reads: integer('reads').notNull().default(0),
+  /** URL ternormalisasi: hasil web_search run ini dan URL di pesan pemilik. */
+  allowed: jsonb('allowed')
+    .$type<string[]>()
+    .notNull()
+    .default(sql`'[]'::jsonb`),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 /** Templat prompt (W27): prompt tersimpan yang dipanggil dengan `/nama` di composer. */
 export const promptTemplates = pgTable(
   'prompt_templates',
