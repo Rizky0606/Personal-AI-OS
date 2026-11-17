@@ -45,6 +45,9 @@ import type { PageFetcher } from '../modules/research/fetcher.js';
 import { createOwnerText } from '../modules/mcp/owner-text.js';
 import { createWebRunStore } from '../modules/mcp/web-state.js';
 import { createMcpServer } from '../modules/mcp/server.js';
+import { createConnectorClient } from '../modules/mcp-connectors/client.js';
+import { createConnectorMcpServer } from '../modules/mcp-connectors/server.js';
+import { createMcpConnectorService } from '../modules/mcp-connectors/service.js';
 import { createAiosTools } from '../modules/mcp/aios-tools.js';
 import { createAgentMemoryProposals } from '../modules/memory/agent-proposals.js';
 import {
@@ -236,6 +239,11 @@ export async function createAuthEnv(
       /** MCP_HERMES_TOKEN_SHA256: menyalakan principal Hermes. */
       hermesTokenSha256?: string;
     };
+    /**
+     * Konektor MCP pihak ketiga: memasang `/v1/mcp-connectors` dan `/v1/mcp/connector/:id`. `allowPrivateHosts`
+     * membuka loopback untuk server MCP tiruan di tes; produksi selalu menolaknya.
+     */
+    mcpConnectors?: { allowPrivateHosts?: boolean };
     /** Batas run coding paralel per project untuk kartu kanban. */
     taskMaxParallel?: number;
     rateLimits?: Partial<RateLimits>;
@@ -253,6 +261,17 @@ export async function createAuthEnv(
     apiKey: options.ninerouterKey,
     timeoutMs: 5000,
     retryDelayMs: 0,
+  });
+
+  const connectorClient = createConnectorClient({
+    allowPrivateHosts: options.mcpConnectors?.allowPrivateHosts ?? false,
+  });
+  const mcpConnectorService = createMcpConnectorService({
+    db,
+    client: connectorClient,
+    tokenKey: keys.connector,
+    allowPrivateHosts: options.mcpConnectors?.allowPrivateHosts ?? false,
+    now: () => new Date(clock.now),
   });
 
   const roles = createRolesService();
@@ -367,6 +386,7 @@ export async function createAuthEnv(
       relay: workerRelay,
       ...(options.workerRelay ?? {}),
       ...(options.mcpTools ? { gatewayTools: true } : {}),
+      connectors: () => mcpConnectorService.listEnabled(),
     }),
     ...(dsh ? { dsh } : {}),
     roles,
@@ -550,6 +570,16 @@ export async function createAuthEnv(
     // tes rate limit menimpanya.
     rateLimits: { login: 1000, refresh: 1000, general: 1_000_000, ...options.rateLimits },
     ...(options.logStream ? { logStream: options.logStream } : {}),
+    mcpConnectors: {
+      db,
+      service: mcpConnectorService,
+      server: createConnectorMcpServer({
+        client: connectorClient,
+        service: mcpConnectorService,
+        version: 'test',
+        now,
+      }),
+    },
     ...(options.mcpTools
       ? {
           mcp: {

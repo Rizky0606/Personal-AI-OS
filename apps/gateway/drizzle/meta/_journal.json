@@ -155,6 +155,13 @@
       "when": 1794874276712,
       "tag": "0021_run_web_state",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1794896054238,
+      "tag": "0022_mcp_connectors",
+      "breakpoints": true
     }
   ]
 }

@@ -21,6 +21,9 @@ import { createMemoryService } from './modules/memory/service.js';
 import { createOwnerText } from './modules/mcp/owner-text.js';
 import { createWebRunStore } from './modules/mcp/web-state.js';
 import { createMcpServer } from './modules/mcp/server.js';
+import { createConnectorClient } from './modules/mcp-connectors/client.js';
+import { createConnectorMcpServer } from './modules/mcp-connectors/server.js';
+import { createMcpConnectorService } from './modules/mcp-connectors/service.js';
 import { createAiosTools } from './modules/mcp/aios-tools.js';
 import { createAgentMemoryProposals } from './modules/memory/agent-proposals.js';
 import { createAgentProposalService } from './modules/agent-proposals/service.js';
@@ -199,6 +202,14 @@ async function main(): Promise<void> {
     hermesUp: async () => (await health.readiness()).checks.hermes.ok,
     log: { warn: (obj, msg) => app.log.warn(obj, msg) },
   });
+  // Konektor MCP pihak ketiga: gateway yang menjadi klien MCP-nya (docs/DESIGN_MCP_KONEKTOR.md bagian 3).
+  const connectorClient = createConnectorClient();
+  const mcpConnectorService = createMcpConnectorService({
+    db,
+    client: connectorClient,
+    tokenKey: keys.connector,
+  });
+
   const runner = createRunner({
     db,
     store,
@@ -209,6 +220,8 @@ async function main(): Promise<void> {
     workerAdapter: createWorkerRelayAdapter({
       relay: workerRelay,
       gatewayTools: config.MCP_TOOLS_ENABLED === 'true',
+      // Dibaca saat run dimulai: daftar konektor yang menyala bisa berubah di antara run.
+      connectors: () => mcpConnectorService.listEnabled(),
     }),
     ...(dsh ? { dsh } : {}),
     proposals: skillProposals,
@@ -380,6 +393,15 @@ async function main(): Promise<void> {
         conversation: (id) => chat.exists(id),
         team: (id) => teams.exists(id),
       },
+    },
+    mcpConnectors: {
+      db,
+      service: mcpConnectorService,
+      server: createConnectorMcpServer({
+        client: connectorClient,
+        service: mcpConnectorService,
+        version: GATEWAY_VERSION,
+      }),
     },
     ...(config.MCP_TOOLS_ENABLED === 'true'
       ? {

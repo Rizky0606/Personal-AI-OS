@@ -1,14 +1,14 @@
 import { createHash } from 'node:crypto';
-import { IdSchema, RUN_ID_HEADER } from '@aios/contracts';
 import type { FastifyPluginCallback, FastifyRequest, onRequestAsyncHookHandler } from 'fastify';
 import type { Database } from '../../db/client.js';
 import { AppError } from '../../errors.js';
 import { writeAudit } from '../audit/repo.js';
-import { authenticateHook, requireAuth, requireScope } from '../auth/guard.js';
+import { authenticateHook, requireScope } from '../auth/guard.js';
 import type { AuthService } from '../auth/service.js';
 import { hashesEqual } from '../auth/tokens.js';
 import type { ProjectsService } from '../projects/service.js';
 import type { RunsService } from '../runs/service.js';
+import { requireWorkerRun } from './run-binding.js';
 import type { McpCallContext, McpServer } from './server.js';
 import { hermesContext, workerContext, type McpPrincipal } from './tools.js';
 
@@ -106,30 +106,8 @@ export const mcpRoutes: FastifyPluginCallback<McpRouteOptions> = (app, opts, don
 
   /** Konteks tool untuk worker: run harus milik worker ini dan sedang berjalan. */
   async function workerCall(req: FastifyRequest): Promise<McpCallContext> {
-    const auth = requireAuth(req);
-    const header = req.headers[RUN_ID_HEADER];
-    if (header === undefined) {
-      throw new AppError(400, 'missing_run_id', `Header ${RUN_ID_HEADER} wajib ada.`);
-    }
-    const parsedRun = IdSchema.safeParse(header);
-    if (!parsedRun.success) {
-      throw new AppError(400, 'invalid_run_id', `Header ${RUN_ID_HEADER} harus berisi ID run.`);
-    }
-    const runId = parsedRun.data;
-    const projectId = await opts.runs.projectId(runId);
-    if (!projectId || (await opts.projects.workerOf(projectId)) !== auth.deviceId)
-      throw new AppError(403, 'run_not_owned', 'Run ini bukan milik worker ini.');
-    const run = await opts.runs.get(runId);
-    if (run.status !== 'running')
-      throw new AppError(409, 'run_not_active', 'Run ini tidak sedang berjalan di gateway.');
-    return {
-      ...workerContext(runId),
-      projectId,
-      conversationId: run.conversationId,
-      planOnly: run.planOnly,
-      model: run.model ?? run.engine,
-      deviceId: auth.deviceId,
-    };
+    const run = await requireWorkerRun(req, opts);
+    return { ...workerContext(run.runId), ...run };
   }
 
   app.post(

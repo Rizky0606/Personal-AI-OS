@@ -52,6 +52,10 @@ import type { TemplateService } from './modules/templates/service.js';
 import type { MemoryProposalService } from './modules/memory/proposal-service.js';
 import type { MemoryService } from './modules/memory/service.js';
 import { mcpRoutes, type McpRouteOptions } from './modules/mcp/routes.js';
+import { mcpConnectorRoutes } from './modules/mcp-connectors/routes.js';
+import { mcpConnectorRpcRoutes } from './modules/mcp-connectors/rpc-routes.js';
+import type { ConnectorMcpServer } from './modules/mcp-connectors/server.js';
+import type { McpConnectorService } from './modules/mcp-connectors/service.js';
 import { agentProposalRoutes } from './modules/agent-proposals/routes.js';
 import type { AgentProposalService } from './modules/agent-proposals/service.js';
 import type { McpServer } from './modules/mcp/server.js';
@@ -147,6 +151,16 @@ export interface AppDeps {
     hermesTokenSha256?: string | undefined;
     now?: () => number;
   };
+  /**
+   * Konektor MCP pihak ketiga (docs/DESIGN_MCP_KONEKTOR.md). Tanpa ini route `/v1/mcp-connectors` dan
+   * `/v1/mcp/connector/:id` tidak dipasang. Terpisah dari `mcp`: `aios_tools` adalah tool milik sendiri,
+   * konektor adalah milik pemilik.
+   */
+  mcpConnectors?: {
+    service: McpConnectorService;
+    server: ConnectorMcpServer;
+    db: McpRouteOptions['db'];
+  };
   rateLimits?: Partial<RateLimits>;
   /** Tujuan log selain stdout; dipakai tes. */
   logStream?: NodeJS.WritableStream;
@@ -189,6 +203,7 @@ export function buildApp({
   worker,
   ws,
   mcp,
+  mcpConnectors,
   rateLimits,
   logStream,
 }: AppDeps): FastifyInstance {
@@ -280,6 +295,8 @@ export function buildApp({
         await protectedScope.register(statusRoutes, { status });
         await protectedScope.register(memoryRoutes, { memory, proposals: memoryProposals });
         await protectedScope.register(agentProposalRoutes, { proposals: agentProposals });
+        if (mcpConnectors)
+          await protectedScope.register(mcpConnectorRoutes, { connectors: mcpConnectors.service });
         await protectedScope.register(templateRoutes, { templates });
         await protectedScope.register(opinionRoutes, { opinion });
         await protectedScope.register(handoffRoutes, { handoff });
@@ -315,6 +332,17 @@ export function buildApp({
           perMinute: limits.mcp,
           hermesTokenSha256: mcp.hermesTokenSha256,
           ...(mcp.now ? { now: mcp.now } : {}),
+        });
+      // Idem untuk konektor: relay worker memakai token perangkat, bukan token aplikasi.
+      if (mcpConnectors)
+        await v1.register(mcpConnectorRpcRoutes, {
+          server: mcpConnectors.server,
+          connectors: mcpConnectors.service,
+          db: mcpConnectors.db,
+          auth,
+          runs,
+          projects,
+          perMinute: limits.mcp,
         });
     },
     { prefix: API_PREFIX },
