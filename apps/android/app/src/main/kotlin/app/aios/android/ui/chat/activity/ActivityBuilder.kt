@@ -28,7 +28,8 @@ enum class ToolKind(val id: String) {
     Propose("propose"),
     Browser("browser"),
     Subagent("subagent"),
-    Plan("plan")
+    Plan("plan"),
+    Connector("connector")
 }
 
 data class ActivityStep(
@@ -95,6 +96,7 @@ internal fun kindOf(name: String): ToolKind? {
     TOOL_KINDS[key]?.let { return it }
     // Awalan tool browser worker (`mcp__aios_browser_`, cermin AIOS_BROWSER_OMP_PREFIX di contracts).
     if (key.startsWith("browser_") || key.startsWith("mcp__aios_browser_")) return ToolKind.Browser
+    if (connectorToolOf(key) != null) return ToolKind.Connector
     val gatewayTool = aiosToolOf(key) ?: return null
     return when (gatewayTool) {
         in AIOS_NETWORK_TOOLS -> ToolKind.Web
@@ -123,6 +125,34 @@ internal fun aiosToolOf(name: String): String? {
         else -> return null
     }
     return rest.takeIf { it in AIOS_TOOL_NAMES }
+}
+
+/** Awalan nama server MCP per konektor. Cermin `MCP_CONNECTOR_SERVER_PREFIX` di contracts/connectors.ts. */
+private const val MCP_CONNECTOR_SERVER_PREFIX = "konektor_"
+
+/** Slug konektor: huruf kecil dan angka, 2-24 karakter, diawali huruf. Cermin `CONNECTOR_NAME_PATTERN`. */
+private val CONNECTOR_NAME_PATTERN = Regex("^[a-z][a-z0-9]{1,23}$")
+
+private const val CONNECTOR_OMP_PREFIX = "mcp__$MCP_CONNECTOR_SERVER_PREFIX"
+
+/** Slug konektor dan nama tool pihak ketiga. */
+internal data class ConnectorToolRef(val connector: String, val tool: String)
+
+/**
+ * Memecah nama tool mesin (`mcp__konektor_github_create_issue`) menjadi slug konektor dan nama tool; null untuk
+ * nama lain, termasuk server MCP pihak ketiga yang tidak kita daftarkan. Cermin `connectorToolOf` di
+ * packages/contracts/src/connectors.ts.
+ */
+internal fun connectorToolOf(name: String): ConnectorToolRef? {
+    val key = name.trim().lowercase()
+    if (!key.startsWith(CONNECTOR_OMP_PREFIX)) return null
+    val rest = key.removePrefix(CONNECTOR_OMP_PREFIX)
+    val cut = rest.indexOf('_')
+    if (cut <= 0) return null
+    val connector = rest.substring(0, cut)
+    val tool = rest.substring(cut + 1)
+    if (tool.isEmpty() || !CONNECTOR_NAME_PATTERN.matches(connector)) return null
+    return ConnectorToolRef(connector, tool)
 }
 
 /** Kalimat langkah menurut jenis tool dan status. */

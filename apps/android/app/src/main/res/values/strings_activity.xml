@@ -36,6 +36,9 @@
     <string name="activity_tool_plan_running">Memperbarui rencana</string>
     <string name="activity_tool_plan_done">Rencana diperbarui</string>
     <string name="activity_tool_plan_noun">Pembaruan rencana</string>
+    <string name="activity_tool_connector_running">Memakai konektor</string>
+    <string name="activity_tool_connector_done">Konektor dipakai</string>
+    <string name="activity_tool_connector_noun">Konektor</string>
 
     <!-- Tool yang tidak dikenal; _anon bila nama kosong (event mulai belum diterima). -->
     <string name="activity_unknown_running">Menjalankan alat: %1$s</string>
