@@ -1014,4 +1014,30 @@ describe('urutan frame sintetis (bentuk frame dari rekaman)', () => {
       ['command', 'mcp__aios_tools_schedule_list'],
     ]);
   });
+
+  it('izin tool konektor berjenis network; nama mcp__ lain tetap command', async () => {
+    const { transport, handle } = await boot({ t: 0 });
+    const ask = (id: string, tool: string, args: string) =>
+      frame(transport, {
+        type: 'extension_ui_request',
+        id,
+        method: 'select',
+        title: `Allow tool: ${tool}\nArguments:\n${args}`,
+        options: ['Approve', 'Deny'],
+      });
+    ask('u1', 'mcp__konektor_github_create_issue', '{"title":"bug"}');
+    ask('u2', 'mcp__konektor_linear2_search', '{"q":"x"}');
+    ask('u3', 'mcp__github__create_issue', '{"title":"bug"}');
+    ask('u4', 'mcp__konektor_github', '{}');
+    frame(transport, { id: 'p1', type: 'prompt_result', status: 'completed' });
+
+    const events = await collect(handle);
+    const requests = events.flatMap((e) => (e.type === 'approval.requested' ? [e] : []));
+    expect(requests.map((e) => [e.kind, e.detail.split('\n')[0]])).toEqual([
+      ['network', 'mcp__konektor_github_create_issue'],
+      ['network', 'mcp__konektor_linear2_search'],
+      ['command', 'mcp__github__create_issue'],
+      ['command', 'mcp__konektor_github'],
+    ]);
+  });
 });

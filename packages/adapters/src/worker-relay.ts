@@ -1,4 +1,4 @@
-import type { AgentEvent, WorkerCommand } from '@aios/contracts';
+import { CONNECTORS_PER_RUN_MAX, type AgentEvent, type WorkerCommand } from '@aios/contracts';
 import { AsyncQueue } from './queue.js';
 import {
   AdapterError,
@@ -7,6 +7,13 @@ import {
   type RunHandle,
   type StartRunInput,
 } from './types.js';
+
+/** Konektor MCP yang ikut ke satu run; tanpa URL dan tanpa token (DESIGN_MCP_KONEKTOR.md #3). */
+export interface RunConnector {
+  id: string;
+  name: string;
+  displayName: string;
+}
 
 /** Sisi gateway dari koneksi ke worker. Diimplementasikan gateway; adapter hanya memakainya. */
 export interface WorkerRelayPort {
@@ -35,6 +42,12 @@ export interface WorkerRelayOptions {
   cancelGraceMs?: number;
   /** Gateway menyajikan tool `aios_tools` (POST /v1/mcp): `run.start` membawa `gatewayTools: true`. */
   gatewayTools?: boolean;
+  /**
+   * Konektor MCP yang aktif saat run dimulai (DESIGN_MCP_KONEKTOR.md #3). Dibaca per run, bukan sekali saat
+   * adapter dibuat, karena pemilik bisa menyalakan/mematikan konektor di antara dua run. Hanya `{id, name,
+   * displayName}` yang ikut: URL dan token konektor tidak pernah meninggalkan gateway.
+   */
+  connectors?: () => Promise<readonly RunConnector[]>;
 }
 
 const CAPABILITIES: AdapterCapabilities = {
@@ -53,6 +66,16 @@ const CAPABILITIES: AdapterCapabilities = {
 export function createWorkerRelayAdapter(options: WorkerRelayOptions): AgentAdapter {
   const disconnectGrace = options.disconnectGraceMs ?? 60_000;
   const cancelGrace = options.cancelGraceMs ?? 10_000;
+
+  /** Daftar konektor run ini; kegagalan membacanya tidak boleh menggagalkan run coding. */
+  const connectorsFor = async (): Promise<RunConnector[]> => {
+    if (!options.connectors) return [];
+    try {
+      return (await options.connectors()).slice(0, CONNECTORS_PER_RUN_MAX);
+    } catch {
+      return [];
+    }
+  };
 
   return {
     id: 'omp',
@@ -132,6 +155,7 @@ export function createWorkerRelayAdapter(options: WorkerRelayOptions): AgentAdap
         onReconnect: () => clearTimeout(disconnectTimer),
       });
 
+      const connectors = await connectorsFor();
       try {
         await options.relay.send(projectId, {
           type: 'run.start',
@@ -149,6 +173,7 @@ export function createWorkerRelayAdapter(options: WorkerRelayOptions): AgentAdap
           ...(input.history?.length ? { history: [...input.history] } : {}),
           ...(input.timeoutMs ? { timeoutMs: input.timeoutMs } : {}),
           ...(options.gatewayTools ? { gatewayTools: true } : {}),
+          ...(connectors.length > 0 ? { connectors } : {}),
         });
       } catch (error) {
         stop();
