@@ -613,7 +613,7 @@ describe('entitas', () => {
     expect(AgentProposalQuerySchema.safeParse({ kind: 'memory' }).success).toBe(false);
     expect(
       AgentProposalQuerySchema.safeParse({
-        conversationId: '11111111-1111-4111-8111-111111111111',
+        conversationId: '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f',
       }).success,
     ).toBe(true);
     expect(AgentProposalQuerySchema.safeParse({ conversationId: 'bukan-uuid' }).success).toBe(
