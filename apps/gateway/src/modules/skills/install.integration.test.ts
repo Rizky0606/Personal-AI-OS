@@ -440,3 +440,67 @@ describe('id dicadangkan', () => {
     }
   });
 });
+
+describe('sumber aitmpl.com (tipe skills)', () => {
+  const PAGE = 'https://www.aitmpl.com/component/skills/creative-design/algorithmic-art';
+  const JSON_URL =
+    'https://www.aitmpl.com/component-content/skills/creative-design/algorithmic-art.json';
+  const aitmplMd = (body: string) =>
+    JSON.stringify({
+      content: skillMd('seni-aitmpl-uji', 'Seni algoritmik dari kode untuk uji.', body),
+      meta: { files: [{ path: 'SKILL.md', bytes: 1, lines: 1 }], languages: [] },
+    });
+
+  it('pratinjau id kategori/nama: unduh JSON component-content, ambil SKILL.md dari `content`', async () => {
+    web.set(JSON_URL, aitmplMd('## Langkah\n1. Gambar.'));
+    const res = await preview('creative-design/algorithmic-art');
+    expect(res.statusCode).toBe(200);
+    const p = SkillInstallPreviewSchema.parse(res.json());
+    expect(p.source).toMatchObject({ kind: 'aitmpl', input: PAGE, url: JSON_URL });
+    expect(p.candidate.body).toContain('1. Gambar.');
+  });
+
+  it('pasang: origin kanonis, trust community', async () => {
+    const p = SkillInstallPreviewSchema.parse((await preview(PAGE)).json());
+    const res = await env.post(
+      '/skills/install',
+      { source: PAGE, checksum: p.candidate.checksum },
+      app,
+    );
+    expect(res.statusCode).toBe(201);
+    expect(SkillSaveResultSchema.parse(res.json())).toMatchObject({
+      id: 'seni-aitmpl-uji',
+      source: 'installed',
+      trust: 'community',
+      origin: PAGE,
+    });
+  });
+
+  it('URL JSON dan id menuju origin yang sama: pratinjau menawarkan update setelah sumber berubah', async () => {
+    web.set(JSON_URL, aitmplMd('## Langkah\n1. Gambar ulang.'));
+    const p = SkillInstallPreviewSchema.parse((await preview(JSON_URL)).json());
+    expect(p.action).toBe('update');
+    expect(p.existing?.body).toContain('1. Gambar.');
+    expect(p.candidate.body).toContain('1. Gambar ulang.');
+  });
+
+  it('sumber berubah sesudah pratinjau: pasang dengan checksum lama ditolak 409', async () => {
+    const stale = SkillInstallPreviewSchema.parse((await preview(PAGE)).json());
+    web.set(JSON_URL, aitmplMd('## Langkah\n1. Gambar tiga.'));
+    const res = await env.post(
+      '/skills/install',
+      { source: PAGE, checksum: stale.candidate.checksum },
+      app,
+    );
+    expect(res.statusCode).toBe(409);
+    expect(code(res)).toBe('skill_changed_upstream');
+  });
+
+  it('tipe bukan skills ditolak 422 tanpa permintaan jaringan', async () => {
+    requested.length = 0;
+    const res = await preview('agents/development-tools/code-reviewer');
+    expect(res.statusCode).toBe(422);
+    expect(code(res)).toBe('skill_type_not_importable');
+    expect(requested).toEqual([]);
+  });
+});
