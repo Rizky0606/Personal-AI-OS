@@ -714,9 +714,9 @@ describe('tool usulan (slice 3): tidak ada yang berubah sebelum pemilik menyetuj
     ).json<{ items: { id: string }[] }>().items;
     expect(inChat.map((p) => p.id)).toEqual([pending[0]!.id]);
     expect(
-      (await on.env.get(`/agent-proposals?conversationId=${other.conversationId}`, on.desktop))
-        .json<{ items: unknown[] }>()
-        .items,
+      (
+        await on.env.get(`/agent-proposals?conversationId=${other.conversationId}`, on.desktop)
+      ).json<{ items: unknown[] }>().items,
     ).toEqual([]);
     // Worker tidak bisa meninjau usulannya sendiri.
     expect((await on.env.post(`/agent-proposals/${id}/approve`, {}, mine.token)).statusCode).toBe(

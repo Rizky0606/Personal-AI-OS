@@ -177,8 +177,7 @@ export function createPushService(deps: {
     agentBatches.delete(key);
     track(
       deliver({
-        title:
-          batch.ids.length > 1 ? `${batch.ids.length} usulan agent baru` : 'Usulan agent baru',
+        title: batch.ids.length > 1 ? `${batch.ids.length} usulan agent baru` : 'Usulan agent baru',
         data: {
           type: 'agent_proposal',
           ...(batch.conversationId ? { conversationId: batch.conversationId } : {}),
