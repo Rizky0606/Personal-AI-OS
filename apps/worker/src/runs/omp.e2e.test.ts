@@ -72,6 +72,8 @@ describe.skipIf(ompPath === null)('run coding dengan omp sungguhan', () => {
         systemPrompt: '# Peran: Penguji\nTulis tes yang kecil dan jelas.',
       },
       model: 'mock-1',
+      // Skenario lama menguji mode worktree; mode in_place (bawaan) diuji tersendiri di bawah.
+      workspace: 'worktree',
       ...over,
     }) as WorkerCommand;
 
@@ -379,7 +381,7 @@ describe.skipIf(ompPath === null)('run coding dengan omp sungguhan', () => {
     expect(accepted.ok).toBe(true);
     expect(accepted.commit).not.toBeNull();
 
-    await expect(fs.stat(wt.root)).rejects.toThrow();
+    await expect(fs.stat(wt.top)).rejects.toThrow();
     expect(git(repo, 'ls-tree', '-r', '--name-only', wt.branch)).toContain('math.test.js');
     expect(git(repo, 'rev-parse', 'main')).toBe(mainBefore);
     expect(git(repo, 'branch', '--show-current')).toBe('main');
@@ -535,7 +537,7 @@ describe.skipIf(ompPath === null)('run coding dengan omp sungguhan', () => {
     expect(state.checkpoints).toHaveLength(2);
     const wt = worker.worktrees.get(RUN_2)!;
     expect(wt.branch).toBe(reviewed.branch);
-    const delta = git(wt.root, 'diff', '--unified=0', afterFirst, state.checkpoints[1]!.id);
+    const delta = git(wt.top, 'diff', '--unified=0', afterFirst, state.checkpoints[1]!.id);
     expect(delta).toContain('-exports.mul = (a, b) => a + b;');
     expect(delta).toContain('+exports.mul = (a, b) => a * b;');
     expect(delta.split('\n').filter((l) => /^[-+](?![-+])/.test(l))).toHaveLength(2);
@@ -558,7 +560,7 @@ describe.skipIf(ompPath === null)('run coding dengan omp sungguhan', () => {
     expect(git(repo, 'rev-list', '--count', `${mainBefore}..main`)).toBe('1');
     expect((await fs.readFile(path.join(repo, 'math.js'), 'utf8')).replace(/\r/g, '')).toBe(FIXED);
     expect(git(repo, 'branch', '--list', 'aios/*')).toBe('');
-    await expect(fs.stat(wt.root)).rejects.toThrow();
+    await expect(fs.stat(wt.top)).rejects.toThrow();
   }, 240_000);
 
   it('perbaiki tombol terpotong di ponsel: agent memotret sendiri, memperbaiki, lalu memverifikasi dengan screenshot kedua', async () => {
@@ -664,4 +666,205 @@ http.createServer((req, res) => {
     expect(eventsOf(RUN_1)[0]).toMatchObject({ type: 'error', code: 'project_not_bound' });
     expect(llm.requests).toHaveLength(0);
   }, 30_000);
+
+  describe('mode in_place (langsung di branch aktif)', () => {
+    const inPlace = (runId: string, over: Parameters<typeof startCommand>[1] = {}) => {
+      const command = startCommand(runId, over) as Extract<WorkerCommand, { type: 'run.start' }>;
+      delete command.workspace; // kosong = setelan project (bawaan in_place)
+      return command;
+    };
+    /** Isi semua berkas di folder (kecuali .git) sebagai peta path -> isi, untuk perbandingan byte demi byte. */
+    async function snapshotFiles(dir: string): Promise<Map<string, string>> {
+      const out = new Map<string, string>();
+      for (const entry of await fs.readdir(dir, { recursive: true, withFileTypes: true })) {
+        if (!entry.isFile()) continue;
+        const full = path.join(entry.parentPath, entry.name);
+        const rel = path.relative(dir, full);
+        if (rel.split(path.sep)[0] === '.git') continue;
+        out.set(rel, (await fs.readFile(full)).toString('base64'));
+      }
+      return out;
+    }
+    const reviewApply = (runId: string, decision: 'accept' | 'reject') =>
+      worker.coordinator.reviewApply({
+        type: 'review.apply',
+        runId,
+        decision,
+        comments: [],
+        merge: false,
+      });
+
+    it('agent menulis di folder project pada main tanpa branch baru; terima = satu commit di main', async () => {
+      const mainBefore = git(repo, 'rev-parse', 'main');
+      const answers = autoAnswer(RUN_1, () => ({ decision: 'allow', remember: false }));
+
+      sendCommand(inPlace(RUN_1));
+      await until(() => finished(RUN_1), 'run selesai', 90_000);
+      answers.stop();
+
+      const events = eventsOf(RUN_1);
+      expect(events.at(-1)).toMatchObject({ type: 'run.completed' });
+      expect(events.find((e) => e.type === 'workspace.ready')).toEqual({
+        type: 'workspace.ready',
+        mode: 'in_place',
+        branch: 'main',
+        base: mainBefore,
+      });
+      // Perintah tes berjalan di folder project, dan hasilnya ada di sana (bukan salinan).
+      expect(answers.asked[1]?.cwd).toBe(repo);
+      const output = events.flatMap((e) => (e.type === 'tool.output' ? [e.chunk] : [])).join('');
+      expect(output).toMatch(/pass 1/);
+      expect(await fs.readFile(path.join(repo, 'math.test.js'), 'utf8')).toBe(TEST_SOURCE);
+      expect(git(repo, 'branch', '--format=%(refname:short)')).toBe('main');
+      expect(git(repo, 'worktree', 'list', '--porcelain').match(/^worktree /gm)).toHaveLength(1);
+      // Belum ada commit sebelum diterima.
+      expect(git(repo, 'rev-parse', 'main')).toBe(mainBefore);
+
+      const accepted = await reviewApply(RUN_1, 'accept');
+
+      expect(accepted).toMatchObject({ ok: true, branch: 'main', merged: false });
+      expect(git(repo, 'rev-parse', 'main')).toBe(accepted.commit);
+      expect(git(repo, 'rev-parse', 'main~1')).toBe(mainBefore);
+      expect(git(repo, 'rev-list', '--count', 'main')).toBe('2');
+      expect(git(repo, 'branch', '--format=%(refname:short)')).toBe('main');
+      expect(git(repo, 'status', '--porcelain')).toBe('');
+      expect(git(repo, 'for-each-ref', 'refs/aios/')).toBe('');
+    }, 120_000);
+
+    it('mode worktree: pesan kedua melanjutkan branch aios yang sama (satu branch per percakapan)', async () => {
+      const answers = autoAnswer(RUN_1, () => ({ decision: 'allow', remember: false }));
+      sendCommand(startCommand(RUN_1));
+      await until(() => finished(RUN_1), 'run pertama selesai', 90_000);
+      answers.stop();
+      const first = worker.worktrees.get(RUN_1)!;
+      await until(() => worker.worktrees.state(RUN_1) === 'review', 'menunggu tinjauan');
+
+      steps = (toolResults) =>
+        toolResults === 0
+          ? { tool: { name: 'write', args: { path: 'catatan.md', content: 'lanjutan\n' } } }
+          : { text: 'Catatan ditambahkan.' };
+      const answers2 = autoAnswer(RUN_2, () => ({ decision: 'allow', remember: false }));
+      sendCommand(
+        startCommand(RUN_2, { continueFromRunId: RUN_1, prompt: 'tambahkan juga catatan' }),
+      );
+      await until(() => finished(RUN_2), 'run kedua selesai', 90_000);
+      answers2.stop();
+
+      expect(eventsOf(RUN_2).find((e) => e.type === 'workspace.ready')).toMatchObject({
+        mode: 'worktree',
+        branch: first.branch,
+        base: first.base,
+      });
+      expect(git(repo, 'branch', '--list', 'aios/*').split('\n')).toHaveLength(1);
+      const state = await worker.review.get(RUN_2);
+      expect(state.files.map((f) => f.path).sort()).toEqual(['catatan.md', 'math.test.js']);
+      expect(git(repo, 'status', '--porcelain')).toBe('');
+    }, 200_000);
+
+    it('dihentikan di tengah run: diff terakhir terkirim, run bisa ditinjau, worker melapor workspace.pending', async () => {
+      steps = (toolResults) => {
+        if (toolResults === 0)
+          return { tool: { name: 'write', args: { path: 'setengah.js', content: 'setengah\n' } } };
+        if (toolResults === 1)
+          return {
+            tool: { name: 'bash', args: { command: 'node -e "setTimeout(() => {}, 120000)"' } },
+          };
+        return { text: 'tidak tercapai' };
+      };
+      const answers = autoAnswer(RUN_1, () => ({ decision: 'allow', remember: false }));
+      sendCommand(inPlace(RUN_1));
+      await until(
+        () => eventsOf(RUN_1).filter((e) => e.type === 'approval.resolved').length === 2,
+        'tulis selesai, bash berjalan',
+        60_000,
+      );
+      // omp sungguhan: proses bash harus benar-benar berjalan sebelum dibatalkan (jam nyata, tidak bisa dipalsukan).
+      await new Promise((r) => setTimeout(r, 1500));
+      sendCommand({ type: 'run.cancel', runId: RUN_1 });
+      await until(() => finished(RUN_1), 'run dibatalkan', 30_000);
+      answers.stop();
+
+      const events = eventsOf(RUN_1);
+      expect(events.at(-1)).toEqual({ type: 'run.status', status: 'cancelled' });
+      // Diff terakhir sebelum penutup memuat berkas setengah jadi (dikirim ulang hanya bila berubah).
+      expect(events.findLast((e) => e.type === 'diff.updated')).toMatchObject({
+        files: [{ path: 'setengah.js' }],
+      });
+      await until(() => worker.worktrees.state(RUN_1) === 'review', 'menunggu tinjauan', 15_000);
+      await until(
+        () =>
+          gateway.received.some(
+            (m) =>
+              (m as { type?: string }).type === 'workspace.pending' &&
+              JSON.stringify(m).includes(RUN_1),
+          ),
+        'workspace.pending',
+        15_000,
+      );
+      expect(await fs.readFile(path.join(repo, 'setengah.js'), 'utf8')).toBe('setengah\n');
+      const state = await worker.review.get(RUN_1);
+      expect(state).toMatchObject({ workspace: 'in_place', branch: 'main' });
+
+      const rejected = await reviewApply(RUN_1, 'reject');
+      expect(rejected.ok).toBe(true);
+      await expect(fs.stat(path.join(repo, 'setengah.js'))).rejects.toThrow();
+      expect(git(repo, 'status', '--porcelain')).toBe('');
+    }, 120_000);
+
+    it('tolak: folder project kembali byte demi byte, berkas yang diabaikan git tetap ada', async () => {
+      await fs.writeFile(path.join(repo, '.gitignore'), 'node_modules/\nbuild/\n');
+      git(repo, 'add', '-A');
+      git(repo, 'commit', '-q', '-m', 'abaikan');
+      await fs.mkdir(path.join(repo, 'node_modules', 'paket'), { recursive: true });
+      await fs.writeFile(
+        path.join(repo, 'node_modules', 'paket', 'index.js'),
+        'module.exports = 1;\n',
+      );
+      await fs.mkdir(path.join(repo, 'build'));
+      await fs.writeFile(path.join(repo, 'build', 'lama.txt'), 'hasil build lama\n');
+      const before = await snapshotFiles(repo);
+
+      steps = (toolResults) => {
+        if (toolResults === 0)
+          return { tool: { name: 'write', args: { path: 'math.test.js', content: TEST_SOURCE } } };
+        if (toolResults === 1)
+          return {
+            tool: { name: 'write', args: { path: 'math.js', content: 'exports.add = () => 0;\n' } },
+          };
+        if (toolResults === 2)
+          return { tool: { name: 'write', args: { path: 'build/baru.txt', content: 'build\n' } } };
+        return { text: 'Selesai.' };
+      };
+      const answers = autoAnswer(RUN_1, () => ({ decision: 'allow', remember: false }));
+      sendCommand(inPlace(RUN_1));
+      await until(() => finished(RUN_1), 'run selesai', 90_000);
+      answers.stop();
+      expect(await fs.readFile(path.join(repo, 'math.js'), 'utf8')).toBe(
+        'exports.add = () => 0;\n',
+      );
+
+      const rejected = await reviewApply(RUN_1, 'reject');
+
+      expect(rejected.ok).toBe(true);
+      const after = await snapshotFiles(repo);
+      // Berkas buatan run yang diabaikan git tidak disentuh tolak; sisanya sama persis dengan sebelum run.
+      expect(after.get(path.join('build', 'baru.txt'))).toBe(
+        Buffer.from('build\n').toString('base64'),
+      );
+      after.delete(path.join('build', 'baru.txt'));
+      expect(after).toEqual(before);
+      expect(git(repo, 'status', '--porcelain')).toBe('');
+      expect(git(repo, 'branch', '--format=%(refname:short)')).toBe('main');
+    }, 120_000);
+
+    it('folder kotor: run ditolak tanpa menjalankan omp', async () => {
+      await fs.writeFile(path.join(repo, 'math.js'), 'diubah pemilik\n');
+      sendCommand(inPlace(RUN_1));
+      await until(() => finished(RUN_1), 'error', 15_000);
+
+      expect(eventsOf(RUN_1)[0]).toMatchObject({ type: 'error', code: 'workspace_dirty' });
+      expect(llm.requests).toHaveLength(0);
+      expect(await fs.readFile(path.join(repo, 'math.js'), 'utf8')).toBe('diubah pemilik\n');
+    }, 30_000);
+  });
 });

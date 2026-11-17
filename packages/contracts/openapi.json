@@ -389,6 +389,34 @@
               "type": {
                 "type": "string",
                 "enum": [
+                  "workspace.ready"
+                ]
+              },
+              "mode": {
+                "$ref": "#/components/schemas/RunWorkspace"
+              },
+              "branch": {
+                "type": "string",
+                "minLength": 1
+              },
+              "base": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "type",
+              "mode",
+              "branch",
+              "base"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
                   "todo.updated"
                 ]
               },
@@ -1011,6 +1039,13 @@
           "outputTokens"
         ]
       },
+      "RunWorkspace": {
+        "type": "string",
+        "enum": [
+          "in_place",
+          "worktree"
+        ]
+      },
       "UserEvent": {
         "oneOf": [
           {
@@ -1614,6 +1649,34 @@
               "type",
               "checkpointId",
               "label"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "workspace.ready"
+                ]
+              },
+              "mode": {
+                "$ref": "#/components/schemas/RunWorkspace"
+              },
+              "branch": {
+                "type": "string",
+                "minLength": 1
+              },
+              "base": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "type",
+              "mode",
+              "branch",
+              "base"
             ]
           },
           {
@@ -2705,6 +2768,9 @@
               "continueFromRunId": {
                 "type": "string",
                 "format": "uuid"
+              },
+              "workspace": {
+                "$ref": "#/components/schemas/RunWorkspace"
               },
               "planOnly": {
                 "type": "boolean"
@@ -6074,6 +6140,19 @@
               "null"
             ]
           },
+          "workspace": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RunWorkspace"
+              },
+              {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            ]
+          },
           "usage": {
             "allOf": [
               {
@@ -6231,6 +6310,9 @@
               "omp",
               "dsh"
             ]
+          },
+          "workspace": {
+            "$ref": "#/components/schemas/RunWorkspace"
           },
           "followUp": {
             "$ref": "#/components/schemas/RichAnswerFollowUp"
@@ -6632,6 +6714,7 @@
               "detached",
               "not_fast_forward",
               "nothing_to_merge",
+              "conflict",
               null
             ]
           },

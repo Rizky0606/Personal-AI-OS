@@ -113,7 +113,7 @@ describe('ProjectsScreen: daftar', () => {
     expect(await screen.findByText(copy.projects.rules.saved)).toBeInTheDocument();
   });
 
-  it('setup worktree: dialog memuat setelan dari worker, menolak karakter shell, dan menyimpannya', async () => {
+  it('setup run coding: dialog memuat setelan dari worker, menolak karakter shell, dan menyimpannya', async () => {
     connected();
     const user = userEvent.setup();
     api.listProjects.mockResolvedValue([project()]);
@@ -122,6 +122,7 @@ describe('ProjectsScreen: daftar', () => {
       commands: ['pnpm install'],
       linkNodeModules: false,
       lsp: true,
+      workspace: 'in_place',
     });
     workerApi.setupSet.mockImplementation((_id, setup) => Promise.resolve(setup));
     await renderScreen(<ProjectsScreen />, '/projects');
@@ -133,6 +134,9 @@ describe('ProjectsScreen: daftar', () => {
     });
     const field = within(dialog).getByRole('textbox', { name: copy.projects.setup.commandsLabel });
     await waitFor(() => expect(field).toHaveValue('pnpm install'));
+    const inPlace = within(dialog).getByRole('switch', { name: copy.projects.setup.inPlace });
+    expect(inPlace).toHaveAttribute('aria-checked', 'true');
+    expect(within(dialog).getByText(copy.projects.setup.inPlaceHint)).toBeInTheDocument();
 
     await user.type(field, '{Enter}pnpm test && rm -rf x');
     expect(within(dialog).getByText(copy.projects.setup.invalid(2))).toBeInTheDocument();
@@ -142,12 +146,16 @@ describe('ProjectsScreen: daftar', () => {
     await user.type(field, 'pnpm install --offline');
     await user.click(within(dialog).getByRole('switch', { name: copy.projects.setup.link }));
     await user.click(within(dialog).getByRole('switch', { name: copy.projects.setup.lsp }));
+    // Mati = tiap run di worktree terpisah.
+    await user.click(inPlace);
+    expect(inPlace).toHaveAttribute('aria-checked', 'false');
     await user.click(within(dialog).getByRole('button', { name: copy.projects.setup.save }));
 
     expect(workerApi.setupSet).toHaveBeenCalledWith(P1, {
       commands: ['pnpm install --offline'],
       linkNodeModules: true,
       lsp: false,
+      workspace: 'worktree',
     });
     expect(await screen.findByText(copy.projects.setup.saved)).toBeInTheDocument();
   });

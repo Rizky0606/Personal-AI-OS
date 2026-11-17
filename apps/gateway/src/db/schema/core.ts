@@ -3,6 +3,7 @@ import type {
   DiffStat,
   MessagePart,
   RunError,
+  RunWorkspace,
   Stack,
   TeamEvent,
   Usage,
@@ -161,6 +162,8 @@ export const runs = pgTable(
     }),
     taskId: uuid('task_id').references((): AnyPgColumn => tasks.id, { onDelete: 'set null' }),
     branch: text('branch'),
+    /** Run coding: `in_place` (folder project, branch aktif) atau `worktree`; dilaporkan worker. */
+    workspace: text('workspace').$type<RunWorkspace>(),
     usage: jsonb('usage').$type<Usage>(),
     error: jsonb('error').$type<RunError>(),
     /** Mode rencana (W29): run coding yang hanya membaca dan menulis rencana. */

@@ -83,11 +83,16 @@ export function createFleetService(deps: {
             projectId: input.projectId,
             title,
           });
-          const { run } = await chat.sendMessage(conversation.id, {
-            parts: [{ type: 'text', text: task.prompt }],
-            ...(input.planOnly ? { planOnly: true } : {}),
-            ...(input.model ? { model: input.model } : {}),
-          });
+          // Armada berjalan paralel: selalu worktree sendiri, tidak pernah di branch aktif.
+          const { run } = await chat.sendMessage(
+            conversation.id,
+            {
+              parts: [{ type: 'text', text: task.prompt }],
+              ...(input.planOnly ? { planOnly: true } : {}),
+              ...(input.model ? { model: input.model } : {}),
+            },
+            { workspace: 'worktree' },
+          );
           items.push({ conversationId: conversation.id, title, run });
         } catch (error) {
           // Satu tugas gagal dimulai tidak membatalkan yang sudah berjalan; yang pertama gagal dilaporkan apa adanya.

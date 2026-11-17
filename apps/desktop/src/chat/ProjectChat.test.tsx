@@ -444,7 +444,7 @@ describe('panel izin inline', () => {
 describe('topbar: project dan branch', () => {
   const crumb = () => screen.getByRole('group', { name: copy.shell.location });
 
-  it('menampilkan project dan branch bawaan; saat run coding berjalan, branch kerja agent', async () => {
+  it('menampilkan project dan branch bawaan; saat run coding worktree berjalan, branch salinan agent', async () => {
     useUiStore.getState().setActiveProject(PROJECT);
     api.listMessages.mockResolvedValue(
       page(message({ author: 'user', text: 'tambahkan tes', runId: RUN_X })),
@@ -468,12 +468,57 @@ describe('topbar: project dan branch', () => {
         reason: 'x',
       });
       emit(`run:${RUN_X}`, { type: 'run.status', status: 'running' });
+      emit(`run:${RUN_X}`, {
+        type: 'workspace.ready',
+        mode: 'worktree',
+        branch: workerBranchFor(RUN_X),
+        base: 'main',
+      });
     });
     expect(await within(crumb()).findByText(workerBranchFor(RUN_X))).toBeInTheDocument();
     expect(within(crumb()).getByText('Toko Online')).toBeInTheDocument();
+    expect(
+      screen.getByText(copy.chat.workspace.worktree(workerBranchFor(RUN_X))),
+    ).toBeInTheDocument();
 
     act(() => emit(`run:${RUN_X}`, { type: 'run.status', status: 'needs_review' }));
     expect(await within(crumb()).findByText('main')).toBeInTheDocument();
+  });
+
+  it('run coding langsung di branch aktif: topbar dan jawaban menunjukkan branch yang dipakai, bukan aios/*', async () => {
+    useUiStore.getState().setActiveProject(PROJECT);
+    api.listMessages.mockResolvedValue(
+      page(message({ author: 'user', text: 'tambahkan tes', runId: RUN_X })),
+    );
+    api.getRun.mockResolvedValue(run({ id: RUN_X, status: 'running' }));
+    await renderScreen(
+      <>
+        <ChatScreen conversationId={CONV} />
+        <TopbarUnderTest />
+      </>,
+    );
+    await waitFor(() => expect(runs.get(RUN_X)).toBeDefined());
+
+    act(() => {
+      emit(`run:${RUN_X}`, {
+        type: 'route.decided',
+        role: 'project',
+        confidence: 0.9,
+        reason: 'x',
+      });
+      emit(`run:${RUN_X}`, { type: 'run.status', status: 'running' });
+      emit(`run:${RUN_X}`, {
+        type: 'workspace.ready',
+        mode: 'in_place',
+        branch: 'fitur-x',
+        base: 'f'.repeat(40),
+      });
+    });
+
+    expect(await within(crumb()).findByText('fitur-x')).toBeInTheDocument();
+    expect(within(crumb()).getByText(copy.shell.runActive)).toBeInTheDocument();
+    expect(within(crumb()).queryByText(/^aios\//)).not.toBeInTheDocument();
+    expect(screen.getByText(copy.chat.workspace.inPlace('fitur-x'))).toBeInTheDocument();
   });
 
   it('role Umum di dalam project tidak mengubah branch di topbar', async () => {

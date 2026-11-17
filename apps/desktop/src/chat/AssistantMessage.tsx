@@ -1,7 +1,7 @@
 import type { RoleInfo } from '../api/gateway';
 import { copy } from '../copy';
 import { Button } from '../ui/Button';
-import { Download, FileText } from 'lucide-react';
+import { Download, FileText, GitBranch } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { apiErrorMessage } from '../api/errors';
 import { useOnline } from '../app/hooks';
@@ -16,6 +16,7 @@ import { RoleChip } from './RoleChip';
 import { AgentOrb, type OrbState } from './AgentOrb';
 import { RunActivity, type RunActivityProps } from './RunActivity';
 import type { ToolStepView } from './ToolStepRow';
+import type { WorkspaceView } from '../realtime/liveRun';
 import type { ComponentProps, ReactNode } from 'react';
 import { stripSkillProposal } from './skillProposal';
 export type AssistantPart =
@@ -45,6 +46,8 @@ export interface AssistantMessageProps {
   onRichFollowUp?: ComponentProps<typeof Markdown>['onRichFollowUp'];
   /** Isi tambahan setelah jawaban (mis. kartu usulan skill); hanya untuk jawaban tersimpan. */
   footer?: ReactNode;
+  /** Folder kerja run coding (langsung di branch atau salinan worktree); tanpa ini tidak tampil. */
+  workspace?: WorkspaceView | null | undefined;
 }
 
 /** Tiga titik yang memudar bergiliran selama jawaban masih ditulis. */
@@ -125,6 +128,7 @@ export function AssistantMessage({
   onSuggest,
   onRichFollowUp,
   footer,
+  workspace,
 }: AssistantMessageProps) {
   // Blok kode di jawaban yang sudah selesai bisa diunduh sekaligus sebagai satu zip (struktur folder ikut path).
   const files = useMemo(
@@ -151,6 +155,16 @@ export function AssistantMessage({
           <span className="font-medium text-text-2">{copy.chat.assistantName}</span>
           <RoleChip role={role} roles={roles} active={streaming} />
           {model ? <span className="font-mono text-caption">{model}</span> : null}
+          {workspace ? (
+            <span className="inline-flex min-w-0 items-center gap-1 text-caption">
+              <GitBranch size={12} strokeWidth={1.5} aria-hidden="true" />
+              <span className="truncate">
+                {workspace.mode === 'in_place'
+                  ? copy.chat.workspace.inPlace(workspace.branch)
+                  : copy.chat.workspace.worktree(workspace.branch)}
+              </span>
+            </span>
+          ) : null}
           {onDelete || onFork ? (
             <span className="ml-auto flex gap-1 opacity-0 transition-opacity duration-[120ms] group-focus-within:opacity-100 group-hover:opacity-100">
               {onFork ? (

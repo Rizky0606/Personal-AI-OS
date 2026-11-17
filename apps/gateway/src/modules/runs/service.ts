@@ -9,6 +9,7 @@ import {
   type ReviewResponseSchema,
   type Run,
   type SteerMode,
+  type WorkerWorkspacePendingFrame,
   type WorkspaceRunListSchema,
 } from '@aios/contracts';
 import { and, desc, eq, inArray } from 'drizzle-orm';
@@ -64,6 +65,12 @@ export interface RunsService {
     runId: string,
     input: z.infer<typeof ReviewRequestSchema>,
   ): Promise<z.infer<typeof ReviewResponseSchema>>;
+  /**
+   * Laporan worker (`workspace.pending`): run in_place yang perubahannya masih ada di folder project. Run yang masih
+   * ditunggu runner (worker dimulai ulang di tengah run) diakhiri dengan diff terakhir; run yang sudah `failed`
+   * atau `cancelled` menjadi `needs_review`. Hanya run milik project perangkat worker itu yang diproses.
+   */
+  workspacePending(deviceId: string, runs: WorkerWorkspacePendingFrame['runs']): Promise<void>;
   /** Ada tidaknya run; dipakai WebSocket sebelum berlangganan. */
   exists(id: string): Promise<boolean>;
   projectId(id: string): Promise<string | null>;
@@ -99,7 +106,7 @@ export function createRunsService(deps: {
   store: EventStore;
   runner: Runner;
   hub: Pick<EventHub, 'publishLive'>;
-  relay: Pick<WorkerRelay, 'review'>;
+  relay: Pick<WorkerRelay, 'review' | 'feed'>;
   chat: Pick<ChatService, 'sendMessage'>;
   observer?: RunObserver;
 }): RunsService {
@@ -372,6 +379,43 @@ export function createRunsService(deps: {
         mergeSkipped: result.mergeSkipped,
         revisionRunId: null,
       };
+    },
+
+    async workspacePending(deviceId, items) {
+      for (const { runId, files } of items) {
+        if (files.length === 0) continue;
+        const [row] = await db
+          .select({ run: runs, worker: projects.workerDeviceId })
+          .from(runs)
+          .innerJoin(conversations, eq(conversations.id, runs.conversationId))
+          .innerJoin(projects, eq(projects.id, conversations.projectId))
+          .where(eq(runs.id, runId));
+        if (row?.worker !== deviceId) continue;
+        const { run } = row;
+        if (run.kind !== 'coding' || run.workspace !== 'in_place' || run.planOnly) continue;
+        if (runner.isActive(runId)) {
+          // Worker dimulai ulang di tengah run: runner masih menunggu event yang tidak akan datang.
+          relay.feed(deviceId, runId, { type: 'diff.updated', files });
+          relay.feed(deviceId, runId, {
+            type: 'error',
+            code: 'worker_restarted',
+            message:
+              'Worker dimulai ulang saat run berjalan. Perubahan yang sudah dibuat menunggu tinjauan.',
+            retryable: true,
+          });
+          continue;
+        }
+        const [revived] = await db
+          .update(runs)
+          .set({ status: 'needs_review' })
+          .where(and(eq(runs.id, runId), inArray(runs.status, ['failed', 'cancelled'])))
+          .returning();
+        if (!revived) continue;
+        await store.append(runId, { type: 'diff.updated', files });
+        const stored = await store.append(runId, { type: 'run.status', status: 'needs_review' });
+        if (run.conversationId) hub.publishLive(`conversation:${run.conversationId}`, stored.event);
+        observer?.notify(runId);
+      }
     },
 
     async exists(id) {

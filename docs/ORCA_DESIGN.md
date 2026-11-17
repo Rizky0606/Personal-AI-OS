@@ -2,6 +2,8 @@
 
 Status: **Implementasi gateway Lead-only tersedia; orkestrasi Lead→Worker belum diimplementasikan.** Keputusan implementasi memakai baseline konservatif pada `docs/superpowers/plans/2026-10-30-orca-team.md`; batas runtime, assignment/review, worktree tim, dan UI klien belum tersedia. Run tunggal tetap default; tim hanya dimulai eksplisit.
 
+Folder kerja: run tim selalu memakai git worktree. Gateway memaksa `workspace: 'worktree'` untuk run tim (pesan dengan `workspace: 'in_place'` di percakapan tim ditolak 422 `workspace_not_allowed`); mode `in_place` (kerja langsung di branch aktif, bawaan chat project) tidak pernah dipakai untuk Orca.
+
 ## Konteks dan batas
 
 Orca menyediakan satu ruang kerja tim yang menggabungkan tugas paralel, status per anggota, aktivitas, serta persetujuan yang tidak membanjiri pengguna. Cindy menjadi contoh interaksi produk deklaratif; UI tetap memakai komponen native, kontrak ketat, tanpa HTML bebas. Repo sudah punya worktree per run, omp melalui adapter worker, event run yang tersimpan/di-replay, dan pg-boss bersama untuk antrean. Kontrak saat ini belum memiliki `subagent.updated` atau event tim. Karena percakapan adapter menandai `subagent.updated` sebagai belum ada, tim menjadi sumber event tim eksplisit; adapter tidak boleh mengarang progres subagen dari teks.

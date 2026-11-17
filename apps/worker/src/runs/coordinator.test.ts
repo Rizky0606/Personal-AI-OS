@@ -113,10 +113,14 @@ const command = (over: Partial<StartCommand> = {}): StartCommand => ({
   prompt: 'tambahkan tes untuk fungsi add',
   bundle: { role: 'frontend', systemPrompt: '# Peran: Frontend', skillIds: [] },
   model: 'combo/code',
+  // Tes lama menguji mode worktree; mode in_place (bawaan) diuji tersendiri di bawah.
+  workspace: 'worktree',
   ...over,
 });
 
-const events = (runId = RUN) => sent.filter((s) => s.runId === runId).map((s) => s.event);
+// `workspace.ready` (selalu event pertama setelah folder kerja siap) diuji tersendiri; tes lama melihat sisanya.
+const events = (runId = RUN) =>
+  sent.filter((s) => s.runId === runId && s.event.type !== 'workspace.ready').map((s) => s.event);
 const types = (runId = RUN) => events(runId).map((e) => e.type);
 
 async function until(check: () => boolean, label: string, ms = 5000) {
@@ -133,6 +137,7 @@ async function build(
     setup?: ProjectSetupStore;
     skills?: ConstructorParameters<typeof RunCoordinator>[0]['skills'];
     tools?: ConstructorParameters<typeof RunCoordinator>[0]['tools'];
+    reportPending?: ConstructorParameters<typeof RunCoordinator>[0]['reportPending'];
   } = {},
 ) {
   const allowed = new AllowList({ file: path.join(base, 'data', 'allowed.json'), forbidden: [] });
@@ -185,7 +190,10 @@ beforeEach(async () => {
   await build();
 });
 afterEach(async () => {
-  await until(() => coordinator.activeRunIds.length === 0, 'run dilepas', 3000).catch(
+  // Run yang dibiarkan menggantung oleh tes dihentikan dulu, supaya pembersihannya (termasuk catatan
+  // workspaces.json di folder data) selesai sebelum folder sementara dihapus, juga saat mesin sibuk.
+  for (const runId of coordinator.activeRunIds) coordinator.cancel(runId);
+  await until(() => coordinator.activeRunIds.length === 0, 'run dilepas', 10_000).catch(
     () => undefined,
   );
   await fs.rm(base, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
@@ -272,7 +280,13 @@ describe('RunCoordinator: setup worktree', () => {
     lsp?: boolean;
   }) {
     const store = new ProjectSetupStore(path.join(base, 'data', 'setup.json'));
-    await store.set(PROJECT, { commands: [], linkNodeModules: false, lsp: true, ...setup });
+    await store.set(PROJECT, {
+      commands: [],
+      linkNodeModules: false,
+      lsp: true,
+      workspace: 'worktree',
+      ...setup,
+    });
     await build({ setup: store });
   }
 
@@ -665,7 +679,7 @@ describe('RunCoordinator: batal, batas waktu, dan putus-sambung', () => {
     adapter.handle.events.push({ type: 'run.completed', summary: 'selesai' });
     adapter.handle.events.end();
     await until(() => !coordinator.isWorking(RUN), 'mesin selesai');
-    expect(sent).toEqual([]);
+    expect(events()).toEqual([]);
     expect(coordinator.activeRunIds).toEqual([RUN]);
 
     online = true;
@@ -723,7 +737,7 @@ describe('RunCoordinator: hasil ditinjau', () => {
     });
 
     expect(accepted.ok).toBe(true);
-    await expect(fs.stat(wt.root)).rejects.toThrow();
+    await expect(fs.stat(wt.top)).rejects.toThrow();
     expect(git(repo, 'log', '-1', '--format=%s', wt.branch)).toBe('test: tes ditambahkan');
     expect(git(repo, 'ls-tree', '-r', '--name-only', wt.branch)).toContain('math.test.js');
     expect(git(repo, 'rev-parse', 'main')).toBe(mainBefore);
@@ -745,7 +759,7 @@ describe('RunCoordinator: hasil ditinjau', () => {
     });
 
     expect(rejected.ok).toBe(true);
-    await expect(fs.stat(wt.root)).rejects.toThrow();
+    await expect(fs.stat(wt.top)).rejects.toThrow();
     expect(git(repo, 'branch', '--list', 'aios/*')).toBe('');
     expect(git(repo, 'rev-parse', 'main')).toBe(mainBefore);
     expect(git(repo, 'status', '--porcelain')).toBe('');
@@ -766,7 +780,7 @@ describe('RunCoordinator: hasil ditinjau', () => {
   it('dua run paralel punya branch dan worktree sendiri; menolak satu tidak mengganggu yang lain', async () => {
     const a = await finishedWithChange(RUN, 'A');
     const b = await finishedWithChange(RUN_2, 'B');
-    expect(a.root).not.toBe(b.root);
+    expect(a.top).not.toBe(b.top);
 
     await coordinator.reviewApply({
       type: 'review.apply',
@@ -776,9 +790,177 @@ describe('RunCoordinator: hasil ditinjau', () => {
       merge: false,
     });
 
-    await expect(fs.stat(b.root)).resolves.toBeDefined();
+    await expect(fs.stat(b.top)).resolves.toBeDefined();
     expect(git(repo, 'branch', '--list', 'aios/*')).toContain(b.branch);
     expect(git(repo, 'branch', '--list', 'aios/*')).not.toContain(a.branch);
+  });
+});
+
+describe('RunCoordinator: mode in_place (langsung di branch aktif)', () => {
+  const inPlace = (over: Partial<StartCommand> = {}) => {
+    const cmd = command(over);
+    delete cmd.workspace; // kosong = setelan project (bawaan in_place)
+    return cmd;
+  };
+  const readyEvents = (runId = RUN) =>
+    sent.filter((s) => s.runId === runId && s.event.type === 'workspace.ready').map((s) => s.event);
+  const review = (runId: string, decision: 'accept' | 'reject') =>
+    coordinator.reviewApply({ type: 'review.apply', runId, decision, comments: [], merge: false });
+
+  it('bawaan: agent bekerja di folder project pada branch aktif; terima = commit di main, tanpa branch aios', async () => {
+    const head = git(repo, 'rev-parse', 'HEAD');
+    coordinator.start(inPlace());
+    await until(() => adapter.inputs.length === 1, 'adapter dimulai');
+
+    expect(adapter.inputs[0]?.cwd).toBe(repo);
+    expect(adapter.inputs[0]?.systemPrompt).toContain('# Folder kerja');
+    expect(readyEvents()).toEqual([
+      { type: 'workspace.ready', mode: 'in_place', branch: 'main', base: head },
+    ]);
+    expect(git(repo, 'branch', '--list', 'aios/*')).toBe('');
+
+    await fs.writeFile(path.join(repo, 'math.test.js'), "require('node:test');\n");
+    adapter.handle.events.push({ type: 'run.completed', summary: 'Tes ditambahkan' });
+    adapter.handle.events.end();
+    await until(() => !coordinator.activeRunIds.includes(RUN), 'run selesai');
+    expect(types()).toEqual(['diff.updated', 'run.completed']);
+
+    const accepted = await review(RUN, 'accept');
+
+    expect(accepted).toMatchObject({ ok: true, branch: 'main', merged: false });
+    expect(git(repo, 'rev-parse', 'main~1')).toBe(head);
+    expect(git(repo, 'rev-parse', 'main')).toBe(accepted.commit);
+    expect(git(repo, 'log', '-1', '--format=%s')).toBe('test: tes ditambahkan');
+    expect(git(repo, 'branch', '--list', 'aios/*')).toBe('');
+    expect(git(repo, 'status', '--porcelain')).toBe('');
+  });
+
+  it('setelan project `worktree` dipakai bila run tidak memilih', async () => {
+    const setup = new ProjectSetupStore(path.join(base, 'data', 'setup.json'));
+    await setup.set(PROJECT, {
+      commands: [],
+      linkNodeModules: false,
+      lsp: true,
+      workspace: 'worktree',
+    });
+    await build({ setup });
+    coordinator.start(inPlace());
+    await until(() => adapter.inputs.length === 1, 'adapter dimulai');
+
+    expect(adapter.inputs[0]?.cwd).not.toBe(repo);
+    expect(readyEvents()[0]).toMatchObject({ mode: 'worktree', branch: workerBranchFor(RUN) });
+  });
+
+  it('folder kotor: run ditolak dengan workspace_dirty dan jalan keluar, adapter tidak dimulai', async () => {
+    await fs.writeFile(path.join(repo, 'math.js'), 'diubah pemilik\n');
+
+    coordinator.start(inPlace());
+    await until(() => types().includes('error'), 'error');
+
+    expect(events()[0]).toMatchObject({
+      type: 'error',
+      code: 'workspace_dirty',
+      message: expect.stringContaining('worktree terpisah') as string,
+    });
+    expect(adapter.inputs).toHaveLength(0);
+    expect(worktrees.get(RUN)).toBeUndefined();
+    expect(await fs.readFile(path.join(repo, 'math.js'), 'utf8')).toBe('diubah pemilik\n');
+  });
+
+  it('dihentikan dengan perubahan: diff terakhir sebelum cancelled, tetap bisa ditinjau, dilaporkan ke gateway', async () => {
+    const reported: { runId: string; files: { path: string }[] }[][] = [];
+    await build({
+      reportPending: (runs) => {
+        reported.push(runs);
+        return true;
+      },
+    });
+    coordinator.start(inPlace());
+    await until(() => adapter.inputs.length === 1, 'adapter dimulai');
+    await fs.writeFile(path.join(repo, 'setengah.js'), 'setengah jadi\n');
+
+    coordinator.cancel(RUN);
+    await until(() => !coordinator.activeRunIds.includes(RUN), 'run dilepas');
+
+    expect(types()).toEqual(['diff.updated', 'run.status']);
+    expect(events()[0]).toMatchObject({ files: [{ path: 'setengah.js' }] });
+    expect(worktrees.state(RUN)).toBe('review');
+    expect(reported.at(-1)).toMatchObject([{ runId: RUN, files: [{ path: 'setengah.js' }] }]);
+
+    // Laporan diulang saat tersambung lagi.
+    await coordinator.reportPending();
+    expect(reported).toHaveLength(2);
+
+    const rejected = await review(RUN, 'reject');
+    expect(rejected.ok).toBe(true);
+    await expect(fs.stat(path.join(repo, 'setengah.js'))).rejects.toThrow();
+    expect(git(repo, 'status', '--porcelain')).toBe('');
+  });
+
+  it('perintah git yang memindahkan HEAD ditolak worker, walau ada aturan "selalu"', async () => {
+    await rules.add(PROJECT, 'command', 'git commit -am x');
+    coordinator.start(inPlace());
+    await until(() => adapter.inputs.length === 1, 'adapter dimulai');
+
+    adapter.handle.events.push({
+      type: 'approval.requested',
+      approvalId: APPROVAL,
+      kind: 'command',
+      detail: 'git commit -am x',
+    });
+    await until(() => adapter.handle.resolved.length === 1, 'dijawab');
+
+    expect(adapter.handle.resolved[0]).toEqual([APPROVAL, 'deny', undefined]);
+    expect(types()).not.toContain('approval.requested');
+  });
+
+  it('mode rencana: folder kotor boleh, tanpa checkpoint dan diff, folder kerja dilepas tanpa menyentuh berkas', async () => {
+    await fs.writeFile(path.join(repo, 'math.js'), 'diubah pemilik\n');
+    coordinator.start(inPlace({ planOnly: true }));
+    await until(() => adapter.inputs.length === 1, 'adapter dimulai');
+    expect(adapter.inputs[0]?.cwd).toBe(repo);
+
+    adapter.handle.events.push({ type: 'tool.started', toolCallId: 't1', name: 'read' });
+    adapter.handle.events.push({
+      type: 'tool.finished',
+      toolCallId: 't1',
+      status: 'ok',
+      durationMs: 1,
+    });
+    adapter.handle.events.push({ type: 'run.completed', summary: 'Rencana.' });
+    adapter.handle.events.end();
+    await until(() => !coordinator.activeRunIds.includes(RUN), 'run selesai');
+
+    expect(types()).not.toContain('diff.updated');
+    expect(types()).not.toContain('checkpoint.created');
+    expect(worktrees.get(RUN)).toBeUndefined();
+    expect(await fs.readFile(path.join(repo, 'math.js'), 'utf8')).toBe('diubah pemilik\n');
+  });
+
+  it('pesan lanjutan melanjutkan folder in_place yang menunggu tinjauan; diff tetap terhadap base awal', async () => {
+    const head = git(repo, 'rev-parse', 'HEAD');
+    coordinator.start(inPlace());
+    await until(() => adapter.inputs.length === 1, 'run pertama');
+    await fs.writeFile(path.join(repo, 'a.txt'), 'satu\n');
+    adapter.handle.events.push({ type: 'run.completed', summary: 'satu' });
+    adapter.handle.events.end();
+    await until(() => !coordinator.activeRunIds.includes(RUN), 'run pertama selesai');
+
+    coordinator.start(inPlace({ runId: RUN_2, continueFromRunId: RUN }));
+    await until(() => adapter.inputs.length === 2, 'run lanjutan');
+
+    expect(adapter.inputs[1]?.cwd).toBe(repo);
+    expect(readyEvents(RUN_2)).toEqual([
+      { type: 'workspace.ready', mode: 'in_place', branch: 'main', base: head },
+    ]);
+    await fs.writeFile(path.join(repo, 'b.txt'), 'dua\n');
+    adapter.handle.events.push({ type: 'run.completed', summary: 'dua' });
+    adapter.handle.events.end();
+    await until(() => !coordinator.activeRunIds.includes(RUN_2), 'run lanjutan selesai');
+    expect(events(RUN_2).find((e) => e.type === 'diff.updated')).toMatchObject({
+      files: [{ path: 'a.txt' }, { path: 'b.txt' }],
+    });
+    expect(worktrees.get(RUN)).toBeUndefined();
   });
 });
 
@@ -912,7 +1094,7 @@ describe('RunCoordinator: checkpoint, diff, dan run lanjutan', () => {
     await until(() => adapter.handles.length === 2, 'run lanjutan dimulai');
 
     const second = worktrees.get(RUN_2)!;
-    expect(second.root).toBe(first.root);
+    expect(second.top).toBe(first.top);
     expect(second.branch).toBe(first.branch);
     expect(adapter.inputs[1]?.cwd).toBe(first.cwd);
     expect(adapter.inputs[1]?.prompt).toBe('perbaiki a.txt baris 1');

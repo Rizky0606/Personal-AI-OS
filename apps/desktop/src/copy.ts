@@ -741,12 +741,14 @@ export const copy = {
     terminal_unavailable:
       'Terminal belum bisa dibuka. Periksa bahwa project terikat ke folder di PC ini.',
     internal: 'Worker mengalami kesalahan. Coba lagi; bila berulang, mulai ulang aplikasi.',
+    head_moved:
+      'Branch project sudah berganti atau riwayatnya berubah sejak run dimulai. Kembali ke branch semula atau bereskan lewat tab Git dulu.',
   },
   projects: {
     title: 'Project',
-    description: 'Daftarkan folder kerja, atur branch, setup worktree, dan aturan untuk agent.',
+    description: 'Daftarkan folder kerja, atur branch, setup run coding, dan aturan untuk agent.',
     rowMenu: (name: string) => `Aksi project: ${name}`,
-    menu: { branch: 'Ganti branch' },
+    menu: { branch: 'Ubah label branch' },
     listLabel: 'Daftar project',
     loading: 'Memuat project',
     empty: 'Belum ada project. Pilih folder project untuk mendaftarkannya.',
@@ -764,19 +766,18 @@ export const copy = {
     noActivity: 'Belum ada aktivitas',
     openChat: 'Buka chat',
     branch: {
-      title: (name: string) => `Branch kerja ${name}`,
+      title: (name: string) => `Branch ${name}`,
       intro:
-        'Branch dasar tiap tugas coding (worktree dibuat dari sini) dan tujuan merge saat hasil diterima.',
+        'Label branch project yang tampil di bilah atas saat tidak ada run. Agent bekerja di branch yang sedang aktif di folder project; ganti branch itu lewat tab Git.',
       loading: 'Membaca branch lokal…',
       localBranches: 'Branch lokal',
       unbound:
         'Folder project belum terikat di PC ini, jadi daftar branch tidak bisa dibaca. Ketik nama branch.',
       label: 'Nama branch',
-      notLocal: (name: string) =>
-        `Branch "${name}" belum ada di folder lokal; tugas coding akan gagal sampai branch itu dibuat.`,
+      notLocal: (name: string) => `Branch "${name}" belum ada di folder lokal.`,
       save: 'Simpan branch',
       saving: 'Menyimpan…',
-      saved: (name: string) => `Branch kerja diganti ke ${name}.`,
+      saved: (name: string) => `Label branch diganti ke ${name}.`,
     },
     unbind: {
       action: 'Lepas folder',
@@ -794,9 +795,13 @@ export const copy = {
     },
     setup: {
       edit: 'Atur setup',
-      title: (name: string) => `Setup worktree ${name}`,
+      title: (name: string) => `Setup run coding ${name}`,
       intro:
-        'Dijalankan di worktree baru sebelum agent mulai, supaya agent bisa langsung menjalankan tes dan typecheck. Disimpan di PC ini saja, tidak di repo.',
+        'Cara agent bekerja di project ini. Disimpan di PC ini saja, tidak di repo. Kanban, armada, dan tim selalu memakai worktree terpisah.',
+      inPlace: 'Kerja langsung di branch aktif',
+      inPlaceHint:
+        'Nyala: agent mengubah folder project di branch yang sedang aktif. Run ditolak bila folder punya perubahan yang belum di-commit atau run lain sedang berjalan. Tinjauan memakai git diff; Terima membuat commit di branch itu. Mati: tiap run bekerja di salinan worktree terpisah di branch aios/<id>, perlu untuk menjalankan beberapa run sekaligus.',
+      worktreeOnly: 'Perintah setup dan tautan node_modules hanya berlaku untuk run di worktree.',
       commandsLabel: 'Perintah (satu per baris)',
       commandsHint: (n: number, max: number) =>
         `${n}/${max} perintah. Tanpa shell: tanda kutip, & | ; < > $ dan % tidak boleh. Hasilnya harus diabaikan git (mis. node_modules), kalau tidak run tanpa perubahan pun masuk antrean review.`,
@@ -809,10 +814,10 @@ export const copy = {
         'Hemat waktu instal, tetapi agent bisa mengubah node_modules asli lewat tautan itu. Mati secara bawaan.',
       lsp: 'Nyalakan LSP agent',
       lspHint:
-        'Agent mendapat diagnostik tipe setelah mengubah berkas, plus definisi dan referensi. Aktif hanya bila server bahasa (mis. typescript-language-server di node_modules/.bin) ditemukan di worktree; instal pertama bisa memakan belasan detik dan memori.',
+        'Agent mendapat diagnostik tipe setelah mengubah berkas, plus definisi dan referensi. Aktif hanya bila server bahasa (mis. typescript-language-server di node_modules/.bin) ditemukan di folder kerja run; instal pertama bisa memakan belasan detik dan memori.',
       save: 'Simpan setup',
       saving: 'Menyimpan…',
-      saved: 'Setup worktree disimpan.',
+      saved: 'Setup run coding disimpan.',
       loading: 'Membaca setup…',
     },
     rules: {
@@ -1164,12 +1169,13 @@ export const copy = {
     reject: 'Tolak semua',
     acceptTitle: 'Terima perubahan',
     acceptBody: (branch: string) => `Perubahan di-commit sebagai satu commit di branch ${branch}.`,
+    acceptBodyInPlace: (branch: string) => `Perubahan di-commit langsung di branch ${branch}.`,
     commitMessage: 'Pesan commit',
     commitMessageHint: 'Format Conventional Commits, mis. feat: tambah tes untuk add.',
     commitMessageRequired: 'Pesan commit tidak boleh kosong.',
     merge: (target: string) => `Gabungkan ke ${target}`,
     mergeHint:
-      'Hanya bila branch kerja Anda bersih dan penggabungan fast-forward. Kalau tidak, branch dibiarkan.',
+      'Bila branch kerja Anda sudah maju, hasil di-rebase dulu ke atasnya lalu fast-forward. Bila ada perubahan yang belum di-commit atau rebase bentrok, branch dibiarkan.',
     mergeDetached: 'Repo sedang detached HEAD, jadi penggabungan tidak tersedia.',
     accepting: 'Menerima…',
     acceptedBranch: (branch: string) => `Diterima. Perubahan ada di branch ${branch}.`,
@@ -1180,9 +1186,23 @@ export const copy = {
       not_fast_forward:
         'Penggabungan dilewati: branch kerja Anda sudah maju sejak run dimulai. Gabungkan sendiri dari branch hasil.',
       nothing_to_merge: 'Tidak ada perubahan untuk digabungkan.',
+      conflict:
+        'Penggabungan dilewati: branch kerja Anda berubah di baris yang sama. Hasil tetap di branch kerja agent; gabungkan sendiri.',
+    },
+    inPlaceBranch: (branch: string) => `Langsung di branch ${branch}`,
+    headMoved: {
+      advanced: (branch: string, n: number) =>
+        `Branch ${branch} maju ${n} commit sejak run dimulai. Diff di bawah terhadap titik awal; Terima meng-commit perubahan yang belum di-commit di atas HEAD terbaru, Tolak hanya membuang yang belum di-commit (commit itu tidak dibatalkan).`,
+      switched: (branch: string | null) =>
+        `Folder project sekarang di ${branch ? `branch ${branch}` : 'detached HEAD'}, bukan branch tempat run dimulai. Terima dan Tolak diblokir sampai Anda kembali ke branch semula.`,
+      diverged: (branch: string | null) =>
+        `Riwayat ${branch ? `branch ${branch}` : 'branch'} ditulis ulang sejak run dimulai. Terima dan Tolak diblokir sampai Anda membereskannya lewat tab Git.`,
+      locked: 'Kembali ke checkpoint dan batalkan per file tidak tersedia selama HEAD berpindah.',
     },
     rejectTitle: 'Tolak semua perubahan?',
     rejectBody: 'Worktree dan branch kerja agent dibuang. Branch dan file Anda tidak berubah.',
+    rejectBodyInPlace:
+      'Isi folder project dikembalikan seperti sebelum agent bekerja; berkas baru buatan agent dihapus. Berkas yang diabaikan git (mis. node_modules) tidak disentuh.',
     rejectConfirm: 'Buang perubahan',
     rejected: 'Perubahan dibuang.',
     cancel: 'Batal',
@@ -1194,7 +1214,7 @@ export const copy = {
       restore: 'Kembali ke sini',
       confirmTitle: 'Kembali ke checkpoint ini?',
       confirmBody:
-        'File di worktree dikembalikan ke keadaan saat itu. Perubahan agent sesudahnya hilang dan checkpoint berikutnya dibuang.',
+        'File di folder kerja run dikembalikan ke keadaan saat itu. Perubahan agent sesudahnya hilang dan checkpoint berikutnya dibuang.',
       confirm: 'Kembalikan',
       restored: 'Dikembalikan ke checkpoint.',
       listLabel: 'Daftar checkpoint',
@@ -1420,6 +1440,12 @@ export const copy = {
     sendFailed: 'Pesan belum terkirim. Teks dikembalikan ke kolom pesan.',
     stopFailed: 'Belum bisa menghentikan jawaban. Coba lagi.',
     runFailed: 'Jawaban gagal.',
+    workspace: {
+      inPlace: (branch: string) => `Di branch ${branch}`,
+      worktree: (branch: string) => `Di salinan ${branch}`,
+      retryWorktree: 'Jalankan sekali ini di worktree terpisah',
+      openGit: 'Buka tab Git',
+    },
     suggestionsLabel: 'Saran',
     suggestions: [
       'Ringkas teks yang saya tempel',
@@ -1748,7 +1774,7 @@ export const copy = {
       'Worker di PC ini belum tersambung, jadi terminal belum bisa dibuka. Tunggu sebentar lalu coba lagi.',
     opening: 'Membuka terminal',
     label: 'Terminal',
-    scope: { run: 'Worktree run', project: 'Folder project' },
+    scope: { run: 'Folder kerja run', project: 'Folder project' },
     exited: (code: number | null) => `Shell berhenti${code === null ? '' : ` (kode ${code})`}.`,
     restart: 'Buka lagi',
     close: 'Tutup terminal',

@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiProblem } from '../auth/authSession';
 import { copy } from '../copy';
 import { useUiStore } from '../state/uiStore';
-import { CONV, RUN_1, RUN_2, message, models, roles, run } from '../test/fixtures';
+import { CONV, RUN_1, RUN_2, message, models, roles, run, uid } from '../test/fixtures';
 import { api, emit, resetApi, runs } from '../test/fakeServices';
 import { renderScreen } from '../test/render';
 
@@ -481,5 +481,70 @@ describe('ChatScreen: ubah pesan terakhir dan jalankan ulang', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       `${copy.chat.runFailed} Model tidak tersedia`,
     );
+  });
+
+  /** Run yang masih berjalan saat percakapan dibuka, lalu ditolak worker dengan `code`. */
+  const refusedRun = async (code: string) => {
+    const failed = uid();
+    const mine = message({ author: 'user', text: 'Perbaiki tes', runId: failed });
+    api.listMessages.mockResolvedValue(page(mine));
+    api.getRun.mockResolvedValue(run({ id: failed, kind: 'coding', status: 'running' }));
+    api.editMessage.mockResolvedValue({
+      message: message({ author: 'user', text: 'Perbaiki tes', runId: RUN_2 }),
+      run: run({ id: RUN_2, kind: 'coding' }),
+    });
+    await renderScreen(<ChatScreen conversationId={CONV} />);
+    await waitFor(() => expect(runs.get(failed)).toBeDefined());
+    act(() => {
+      emit(`run:${failed}`, {
+        type: 'error',
+        code,
+        message: 'Folder project tidak bisa dipakai langsung.',
+        retryable: false,
+      });
+      emit(`run:${failed}`, { type: 'run.status', status: 'failed' });
+    });
+    const alert = await screen.findByRole('alert');
+    return { failed, mine, alert };
+  };
+
+  it('folder project kotor: buka tab Git, atau ulangi pesan itu sekali di worktree lewat edit (tidak dobel)', async () => {
+    const user = userEvent.setup();
+    const { failed, mine, alert } = await refusedRun('workspace_dirty');
+
+    await user.click(within(alert).getByRole('button', { name: copy.chat.workspace.openGit }));
+    expect(useUiStore.getState()).toMatchObject({ rightPanelOpen: true, rightPanelTab: 'git' });
+
+    await user.click(
+      within(alert).getByRole('button', { name: copy.chat.workspace.retryWorktree }),
+    );
+    expect(api.editMessage).toHaveBeenCalledWith(
+      mine.id,
+      expect.objectContaining({ text: 'Perbaiki tes', workspace: 'worktree' }),
+    );
+    expect(api.sendMessage).not.toHaveBeenCalled();
+    runs.release(failed);
+  });
+
+  it('run lain sedang memakai folder project: hanya tawaran worktree, tanpa tab Git', async () => {
+    const user = userEvent.setup();
+    const { failed, mine, alert } = await refusedRun('workspace_busy');
+
+    expect(within(alert).queryByRole('button', { name: copy.chat.workspace.openGit })).toBeNull();
+    await user.click(
+      within(alert).getByRole('button', { name: copy.chat.workspace.retryWorktree }),
+    );
+    expect(api.editMessage).toHaveBeenCalledWith(
+      mine.id,
+      expect.objectContaining({ workspace: 'worktree' }),
+    );
+    runs.release(failed);
+  });
+
+  it('kegagalan lain tidak menawarkan worktree atau tab Git', async () => {
+    const { failed, alert } = await refusedRun('upstream');
+
+    expect(within(alert).queryByRole('button')).toBeNull();
+    runs.release(failed);
   });
 });

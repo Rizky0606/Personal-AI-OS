@@ -36,6 +36,7 @@ export function run(over: Partial<Run> = {}): Run {
     conversationId: CONV,
     taskId: null,
     branch: null,
+    workspace: null,
     usage: null,
     error: null,
     planOnly: false,

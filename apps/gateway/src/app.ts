@@ -309,6 +309,7 @@ export function buildApp({
           auth,
           onRunEvent: (deviceId, runId, event) => workerRelay.feed(deviceId, runId, event),
           onReviewResult: (deviceId, frame) => workerRelay.reviewResult(deviceId, frame),
+          onWorkspacePending: (deviceId, frame) => runs.workspacePending(deviceId, frame.runs),
           hub: workerHub,
           ...(ws.heartbeatMs ? { heartbeatMs: ws.heartbeatMs } : {}),
           ...(ws.now ? { now: ws.now } : {}),

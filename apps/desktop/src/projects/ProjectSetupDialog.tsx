@@ -3,6 +3,7 @@ import {
   SETUP_MAX_COMMANDS,
   SetupCommandSchema,
   type Project,
+  type RunWorkspace,
 } from '@aios/contracts';
 import { useEffect, useState } from 'react';
 import { workerApi } from '../app/services';
@@ -27,11 +28,15 @@ function firstInvalid(lines: string[]): number | null {
   return at === -1 ? null : at + 1;
 }
 
-/** Setup worktree (disimpan di worker PC ini): perintah yang dijalankan sebelum agent mulai dan tautan node_modules. */
+/**
+ * Setup run coding (disimpan di worker PC ini): kerja langsung di branch aktif atau di worktree terpisah, perintah
+ * yang dijalankan di worktree baru sebelum agent mulai, tautan node_modules, dan LSP.
+ */
 export function ProjectSetupDialog({ project, onClose }: ProjectSetupDialogProps) {
   const [text, setText] = useState('');
   const [link, setLink] = useState(false);
   const [lsp, setLsp] = useState(true);
+  const [workspace, setWorkspace] = useState<RunWorkspace>('in_place');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +56,7 @@ export function ProjectSetupDialog({ project, onClose }: ProjectSetupDialogProps
         setText(setup.commands.join('\n'));
         setLink(setup.linkNodeModules);
         setLsp(setup.lsp);
+        setWorkspace(setup.workspace);
       })
       .catch((e: unknown) => !cancelled && setError(workerErrorMessage(e)))
       .finally(() => !cancelled && setLoading(false));
@@ -76,7 +82,12 @@ export function ProjectSetupDialog({ project, onClose }: ProjectSetupDialogProps
     setSaving(true);
     setError(null);
     try {
-      await workerApi.setupSet(project.id, { commands: lines, linkNodeModules: link, lsp });
+      await workerApi.setupSet(project.id, {
+        commands: lines,
+        linkNodeModules: link,
+        lsp,
+        workspace,
+      });
       push(s.saved);
       onClose();
     } catch (e) {
@@ -109,6 +120,19 @@ export function ProjectSetupDialog({ project, onClose }: ProjectSetupDialogProps
       }
     >
       {error ? <ErrorBanner message={error} /> : null}
+      <div className="flex items-start gap-3 rounded-control border border-border px-3 py-3">
+        <Switch
+          checked={workspace === 'in_place'}
+          onChange={(on) => setWorkspace(on ? 'in_place' : 'worktree')}
+          label={s.inPlace}
+          disabled={loading || saving}
+        />
+        <div className="flex flex-col">
+          <span className="text-ui text-text">{s.inPlace}</span>
+          <span className="text-caption text-text-3">{s.inPlaceHint}</span>
+        </div>
+      </div>
+      <p className="text-caption text-text-3">{s.worktreeOnly}</p>
       <TextArea
         label={s.commandsLabel}
         hint={s.commandsHint(lines.length, SETUP_MAX_COMMANDS)}

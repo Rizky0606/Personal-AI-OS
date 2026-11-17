@@ -100,6 +100,14 @@ export type Message = z.infer<typeof MessageSchema>;
 export const RunKindSchema = z.enum(['chat', 'coding', 'research', 'schedule']);
 export type RunKind = z.infer<typeof RunKindSchema>;
 
+/**
+ * Tempat run coding mengubah berkas. `in_place`: langsung di folder project, di branch yang sedang aktif (tanpa
+ * worktree dan tanpa branch baru). `worktree`: salinan git worktree terpisah di branch `aios/<id>`. Tim Orca,
+ * armada, kartu kanban, dan jadwal selalu `worktree`.
+ */
+export const RunWorkspaceSchema = z.enum(['in_place', 'worktree']).meta({ id: 'RunWorkspace' });
+export type RunWorkspace = z.infer<typeof RunWorkspaceSchema>;
+
 export const RunSchema = z
   .object({
     id: IdSchema,
@@ -110,7 +118,10 @@ export const RunSchema = z
     status: RunStatusSchema,
     conversationId: IdSchema.nullable(),
     taskId: IdSchema.nullable(),
+    /** Run coding: branch tempat perubahan berada (branch aktif project, atau `aios/<id>` di mode worktree). */
     branch: z.string().nullable(),
+    /** Run coding: tempat run mengubah berkas, dilaporkan worker saat folder kerja siap; null sebelum itu. */
+    workspace: RunWorkspaceSchema.nullable().default(null),
     usage: UsageSchema.nullable(),
     error: RunErrorSchema.nullable(),
     /** Run coding mode rencana: hanya membaca dan menulis rencana, tanpa perubahan berkas (W29). */

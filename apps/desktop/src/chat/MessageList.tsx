@@ -6,7 +6,7 @@ import { useConversationProgress } from '../api/queries';
 import { api } from '../app/services';
 import { copy } from '../copy';
 import { buildActivity, savedActivity, type SavedTool } from '../realtime/activity';
-import { isSettled, type LiveRun, type PendingApproval } from '../realtime/liveRun';
+import { isSettled, workspaceOfRun, type LiveRun, type PendingApproval } from '../realtime/liveRun';
 import { Button } from '../ui/Button';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { ErrorBanner } from '../ui/ErrorBanner';
@@ -35,6 +35,10 @@ export interface MessageListProps {
   now: number;
   /** Pesan kegagalan run terakhir, bila ada. */
   failure: string | null;
+  /** Mengulang pesan yang ditolak di worktree terpisah (folder project kotor, sibuk, atau detached HEAD). */
+  onRetryInWorktree?: (() => void) | undefined;
+  /** Membuka tab Git untuk membereskan folder project. */
+  onOpenGit?: (() => void) | undefined;
   /** Pesan pengguna terakhir yang boleh dikirim ulang (null saat jawaban berjalan). */
   editableUserId?: string | null;
   onResendLast?: () => void;
@@ -133,6 +137,7 @@ function SavedAssistantMessage({ runId, conversationId, ...props }: SavedAssista
       {...props}
       orb={orbStateOf(activity.phase)}
       run={{ activity, now: 0, artifacts }}
+      workspace={workspaceOfRun(run.data)}
     />
   );
 }
@@ -150,6 +155,7 @@ function AssistantRow({
     return (
       <AssistantMessage
         {...props}
+        workspace={finished.workspace}
         orb={orbStateOf(activity.phase)}
         run={{
           activity,
@@ -192,6 +198,7 @@ function LiveAssistant({
       model={null}
       roles={roles}
       streaming={streaming}
+      workspace={live.workspace}
       orb={orbStateOf(activity.phase)}
       run={{
         activity,
@@ -213,6 +220,8 @@ export function MessageList({
   finished,
   now,
   failure,
+  onRetryInWorktree,
+  onOpenGit,
   editableUserId = null,
   onResendLast,
   canModify = false,
@@ -350,6 +359,22 @@ export function MessageList({
         {failure !== null ? (
           <ErrorBanner
             message={failure ? `${copy.chat.runFailed} ${failure}` : copy.chat.runFailed}
+            action={
+              onRetryInWorktree || onOpenGit ? (
+                <div className="flex shrink-0 flex-wrap justify-end gap-2">
+                  {onOpenGit ? (
+                    <Button variant="secondary" onClick={onOpenGit}>
+                      {copy.chat.workspace.openGit}
+                    </Button>
+                  ) : null}
+                  {onRetryInWorktree ? (
+                    <Button variant="secondary" disabled={!canModify} onClick={onRetryInWorktree}>
+                      {copy.chat.workspace.retryWorktree}
+                    </Button>
+                  ) : null}
+                </div>
+              ) : undefined
+            }
           />
         ) : null}
       </div>

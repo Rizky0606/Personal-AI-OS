@@ -1,8 +1,13 @@
 import { z } from 'zod';
 import { IdSchema, RoleIdSchema } from './common.js';
 import { CONNECTORS_PER_RUN_MAX, ConnectorNameSchema } from './connectors.js';
-import { ApprovalDecisionSchema, SteerModeSchema } from './entities.js';
-import { AgentEventSchema, QueueNameSchema, QuestionAnswerSchema } from './events.js';
+import { ApprovalDecisionSchema, RunWorkspaceSchema, SteerModeSchema } from './entities.js';
+import {
+  AgentEventSchema,
+  DiffFileSchema,
+  QueueNameSchema,
+  QuestionAnswerSchema,
+} from './events.js';
 
 /*
  * Protokol worker (API_CONTRACT.md, "Protokol worker"): WebSocket keluar dari worker
@@ -28,8 +33,13 @@ export const RunStartCommandSchema = z.object({
     skillIds: z.array(z.string().min(1).max(80)).max(40).default([]),
   }),
   model: z.string().min(1),
-  /** Lanjutan dari run sebelumnya (revisi setelah komentar review): memakai worktree run itu. */
+  /** Lanjutan dari run sebelumnya (revisi atau pesan lanjutan): memakai folder kerja run itu, apa pun modenya. */
   continueFromRunId: IdSchema.optional(),
+  /**
+   * Tempat run mengubah berkas. Kosong = setelan project di worker (bawaan `in_place`). Gateway selalu mengirim
+   * `worktree` untuk tim Orca, armada, kartu kanban, dan jadwal. Diabaikan bila `continueFromRunId` diisi.
+   */
+  workspace: RunWorkspaceSchema.optional(),
   /** Mode rencana: semua permintaan izin (tulis, perintah, jaringan) ditolak worker. */
   planOnly: z.boolean().optional(),
   /** Giliran sebelumnya di percakapan ini (kronologis); omp memulai proses baru tiap run, jadi tanpa ini ia tidak tahu konteksnya. */
@@ -145,6 +155,8 @@ export const MergeSkippedSchema = z.enum([
   'detached',
   'not_fast_forward',
   'nothing_to_merge',
+  /** Branch kerja pengguna sudah maju dan rebase hasil run ke atasnya bentrok; rebase dibatalkan. */
+  'conflict',
 ]);
 export type MergeSkipped = z.infer<typeof MergeSkippedSchema>;
 
@@ -162,12 +174,24 @@ export const WorkerReviewResultFrameSchema = z.object({
 });
 export type WorkerReviewResultFrame = z.infer<typeof WorkerReviewResultFrameSchema>;
 
+/**
+ * Run mode `in_place` yang folder kerjanya masih memuat perubahan menunggu keputusan (mis. dihentikan, gagal, atau
+ * worker dimulai ulang di tengah run). Dikirim worker setiap tersambung ke gateway dan saat run seperti itu
+ * berakhir; gateway membuat run itu bisa ditinjau (`needs_review`) alih-alih membiarkan perubahan setengah jadi.
+ */
+export const WorkerWorkspacePendingFrameSchema = z.object({
+  type: z.literal('workspace.pending'),
+  runs: z.array(z.object({ runId: IdSchema, files: z.array(DiffFileSchema).max(2000) })).max(100),
+});
+export type WorkerWorkspacePendingFrame = z.infer<typeof WorkerWorkspacePendingFrameSchema>;
+
 /** Worker ke gateway. */
 export const WorkerToGatewayFrameSchema = z
   .discriminatedUnion('type', [
     WorkerEventFrameSchema,
     WorkerPingFrameSchema,
     WorkerReviewResultFrameSchema,
+    WorkerWorkspacePendingFrameSchema,
   ])
   .meta({ id: 'WorkerToGatewayFrame' });
 export type WorkerToGatewayFrame = z.infer<typeof WorkerToGatewayFrameSchema>;

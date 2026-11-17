@@ -7,6 +7,7 @@ import {
   type GatewayToWorkerFrame,
   type WorkerCommand,
   type WorkerReviewResultFrame,
+  type WorkerWorkspacePendingFrame,
 } from '@aios/contracts';
 import type { FastifyBaseLogger, FastifyPluginCallback } from 'fastify';
 import type { WebSocket } from 'ws';
@@ -30,6 +31,8 @@ export interface WorkerHubDeps {
   onRunEvent(deviceId: string, runId: string, event: AgentEvent): 'ok' | 'not_active' | 'not_owned';
   /** Jawaban worker atas `review.apply`. */
   onReviewResult(deviceId: string, frame: WorkerReviewResultFrame): void;
+  /** Laporan worker: run in_place yang perubahannya menunggu keputusan (lihat RunsService.workspacePending). */
+  onWorkspacePending(deviceId: string, frame: WorkerWorkspacePendingFrame): Promise<void>;
   heartbeatMs?: number;
   now?: () => number;
 }
@@ -99,7 +102,7 @@ function handleConnection(
   let chain: Promise<void> = Promise.resolve();
   socket.on('message', (data: Buffer, isBinary: boolean) => {
     chain = chain
-      .then(() => {
+      .then(async () => {
         let raw: unknown;
         try {
           raw = isBinary ? undefined : JSON.parse(data.toString('utf8'));
@@ -117,6 +120,10 @@ function handleConnection(
         }
         if (frame.data.type === 'review.result') {
           deps.onReviewResult(auth.deviceId, frame.data);
+          return;
+        }
+        if (frame.data.type === 'workspace.pending') {
+          await deps.onWorkspacePending(auth.deviceId, frame.data);
           return;
         }
         const { runId, event } = frame.data;

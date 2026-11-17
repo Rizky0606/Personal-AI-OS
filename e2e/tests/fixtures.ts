@@ -36,6 +36,22 @@ export const control = {
     });
     return ((await res.json()) as { out: string }).out;
   },
+  /** Isi berkas di repo uji; null bila tidak ada. */
+  async readFile(file: string): Promise<string | null> {
+    const res = await fetch(`${stack().controlUrl}/file`, {
+      method: 'POST',
+      body: JSON.stringify({ path: file }),
+    });
+    return ((await res.json()) as { content: string | null }).content;
+  },
+  /** Menulis (atau menghapus bila null) berkas di repo uji. */
+  async writeFile(file: string, content: string | null): Promise<void> {
+    const res = await fetch(`${stack().controlUrl}/file`, {
+      method: 'POST',
+      body: JSON.stringify({ path: file, content }),
+    });
+    if (!res.ok) throw new Error(`gagal menulis ${file}: ${res.status}`);
+  },
 };
 
 /** Menyiapkan halaman: shim Tauri aktif dan terhubung ke server kendali sebelum aplikasi dimuat. */

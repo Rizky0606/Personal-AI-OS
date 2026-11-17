@@ -5,6 +5,7 @@ import type {
   QueueName,
   RichAnswerFollowUp,
   RoleInfoSchema,
+  RunWorkspace,
   SteerMode,
 } from '@aios/contracts';
 import {
@@ -180,6 +181,8 @@ export interface MessageInput {
   skills?: readonly string[] | undefined;
   /** Mesin yang dipaksa untuk pesan ini; tanpa ini gateway memilih menurut konteks. */
   engine?: 'hermes' | 'omp' | 'dsh' | undefined;
+  /** Folder kerja run coding untuk pesan ini; kosong = setelan project (bawaan langsung di branch aktif). */
+  workspace?: RunWorkspace | undefined;
   followUp?: RichAnswerFollowUp | undefined;
 }
 
@@ -196,6 +199,7 @@ function messageBody(input: MessageInput) {
     ...(input.webSearch ? { webSearch: true } : {}),
     ...(input.skills?.length ? { skills: [...input.skills] } : {}),
     ...(input.engine ? { engine: input.engine } : {}),
+    ...(input.workspace ? { workspace: input.workspace } : {}),
     ...(input.followUp ? { followUp: input.followUp } : {}),
   };
 }

@@ -125,6 +125,7 @@ export const unusedRuns: AppDeps['runs'] = {
   answerQuestion: unused('runs.answerQuestion'),
   removeQueued: unused('runs.removeQueued'),
   review: unused('runs.review'),
+  workspacePending: unused('runs.workspacePending'),
   exists: unused('runs.exists'),
   projectId: unused('runs.projectId'),
 };

@@ -13,6 +13,7 @@ Status: **investigasi selesai** (fase A) dan **tingkat 1 terimplementasi** (fase
 - **Rekomendasi tingkat 1 (dikerjakan di branch ini):** blok "aturan kerja kode" di role `project` (pahami dulu, diff minimal, protokol tanda tangan, verifikasi wajib, tanpa subagent untuk menulis, periksa diff) dan catatan worker "Dependensi worktree" yang membuat agent menjalankan instal dependensi (lewat approval) sebelum typecheck.
 - **Hasil.** Dengan prompt akhir, 3 dari 3 run sungguhan memperbarui keempat pemakai, menjalankan typecheck sampai lulus, dan tidak menyentuh berkas lain; di satu run typecheck itulah yang menangkap alias yang terlewat, lalu agent memperbaikinya sendiri (bagian 7). Sebelumnya 2 dari 3 run menyerahkan refactor rusak dan 0 dari 3 menjalankan typecheck.
 - **Di luar kendali AIOS:** kualitas model hulu combo `coding-main`, server bahasa TypeScript yang tidak ada di PC pemilik, dan isi prompt bawaan omp.
+- **Catatan sesudahnya (feat/branch-aktif):** run coding chat project kini bawaannya mode `in_place` (langsung di folder project pada branch aktif). Di mode itu `node_modules` project sudah ada, jadi akar masalah #1 tidak berlaku: catatan "Dependensi worktree" tidak muncul, typecheck/tes langsung jalan, dan LSP omp menemukan server bahasa bila ada di `node_modules/.bin` project atau PATH. Temuan di dokumen ini tetap berlaku untuk mode worktree (kartu kanban, armada, tim, jadwal, atau pilihan eksplisit) dan tidak diubah.
 
 ## 1. Masalah
 

@@ -10,7 +10,12 @@ const FileSchema = z.object({
   projects: z.record(z.string(), ProjectSetupSchema),
 });
 
-const EMPTY: ProjectSetup = { commands: [], linkNodeModules: false, lsp: true };
+const EMPTY: ProjectSetup = {
+  commands: [],
+  linkNodeModules: false,
+  lsp: true,
+  workspace: 'in_place',
+};
 
 /**
  * Penyiapan worktree per project, disimpan di worker (bukan di repo): isi repo tidak pernah menentukan
@@ -39,7 +44,8 @@ export class ProjectSetupStore {
     const isDefault =
       setup.commands.length === 0 &&
       setup.linkNodeModules === EMPTY.linkNodeModules &&
-      setup.lsp === EMPTY.lsp;
+      setup.lsp === EMPTY.lsp &&
+      setup.workspace === EMPTY.workspace;
     if (isDefault) delete this.projects[projectId];
     else this.projects[projectId] = { ...setup, commands: [...setup.commands] };
     await fs.mkdir(nodePath.dirname(this.file), { recursive: true });

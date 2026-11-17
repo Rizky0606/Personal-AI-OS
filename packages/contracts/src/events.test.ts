@@ -128,6 +128,16 @@ const agentCases: Record<AgentEventType, Cases> = {
     valid: [{ type: 'checkpoint.created', checkpointId: 'cp_1', label: 'Sebelum refactor' }],
     invalid: [{ type: 'checkpoint.created', label: 'tanpa id' }],
   },
+  'workspace.ready': {
+    valid: [
+      { type: 'workspace.ready', mode: 'in_place', branch: 'main', base: 'a1b2c3d' },
+      { type: 'workspace.ready', mode: 'worktree', branch: 'aios/0a1b2c3d', base: 'a1b2c3d' },
+    ],
+    invalid: [
+      { type: 'workspace.ready', mode: 'langsung', branch: 'main', base: 'a1b2c3d' },
+      { type: 'workspace.ready', mode: 'in_place', branch: '', base: 'a1b2c3d' },
+    ],
+  },
   'todo.updated': {
     valid: [
       { type: 'todo.updated', phases: [] },
@@ -508,6 +518,7 @@ describe('AgentEvent', () => {
         'approval.resolved',
         'diff.updated',
         'checkpoint.created',
+        'workspace.ready',
         'todo.updated',
         'queue.updated',
         'subagent.updated',

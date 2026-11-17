@@ -1,6 +1,7 @@
 import {
   TERMINAL_RUN_STATUSES,
   type RunStatus,
+  type RunWorkspace,
   type ServerEvent,
   type Question,
   type TodoPhase,
@@ -62,6 +63,19 @@ export interface LiveArtifact {
 /** Konteks yang dipakai run (event `context.used`), tanpa `type`: skill, memori (jumlah dan judul), lampiran. */
 export type ContextUsed = Omit<Extract<ServerEvent, { type: 'context.used' }>, 'type'>;
 
+/** Mode folder kerja run coding beserta branch yang dipakai agent. */
+export interface WorkspaceView {
+  mode: RunWorkspace;
+  branch: string;
+}
+
+/** Folder kerja dari DTO run (diisi gateway saat `workspace.ready`); null untuk run lama atau belum dilaporkan. */
+export function workspaceOfRun(
+  run: { workspace: RunWorkspace | null; branch: string | null } | null | undefined,
+): WorkspaceView | null {
+  return run?.workspace && run.branch ? { mode: run.workspace, branch: run.branch } : null;
+}
+
 export interface LiveRun {
   runId: string;
   role: string | null;
@@ -95,6 +109,8 @@ export interface LiveRun {
   subagents: SubagentView[];
   /** Konteks yang dipakai run; null sampai event `context.used` tiba. */
   contextUsed: ContextUsed | null;
+  /** Folder kerja run coding (event `workspace.ready`); null sampai worker melaporkannya. */
+  workspace: WorkspaceView | null;
 }
 
 export const isTerminal = (status: RunStatus): boolean => TERMINAL_RUN_STATUSES.includes(status);
@@ -129,6 +145,7 @@ export const newLiveRun = (runId: string): LiveRun => ({
   questions: [],
   subagents: [],
   contextUsed: null,
+  workspace: null,
 });
 
 /** Memajukan waktu mulai ke waktu run dibuat di server bila lebih awal (reload di tengah run). */
@@ -322,6 +339,8 @@ function reduceEvent(run: LiveRun, event: ServerEvent, ts: number | undefined): 
       return run.artifacts.some((artifact) => artifact.fileId === event.fileId)
         ? run
         : { ...run, artifacts: [...run.artifacts, event] };
+    case 'workspace.ready':
+      return { ...run, workspace: { mode: event.mode, branch: event.branch } };
     case 'error':
       return {
         ...run,
