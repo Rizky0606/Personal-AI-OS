@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, inject, it } from 'vitest';
 import {
   auditLog,
+  conversations,
   devices,
   researchJobs,
   runs,
@@ -179,6 +180,97 @@ describe('push untuk laporan mingguan kurator skill', () => {
     });
     await env.push.idle();
     expect(fcm.sent).toEqual([]);
+  });
+});
+
+describe('push untuk usulan agent', () => {
+  const proposedSchedule = (name: string) => ({
+    name,
+    cron: '0 7 * * 1',
+    timezone: 'Asia/Jakarta',
+    prompt: 'RAHASIA-INSTRUKSI-JADWAL',
+    target: 'chat' as const,
+  });
+
+  const turn = async () => {
+    const [conversation] = await db()
+      .insert(conversations)
+      .values({ title: 'Usul', surface: 'windows' })
+      .returning();
+    const [run] = await db()
+      .insert(runs)
+      .values({ kind: 'chat', engine: 'hermes', conversationId: conversation!.id })
+      .returning();
+    return { conversationId: conversation!.id, runId: run!.id };
+  };
+
+  it('dua usulan dari satu giliran digabung jadi satu push; judul hanya jumlah, data hanya ID', async () => {
+    const { conversationId, runId } = await turn();
+    const made = [];
+    for (const name of ['Ringkasan pagi', 'Ringkasan malam'])
+      made.push(
+        await env.agentProposals.create({
+          kind: 'schedule',
+          schedule: proposedSchedule(name),
+          agent: 'omp',
+          reason: 'RAHASIA-ALASAN-AGENT',
+          afterWeb: false,
+          conversationId,
+          runId,
+          actorDeviceId: null,
+        }),
+      );
+    await env.push.idle();
+
+    expect(fcm.sent.map((m) => m.token).sort()).toEqual([phone.token, tablet.token].sort());
+    for (const m of fcm.sent) {
+      expect(m.notification).toEqual({ title: '2 usulan agent baru' });
+      expect(m.data).toEqual({
+        type: 'agent_proposal',
+        conversationId,
+        proposalIds: made.map((p) => p.id).join(','),
+      });
+    }
+    // Judul usulan, instruksi jadwal, dan alasan agent tidak pernah lewat Google.
+    expect(JSON.stringify(fcm.sent)).not.toMatch(/RAHASIA|Ringkasan/);
+  });
+
+  it('giliran lain dapat push sendiri; Hermes tanpa run dan tanpa percakapan tetap dikirim tanpa conversationId', async () => {
+    const first = await turn();
+    const second = await turn();
+    for (const { conversationId, runId } of [first, second])
+      await env.agentProposals.create({
+        kind: 'schedule',
+        schedule: proposedSchedule('Ringkasan'),
+        agent: 'omp',
+        reason: 'x',
+        afterWeb: false,
+        conversationId,
+        runId,
+        actorDeviceId: null,
+      });
+    const hermes = await env.agentProposals.create({
+      kind: 'schedule',
+      schedule: proposedSchedule('Dari Hermes'),
+      agent: 'hermes',
+      reason: 'x',
+      afterWeb: true,
+      conversationId: null,
+      runId: null,
+      actorDeviceId: null,
+    });
+    await env.push.idle();
+
+    // Tiga giliran berbeda = tiga push per perangkat, masing-masing satu ID.
+    const toPhone = fcm.sent.filter((m) => m.token === phone.token);
+    expect(toPhone).toHaveLength(3);
+    for (const m of toPhone) expect(m.notification).toEqual({ title: 'Usulan agent baru' });
+    expect(toPhone.map((m) => m.data.conversationId ?? '').sort()).toEqual(
+      [first.conversationId, second.conversationId, ''].sort(),
+    );
+    // Hermes bekerja tanpa percakapan: kunci conversationId tidak ikut di payload.
+    const fromHermes = toPhone.find((m) => m.data.proposalIds === hermes.id);
+    expect(fromHermes!.data).toEqual({ type: 'agent_proposal', proposalIds: hermes.id });
   });
 });
 

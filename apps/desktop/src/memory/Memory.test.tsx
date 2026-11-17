@@ -191,6 +191,17 @@ describe('MemorySection', () => {
     expect(api.rejectMemoryProposal).toHaveBeenCalledWith(third.id);
   });
 
+  it('usulan dari agent: nama agent tampil dan peringatan web muncul bila agent membaca web', async () => {
+    api.listMemoryProposals.mockResolvedValue([
+      proposal({ source: 'agent', agent: 'omp', afterWeb: true }),
+    ]);
+    await renderScreen(<MemorySection />);
+
+    const list = await screen.findByRole('list', { name: m.proposalsLabel });
+    expect(within(list).getByText(copy.agentProposals.agents.omp)).toBeInTheDocument();
+    expect(within(list).getByText(copy.agentProposals.afterWeb)).toBeInTheDocument();
+  });
+
   it('disimpan otomatis: Urungkan memanggil undo, memori hilang, baris tampil Diurungkan', async () => {
     const user = userEvent.setup();
     const resultId = '0192f0c4-7a1b-7c2d-8e3f-0000000000ee';

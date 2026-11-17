@@ -92,6 +92,13 @@ class AppLinksTest {
     }
 
     @Test
+    fun `notifikasi usulan agent membuka layar Usulan agent`() {
+        val data = mapOf("type" to "agent_proposal", "conversationId" to "c1", "proposalIds" to "p1,p2")
+        assertEquals(AppLink.OpenAgentProposals, AppLinks.fromPush(data))
+        assertEquals(AppLink.OpenAgentProposals, AppLinks.fromPush(mapOf("type" to "agent_proposal")))
+    }
+
+    @Test
     fun `notifikasi jadwal membuka percakapan hasilnya, atau jadwalnya bila percakapan tidak ada`() {
         val withConversation = mapOf(
             "type" to "schedule.result",

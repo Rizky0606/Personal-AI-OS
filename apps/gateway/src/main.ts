@@ -324,7 +324,7 @@ async function main(): Promise<void> {
   });
 
   const health = createHealthService({ config, pingDatabase: () => pool.query('select 1') });
-  const agentProposals = createAgentProposalService({ db, hub, tasks, schedules });
+  const agentProposals = createAgentProposalService({ db, hub, tasks, schedules, push });
   const app = buildApp({
     config,
     health,

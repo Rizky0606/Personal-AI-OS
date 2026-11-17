@@ -22,12 +22,31 @@ export interface PushService {
    * Judul hanya jumlah usulan; data hanya ID. Tanpa FCM tidak melakukan apa pun.
    */
   memoryProposals(input: { conversationId: string; proposalIds: string[] }): void;
+  /**
+   * Memori yang disimpan otomatis dari satu giliran chat (mode `auto`, dipanggil sekali per ekstraksi).
+   * Judul hanya jumlah memori; data hanya ID agar pemilik bisa langsung mengurungkannya.
+   */
+  memoryAutoSaved(input: { conversationId: string; proposalIds: string[] }): void;
+  /**
+   * Usulan agent baru (`task_propose`/`schedule_propose`). Usulan dari satu giliran digabung menjadi satu push:
+   * ID yang datang dalam jendela AGENT_PROPOSAL_WINDOW_MS dengan kunci giliran yang sama dikirim bersama,
+   * jadi satu run (maks 3 usulan) tidak pernah menghasilkan lebih dari satu notifikasi.
+   * Judul hanya jumlah usulan; data hanya ID. Tanpa FCM tidak melakukan apa pun.
+   */
+  agentProposals(input: {
+    /** Kunci giliran: run yang memanggil tool; null untuk Hermes yang bekerja tanpa run. */
+    runId: string | null;
+    conversationId: string | null;
+    proposalId: string;
+  }): void;
   /** Menunggu pengiriman yang sedang berjalan (tes, shutdown). */
   idle(): Promise<void>;
   close(): void;
 }
 
 const TITLE_MAX = 60;
+/** Jendela penggabungan usulan agent satu giliran; cukup lama untuk tiga panggilan tool berurutan. */
+const AGENT_PROPOSAL_WINDOW_MS = 5_000;
 const clip = (text: string, max: number) => {
   const flat = text.replace(/\s+/g, ' ').trim();
   return flat.length <= max ? flat : `${flat.slice(0, max - 1)}…`;
@@ -49,6 +68,11 @@ export function createPushService(deps: {
 }): PushService {
   const { db, hub, fcm, log } = deps;
   const pending = new Set<Promise<unknown>>();
+  /** Usulan agent yang menunggu digabung, per giliran. */
+  const agentBatches = new Map<
+    string,
+    { conversationId: string | null; ids: string[]; timer: NodeJS.Timeout }
+  >();
   let unsubscribe: (() => void) | undefined;
 
   async function androidDevices(onlyId?: string) {
@@ -145,6 +169,24 @@ export function createPushService(deps: {
     void work.finally(() => pending.delete(work));
   }
 
+  /** Mengirim satu push untuk semua usulan agent yang terkumpul di satu giliran. */
+  function flushAgentBatch(key: string) {
+    const batch = agentBatches.get(key);
+    if (!batch) return;
+    clearTimeout(batch.timer);
+    agentBatches.delete(key);
+    track(
+      deliver({
+        title: batch.ids.length > 1 ? `${batch.ids.length} usulan agent baru` : 'Usulan agent baru',
+        data: {
+          type: 'agent_proposal',
+          ...(batch.conversationId ? { conversationId: batch.conversationId } : {}),
+          proposalIds: batch.ids.join(','),
+        },
+      }).catch((err: unknown) => log?.warn({ err }, 'push usulan agent gagal')),
+    );
+  }
+
   return {
     start() {
       if (!fcm) {
@@ -197,11 +239,42 @@ export function createPushService(deps: {
       );
     },
 
+    memoryAutoSaved({ conversationId, proposalIds }) {
+      if (!fcm || proposalIds.length === 0) return;
+      track(
+        deliver({
+          title:
+            proposalIds.length > 1
+              ? `${proposalIds.length} memori disimpan otomatis`
+              : 'Memori disimpan otomatis',
+          data: { type: 'memory_proposal', conversationId, proposalIds: proposalIds.join(',') },
+        }).catch((err: unknown) => log?.warn({ err }, 'push memori otomatis gagal')),
+      );
+    },
+
+    agentProposals({ runId, conversationId, proposalId }) {
+      if (!fcm) return;
+      // Hermes bekerja tanpa run dan tanpa percakapan: semua usulannya masuk satu kunci.
+      const key = runId ?? conversationId ?? 'tanpa-run';
+      const batch = agentBatches.get(key);
+      if (batch) {
+        batch.ids.push(proposalId);
+        return;
+      }
+      const timer = setTimeout(() => flushAgentBatch(key), AGENT_PROPOSAL_WINDOW_MS);
+      timer.unref();
+      agentBatches.set(key, { conversationId, ids: [proposalId], timer });
+    },
+
     async idle() {
+      // Giliran yang masih menunggu jendela penggabungan dikirim sekarang agar tidak hilang.
+      for (const key of [...agentBatches.keys()]) flushAgentBatch(key);
       await Promise.all([...pending]);
     },
 
     close() {
+      for (const batch of agentBatches.values()) clearTimeout(batch.timer);
+      agentBatches.clear();
       unsubscribe?.();
       unsubscribe = undefined;
     },

@@ -1235,6 +1235,20 @@ export const copy = {
       reviewLabel: (name: string) => `Tinjau usulan skill ${name}`,
       status: { pending: 'Menunggu keputusan', approved: 'Disetujui', rejected: 'Ditolak' },
     },
+    /** Kartu usulan kartu/jadwal dari agent di bawah jawaban; keputusan tetap di layar Kanban atau Jadwal. */
+    agentProposal: {
+      list: 'Usulan agent dari jawaban ini',
+      cardTask: (title: string) => `Agent mengusulkan kartu: ${title}`,
+      cardSchedule: (name: string) => `Agent mengusulkan jadwal: ${name}`,
+      review: 'Tinjau',
+      reviewLabel: (name: string) => `Tinjau usulan agent ${name}`,
+      status: { pending: 'Menunggu keputusan', approved: 'Disetujui', rejected: 'Ditolak' },
+    },
+    /** Memori yang disimpan otomatis dari pesan ini (mode auto), lengkap dengan Urungkan. */
+    autoMemory: {
+      list: 'Memori yang disimpan otomatis dari pesan ini',
+      title: 'Disimpan otomatis ke memori',
+    },
     emptyThread: 'Tulis pesan di bawah. Agent dan skill dipilih otomatis.',
     loadOlder: 'Muat pesan lebih lama',
     composerOptions: 'Opsi',

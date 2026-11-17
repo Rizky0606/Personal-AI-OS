@@ -592,12 +592,41 @@ describe('mode auto', () => {
     expect(ProblemSchema.parse(undo.json()).code).toBe('proposal_not_undoable');
   });
 
-  it('status=review: pending ditambah auto_saved/undone 7 hari terakhir; urungkan tampil sebagai undone; tanpa push', async () => {
+  it('push FCM: satu per giliran, judul hanya jumlah memori, data hanya ID tanpa teks fakta', async () => {
+    extractReply = facts(BANDUNG_FACT, {
+      action: 'add',
+      text: 'Pemilik bekerja sebagai dokter gigi.',
+      evidence: 'kerja sebagai dokter gigi',
+    });
+    const sent = await send(g.env, g.token, BANDUNG);
+    await g.env.push.idle();
+    const saved = await proposals(g.env, g.token, 'auto_saved');
+    expect(saved).toHaveLength(2);
+    expect(fcm.sent).toHaveLength(1);
+    const [push] = fcm.sent;
+    expect(push!.token).toBe('fcm-token-auto');
+    expect(push!.notification).toEqual({ title: '2 memori disimpan otomatis' });
+    expect(push!.data).toEqual({
+      type: 'memory_proposal',
+      conversationId: sent.conversationId,
+      proposalIds: expect.any(String) as string,
+    });
+    expect(push!.data.proposalIds!.split(',').sort()).toEqual(saved.map((p) => p.id).sort());
+    // Teks fakta, kutipan, dan pesan pemilik tidak pernah lewat Google.
+    expect(JSON.stringify(fcm.sent)).not.toMatch(/Bandung|dokter|tinggal/);
+
+    // Model tidak mengembalikan fakta sama sekali: tanpa push.
+    fcm.sent.length = 0;
+    extractReply = facts();
+    await send(g.env, g.token, BANDUNG);
+    await g.env.push.idle();
+    expect(fcm.sent).toEqual([]);
+  });
+
+  it('status=review: pending ditambah auto_saved/undone 7 hari terakhir; urungkan tampil sebagai undone', async () => {
     extractReply = facts(BANDUNG_FACT);
     await send(g.env, g.token, BANDUNG);
     await g.env.push.idle();
-    // Mode auto tidak mengirim push (bukan usulan yang menunggu keputusan).
-    expect(fcm.sent).toEqual([]);
 
     const { db } = g.env.database.handle;
     const old = new Date(g.env.clock.now - 8 * 24 * 60 * 60 * 1000);

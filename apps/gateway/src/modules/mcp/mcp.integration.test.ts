@@ -136,6 +136,7 @@ async function runningRun(gw: Gateway, name: string, text: string, extra: object
     token: worker.accessToken,
     deviceId: worker.device.id,
     projectId: project.id,
+    conversationId: conversation.id,
     runId: run.id,
     fake,
   };
@@ -707,6 +708,16 @@ describe('tool usulan (slice 3): tidak ada yang berubah sebelum pemilik menyetuj
       }),
     ]);
     const id = pending[0]!.id;
+    // Kartu usulan di chat memakai filter percakapan: hanya usulan dari percakapan run ini.
+    const inChat = (
+      await on.env.get(`/agent-proposals?conversationId=${mine.conversationId}`, on.desktop)
+    ).json<{ items: { id: string }[] }>().items;
+    expect(inChat.map((p) => p.id)).toEqual([pending[0]!.id]);
+    expect(
+      (
+        await on.env.get(`/agent-proposals?conversationId=${other.conversationId}`, on.desktop)
+      ).json<{ items: unknown[] }>().items,
+    ).toEqual([]);
     // Worker tidak bisa meninjau usulannya sendiri.
     expect((await on.env.post(`/agent-proposals/${id}/approve`, {}, mine.token)).statusCode).toBe(
       403,

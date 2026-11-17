@@ -140,6 +140,8 @@ export interface AgentProposalQuery {
   status?: 'pending' | 'approved' | 'rejected' | 'all' | undefined;
   kind?: AgentProposalKind | undefined;
   projectId?: string | undefined;
+  /** Usulan yang lahir dari satu percakapan (kartu usulan di bawah jawaban). */
+  conversationId?: string | undefined;
 }
 export type ApproveAgentProposalInput = z.input<typeof ApproveAgentProposalRequestSchema>;
 export type UpdateSkillInput = z.input<typeof UpdateSkillRequestSchema>;
@@ -426,7 +428,7 @@ export function createGatewayApi(call: Call) {
     listAgentProposals: async (params: AgentProposalQuery = {}) =>
       (
         await get(
-          `/agent-proposals${query({ status: params.status, kind: params.kind, projectId: params.projectId })}`,
+          `/agent-proposals${query({ status: params.status, kind: params.kind, projectId: params.projectId, conversationId: params.conversationId })}`,
           AgentProposalListSchema,
         )
       ).items,

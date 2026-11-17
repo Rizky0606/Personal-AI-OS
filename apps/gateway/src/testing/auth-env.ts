@@ -491,7 +491,7 @@ export async function createAuthEnv(
     queues: boss,
     now,
   });
-  const agentProposals = createAgentProposalService({ db, hub, tasks, schedules, now });
+  const agentProposals = createAgentProposalService({ db, hub, tasks, schedules, push, now });
   const app = buildApp({
     config: { LOG_LEVEL: options.logStream ? 'info' : 'silent', NODE_ENV: 'test' },
     health: { readiness: () => Promise.reject(new Error('tidak dipakai')) },
