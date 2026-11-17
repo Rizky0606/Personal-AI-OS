@@ -29,7 +29,7 @@ Ringkasan keputusan:
 | `space_chunks` | `id`, `document_id` (cascade), `space_id` (cascade), `ordinal`, `content`, `tsv` = kolom generated `to_tsvector('simple', content)`; indeks GIN `space_chunks_tsv_idx` | `extra.ts:211-232`, migrasi `0007_spaces.sql` |
 | `conversations.space_id` | FK `set null` | `core.ts:109` |
 
-Tipe kolom khusus yang sudah ada: `tsvector` dan `bytea` (`extra.ts:38-42`; `bytea` dipakai `files.content`, `extra.ts:131`). Migrasi terakhir `0017_skill_proposals_curator` (`apps/gateway/drizzle/meta/_journal.json:128`); migrasi maju saja (`infra/scripts/deploy.sh:13`).
+Tipe kolom khusus yang sudah ada: `tsvector` dan `bytea` (`extra.ts:38-42`; `bytea` dipakai `files.content`, `extra.ts:131`). Migrasi terakhir `0021_run_web_state` (`apps/gateway/drizzle/meta/_journal.json:156`); migrasi maju saja (`infra/scripts/deploy.sh:13`).
 
 Tidak ada kolom embedding, tidak ada ekstensi Postgres apa pun, tidak ada kolom asal-usul atau sematan pada memori.
 
