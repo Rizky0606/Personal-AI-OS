@@ -10658,7 +10658,7 @@
         "tags": [
           "Skill"
         ],
-        "summary": "Pratinjau pemasangan dari luar: gateway mengunduh SKILL.md (hanya github.com, raw.githubusercontent.com, skills.sh; maks 64 KB; teks saja; tidak ada yang dijalankan), memindainya, dan mengembalikan isi lengkap + versi terpasang untuk diff",
+        "summary": "Pratinjau pemasangan dari luar: gateway mengunduh SKILL.md (hanya github.com, raw.githubusercontent.com, skills.sh, www.aitmpl.com; maks 64 KB; teks saja; tidak ada yang dijalankan), memindainya, dan mengembalikan isi lengkap + versi terpasang untuk diff",
         "security": [
           {
             "bearerAuth": []
