@@ -97,7 +97,8 @@ export async function startWorker(options: WorkerOptions): Promise<RunningWorker
     log,
   });
   const proxyPort = await proxy.start();
-  // Relay tool gateway (aios_tools): token perangkat tetap di worker, omp hanya memegang token lokal per run.
+  // Relay server MCP gateway (aios_tools dan konektor pemilik): token perangkat tetap di worker, omp hanya
+  // memegang token lokal per pendaftaran.
   const toolsRelay = new GatewayToolsRelay({
     serverUrl: () => link.serverUrl,
     token: (opts) => link.freshAccessToken(opts),
