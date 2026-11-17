@@ -1025,6 +1025,16 @@ export const copy = {
     waiting: 'Run menunggu jawaban Anda.',
     failed: 'Keputusan belum terkirim.',
     alwaysHint: 'Hanya untuk perintah yang persis sama di project ini.',
+    gatewayTitle: (tool: string) => `Agent meminta izin memakai tool ${tool}`,
+    allowAlwaysTool: (tool: string) => `Selalu untuk ${tool} di project ini`,
+    gatewayHint: (tool: string) =>
+      tool === 'web_search'
+        ? 'Berlaku untuk semua kueri web_search di project ini, bukan hanya kueri ini.'
+        : tool === 'web_read'
+          ? 'Berlaku untuk semua web_read di project ini, bukan hanya URL ini. Gateway tetap hanya membuka URL dari hasil pencarian run ini atau pesan Anda.'
+          : tool.endsWith('_propose')
+            ? `Berlaku untuk semua panggilan ${tool} di project ini. Usulannya tetap menunggu tinjauan Anda.`
+            : `Berlaku untuk semua panggilan ${tool} di project ini, bukan hanya panggilan ini.`,
   },
   review: {
     refresh: 'Muat ulang',

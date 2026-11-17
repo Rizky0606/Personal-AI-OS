@@ -80,6 +80,12 @@
     <string name="approval_allow_always">Selalu untuk project ini</string>
     <string name="approval_deny">Tolak</string>
     <string name="approval_always_hint">\"Selalu\" hanya berlaku untuk perintah yang persis sama.</string>
+    <string name="approval_title_gateway">Agent meminta izin memakai tool %1$s</string>
+    <string name="approval_allow_always_tool">Selalu untuk %1$s di project ini</string>
+    <string name="approval_hint_web_search">Berlaku untuk semua kueri web_search di project ini, bukan hanya kueri ini.</string>
+    <string name="approval_hint_web_read">Berlaku untuk semua web_read di project ini, bukan hanya URL ini. Gateway tetap hanya membuka URL dari hasil pencarian run ini atau pesan Anda.</string>
+    <string name="approval_hint_propose">Berlaku untuk semua panggilan %1$s di project ini. Usulannya tetap menunggu tinjauan Anda.</string>
+    <string name="approval_hint_tool">Berlaku untuk semua panggilan %1$s di project ini, bukan hanya panggilan ini.</string>
 
     <!-- Panel Progres (paritas desktop P2B/P6) -->
     <string name="progress_chip_label">Langkah %1$d dari %2$d: %3$s</string>

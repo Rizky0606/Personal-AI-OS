@@ -93,7 +93,8 @@ private val TOOL_KINDS: Map<String, ToolKind> = buildMap {
 internal fun kindOf(name: String): ToolKind? {
     val key = name.trim().lowercase()
     TOOL_KINDS[key]?.let { return it }
-    if (key.startsWith("browser_")) return ToolKind.Browser
+    // Awalan tool browser worker (`mcp__aios_browser_`, cermin AIOS_BROWSER_OMP_PREFIX di contracts).
+    if (key.startsWith("browser_") || key.startsWith("mcp__aios_browser_")) return ToolKind.Browser
     val gatewayTool = aiosToolOf(key) ?: return null
     return when (gatewayTool) {
         in AIOS_NETWORK_TOOLS -> ToolKind.Web

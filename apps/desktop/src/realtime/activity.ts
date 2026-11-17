@@ -1,4 +1,9 @@
-import { AIOS_NETWORK_TOOLS, AIOS_PROPOSE_TOOLS, aiosToolOf } from '@aios/contracts';
+import {
+  AIOS_BROWSER_OMP_PREFIX,
+  AIOS_NETWORK_TOOLS,
+  AIOS_PROPOSE_TOOLS,
+  aiosToolOf,
+} from '@aios/contracts';
 import { copy } from '../copy';
 import { isSettled, type LiveRun, type ToolStep } from './liveRun';
 
@@ -115,7 +120,7 @@ const TOOL_KINDS: Record<string, ToolKind> = {
 export function toolKindOf(name: string): ToolKind | null {
   const key = name.trim().toLowerCase();
   if (Object.hasOwn(TOOL_KINDS, key)) return TOOL_KINDS[key] ?? null;
-  if (key.startsWith('browser_')) return 'browser';
+  if (key.startsWith('browser_') || key.startsWith(AIOS_BROWSER_OMP_PREFIX)) return 'browser';
   // Tool milik gateway (server MCP `aios_tools`), bukan konektor pihak ketiga: web, baca data sistem, atau usulan.
   const gatewayTool = aiosToolOf(key);
   if (gatewayTool) {

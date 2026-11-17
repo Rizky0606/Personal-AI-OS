@@ -915,7 +915,8 @@ Slice 1–4 selesai (web, baca data sistem, dan usulan untuk omp lewat worker; p
 - [ ] **Hermes: perangkat layanan** yang terlihat dan bisa dicabut di halaman Perangkat (keputusan pemilik #2) sebagai pengganti hash statis di `gateway.env`.
 - [ ] **Hermes: `afterWeb` dan kutipan memori memakai jendela waktu** (jam berjalan / 30 menit chat umum), bukan percakapan yang sedang dijawab Hermes: gateway tidak tahu percakapan mana yang memanggil tool.
 - [ ] **Belum dicoba dengan omp di Windows** dan dengan gateway produksi: e2e memakai omp 18.12.6 Linux ARM64 dengan gateway tiruan (`omp.e2e.test.ts`), dan smoke sekali pakai memakai kode MCP gateway sungguhan + SearXNG tiruan. Aktifkan `MCP_TOOLS_ENABLED=true` di VPS hanya setelah worker versi baru terpasang di PC (worker lama mengabaikan `gatewayTools`, jadi aman, tetapi tool tidak muncul).
-- [ ] **Desktop: label "Selalu izinkan" untuk izin tool gateway** masih memakai teks izin jaringan biasa; aturan yang tersimpan berlaku per nama tool (`mcp__aios_tools_web_search`), bukan per URL. Belum ada tampilan daftar aturan yang menjelaskan perbedaannya.
-- [ ] **Tool browser worker (`mcp__aios_browser_browser_*`)** masih tampil sebagai Konektor dengan nama `aios_browser_browser_screenshot` di Progres dan "Menjalankan alat" di Aktivitas (pemetaan hanya ditambahkan untuk `aios_tools`).
-- [ ] **Anggaran per run disimpan di memori gateway**: restart gateway mengosongkan hitungan dan allowlist hasil pencarian run yang sedang berjalan (agent perlu mencari ulang sebelum `web_read`).
+- [x] **Desktop: label "Selalu izinkan" untuk izin tool gateway** masih memakai teks izin jaringan biasa; aturan yang tersimpan berlaku per nama tool (`mcp__aios_tools_web_search`), bukan per URL.
+- [ ] **Belum ada tampilan daftar aturan izin** yang menjelaskan cakupan "Selalu izinkan" per nama tool untuk tool gateway (desktop dan Android).
+- [x] **Tool browser worker (`mcp__aios_browser_browser_*`)** masih tampil sebagai Konektor dengan nama `aios_browser_browser_screenshot` di Progres dan "Menjalankan alat" di Aktivitas (pemetaan hanya ditambahkan untuk `aios_tools`).
+- [x] **Anggaran per run disimpan di memori gateway**: restart gateway mengosongkan hitungan dan allowlist hasil pencarian run yang sedang berjalan (agent perlu mencari ulang sebelum `web_read`).
 
