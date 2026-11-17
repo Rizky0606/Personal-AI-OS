@@ -405,9 +405,9 @@ export const copy = {
     },
     install: {
       intro:
-        'Tempel id skills.sh (pemilik/repo@skill) atau URL GitHub ke SKILL.md. Hanya github.com, raw.githubusercontent.com, dan skills.sh yang diizinkan.',
+        'Tempel id skills.sh (pemilik/repo@skill), id aitmpl.com (kategori/nama), atau URL GitHub atau aitmpl.com ke SKILL.md. Hanya github.com, raw.githubusercontent.com, skills.sh, dan www.aitmpl.com yang diizinkan; dari aitmpl.com hanya tipe skills.',
       source: 'Sumber',
-      sourcePlaceholder: 'pemilik/repo@skill atau https://github.com/…/SKILL.md',
+      sourcePlaceholder: 'pemilik/repo@skill, kategori/nama, atau https://github.com/…/SKILL.md',
       preview: 'Pratinjau',
       previewing: 'Mengunduh…',
       install: 'Pasang',

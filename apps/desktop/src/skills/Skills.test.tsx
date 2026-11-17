@@ -289,13 +289,21 @@ describe('SkillsScreen: Pasang', () => {
   it('galat 409 checksum berubah meminta pratinjau ulang', async () => {
     api.previewSkillInstall.mockResolvedValue(preview());
     api.installSkill.mockRejectedValue(
-      new ApiProblem(409, 'skill_source_changed', 'Isi di sumber berubah.'),
+      new ApiProblem(409, 'skill_changed_upstream', 'Isi di sumber berubah.'),
     );
     const user = await openInstall();
     await user.type(screen.getByLabelText(t.install.source), 'o/r@s');
     await user.click(screen.getByRole('button', { name: t.install.preview }));
     await user.click(await screen.findByRole('button', { name: t.install.install }));
     expect(await screen.findByRole('alert')).toHaveTextContent(t.install.changedSince);
+  });
+
+  it('id aitmpl.com diteruskan apa adanya ke pratinjau', async () => {
+    api.previewSkillInstall.mockResolvedValue(preview());
+    const user = await openInstall();
+    await user.type(screen.getByLabelText(t.install.source), 'creative-design/algorithmic-art');
+    await user.click(screen.getByRole('button', { name: t.install.preview }));
+    expect(api.previewSkillInstall).toHaveBeenCalledWith('creative-design/algorithmic-art');
   });
 });
 
