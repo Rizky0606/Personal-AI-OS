@@ -181,8 +181,8 @@ fun buildProgress(
     val groups = linkedSetOf<ToolGroup>()
     val connectors = mutableListOf<String>()
     for (name in toolNames) {
-        // Tool `aios_tools` milik sistem sendiri: dihitung ke grup alat (web, data, atau usulan), bukan konektor.
-        if (name.startsWith("mcp__") && aiosToolOf(name) == null) {
+        // Tool `aios_tools` dan browser worker milik sistem sendiri: dihitung ke grup alat, bukan konektor.
+        if (name.startsWith("mcp__") && aiosToolOf(name) == null && !name.startsWith("mcp__aios_browser_")) {
             connectors += name.split("__").getOrNull(1) ?: name
             continue
         }

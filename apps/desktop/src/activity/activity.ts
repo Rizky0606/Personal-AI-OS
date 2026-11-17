@@ -1,4 +1,9 @@
-import { AIOS_NETWORK_TOOLS, AIOS_PROPOSE_TOOLS, aiosToolOf } from '@aios/contracts';
+import {
+  AIOS_BROWSER_OMP_PREFIX,
+  AIOS_NETWORK_TOOLS,
+  AIOS_PROPOSE_TOOLS,
+  aiosToolOf,
+} from '@aios/contracts';
 
 /** Satu langkah tool agent, seperti yang tampil di pesan (live maupun tersimpan). */
 export interface ActivityStep {
@@ -9,7 +14,7 @@ export interface ActivityStep {
 }
 
 export type ToolKind =
-  'read' | 'edit' | 'search' | 'command' | 'web' | 'data' | 'propose' | 'other';
+  'read' | 'edit' | 'search' | 'command' | 'web' | 'data' | 'propose' | 'browser' | 'other';
 
 const READ = new Set(['read', 'cat', 'view', 'open']);
 const EDIT = new Set(['write', 'edit', 'patch', 'delete', 'rm', 'notebook', 'multiedit', 'create']);
@@ -26,14 +31,15 @@ const WEB = new Set([
 const COMMAND = new Set(['bash', 'shell', 'sh', 'exec', 'run', 'terminal']);
 
 /**
- * Jenis langkah menurut nama tool; tool gateway (`aios_tools`) jadi `web`, `data` (baca data sistem) atau `propose` (usulan), nama
- * tool MCP lain (`mcp__...`) dan yang tak dikenal jadi `other`.
+ * Jenis langkah menurut nama tool; tool gateway (`aios_tools`) jadi `web`, `data` (baca data sistem) atau `propose` (usulan),
+ * tool browser worker (`mcp__aios_browser_`) jadi `browser`, nama tool MCP lain (`mcp__...`) dan yang tak dikenal jadi `other`.
  */
 export function toolKind(name: string): ToolKind {
   const n = name.toLowerCase();
   if (READ.has(n)) return 'read';
   if (EDIT.has(n)) return 'edit';
   if (SEARCH.has(n)) return 'search';
+  if (n.startsWith(AIOS_BROWSER_OMP_PREFIX)) return 'browser';
   const gatewayTool = aiosToolOf(n);
   if (gatewayTool) {
     if (AIOS_NETWORK_TOOLS.includes(gatewayTool)) return 'web';
