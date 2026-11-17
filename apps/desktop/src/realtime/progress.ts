@@ -206,7 +206,11 @@ export function buildProgress(
   const connectors: string[] = [];
   for (const name of toolNames) {
     // Tool `aios_tools` dan browser worker milik sistem sendiri: dihitung ke grup alat, bukan konektor.
-    if (name.startsWith('mcp__') && !aiosToolOf(name) && !name.startsWith(AIOS_BROWSER_OMP_PREFIX)) {
+    if (
+      name.startsWith('mcp__') &&
+      !aiosToolOf(name) &&
+      !name.startsWith(AIOS_BROWSER_OMP_PREFIX)
+    ) {
       connectors.push(name.split('__')[1] ?? name);
       continue;
     }
