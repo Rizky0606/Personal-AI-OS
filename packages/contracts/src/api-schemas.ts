@@ -49,6 +49,13 @@ import {
 } from './events.js';
 import { MergeSkippedSchema, ReviewCommentSchema } from './worker.js';
 import { RichAnswerFollowUpSchema } from './rich-answers.js';
+import {
+  CONNECTOR_TOKEN_MAX,
+  CONNECTOR_TOOL_NAME_MAX,
+  CONNECTOR_TOOLS_MAX,
+  CONNECTOR_URL_MAX,
+  ConnectorNameSchema,
+} from './connectors.js';
 
 /*
  * Request dan response setiap endpoint REST (API_CONTRACT.md, "Endpoint REST").
@@ -1386,3 +1393,92 @@ export const ConversationProgressSchema = z
   })
   .meta({ id: 'ConversationProgress' });
 export type ConversationProgress = z.infer<typeof ConversationProgressSchema>;
+
+/*
+ * Konektor MCP pihak ketiga (docs/DESIGN_MCP_KONEKTOR.md). Token konektor TIDAK PERNAH ikut di respons
+ * mana pun: yang terlihat hanya `hasToken`. Permintaan buat/ubah menerimanya sebagai field tulis-saja.
+ */
+
+/** Satu tool di server konektor, seperti yang terbaca saat `probe` dan disetujui pemilik. */
+export const McpConnectorToolSchema = z
+  .object({
+    name: z.string().trim().min(1).max(CONNECTOR_TOOL_NAME_MAX),
+    /** Judul manusiawi dari server, bila ada. */
+    title: z.string().max(200).optional(),
+    description: z.string().max(2000),
+    /** JSON Schema masukan dari server, diteruskan apa adanya ke mesin agent. */
+    inputSchema: z.record(z.string(), z.unknown()),
+    /** `annotations.readOnlyHint === true`. Hint yang hilang dianggap menulis. */
+    readOnly: z.boolean(),
+  })
+  .meta({ id: 'McpConnectorTool' });
+export type McpConnectorTool = z.infer<typeof McpConnectorToolSchema>;
+
+export const McpConnectorSchema = z
+  .object({
+    id: IdSchema,
+    /** Slug yang ikut ke nama tool di mesin agent (`mcp__konektor_<name>_<tool>`). */
+    name: ConnectorNameSchema,
+    displayName: z.string().min(1).max(80),
+    url: z.string().max(CONNECTOR_URL_MAX),
+    /** Token statis tersimpan (nilainya tidak pernah dikembalikan). */
+    hasToken: z.boolean(),
+    enabled: z.boolean(),
+    /** Tool yang diizinkan pemilik; hanya ini yang dilihat agent. */
+    tools: z.array(McpConnectorToolSchema),
+    lastProbeAt: TimestampSchema.nullable(),
+    /** Pesan kegagalan terakhir (sudah dibersihkan dari rahasia); null bila sehat. */
+    lastError: z.string().nullable(),
+    createdAt: TimestampSchema,
+    updatedAt: TimestampSchema,
+  })
+  .meta({ id: 'McpConnector' });
+export type McpConnector = z.infer<typeof McpConnectorSchema>;
+
+export const McpConnectorListSchema = itemsOf(McpConnectorSchema).meta({ id: 'McpConnectorList' });
+
+/** Hasil `initialize` + `tools/list` terhadap server konektor; tidak menyimpan apa pun. */
+export const McpConnectorProbeSchema = z
+  .object({
+    url: z.string(),
+    serverName: z.string(),
+    serverVersion: z.string(),
+    protocolVersion: z.string(),
+    tools: z.array(McpConnectorToolSchema),
+    /** Server memberi lebih banyak tool daripada batas; sisanya dipotong. */
+    truncated: z.boolean(),
+  })
+  .meta({ id: 'McpConnectorProbe' });
+export type McpConnectorProbe = z.infer<typeof McpConnectorProbeSchema>;
+
+const ConnectorUrlSchema = z.string().trim().min(1).max(CONNECTOR_URL_MAX);
+const ConnectorTokenSchema = z.string().trim().min(1).max(CONNECTOR_TOKEN_MAX);
+
+/** Pratinjau sebelum menyimpan: URL dan token yang diketik pemilik, atau konektor tersimpan (tanpa body). */
+export const ProbeMcpConnectorRequestSchema = z
+  .object({ url: ConnectorUrlSchema, token: ConnectorTokenSchema.optional() })
+  .meta({ id: 'ProbeMcpConnectorRequest' });
+
+export const CreateMcpConnectorRequestSchema = z
+  .object({
+    name: ConnectorNameSchema,
+    displayName: z.string().trim().min(1).max(80),
+    url: ConnectorUrlSchema,
+    token: ConnectorTokenSchema.optional(),
+    tools: z.array(McpConnectorToolSchema).max(CONNECTOR_TOOLS_MAX),
+  })
+  .meta({ id: 'CreateMcpConnectorRequest' });
+
+/** Field yang tidak dikirim tidak berubah. `token: null` menghapus token tersimpan. */
+export const UpdateMcpConnectorRequestSchema = z
+  .object({
+    displayName: z.string().trim().min(1).max(80).optional(),
+    url: ConnectorUrlSchema.optional(),
+    token: ConnectorTokenSchema.nullable().optional(),
+    tools: z.array(McpConnectorToolSchema).max(CONNECTOR_TOOLS_MAX).optional(),
+  })
+  .meta({ id: 'UpdateMcpConnectorRequest' });
+
+export const SetMcpConnectorEnabledRequestSchema = z
+  .object({ enabled: z.boolean() })
+  .meta({ id: 'SetMcpConnectorEnabledRequest' });

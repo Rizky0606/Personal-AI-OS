@@ -6,10 +6,12 @@ import {
   AgentProposalSchema,
   ApproveAgentProposalRequestSchema,
   ApproveMemoryProposalRequestSchema,
+  McpConnectorSchema,
   MemoryProposalQuerySchema,
   MemoryProposalSchema,
   UpdateMemoryRequestSchema,
 } from './api-schemas.js';
+import { ConnectorNameSchema, connectorServerName, connectorToolOf } from './connectors.js';
 import { PageQuerySchema, ProblemSchema } from './common.js';
 import { MemorySchema, MessageSchema, RunSchema } from './entities.js';
 import { ID_A, ID_B, ID_C, TS } from './fixtures.js';
@@ -36,7 +38,7 @@ import {
   WebSearchInputSchema,
   aiosToolOf,
 } from './tools.js';
-import { WorkerCommandSchema } from './worker.js';
+import { RunStartCommandSchema, WorkerCommandSchema } from './worker.js';
 import { ChannelSchema, ClientMessageSchema, EventEnvelopeSchema } from './ws.js';
 
 /** Tabel "Endpoint REST" di docs/API_CONTRACT.md, satu baris per method + path. */
@@ -127,6 +129,15 @@ const DOCUMENTED_ENDPOINTS = [
   'GET /agent-proposals/:id',
   'POST /agent-proposals/:id/approve',
   'POST /agent-proposals/:id/reject',
+  'GET /mcp-connectors',
+  'POST /mcp-connectors',
+  'POST /mcp-connectors/probe',
+  'GET /mcp-connectors/:id',
+  'PATCH /mcp-connectors/:id',
+  'DELETE /mcp-connectors/:id',
+  'POST /mcp-connectors/:id/enable',
+  'POST /mcp-connectors/:id/probe',
+  'POST /mcp/connector/:id',
   'GET /spaces',
   'POST /spaces',
   'PATCH /spaces/:id',
@@ -335,6 +346,69 @@ describe('protokol worker', () => {
     expect(parsed).toMatchObject({ gatewayTools: true });
     expect(WorkerCommandSchema.parse(start)).not.toHaveProperty('gatewayTools');
     expect(WorkerCommandSchema.safeParse({ ...start, gatewayTools: 'ya' }).success).toBe(false);
+  });
+});
+
+describe('konektor MCP pihak ketiga', () => {
+  it('memecah nama tool omp menjadi slug konektor dan nama tool', () => {
+    expect(connectorToolOf('mcp__konektor_github_create_issue')).toEqual({
+      connector: 'github',
+      tool: 'create_issue',
+    });
+    expect(connectorToolOf(' MCP__KONEKTOR_LINEAR2_SEARCH ')).toEqual({
+      connector: 'linear2',
+      tool: 'search',
+    });
+    // Tool tanpa garis bawah tetap terbaca.
+    expect(connectorToolOf('mcp__konektor_notion_search')).toEqual({
+      connector: 'notion',
+      tool: 'search',
+    });
+  });
+
+  it('menolak nama di luar konektor terdaftar dan slug yang tidak sah', () => {
+    expect(connectorToolOf('mcp__github__create_issue')).toBeNull();
+    expect(connectorToolOf('mcp__aios_tools_web_search')).toBeNull();
+    expect(connectorToolOf('mcp__aios_browser_browser_screenshot')).toBeNull();
+    expect(connectorToolOf('create_issue')).toBeNull();
+    // Tanpa nama tool setelah slug.
+    expect(connectorToolOf('mcp__konektor_github')).toBeNull();
+    // Slug diawali angka, atau memuat tanda hubung: tidak bisa dipecah pasti.
+    expect(connectorToolOf('mcp__konektor_9gag_post')).toBeNull();
+    expect(connectorToolOf('mcp__konektor__kosong')).toBeNull();
+  });
+
+  it('nama server MCP dan slug konsisten', () => {
+    expect(connectorServerName('github')).toBe('konektor_github');
+    expect(connectorToolOf(`mcp__${connectorServerName('github')}_list_repos`)).toEqual({
+      connector: 'github',
+      tool: 'list_repos',
+    });
+    expect(ConnectorNameSchema.safeParse('github').success).toBe(true);
+    expect(ConnectorNameSchema.safeParse('git_hub').success).toBe(false);
+    expect(ConnectorNameSchema.safeParse('git-hub').success).toBe(false);
+    expect(ConnectorNameSchema.safeParse('g').success).toBe(false);
+  });
+
+  it('run.start membawa identitas konektor saja, tanpa url dan token', () => {
+    const parsed = RunStartCommandSchema.parse({
+      type: 'run.start',
+      runId: '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f',
+      projectId: '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e01',
+      prompt: 'halo',
+      bundle: { role: 'general', systemPrompt: '', skillIds: [] },
+      model: 'default',
+      connectors: [
+        { id: '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e02', name: 'github', displayName: 'GitHub' },
+      ],
+    });
+    expect(parsed.connectors).toHaveLength(1);
+    expect(Object.keys(parsed.connectors?.[0] ?? {})).toEqual(['id', 'name', 'displayName']);
+  });
+
+  it('konektor tidak pernah mengembalikan token lewat API', () => {
+    expect('token' in McpConnectorSchema.shape).toBe(false);
+    expect('hasToken' in McpConnectorSchema.shape).toBe(true);
   });
 });
 
