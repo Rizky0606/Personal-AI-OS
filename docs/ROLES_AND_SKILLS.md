@@ -83,7 +83,7 @@ Registri menolak file yang tidak valid (gateway gagal start, atau di mode dev pe
 | Skill | Isi aturan |
 | --- | --- |
 | `scope-guard` | Agent dan skill adalah keahlian, bukan batas izin: kerjakan permintaan apa pun semampu alat yang ada. Bila satu langkah butuh alat yang tidak tersedia, kerjakan semua yang bisa lalu sebut cara menyelesaikan sisanya; tempat lain hanya disarankan sebagai tambahan. Jangan menyentuh file atau topik yang tidak diminta |
-| `read-context-first` | Coding: baca AGENTS.md, struktur folder, file terkait. Umum: baca pesan sebelumnya dan memori relevan. Baru menulis setelah itu |
+| `read-context-first` | Coding: lihat struktur folder dulu (list/glob), baca file terkait; AGENTS.md, README, dan sejenisnya hanya dibaca bila ada di daftar berkas (AGENTS.md project biasanya sudah ada di konteks omp), jadi tidak ada baca gagal untuk berkas yang tidak ada. Umum: baca pesan sebelumnya dan memori relevan. Baru menulis setelah itu |
 | `plan-before-edit` | Tugas lebih dari satu file atau ambigu: rencana bernomor 3–7 langkah dulu, maksimal satu pertanyaan klarifikasi |
 | `verify-before-done` | Coding: jalankan typecheck, lint, tes terkait, sebutkan hasilnya. Riset: setiap klaim punya sumber. Dilarang mengklaim selesai tanpa bukti |
 | `minimal-diff` | Ubah sesedikit mungkin, ikuti konvensi yang ada, tanpa refactor yang tidak diminta, tanpa dependensi baru tanpa alasan |
@@ -103,6 +103,7 @@ Registri menolak file yang tidak valid (gateway gagal start, atau di mode dev pe
 | `citation` | Setiap paragraf faktual ditutup rujukan [n] ke daftar sumber |
 | `stop-slop` | Hindari frasa klise AI, kalimat pendek dan spesifik, sesuai suara pengguna |
 | `script-structure` | Hook 3 detik, satu ide per adegan, penutup dengan ajakan yang jelas |
+| `find-skills` | Hanya bila pemilik secara eksplisit meminta mencari, merekomendasikan, atau memasang skill: cari dengan `npx skills find`, nilai, sajikan maksimal tiga opsi; tidak pernah memasang sendiri. Tugas biasa tidak memicu pencarian skill |
 
 Format skill: `packages/roles/skills/<id>/SKILL.md` dengan frontmatter `name` dan `description`, isi berupa checklist singkat. Anggaran awal: total skill yang disuntik per run maksimal sekitar 4.000 token; skill tambahan dimuat hanya bila relevan.
 
