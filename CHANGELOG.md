@@ -47,6 +47,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/); ve
 - **Worktree yatim dibersihkan:** worktree dari run yang dihentikan, gagal, atau terputus (termasuk sisa versi lama tanpa catatan di `.aios-worktrees`/folder data worker) dihapus saat worker mulai; branch `aios/*`-nya hanya dihapus bila commit ujungnya juga ada di branch lain.
 - **Ref checkpoint per id run** (`refs/aios/cp/<id run>`), tidak lagi diturunkan dari nama branch.
 - **Galat terima/tolak tinjauan tampil di dalam dialog** (desktop): bila Terima, Tolak semua, Batalkan perubahan file, atau Kembali ke checkpoint gagal, pesannya tampil di dialog yang tetap terbuka (bukan toast 4 detik di belakang overlay) dan menyebut aksi yang belum terjadi ("Perubahan belum dibuang.", "Perubahan belum diterima.", …). `worker_offline` dari gateway kini dijelaskan sebagai worker pemegang folder kerja run yang tidak tersambung, bukan "perubahan belum bisa dibaca". Tombol aksi bisa ditekan lagi untuk mencoba ulang; menutup dialog membuang galat lama.
+- **Kartu kanban menunjukkan run yang menunggu pemilik** (desktop): kartu Running kini mengikuti run-nya secara live, jadi run yang menunggu izin tampil "Menunggu izin" (titik peringatan) dengan tombol "Buka run" yang membuka percakapan run tempat izin dijawab; kartu Review menampilkan "Menunggu tinjauan". "Buka run" juga ada di menu kartu dan di dialog kartu yang sedang dikerjakan.
 
 ## [1.1.0] - 2026-11-15
 

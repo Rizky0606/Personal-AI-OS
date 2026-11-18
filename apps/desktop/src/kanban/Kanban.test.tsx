@@ -1,12 +1,12 @@
 import type { Project, Task } from '@aios/contracts';
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiProblem } from '../auth/authSession';
 import { copy } from '../copy';
 import { useUiStore } from '../state/uiStore';
-import { api, resetApi } from '../test/fakeServices';
-import { TS, roles, uid } from '../test/fixtures';
+import { api, emit, fakeRealtime, resetApi } from '../test/fakeServices';
+import { TS, roles, run, uid } from '../test/fixtures';
 import { renderScreen } from '../test/render';
 
 vi.mock('../app/services', async () => (await import('../test/fakeServices')).fakeServices);
@@ -475,6 +475,70 @@ describe('KanbanScreen: tampilan sesi 6', () => {
       () =>
         expect(screen.getByRole('article', { name: 'Satu' })).not.toHaveAttribute('data-landed'),
       { timeout: 1500 },
+    );
+  });
+});
+
+describe('KanbanScreen: run kartu yang menunggu pemilik', () => {
+  it('run kartu menunggu izin: kartu menandainya dan Buka run membuka percakapan run', async () => {
+    const runId = uid();
+    const conversationId = uid();
+    api.listTasks.mockResolvedValue([task({ title: 'Butuh izin', status: 'running', runId })]);
+    api.getRun.mockResolvedValue(
+      run({ id: runId, conversationId, taskId: uid(), status: 'waiting_approval' }),
+    );
+    const user = userEvent.setup();
+    const { router } = await renderScreen(<KanbanScreen />, '/kanban');
+
+    const card = await screen.findByRole('article', { name: 'Butuh izin' });
+    expect(within(card).queryByRole('button', { name: copy.kanban.openRun })).toBeNull();
+    await waitFor(() =>
+      expect(fakeRealtime.subscribe).toHaveBeenCalledWith(`run:${runId}`, expect.any(Function)),
+    );
+    act(() =>
+      emit(`run:${runId}`, {
+        type: 'approval.requested',
+        approvalId: uid(),
+        kind: 'command',
+        detail: 'npm test',
+      }),
+    );
+
+    expect(
+      await within(card).findByRole('button', {
+        name: new RegExp(`^${copy.kanban.status.waitingApproval}:\\s*Butuh izin$`),
+      }),
+    ).toBeInTheDocument();
+    await user.click(within(card).getByRole('button', { name: copy.kanban.openRun }));
+
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe(`/workspace/${PROJECT}/${conversationId}`),
+    );
+  });
+
+  it('kartu Review menampilkan Menunggu tinjauan; kartu Running bisa dibuka ke run dari dialog dan menu', async () => {
+    const runId = uid();
+    const conversationId = uid();
+    api.listTasks.mockResolvedValue([
+      task({ title: 'Siap tinjau', status: 'review', runId: uid() }),
+      task({ title: 'Masih jalan', status: 'running', runId }),
+    ]);
+    api.getRun.mockResolvedValue(run({ id: runId, conversationId, status: 'running' }));
+    const user = userEvent.setup();
+    const { router } = await renderScreen(<KanbanScreen />, '/kanban');
+
+    const review = await screen.findByRole('article', { name: 'Siap tinjau' });
+    expect(within(review).getByText(copy.kanban.status.review)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: copy.kanban.cardMenu('Siap tinjau') }));
+    expect(await screen.findByRole('menuitem', { name: copy.kanban.openRun })).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+
+    await user.click(screen.getByRole('button', { name: titleOf('Masih jalan') }));
+    const dialog = await screen.findByRole('dialog', { name: copy.kanban.dialog.viewTitle });
+    await user.click(within(dialog).getByRole('button', { name: copy.kanban.openRun }));
+
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe(`/workspace/${PROJECT}/${conversationId}`),
     );
   });
 });
