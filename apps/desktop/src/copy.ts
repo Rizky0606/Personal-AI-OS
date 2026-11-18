@@ -1099,6 +1099,7 @@ export const copy = {
     cwd: 'Folder kerja',
     allowOnce: 'Izinkan sekali',
     allowAlways: 'Selalu untuk project ini',
+    allowRunWrites: 'Izinkan tulis berkas untuk run ini',
     deny: 'Tolak',
     waiting: 'Run menunggu jawaban Anda.',
     failed: 'Keputusan belum terkirim.',

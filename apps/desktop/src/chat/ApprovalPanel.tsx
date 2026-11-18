@@ -8,7 +8,8 @@ export interface ApprovalPanelProps {
   approval: PendingApproval;
   /** Keputusan sedang dikirim; tombol dinonaktifkan supaya tidak terkirim dua kali. */
   busy: boolean;
-  onResolve: (decision: 'allow' | 'deny', remember: boolean) => void;
+  /** `forRun`: "Izinkan tulis berkas untuk run ini" (hanya izin tulis berkas). */
+  onResolve: (decision: 'allow' | 'deny', remember: boolean, forRun?: boolean) => void;
 }
 
 /**
@@ -50,6 +51,11 @@ export function ApprovalPanel({ approval, busy, onResolve }: ApprovalPanelProps)
         <Button variant="secondary" disabled={busy} onClick={() => onResolve('allow', true)}>
           {gatewayTool ? copy.approval.allowAlwaysTool(gatewayTool) : copy.approval.allowAlways}
         </Button>
+        {approval.kind === 'file_write' ? (
+          <Button variant="secondary" disabled={busy} onClick={() => onResolve('allow', false, true)}>
+            {copy.approval.allowRunWrites}
+          </Button>
+        ) : null}
         <Button variant="danger" disabled={busy} onClick={() => onResolve('deny', false)}>
           {copy.approval.deny}
         </Button>

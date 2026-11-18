@@ -324,11 +324,14 @@ export function createGatewayApi(call: Call) {
     getRun: (id: string) => get(`/runs/${id}`, RunSchema),
     /** Run coding terbaru dengan judul dan project, untuk Ruang Kerja. */
     listRuns: async () => (await get('/runs?kind=coding&limit=100', WorkspaceRunListSchema)).items,
-    /** Keputusan atas permintaan izin agent; `remember` = selalu izinkan untuk project ini. */
+    /**
+     * Keputusan atas permintaan izin agent; `remember` = selalu izinkan untuk project ini, `forRun` = izinkan tulis
+     * berkas di folder run ini sampai run selesai.
+     */
     resolveApproval: (
       runId: string,
       approvalId: string,
-      input: { decision: 'allow' | 'deny'; remember: boolean },
+      input: { decision: 'allow' | 'deny'; remember: boolean; forRun?: boolean },
     ) =>
       get(`/runs/${runId}/approvals/${approvalId}`, ApprovalSchema, {
         method: 'POST',
