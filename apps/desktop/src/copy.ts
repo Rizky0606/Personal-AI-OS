@@ -215,6 +215,12 @@ export const copy = {
       active: 'Berjalan',
       failed: 'Gagal',
       activeRuns: 'Run berjalan',
+      /** Tool aplikasi (`aios_tools`) untuk agent; dari `agentTools` di GET /status. */
+      agentTools: 'Tool aplikasi untuk agent',
+      agentToolsHermes: 'Hermes (chat umum)',
+      agentToolsOn: 'Tersambung ke aios_tools: agent bisa mengusulkan memori dan jadwal.',
+      agentToolsOff:
+        'Belum tersambung ke aios_tools: chat umum tidak bisa mengusulkan memori atau jadwal. Pakai tombol Ingat di pesan dan layar Jadwal.',
       overall: {
         ok: 'Semua dependensi terjangkau.',
         degraded: 'Ada dependensi yang bermasalah.',
@@ -1411,7 +1417,11 @@ export const copy = {
     web: {
       chip: 'Cari di web',
       chipHint:
-        'Cari informasi di internet untuk pesan berikutnya dan sertakan hasilnya sebagai bahan jawaban. Pilihan ini diingat.',
+        'Cari informasi di internet untuk pesan di percakapan ini dan sertakan hasilnya sebagai bahan jawaban. Chat baru selalu mulai tanpa pencarian web.',
+      /** Chip di composer selama Cari di web menyala untuk percakapan ini. */
+      active: 'Web',
+      activeHint: 'Cari di web menyala untuk percakapan ini.',
+      off: 'Matikan Cari di web',
     },
     skills: {
       chip: 'Skill',
@@ -1938,6 +1948,15 @@ export const copy = {
       approved: 'Jadwal dibuat.',
       approvedDisabled: 'Jadwal dibuat dalam keadaan nonaktif.',
     },
+  },
+  /** Cadangan untuk blok `aios-ui` yang tidak lolos validasi: data tampil tanpa JSON mentah. */
+  richFallback: {
+    region: 'Komponen jawaban yang tidak dapat ditampilkan',
+    note: 'Komponen tidak dapat ditampilkan.',
+    noteWithData: 'Komponen tidak dapat ditampilkan; datanya:',
+    showRaw: 'Lihat data mentah',
+    columnLabel: 'Label',
+    columnValue: 'Nilai',
   },
   toast: { close: 'Tutup' },
 } as const;

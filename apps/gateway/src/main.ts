@@ -382,6 +382,11 @@ async function main(): Promise<void> {
       health,
       isWorkerOnline: (id) => workerHub.isOnline(id),
       queues: boss,
+      // Hermes hanya tersambung ke aios_tools bila MCP menyala DAN principal Hermes dikonfigurasi.
+      agentTools: {
+        mcp: config.MCP_TOOLS_ENABLED === 'true',
+        hermes: config.MCP_TOOLS_ENABLED === 'true' && Boolean(config.MCP_HERMES_TOKEN_SHA256),
+      },
     }),
     worker: { hub: workerHub, relay: workerRelay },
     ws: {

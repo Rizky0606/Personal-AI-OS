@@ -509,6 +509,10 @@ export async function createAuthEnv(
     health: { readiness: () => Promise.resolve(READY) },
     isWorkerOnline: (id) => workerHub.isOnline(id),
     queues: boss,
+    agentTools: {
+      mcp: options.mcpTools !== undefined,
+      hermes: Boolean(options.mcpTools?.hermesTokenSha256),
+    },
     now,
   });
   const agentProposals = createAgentProposalService({ db, hub, tasks, schedules, push, now });
