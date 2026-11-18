@@ -222,6 +222,16 @@ describe('run coding lewat worker', () => {
       status: 'pending',
     });
 
+    // "Untuk run ini" hanya untuk izin tulis berkas yang diizinkan (ini izin perintah): 400, izin tetap menunggu.
+    const scoped = await env.post(
+      `/runs/${run.id}/approvals/${APPROVAL_ID}`,
+      { decision: 'allow', forRun: true },
+      desktop,
+    );
+    expect(scoped.statusCode).toBe(400);
+    expect(problem(scoped).code).toBe('approval_scope_invalid');
+    expect(fake.command('approval.resolve')).toBeUndefined();
+
     const decided = await env.post(
       `/runs/${run.id}/approvals/${APPROVAL_ID}`,
       { decision: 'allow', remember: true },
@@ -245,7 +255,8 @@ describe('run coding lewat worker', () => {
       type: 'approval.resolved',
       approvalId: APPROVAL_ID,
       decision: 'allow',
-      remember: false,
+      // Worker mencatat aturan yang tersimpan (B9).
+      remember: true,
     });
     await until(async () => (await statusOf(run.id)) === 'running', 'kembali running');
     fake.emit(run.id, {

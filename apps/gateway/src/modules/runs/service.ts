@@ -44,7 +44,7 @@ export interface RunsService {
     actorDeviceId: string,
     runId: string,
     approvalId: string,
-    input: { decision: 'allow' | 'deny'; remember: boolean },
+    input: { decision: 'allow' | 'deny'; remember: boolean; forRun?: boolean },
   ): Promise<Approval>;
   /** Mengarahkan agent yang sedang berjalan dengan teks baru. */
   steer(runId: string, text: string, mode?: SteerMode): Promise<void>;
@@ -209,7 +209,7 @@ export function createRunsService(deps: {
       return toRunDto(await load(id));
     },
 
-    async resolveApproval(actorDeviceId, runId, approvalId, { decision, remember }) {
+    async resolveApproval(actorDeviceId, runId, approvalId, { decision, remember, forRun = false }) {
       const [row] = await db
         .select()
         .from(approvals)
@@ -222,8 +222,16 @@ export function createRunsService(deps: {
           'Permintaan izin ini sudah diputuskan.',
         );
       }
+      // "Untuk run ini" hanya untuk izin tulis berkas yang diizinkan, dan bukan sekaligus aturan "Selalu".
+      if (forRun && (decision !== 'allow' || remember || row.kind !== 'file_write')) {
+        throw new AppError(
+          400,
+          'approval_scope_invalid',
+          'Izin untuk run ini hanya berlaku untuk mengizinkan tulis berkas, tanpa "Selalu".',
+        );
+      }
       try {
-        const outcome = await runner.resolveApproval(runId, approvalId, decision, remember);
+        const outcome = await runner.resolveApproval(runId, approvalId, decision, remember, forRun);
         if (outcome === 'inactive') {
           throw new AppError(409, 'run_not_active', 'Run ini tidak sedang berjalan di gateway.');
         }
@@ -245,7 +253,7 @@ export function createRunsService(deps: {
       await writeAudit(db, {
         actorDeviceId,
         action: 'approval.decided',
-        target: `approval:${approvalId} ${decision}${remember ? ' remember' : ''}`,
+        target: `approval:${approvalId} ${decision}${remember ? ' remember' : ''}${forRun ? ' run' : ''}`,
       });
       return toApprovalDto(updated ?? row);
     },

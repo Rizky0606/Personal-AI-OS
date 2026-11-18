@@ -94,6 +94,8 @@ export const ApprovalResolveCommandSchema = z.object({
   approvalId: IdSchema,
   decision: ApprovalDecisionSchema,
   remember: z.boolean(),
+  /** Izinkan semua penulisan berkas di dalam folder kerja run ini (bukan `.git`), hanya untuk run ini. */
+  forRun: z.boolean().optional(),
 });
 
 export const QuestionAnswerCommandSchema = z.object({

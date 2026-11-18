@@ -212,7 +212,7 @@ export function createWorkerRelayAdapter(options: WorkerRelayOptions): AgentAdap
             .send(projectId, { type: 'run.cancel', runId: input.runId })
             .catch(end);
         },
-        async resolveApproval(id, decision, remember = false) {
+        async resolveApproval(id, decision, remember = false, forRun = false) {
           if (ended) throw new AdapterError('run_finished', 'Run sudah selesai.');
           await options.relay.send(projectId, {
             type: 'approval.resolve',
@@ -220,6 +220,7 @@ export function createWorkerRelayAdapter(options: WorkerRelayOptions): AgentAdap
             approvalId: id,
             decision,
             remember,
+            ...(forRun ? { forRun: true } : {}),
           });
         },
         async answerQuestion(questionId, { answers, cancelled }) {

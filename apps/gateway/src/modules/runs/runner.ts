@@ -115,6 +115,7 @@ export interface Runner {
     approvalId: string,
     decision: 'allow' | 'deny',
     remember: boolean,
+    forRun?: boolean,
   ): Promise<'ok' | 'inactive'>;
   /** Mengarahkan agent yang sedang berjalan. Melempar AdapterError bila mesin tidak mendukung. */
   steer(runId: string, text: string, mode?: SteerMode): Promise<'ok' | 'inactive'>;
@@ -904,10 +905,10 @@ export function createRunner(deps: RunnerDeps): Runner {
       return true;
     },
 
-    async resolveApproval(runId, approvalId, decision, remember) {
+    async resolveApproval(runId, approvalId, decision, remember, forRun = false) {
       const handle = active.get(runId)?.handle;
       if (!handle) return 'inactive';
-      await handle.resolveApproval(approvalId, decision, remember);
+      await handle.resolveApproval(approvalId, decision, remember, forRun);
       return 'ok';
     },
 

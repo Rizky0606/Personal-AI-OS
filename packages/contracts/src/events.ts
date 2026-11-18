@@ -86,7 +86,10 @@ export const ApprovalResolvedEventSchema = z.object({
   type: z.literal('approval.resolved'),
   approvalId: IdSchema,
   decision: ApprovalDecisionSchema,
+  /** Aturan "Selalu untuk project ini" tersimpan di worker untuk izin ini. */
   remember: z.boolean(),
+  /** Dijawab "Izinkan tulis berkas untuk run ini": penulisan berkas berikutnya di folder run diizinkan otomatis. */
+  forRun: z.boolean().optional(),
 });
 
 export const DiffFileSchema = z.object({

@@ -73,7 +73,16 @@ export interface RunHandle {
   /** Menarik arahan dari antrean agent sebelum diproses (`text` persis seperti di `queue.updated`). */
   removeQueued(queue: QueueName, text: string): Promise<void>;
   cancel(): Promise<void>;
-  resolveApproval(id: string, decision: 'allow' | 'deny', remember?: boolean): Promise<void>;
+  /**
+   * `forRun`: "Izinkan tulis berkas untuk run ini" (hanya dipakai relay worker; worker yang menegakkannya).
+   * Adapter lain mengabaikannya.
+   */
+  resolveApproval(
+    id: string,
+    decision: 'allow' | 'deny',
+    remember?: boolean,
+    forRun?: boolean,
+  ): Promise<void>;
   /** Menjawab pertanyaan agent (`question.asked`); `cancelled` membuat agent memakai pilihan yang direkomendasikan. */
   answerQuestion(
     questionId: string,

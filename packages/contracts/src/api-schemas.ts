@@ -813,6 +813,11 @@ export const ApprovalDecisionRequestSchema = z
   .object({
     decision: ApprovalDecisionSchema,
     remember: z.boolean().default(false),
+    /**
+     * "Izinkan tulis berkas untuk run ini": hanya untuk izin `file_write` dengan keputusan `allow`, tidak bersama
+     * `remember`. Penulisan berikutnya di dalam folder kerja run (bukan `.git`) diizinkan otomatis sampai run selesai.
+     */
+    forRun: z.boolean().default(false),
   })
   .meta({ id: 'ApprovalDecisionRequest' });
 
