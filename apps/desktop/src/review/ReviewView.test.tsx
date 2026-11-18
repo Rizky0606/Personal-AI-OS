@@ -98,9 +98,16 @@ const open = async () => {
 describe('Tinjau perubahan: tampilan', () => {
   it('tanpa run yang menunggu tinjauan: petunjuk; dengan run: ringkasan, branch, dan file', async () => {
     useUiStore.getState().setReviewRunId(null);
-    const view = await renderScreen(<DiffPanel />);
+    const view = await renderScreen(<DiffPanel />, '/kanban');
     expect(await screen.findByText(copy.review.empty)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: copy.review.openKanban })).toBeInTheDocument();
     view.unmount();
+    // Di chat project, tab Diff tidak menawarkan papan kartu: hasil datang dari pesan di chat ini.
+    const chat = await renderScreen(<DiffPanel />, `/workspace/${uid()}`);
+    expect(await screen.findByText(copy.review.emptyChat)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: copy.review.writeMessage })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: copy.review.openKanban })).toBeNull();
+    chat.unmount();
     useUiStore.getState().setReviewRunId(RUN);
 
     await open();
@@ -643,10 +650,10 @@ describe('Tinjau perubahan: pendapat kedua', () => {
 });
 
 describe('Tinjau perubahan: aksi keadaan kosong', () => {
-  it('tanpa run: tombol Buka papan kartu menuju /kanban', async () => {
+  it('tanpa run di luar chat: tombol Buka papan kartu menuju /kanban', async () => {
     useUiStore.getState().setReviewRunId(null);
     const user = userEvent.setup();
-    const { router } = await renderScreen(<DiffPanel />);
+    const { router } = await renderScreen(<DiffPanel />, '/schedules');
     await user.click(await screen.findByRole('button', { name: copy.review.openKanban }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/kanban'));
   });

@@ -213,3 +213,20 @@ describe('ConnectionBanner (state shell: sukses, galat gateway, luring)', () => 
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });
+
+describe('Topbar: chat project', () => {
+  it('judul berupa nama project: chip hanya branch; chip tidak dipotong melainkan disembunyikan bila tidak muat', async () => {
+    useUiStore.setState({ activeProjectId: project.id, activeRunBranch: 'aios/7a574430' });
+    await renderTopbar({ title: 'Toko Online', projectInTitle: true });
+    const group = screen.getByRole('group', { name: copy.shell.location });
+    expect(await within(group).findByText('aios/7a574430')).toBeInTheDocument();
+    expect(within(group).getAllByText('Toko Online')).toHaveLength(1);
+    for (const chip of group.querySelectorAll('[data-chip]')) {
+      expect(chip).toHaveClass('shrink-0');
+    }
+    expect(group.querySelector('[data-chip]')?.parentElement).toHaveClass(
+      'flex-wrap',
+      'overflow-hidden',
+    );
+  });
+});

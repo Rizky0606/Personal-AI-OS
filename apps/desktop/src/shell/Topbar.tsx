@@ -61,7 +61,7 @@ function Chip({
     <span
       data-chip
       title={hint}
-      className="inline-flex h-7 min-w-0 max-w-56 items-center gap-2 rounded-badge bg-surface-2 px-2 text-meta text-text-2"
+      className="inline-flex h-7 max-w-56 min-w-0 shrink-0 items-center gap-2 rounded-badge bg-surface-2 px-2 text-meta text-text-2"
     >
       {icon}
       <span className="truncate">{children}</span>
@@ -73,6 +73,8 @@ export interface TopbarProps {
   title: string;
   /** Layar chat: tampilkan project aktif, branch, dan model. */
   chat: boolean;
+  /** Judul sudah berupa nama project (chat project): chip project hanya menampilkan branch. */
+  projectInTitle?: boolean;
   /** Aksi utama bagian ini (Chat baru, Riset baru). */
   action?: { label: string; onSelect: () => void } | undefined;
   rightPanelOpen: boolean;
@@ -84,7 +86,14 @@ export interface TopbarProps {
  * agent selama run berjalan) dan model, lalu di kanan indikator koneksi, aksi konteks bagian ini, dan tombol panel
  * kanan. Judul, project, dan model satu grup "Lokasi saat ini".
  */
-export function Topbar({ title, chat, action, rightPanelOpen, onToggleRightPanel }: TopbarProps) {
+export function Topbar({
+  title,
+  chat,
+  projectInTitle = false,
+  action,
+  rightPanelOpen,
+  onToggleRightPanel,
+}: TopbarProps) {
   const activeProjectId = useUiStore((s) => s.activeProjectId);
   const runBranch = useUiStore((s) => s.activeRunBranch);
   const modelId = useUiStore((s) => s.model);
@@ -104,21 +113,29 @@ export function Topbar({ title, chat, action, rightPanelOpen, onToggleRightPanel
       <div
         role="group"
         aria-label={copy.shell.location}
-        className="flex min-w-0 items-center gap-3"
+        className="flex min-w-0 flex-1 items-center gap-3"
       >
-        <h1 className="min-w-0 shrink truncate text-section font-semibold text-text">{title}</h1>
+        <h1 className="max-w-64 shrink-0 truncate text-section font-semibold text-text">{title}</h1>
         {chat ? (
-          <div className="flex min-w-0 items-center gap-2">
-            <Chip
-              icon={
-                <FolderGit2 size={14} strokeWidth={1.5} aria-hidden="true" className="shrink-0" />
-              }
-            >
-              {project?.name ?? copy.status.project}
-              {branch ? (
-                <span className="ml-2 font-mono text-caption text-text-3">{branch}</span>
-              ) : null}
-            </Chip>
+          // Chip tidak pernah dipotong jadi "Proje…": yang tidak muat turun ke baris kedua yang tersembunyi
+          // (urut prioritas: project/branch, Berjalan, agent, model). Model tetap terlihat di composer.
+          <div className="flex h-7 min-w-0 flex-1 flex-wrap items-center gap-x-2 overflow-hidden">
+            {projectInTitle && !branch ? null : (
+              <Chip
+                icon={
+                  <FolderGit2 size={14} strokeWidth={1.5} aria-hidden="true" className="shrink-0" />
+                }
+              >
+                {projectInTitle ? null : (project?.name ?? copy.status.project)}
+                {branch ? (
+                  <span
+                    className={cn('font-mono text-caption text-text-3', !projectInTitle && 'ml-2')}
+                  >
+                    {branch}
+                  </span>
+                ) : null}
+              </Chip>
+            )}
             {runBranch !== null ? (
               <span className="inline-flex h-7 shrink-0 items-center gap-2 rounded-badge bg-accent-soft px-2 text-meta text-text">
                 <span

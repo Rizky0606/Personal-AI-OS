@@ -752,6 +752,7 @@ export const copy = {
     listLabel: 'Daftar project',
     loading: 'Memuat project',
     empty: 'Belum ada project. Pilih folder project untuk mendaftarkannya.',
+    emptySidebar: 'Belum ada project. Tambahkan lewat tombol Tambah project di area utama.',
     add: 'Tambah project',
     workerOff:
       'Worker belum tersambung. Project belum bisa ditambahkan, tetapi daftar tetap tampil.',
@@ -1134,6 +1135,9 @@ export const copy = {
       'Run dihentikan sebelum selesai, jadi perubahannya mungkin setengah jadi. Periksa dulu sebelum menerima.',
     open: 'Tinjau perubahan',
     empty: 'Belum ada perubahan untuk ditinjau. Hasil run coding muncul di sini.',
+    emptyChat:
+      'Belum ada perubahan untuk ditinjau. Minta agent mengubah kode lewat pesan; hasilnya muncul di sini.',
+    writeMessage: 'Tulis pesan',
     noChanges: 'Agent tidak mengubah file apa pun.',
     loading: 'Memuat perubahan…',
     workerOffline: 'Worker di PC ini belum tersambung, jadi perubahan belum bisa dibaca.',

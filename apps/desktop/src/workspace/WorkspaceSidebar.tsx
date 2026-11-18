@@ -11,6 +11,7 @@ import { copy } from '../copy';
 import { cn } from '../lib/cn';
 import { Button } from '../ui/Button';
 import { IconButton } from '../ui/IconButton';
+import { InfoNote } from '../ui/InfoNote';
 import { StateView, type ViewState } from '../ui/StateView';
 import { useProjects } from '../worker/hooks';
 import { isLiveRun, needsAttention, statusDotClass, type WorkspaceRun } from './runs';
@@ -120,8 +121,8 @@ function ProjectGroup({
  * Sidebar tab Project: semua project terdaftar, masing-masing dengan percakapannya dan penanda run yang
  * sedang berjalan. Memilih project atau percakapan membuka chat sesuai folder project itu.
  *
- * `addInMain`: layar utama (Kelola project) sudah punya tombol tambah, jadi keadaan kosong di sini hanya menawarkan
- * muat ulang: satu aksi tambah per layar, di area utama.
+ * `addInMain`: layar utama (Kelola project) sudah punya tombol tambah, jadi keadaan kosong di sini hanya petunjuk
+ * tanpa aksi: satu aksi tambah per layar, di area utama.
  */
 export function WorkspaceSidebar({ addInMain = false }: { addInMain?: boolean }) {
   const projects = useProjects();
@@ -143,39 +144,39 @@ export function WorkspaceSidebar({ addInMain = false }: { addInMain?: boolean })
   return (
     <div className="flex h-full flex-col">
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <StateView
-          state={view}
-          loadingLabel={copy.projects.loading}
-          emptyMessage={copy.projects.empty}
-          emptyAction={
-            addInMain ? (
-              <Button variant="secondary" onClick={() => void projects.refetch()}>
-                {copy.states.retry}
-              </Button>
-            ) : (
+        {view === 'empty' && addInMain ? (
+          // Layar Kelola project sudah punya tombol Tambah project; di sini cukup petunjuk tanpa aksi
+          // ("Coba lagi" untuk daftar yang memang kosong menyesatkan).
+          <InfoNote message={copy.projects.emptySidebar} />
+        ) : (
+          <StateView
+            state={view}
+            loadingLabel={copy.projects.loading}
+            emptyMessage={copy.projects.empty}
+            emptyAction={
               <Button variant="secondary" onClick={() => setDialogOpen(true)}>
                 <Plus size={14} strokeWidth={1.5} aria-hidden="true" />
                 {copy.projects.add}
               </Button>
-            )
-          }
-          errorMessage={projects.isError ? apiErrorMessage(projects.error, online) : ''}
-          offlineMessage={copy.states.offline}
-          retryLabel={copy.states.retry}
-          onRetry={() => void projects.refetch()}
-        >
-          <ul aria-label={copy.projects.listLabel} className="flex flex-col gap-0.5 p-2">
-            {list.map((project) => (
-              <ProjectGroup
-                key={project.id}
-                project={project}
-                selected={params.projectId === project.id}
-                activeConversationId={params.conversationId}
-                live={liveRunOf(runs.data ?? [], project.id)}
-              />
-            ))}
-          </ul>
-        </StateView>
+            }
+            errorMessage={projects.isError ? apiErrorMessage(projects.error, online) : ''}
+            offlineMessage={copy.states.offline}
+            retryLabel={copy.states.retry}
+            onRetry={() => void projects.refetch()}
+          >
+            <ul aria-label={copy.projects.listLabel} className="flex flex-col gap-0.5 p-2">
+              {list.map((project) => (
+                <ProjectGroup
+                  key={project.id}
+                  project={project}
+                  selected={params.projectId === project.id}
+                  activeConversationId={params.conversationId}
+                  live={liveRunOf(runs.data ?? [], project.id)}
+                />
+              ))}
+            </ul>
+          </StateView>
+        )}
       </div>
       <div className="border-t border-border p-2">
         <Link

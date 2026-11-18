@@ -23,6 +23,7 @@ import { cn } from '../lib/cn';
 import { routeForSlot } from './navRoutes';
 import { InfoNote } from '../ui/InfoNote';
 import { useShortcuts } from './useShortcuts';
+import { useProjects } from '../worker/hooks';
 
 interface Section {
   title: string;
@@ -32,20 +33,22 @@ interface Section {
   action?: { label: string; to: '/' | '/research' };
 }
 
+/** Sidebar Kanban: pemilih project; petunjuk memilih project hanya bila belum ada yang dipilih. */
+function KanbanSidebar() {
+  const projectId = useUiStore((s) => s.activeProjectId);
+  return (
+    <>
+      <ProjectSwitcher to="/kanban" allowGeneral={false} />
+      {projectId ? null : <InfoNote message={copy.kanban.sidebarHint} />}
+    </>
+  );
+}
+
 /** Judul bagian dan isi sidebar menurut rute aktif. */
 function sectionFor(pathname: string): Section {
   if (pathname.startsWith('/projects'))
     return { title: copy.workspace.manage, list: <WorkspaceSidebar addInMain /> };
-  if (pathname.startsWith('/kanban'))
-    return {
-      title: copy.nav.kanban,
-      list: (
-        <>
-          <ProjectSwitcher to="/kanban" allowGeneral={false} />
-          <InfoNote message={copy.kanban.sidebarHint} />
-        </>
-      ),
-    };
+  if (pathname.startsWith('/kanban')) return { title: copy.nav.kanban, list: <KanbanSidebar /> };
   if (pathname.startsWith('/workspace'))
     return { title: copy.nav.workspace, list: <WorkspaceSidebar /> };
   if (pathname.startsWith('/schedules'))
@@ -90,6 +93,10 @@ export function Shell() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
   const rightPanelOpen = useUiStore((s) => s.rightPanelOpen);
+  const activeProjectId = useUiStore((s) => s.activeProjectId);
+  const projectName = useProjects().data?.find((p) => p.id === activeProjectId)?.name;
+  // Chat project (/workspace/<id>[/<percakapan>]): judulnya nama project, bukan nama bagian "Project".
+  const projectTitle = /^\/workspace\/[^/]+/.test(pathname) && projectName ? projectName : null;
   // Judul dari PageHeader layar aktif; null = pakai nama bagian.
   const [screenTitle, setScreenTitle] = useState<string | null>(null);
   const toggleSidebar = useUiStore((s) => s.toggleSidebar);
@@ -154,8 +161,9 @@ export function Shell() {
           className={cn(ISLAND, 'flex min-w-0 flex-1 flex-col overflow-hidden')}
         >
           <Topbar
-            title={screenTitle ?? section.title}
+            title={screenTitle ?? projectTitle ?? section.title}
             chat={isChatPath(pathname)}
+            projectInTitle={screenTitle === null && projectTitle !== null}
             rightPanelOpen={rightPanelOpen}
             onToggleRightPanel={toggleRightPanel}
           />
