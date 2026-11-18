@@ -960,3 +960,14 @@ Slice 1 selesai di cabang `feat/mcp-konektor`: konektor HTTP jarak jauh dengan t
 - [ ] **Android tidak bisa meninjau** hasil run `in_place` (diff hanya dibaca dari worker lokal), padahal hasil itu memblokir run berikutnya di repo yang sama (`workspace_busy`) sampai diputuskan dari desktop.
 - [ ] **Aksi tab Git pemilik tidak dikunci selama run `in_place`** (stage, commit, checkout, pull). Commit atau pindah branch pemilik di tengah run ditangani saat tinjauan (`headMoved`: maju = commit di atas HEAD terbaru; berganti/ditulis ulang = `head_moved`), tetapi tab Git belum memperingatkan bahwa run sedang memakai folder itu.
 - [ ] **Penolakan `workspace_busy`/`workspace_dirty` belum memberi tautan ke run yang memblokir**; tombol satu klik hanya "Jalankan sekali ini di worktree terpisah" dan "Buka tab Git".
+
+## Temuan: chat umum (uji umum v1.2.0, `fix/chat-umum`)
+
+- [x] **Keputusan: sesi Hermes baru membawa riwayat di pesan user.** Hermes mengabaikan riwayat di body bila `X-Hermes-Session-Id` dikirim, jadi adapter melipatnya ke pesan user giliran pertama (`foldHistory`). Konsekuensi: transkrip Hermes untuk sesi itu memuat blok `<riwayat>`, dan judul Hermes untuk sesi itu bisa diambil dari blok tersebut (judul AIOS tidak terpengaruh).
+- [ ] **±84% token input "Halo" milik Hermes sendiri** (13.362 dari 15.672 token; diukur tanpa pesan sistem AIOS). Memangkasnya perlu konfigurasi Hermes (mis. toolset platform `api_server`), di luar repo ini; keputusan pemilik.
+- [ ] **Judul percakapan dibuat dua kali** (gateway `TITLE_MODEL` dan `auxiliary.title_generation` Hermes untuk sesinya sendiri yang tidak dipakai AIOS). Hermes tidak punya sakelar per permintaan; satu-satunya cara aman adalah `auxiliary.title_generation.enabled: false` di konfigurasi Hermes (keputusan pemilik). Judul gateway dipertahankan.
+- [ ] **Usulan memori/jadwal dari chat umum di produksi** butuh runbook `docs/RUNBOOK_HERMES_MCP.md` dijalankan (`MCP_HERMES_TOKEN_SHA256` + server MCP `aios` di Hermes). Sampai itu, layar Status menyatakan Hermes tidak tersambung dan chat menawarkan tombol Ingat.
+- [ ] **`rememberFactFrom` hanya mengenali pesan yang DIAWALI permintaan mengingat** ("tolong ingat bahwa…", "catat…", "remember that…"; heuristik tanpa model); kalimat bebas seperti "jangan lupa aku vegetarian" belum memicu tawaran Ingat.
+- [ ] **Percobaan ulang otomatis hanya untuk pesan chat ke Hermes** (yang punya `freshSession`) sebelum keluaran pertama; run coding (omp) dan dsh tidak diulang otomatis.
+- [ ] Jadwal yang meminta "minimal tiga sumber" bisa dipenuhi halaman indeks/kategori (uji umum B9); belum ada penyaring rujukan.
+- [ ] Pemilih model chat umum tetap "Model diatur di server Hermes" (PRD W1 menyebut pilih model); butuh `direct_model_requests` di Hermes.
