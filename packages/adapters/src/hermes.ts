@@ -88,6 +88,24 @@ function statusError(status: number): AdapterError {
 }
 
 /**
+ * Riwayat dari aplikasi + pesan baru sebagai satu pesan user, untuk giliran pertama sesi Hermes baru (Hermes
+ * mengabaikan riwayat di body bila `X-Hermes-Session-Id` dikirim).
+ */
+export function foldHistory(
+  history: NonNullable<StartRunInput['history']>,
+  prompt: string,
+): string {
+  const turns = history
+    .map((turn) => `[${turn.role === 'user' ? 'Pemilik' : 'Asisten'}]\n${turn.content}`)
+    .join('\n\n');
+  return [
+    'Riwayat percakapan ini sebelum pesan sekarang, disalin aplikasi karena sesi agent baru. Pakai sebagai konteks; jangan dibalas satu per satu.',
+    `<riwayat>\n${turns}\n</riwayat>`,
+    `Pesan sekarang:\n${prompt}`,
+  ].join('\n\n');
+}
+
+/**
  * Adapter Hermes lewat `POST /v1/chat/completions` (stream). Riwayat percakapan dipegang Hermes
  * berdasarkan `X-Hermes-Session-Id`, jadi hanya pesan baru yang dikirim. Memutus koneksi SSE saja TIDAK
  * menghentikan Hermes (diverifikasi Sesi P5: tool tetap berjalan; uji umum v1.2.0: sesi Hermes tetap menyimpan
@@ -151,20 +169,27 @@ export function createHermesAdapter(options: HermesAdapterOptions): AgentAdapter
           | ({ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } })[];
         const messages: { role: string; content: Content }[] = [];
         if (input.systemPrompt) messages.push({ role: 'system', content: input.systemPrompt });
-        // Sesi baru setelah percakapan dipotong: Hermes belum punya transkripnya, jadi riwayat dikirim di sini.
-        for (const turn of input.history ?? []) messages.push({ ...turn });
+        // Sesi baru (setelah percakapan dipotong, run dihentikan atau gagal): Hermes belum punya transkripnya.
+        // Dengan X-Hermes-Session-Id Hermes MENGABAIKAN riwayat di body dan memuatnya dari state.db (terbukti di
+        // Hermes VPS 2026-11-18: riwayat di body tidak menambah token input), jadi riwayat dilipat ke pesan user
+        // giliran ini, yang disimpan Hermes sehingga giliran berikutnya tetap membawanya. Tanpa sesi, Hermes
+        // memakai riwayat di body.
+        const history = input.history ?? [];
+        const fold = Boolean(input.sessionId) && history.length > 0;
+        if (!fold) for (const turn of history) messages.push({ ...turn });
+        const prompt = fold ? foldHistory(history, input.prompt) : input.prompt;
         // Gambar dikirim inline sebagai data URL (Hermes menolak upload berkas, tetapi menerima gambar).
         messages.push({
           role: 'user',
           content: input.images?.length
             ? [
-                { type: 'text', text: input.prompt },
+                { type: 'text', text: prompt },
                 ...input.images.map((image) => ({
                   type: 'image_url' as const,
                   image_url: { url: `data:${image.mime};base64,${image.data}` },
                 })),
               ]
-            : input.prompt,
+            : prompt,
         });
 
         const connectTimer = setTimeout(() => stop('connect_timeout'), connectTimeoutMs);

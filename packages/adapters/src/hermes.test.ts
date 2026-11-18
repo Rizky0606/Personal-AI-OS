@@ -3,7 +3,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import type { AddressInfo } from 'node:net';
 import { afterEach, describe, expect, it } from 'vitest';
 import { normalizeEvents } from './events.js';
-import { createHermesAdapter, type HermesAdapterOptions } from './hermes.js';
+import { createHermesAdapter, foldHistory, type HermesAdapterOptions } from './hermes.js';
 import { parseSse } from './sse.js';
 
 const MESSAGE_ID = '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f';
@@ -102,7 +102,7 @@ describe('adapter Hermes: permintaan', () => {
     });
   });
 
-  it('riwayat (sesi baru setelah percakapan dipotong) dikirim di antara system prompt dan pesan baru', async () => {
+  it('riwayat tanpa sessionId dikirim di antara system prompt dan pesan baru', async () => {
     const hermes = await mockHermes((_req, res) => {
       sseHead(res);
       res.end(`${chunk({ content: 'x' }, 'stop')}data: [DONE]\n\n`);
@@ -126,6 +126,36 @@ describe('adapter Hermes: permintaan', () => {
         { role: 'user', content: 'Siapa nama saya?' },
       ],
     });
+  });
+
+  it('riwayat untuk sesi baru (dengan sessionId) dilipat ke pesan user: Hermes mengabaikan riwayat di body', async () => {
+    const hermes = await mockHermes((_req, res) => {
+      sseHead(res);
+      res.end(`${chunk({ content: 'x' }, 'stop')}data: [DONE]\n\n`);
+    });
+    const history = [
+      { role: 'user' as const, content: 'Nama saya Budi.' },
+      { role: 'assistant' as const, content: 'Halo Budi.' },
+    ];
+    await collect(
+      { baseUrl: hermes.url },
+      {
+        systemPrompt: 'Kamu asisten.',
+        sessionId: 'aios-c-baru',
+        history,
+        prompt: 'Siapa nama saya?',
+      },
+    );
+    const body = hermes.seen[0]!.body as { messages: { role: string; content: string }[] };
+    expect(hermes.seen[0]!.headers['x-hermes-session-id']).toBe('aios-c-baru');
+    expect(body.messages).toEqual([
+      { role: 'system', content: 'Kamu asisten.' },
+      { role: 'user', content: foldHistory(history, 'Siapa nama saya?') },
+    ]);
+    const folded = body.messages[1]!.content;
+    expect(folded).toContain('[Pemilik]\nNama saya Budi.');
+    expect(folded).toContain('[Asisten]\nHalo Budi.');
+    expect(folded.endsWith('Pesan sekarang:\nSiapa nama saya?')).toBe(true);
   });
 
   it('tanpa sessionId dan apiKey, header itu tidak dikirim', async () => {
@@ -489,7 +519,8 @@ describe('adapter Hermes: cancel', () => {
   it('cancel dan macet menghentikan run di Hermes: POST /v1/runs/{id chunk}/stop dengan API key', async () => {
     const withId = (id: string, content: string) =>
       `data: ${JSON.stringify({ id, choices: [{ index: 0, delta: { content }, finish_reason: null }] })}\n\n`;
-    const { promise: stopCall, resolve: stopped } = Promise.withResolvers<Seen>();
+    let stopped!: (seen: Seen) => void;
+    const stopCall = new Promise<Seen>((resolve) => (stopped = resolve));
     const hermes = await mockHermes((req, res, seen) => {
       if (req.url?.startsWith('/v1/runs/')) {
         res.writeHead(200, { 'content-type': 'application/json' });
