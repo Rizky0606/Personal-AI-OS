@@ -1,9 +1,11 @@
+import type { Project } from '@aios/contracts';
 import { screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { copy } from '../copy';
 import { useUiStore } from '../state/uiStore';
-import { api, resetApi } from '../test/fakeServices';
-import { models } from '../test/fixtures';
+import { api, resetApi, setWorker } from '../test/fakeServices';
+import { models, TS } from '../test/fixtures';
 import { renderScreen } from '../test/render';
 
 vi.mock('../app/services', async () => (await import('../test/fakeServices')).fakeServices);
@@ -82,5 +84,126 @@ describe('SidebarStatus: kuota', () => {
     });
     await renderScreen(<SidebarStatus collapsed />);
     expect(await screen.findByRole('link', { name: /Kuota 1,5 rb token/ })).toBeInTheDocument();
+  });
+});
+
+describe('SidebarStatus: worker project menurut gateway', () => {
+  const OWN = '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f';
+  const OLD = '0192f0c4-7a1b-7c2d-9e3f-4a5b6c7d8e90';
+  const PROJECT = '0192f0c4-7a1b-7c2d-a001-4a5b6c7d8e91';
+  const status = (
+    over: { workerDeviceId?: string; name?: string; online?: boolean; revoked?: boolean } = {},
+  ) => ({
+    workerDeviceId: OWN,
+    name: 'PC-RUMAH',
+    online: true,
+    revoked: false,
+    lastSeenAt: TS,
+    ...over,
+  });
+  const project: Project = {
+    id: PROJECT,
+    name: 'ts-lib',
+    workerDeviceId: OWN,
+    stack: { languages: ['typescript'], frameworks: [] },
+    defaultBranch: 'main',
+    instructions: '',
+    createdAt: TS,
+    updatedAt: TS,
+  };
+  const card = () => screen.getByRole('status', { name: /worker/i });
+
+  beforeEach(() => {
+    api.getQuota.mockRejectedValue(new Error('x'));
+    // Worker PC ini tersambung ke gateway sebagai perangkat OWN.
+    setWorker({
+      local: 'connected',
+      status: {
+        gateway: 'connected',
+        deviceId: OWN,
+        activeRuns: 0,
+        version: '0.1.0',
+        ompVersion: null,
+        browserAvailable: false,
+      },
+    });
+  });
+
+  it('tanpa project aktif: status worker lokal, gateway tidak ditanya', async () => {
+    await renderScreen(<SidebarStatus />);
+    expect(card()).toHaveAccessibleName(copy.workerStatus.connected);
+    expect(api.getProjectWorker).not.toHaveBeenCalled();
+  });
+
+  it('worker project = worker PC ini dan tersambung ke hub: "Worker project tersambung" tanpa tombol', async () => {
+    useUiStore.setState({ activeProjectId: PROJECT });
+    api.getProjectWorker.mockResolvedValue(status());
+    await renderScreen(<SidebarStatus />);
+
+    expect(await screen.findByText(copy.projectWorker.connected)).toBeInTheDocument();
+    expect(api.getProjectWorker).toHaveBeenCalledWith(PROJECT);
+    expect(screen.queryByRole('button', { name: copy.projectWorker.useThisPc })).toBeNull();
+  });
+
+  it('worker lokal tersambung tetapi hub gateway tidak melihatnya: "Worker project offline", bukan "tersambung"', async () => {
+    useUiStore.setState({ activeProjectId: PROJECT });
+    api.getProjectWorker.mockResolvedValue(status({ online: false }));
+    await renderScreen(<SidebarStatus />);
+
+    expect(await screen.findByText(copy.projectWorker.offline)).toBeInTheDocument();
+    expect(screen.queryByText(copy.workerStatus.connected)).toBeNull();
+  });
+
+  it('project terikat ke worker lama yang dicabut (login ulang): tombol memindahkan project ke worker PC ini', async () => {
+    const user = userEvent.setup();
+    useUiStore.setState({ activeProjectId: PROJECT });
+    api.getProjectWorker
+      .mockResolvedValueOnce(status({ workerDeviceId: OLD, online: false, revoked: true }))
+      .mockResolvedValue(status());
+    api.rebindProjectWorker.mockResolvedValue(project);
+    await renderScreen(<SidebarStatus />);
+
+    expect(await screen.findByText(copy.projectWorker.revoked)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: copy.projectWorker.useThisPc }));
+
+    expect(api.rebindProjectWorker).toHaveBeenCalledWith(PROJECT, OWN);
+    expect((await screen.findAllByText(copy.projectWorker.rebound)).length).toBeGreaterThan(0);
+    // Status dimuat ulang dari gateway setelah pindah.
+    expect(await screen.findByText(copy.projectWorker.connected)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: copy.projectWorker.useThisPc })).toBeNull();
+  });
+
+  it('ikat ulang ditolak gateway (run masih berjalan): pesan galat tampil, tombol tetap ada', async () => {
+    const user = userEvent.setup();
+    useUiStore.setState({ activeProjectId: PROJECT });
+    api.getProjectWorker.mockResolvedValue(
+      status({ workerDeviceId: OLD, revoked: true, online: false }),
+    );
+    api.rebindProjectWorker.mockRejectedValue(new Error('Masih ada tugas yang berjalan.'));
+    await renderScreen(<SidebarStatus />);
+
+    await user.click(await screen.findByRole('button', { name: copy.projectWorker.useThisPc }));
+    await waitFor(() => expect(api.rebindProjectWorker).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole('button', { name: copy.projectWorker.useThisPc })).toBeEnabled();
+  });
+
+  it('worker lain tersambung (project milik PC lain): label nama worker, tanpa tombol pindah', async () => {
+    useUiStore.setState({ activeProjectId: PROJECT });
+    api.getProjectWorker.mockResolvedValue(status({ workerDeviceId: OLD, name: 'LAPTOP' }));
+    await renderScreen(<SidebarStatus />);
+
+    expect(await screen.findByText(copy.projectWorker.other('LAPTOP', true))).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: copy.projectWorker.useThisPc })).toBeNull();
+  });
+
+  it('worker lain offline (worker lama belum dicabut): tombol pindah tersedia', async () => {
+    useUiStore.setState({ activeProjectId: PROJECT });
+    api.getProjectWorker.mockResolvedValue(
+      status({ workerDeviceId: OLD, name: 'PC-LAMA', online: false }),
+    );
+    await renderScreen(<SidebarStatus />);
+
+    expect(await screen.findByText(copy.projectWorker.other('PC-LAMA', false))).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: copy.projectWorker.useThisPc })).toBeInTheDocument();
   });
 });

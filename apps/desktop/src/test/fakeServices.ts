@@ -112,6 +112,8 @@ export const api: FakeApi = {
   search: fn<'search'>(),
   updateProject: fn<'updateProject'>(),
   deleteProject: fn<'deleteProject'>(),
+  getProjectWorker: fn<'getProjectWorker'>(),
+  rebindProjectWorker: fn<'rebindProjectWorker'>(),
   downloadFile: fn<'downloadFile'>(),
   deleteConversation: fn<'deleteConversation'>(),
   listSpaces: fn<'listSpaces'>(),

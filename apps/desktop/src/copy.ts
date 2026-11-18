@@ -229,6 +229,17 @@ export const copy = {
     reconnecting: 'Worker menyambung ulang…',
     off: 'Worker mati',
   },
+  /** Worker project aktif menurut gateway (kartu status sidebar). */
+  projectWorker: {
+    connected: 'Worker project tersambung',
+    offline: 'Worker project offline',
+    revoked: 'Project terikat ke worker yang sudah dicabut',
+    other: (name: string, online: boolean) =>
+      online ? `Project memakai worker lain: ${name}` : `Worker project (${name}) offline`,
+    useThisPc: 'Pakai worker PC ini',
+    rebinding: 'Memindahkan…',
+    rebound: 'Project sekarang memakai worker PC ini.',
+  },
   login: {
     title: 'Masuk ke server',
     server: 'Alamat server',

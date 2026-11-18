@@ -37,6 +37,7 @@ import {
   EngineListSchema,
   ModelListSchema,
   ProjectSchema,
+  ProjectWorkerStatusSchema,
   ResearchJobDetailSchema,
   ResearchJobSchema,
   CompareResponseSchema,
@@ -234,6 +235,11 @@ export function createGatewayApi(call: Call) {
     ) => get(`/projects/${id}`, ProjectSchema, { method: 'PATCH', body: patch }),
     createProject: (input: CreateProjectInput) =>
       get('/projects', ProjectSchema, { method: 'POST', body: input }),
+    /** Perangkat worker project dan apakah ia tersambung ke hub worker gateway saat ini. */
+    getProjectWorker: (id: string) => get(`/projects/${id}/worker`, ProjectWorkerStatusSchema),
+    /** Mengikat project ke perangkat worker aktif lain (mis. worker PC ini setelah login ulang). */
+    rebindProjectWorker: (id: string, workerDeviceId: string) =>
+      get(`/projects/${id}/worker`, ProjectSchema, { method: 'PUT', body: { workerDeviceId } }),
 
     /** Armada agent: beberapa tugas berbeda dimulai sekaligus di satu project (maks. 4). */
     launchFleet: (input: {
