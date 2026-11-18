@@ -17,6 +17,11 @@ export interface WorkerRelay extends WorkerRelayPort {
   ): Promise<WorkerReviewResultFrame>;
   /** Jawaban `review.apply` dari worker. */
   reviewResult(deviceId: string, frame: WorkerReviewResultFrame): void;
+  /**
+   * Worker lama diganti worker baru (didaftarkan ulang dengan nama sama, project ikut pindah): run yang sedang
+   * didengarkan dan tinjauan yang menunggu jawaban atas perangkat lama kini milik perangkat baru.
+   */
+  moveDevice(fromIds: readonly string[], toId: string): void;
 }
 
 const REVIEW_TIMEOUT_MS = 30_000;
@@ -120,6 +125,18 @@ export function createWorkerRelay(deps: {
       clearTimeout(pending.timer);
       reviews.delete(frame.runId);
       pending.resolve(frame);
+    },
+
+    moveDevice(fromIds, toId) {
+      const online = deps.hub.isOnline(toId);
+      for (const entry of listeners.values()) {
+        if (!fromIds.includes(entry.deviceId)) continue;
+        entry.deviceId = toId;
+        if (online) entry.onReconnect();
+      }
+      for (const pending of reviews.values()) {
+        if (fromIds.includes(pending.deviceId)) pending.deviceId = toId;
+      }
     },
 
     presence(deviceId, online) {

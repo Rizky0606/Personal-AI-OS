@@ -29,6 +29,8 @@ export const unusedProjects: AppDeps['projects'] = {
   workerOf: unused('projects.workerOf'),
   rulesSection: unused('projects.rulesSection'),
   remove: unused('projects.remove'),
+  workerStatus: unused('projects.workerStatus'),
+  rebindWorker: unused('projects.rebindWorker'),
 };
 export const unusedCompare: AppDeps['compare'] = { run: unused('compare.run') };
 export const unusedStatus: AppDeps['status'] = { get: unused('status.get') };

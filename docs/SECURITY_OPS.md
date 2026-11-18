@@ -17,6 +17,7 @@ Tinjauan source terbaru untuk persiapan rilis: `docs/SECURITY_REVIEW.md` (bukan 
 - Token per perangkat dengan scope (`app`, `worker`, `llm`), bisa dicabut dari halaman Perangkat.
 - Refresh token dirotasi setiap dipakai; pemakaian ulang token lama mencabut perangkat itu.
 - Klien menyimpan token di penyimpanan aman OS (Windows Credential Manager via Tauri, Android Keystore).
+- Worker diganti: desktop yang mendaftarkan ulang worker dengan nama sama (mis. setelah login ulang dan kredensial worker hilang) mencabut worker lama, dan dalam transaksi yang sama semua project worker lama pindah ke worker baru (audit `worker.replaced` dan `project.worker_moved` per project, lama → baru). Run yang sedang berjalan dan tinjauan yang menunggu ikut perangkat baru. Memindahkan project ke worker aktif lain secara manual (`PUT /projects/:id/worker`, scope `app`) juga diaudit `project.worker_moved` dan ditolak selama ada run berjalan.
 
 ## Worker dan eksekusi
 
