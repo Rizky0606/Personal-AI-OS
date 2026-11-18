@@ -56,6 +56,7 @@ export function toRunDto(row: typeof runs.$inferSelect): Run {
     workspace: row.workspace,
     usage: row.usage,
     error: row.error,
+    endReason: row.endReason ?? null,
     planOnly: row.planOnly && row.kind === 'coding',
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),

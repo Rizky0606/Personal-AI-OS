@@ -211,7 +211,9 @@ describe('POST /runs/:id/review', () => {
     const res = await review(run.id, { decision: 'reject' });
 
     expect(res.statusCode, res.body).toBe(200);
-    expect(ReviewResponseSchema.parse(res.json()).run.status).toBe('rejected');
+    const rejected = ReviewResponseSchema.parse(res.json()).run;
+    expect(rejected.status).toBe('rejected');
+    expect(rejected.endReason).toBeNull();
     expect(fake.all('review.apply')[0]).toMatchObject({ decision: 'reject', comments: [] });
   });
 
@@ -228,6 +230,16 @@ describe('POST /runs/:id/review', () => {
     expect(res.statusCode, res.body).toBe(200);
     const body = ReviewResponseSchema.parse(res.json());
     expect(body.run.status).toBe('rejected');
+    // Digantikan run revisi ("Kirim komentar ke agent"), bukan ditolak: endReason di DTO dan event run.status.
+    expect(body.run.endReason).toBe('superseded');
+    const statusEvents = (await env.get(`/runs/${run.id}/events`, desktop))
+      .json<{ items: { event: { type: string } }[] }>()
+      .items.filter((i) => i.event.type === 'run.status');
+    expect(statusEvents.at(-1)?.event).toEqual({
+      type: 'run.status',
+      status: 'rejected',
+      endReason: 'superseded',
+    });
     expect(body.revisionRunId).not.toBeNull();
     // Tidak ada review.apply: worktree dipertahankan untuk run lanjutan.
     expect(fake.all('review.apply')).toEqual([]);

@@ -119,14 +119,22 @@ export function createRunsService(deps: {
   }
 
   /** Status akhir tinjauan; hanya dari needs_review (dua permintaan bersamaan tidak berlaku ganda). */
-  async function settle(run: typeof runs.$inferSelect, status: 'accepted' | 'rejected') {
+  async function settle(
+    run: typeof runs.$inferSelect,
+    status: 'accepted' | 'rejected',
+    endReason?: 'superseded',
+  ) {
     const [updated] = await db
       .update(runs)
-      .set({ status })
+      .set({ status, ...(endReason ? { endReason } : {}) })
       .where(and(eq(runs.id, run.id), eq(runs.status, 'needs_review')))
       .returning();
     if (!updated) throw notReviewable();
-    const stored = await store.append(run.id, { type: 'run.status', status });
+    const stored = await store.append(run.id, {
+      type: 'run.status',
+      status,
+      ...(endReason ? { endReason } : {}),
+    });
     if (run.conversationId) hub.publishLive(`conversation:${run.conversationId}`, stored.event);
     observer?.notify(run.id);
     return updated;
@@ -209,7 +217,12 @@ export function createRunsService(deps: {
       return toRunDto(await load(id));
     },
 
-    async resolveApproval(actorDeviceId, runId, approvalId, { decision, remember, forRun = false }) {
+    async resolveApproval(
+      actorDeviceId,
+      runId,
+      approvalId,
+      { decision, remember, forRun = false },
+    ) {
       const [row] = await db
         .select()
         .from(approvals)
@@ -334,7 +347,8 @@ export function createRunsService(deps: {
             },
             { continueFromRunId: run.id, ...(run.taskId ? { taskId: run.taskId } : {}) },
           );
-          const settled = await settle(run, 'rejected');
+          // Run ini digantikan run revisi, bukan ditolak pemilik (desktop membedakannya lewat endReason).
+          const settled = await settle(run, 'rejected', 'superseded');
           await writeAudit(db, {
             actorDeviceId,
             action: 'run.review',

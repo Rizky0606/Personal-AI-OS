@@ -93,7 +93,7 @@ Setiap event dari server dibungkus envelope yang sama:
 
 | Event                                          | Isi                                                          | Dipakai untuk               |
 | ---------------------------------------------- | ------------------------------------------------------------ | --------------------------- |
-| `run.status`                                   | `status`                                                     | Indikator status            |
+| `run.status`                                   | `status`, opsional `endReason` (`stopped` \| `superseded`, lihat `Run.endReason`) | Indikator status            |
 | `route.decided`                                | `role, confidence, reason`                                   | Agent dan skill yang dimuat |
 | `message.delta`, `message.completed`           | Potongan teks; usage token                                   | Streaming jawaban           |
 | `reasoning.delta`                              | Potongan penalaran (opsional)                                | Blok terlipat               |
@@ -174,6 +174,8 @@ stateDiagram-v2
 
 `queued` → `routing` → `preparing` (siapkan folder kerja: folder project untuk `in_place`, buat worktree untuk `worktree`) → `running`, yang bisa bolak-balik ke `waiting_approval`. Run coding berakhir di `needs_review` lalu `accepted` atau `rejected`. Run chat berakhir di `completed`. Semua run bisa berakhir `failed` atau `cancelled`. Pengecualian `in_place`: run yang berhenti sebelum selesai (dihentikan, gagal, timeout, worker terputus, gateway restart) dengan perubahan berkas berakhir di `needs_review` (error tetap dicatat), karena perubahannya ada di folder project; run `in_place` yang sudah `failed`/`cancelled` bisa dihidupkan kembali ke `needs_review` oleh laporan `workspace.pending` worker.
 
+`Run.endReason` (aditif, bawaan `null`) membedakan akhir yang statusnya sama: `stopped` = run dihentikan lewat `POST /runs/:id/cancel` (pemilik, atau Lead tim) — termasuk run `in_place` yang karena punya perubahan berakhir `needs_review` dengan `error: null`, dan run yang berakhir `cancelled`; `superseded` = run `needs_review` yang ditutup `rejected` karena digantikan run lanjutan (pesan lanjutan pemilik, atau tolak dengan komentar / "Kirim komentar ke agent"), bukan karena ditolak pemilik. Event `run.status` yang menandai akhir itu membawa `endReason` yang sama.
+
 ## Model data inti
 
 | Tabel                 | Kolom penting                                                                                                                  |
@@ -181,7 +183,7 @@ stateDiagram-v2
 | `devices`             | id, kind (android, desktop, worker), name, token_hash, scopes, push_token, last_seen_at                                        |
 | `conversations`       | id, title, surface, project_id, space_id, hermes_session_id, pinned, archived_at                                                         |
 | `messages`            | id, conversation_id, author (user, assistant, system), parts (jsonb), agent_role, model, run_id                                |
-| `runs`                | id, kind (chat, coding, research, schedule), engine, agent_role, model, status, conversation_id, task_id, branch, workspace (in_place, worktree; null sebelum worker melapor), usage, error |
+| `runs`                | id, kind (chat, coding, research, schedule), engine, agent_role, model, status, conversation_id, task_id, branch, workspace (in_place, worktree; null sebelum worker melapor), usage, error, end_reason (stopped, superseded; null untuk akhir biasa) |
 | `run_events`          | run_id, seq, type, payload (jsonb), ts — primary key (run_id, seq)                                                             |
 | `approvals`           | id, run_id, kind, detail, status, remember, decided_at                                                                         |
 | `approval_rules`      | project_id, pattern, decision. **Tidak dipakai**: tabel ada di skema tetapi tidak dibaca atau ditulis modul gateway mana pun. Aturan "selalu izinkan untuk project ini" disimpan di worker (`approval-rules.json` di folder data worker, `apps/worker/src/runs/rules.ts`) |

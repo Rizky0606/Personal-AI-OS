@@ -3,6 +3,7 @@ import { IdSchema, RoleIdSchema, RunErrorSchema, TimestampSchema, UsageSchema } 
 import {
   ApprovalDecisionSchema,
   ApprovalKindSchema,
+  RunEndReasonSchema,
   RunWorkspaceSchema,
   ScheduleRunStatusSchema,
   TaskSchema,
@@ -14,6 +15,8 @@ import { RunStatusSchema } from './run-status.js';
 export const RunStatusEventSchema = z.object({
   type: z.literal('run.status'),
   status: RunStatusSchema,
+  /** Ada bila status ini terjadi karena pemilik menghentikan run (`stopped`) atau run digantikan (`superseded`). */
+  endReason: RunEndReasonSchema.optional(),
 });
 
 export const RouteDecidedEventSchema = z.object({

@@ -32,6 +32,9 @@
               },
               "status": {
                 "$ref": "#/components/schemas/RunStatus"
+              },
+              "endReason": {
+                "$ref": "#/components/schemas/RunEndReason"
               }
             },
             "required": [
@@ -1017,6 +1020,13 @@
           "cancelled"
         ]
       },
+      "RunEndReason": {
+        "type": "string",
+        "enum": [
+          "stopped",
+          "superseded"
+        ]
+      },
       "Usage": {
         "type": "object",
         "properties": {
@@ -1303,6 +1313,9 @@
               },
               "status": {
                 "$ref": "#/components/schemas/RunStatus"
+              },
+              "endReason": {
+                "$ref": "#/components/schemas/RunEndReason"
               }
             },
             "required": [
@@ -6177,6 +6190,19 @@
           },
           "error": {
             "$ref": "#/components/schemas/RunError"
+          },
+          "endReason": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RunEndReason"
+              },
+              {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            ]
           },
           "planOnly": {
             "type": "boolean",

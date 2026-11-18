@@ -3,6 +3,7 @@ import type {
   DiffStat,
   MessagePart,
   RunError,
+  RunEndReason,
   RunWorkspace,
   Stack,
   TeamEvent,
@@ -166,6 +167,8 @@ export const runs = pgTable(
     workspace: text('workspace').$type<RunWorkspace>(),
     usage: jsonb('usage').$type<Usage>(),
     error: jsonb('error').$type<RunError>(),
+    /** `stopped` (dihentikan) atau `superseded` (digantikan run lanjutan); null untuk akhir biasa. */
+    endReason: text('end_reason').$type<RunEndReason>(),
     /** Mode rencana (W29): run coding yang hanya membaca dan menulis rencana. */
     planOnly: boolean('plan_only').notNull().default(false),
     createdAt: createdAt(),

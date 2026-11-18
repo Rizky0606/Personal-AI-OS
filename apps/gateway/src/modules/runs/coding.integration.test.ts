@@ -745,7 +745,13 @@ describe('folder kerja run coding: in_place dan worktree', () => {
 
     expect((await cancelling).statusCode).toBe(200);
     await until(async () => (await statusOf(run.id)) === 'needs_review', 'needs_review');
-    expect(await getRun(run.id)).toMatchObject({ workspace: 'in_place', branch: 'main' });
+    // Dihentikan pemilik: endReason membedakannya dari run yang selesai sendiri (error tetap null).
+    expect(await getRun(run.id)).toMatchObject({
+      workspace: 'in_place',
+      branch: 'main',
+      error: null,
+      endReason: 'stopped',
+    });
     fake.close();
   });
 
@@ -762,7 +768,10 @@ describe('folder kerja run coding: in_place dan worktree', () => {
       retryable: false,
     });
     await until(async () => (await statusOf(run.id)) === 'needs_review', 'needs_review');
-    expect((await getRun(run.id)).error).toMatchObject({ code: 'run_timeout' });
+    expect(await getRun(run.id)).toMatchObject({
+      error: { code: 'run_timeout' },
+      endReason: null,
+    });
     await env.runner.idle();
 
     const plain = await startRun(conversationId, 'coba lagi');
@@ -784,7 +793,7 @@ describe('folder kerja run coding: in_place dan worktree', () => {
     fake.emit(run.id, { type: 'diff.updated', files: [file] });
     fake.emit(run.id, { type: 'run.status', status: 'cancelled' });
     expect((await cancelling).statusCode).toBe(200);
-    expect(await statusOf(run.id)).toBe('cancelled');
+    expect(await getRun(run.id)).toMatchObject({ status: 'cancelled', endReason: 'stopped' });
     fake.close();
   });
 
@@ -847,6 +856,8 @@ describe('folder kerja run coding: in_place dan worktree', () => {
     expect(command.continueFromRunId).toBe(first.id);
     expect(command.workspace).toBeUndefined();
     await until(async () => (await statusOf(first.id)) === 'rejected', 'run lama ditutup');
+    // Digantikan pesan lanjutan, bukan ditolak pemilik.
+    expect(await getRun(first.id)).toMatchObject({ endReason: 'superseded' });
     expect(await getRun(second.id)).toMatchObject({
       branch: workerBranchFor(first.id),
       workspace: 'worktree',
