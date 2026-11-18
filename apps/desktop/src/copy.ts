@@ -935,6 +935,8 @@ export const copy = {
       done: 'Selesai',
       error: 'Gagal',
       cancelled: 'Dibatalkan',
+      /** Dihentikan pemilik dari perangkat ini (juga bila sudah mengubah berkas dan menunggu tinjauan). */
+      stopped: 'Dihentikan',
       steps: (n: number) => `${n} langkah`,
       separator: ' · ',
     },
@@ -945,6 +947,7 @@ export const copy = {
       openApproval: 'Buka approval',
       timeline: 'Linimasa langkah',
       moreSteps: (n: number) => `+${n} langkah lainnya`,
+      quiet: (elapsed: string) => `Menunggu model · ${elapsed} sejak aktivitas terakhir`,
       phase: {
         idle: 'Siap',
         thinking: 'Menyiapkan',
@@ -1103,6 +1106,14 @@ export const copy = {
     waiting: 'Run menunggu jawaban Anda.',
     failed: 'Keputusan belum terkirim.',
     alwaysHint: 'Hanya untuk perintah yang persis sama di project ini.',
+    fileWriteHint:
+      'Berlaku untuk SEMUA penulisan dan pengubahan berkas oleh agent di project ini, bukan hanya berkas ini. Hasilnya tetap ditinjau sebelum diterima.',
+    file: 'Berkas',
+    showContent: (lines: number) => `Lihat isi baru (${lines} baris)`,
+    subagentTitle: 'Agent meminta izin menjalankan subagent',
+    subagents: 'Subagent',
+    subagentTask: 'Tugas subagent',
+    subagentHint: 'Hanya untuk permintaan subagent yang persis sama di project ini.',
     gatewayTitle: (tool: string) => `Agent meminta izin memakai tool ${tool}`,
     allowAlwaysTool: (tool: string) => `Selalu untuk ${tool} di project ini`,
     gatewayHint: (tool: string) =>
@@ -1119,6 +1130,8 @@ export const copy = {
     openKanban: 'Buka papan kartu',
     title: 'Tinjau perubahan',
     ready: 'Hasil run siap ditinjau. Periksa perubahannya, lalu terima atau kembalikan ke agent.',
+    readyStopped:
+      'Run dihentikan sebelum selesai, jadi perubahannya mungkin setengah jadi. Periksa dulu sebelum menerima.',
     open: 'Tinjau perubahan',
     empty: 'Belum ada perubahan untuk ditinjau. Hasil run coding muncul di sini.',
     noChanges: 'Agent tidak mengubah file apa pun.',
@@ -1278,6 +1291,7 @@ export const copy = {
     open: 'Buka',
     stop: 'Hentikan',
     untitled: 'Tanpa judul',
+    stoppedReview: 'Dihentikan, perlu ditinjau',
   },
   runStatus: {
     queued: 'Mengantre',
