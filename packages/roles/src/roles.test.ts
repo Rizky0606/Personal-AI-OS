@@ -30,12 +30,19 @@ import {
 
 const registry = loadRegistry();
 
-/** Agent di ROLES_AND_SKILLS.md: grup, mesin, dan skill milik agent itu sendiri (di luar skill inti). */
-const SPEC: Record<string, { group: string; engine: string; skills: string[] }> = {
+/**
+ * Agent di ROLES_AND_SKILLS.md: grup, mesin, skill milik agent itu sendiri (di luar skill inti), dan skill yang hanya
+ * ditawarkan lewat indeks (`offered_skills`).
+ */
+const SPEC: Record<
+  string,
+  { group: string; engine: string; skills: string[]; offered?: string[] }
+> = {
   general: {
     group: 'umum',
     engine: 'hermes',
-    skills: ['answer-first', 'clarify-once', 'find-skills'],
+    skills: ['answer-first', 'clarify-once'],
+    offered: ['find-skills'],
   },
   project: { group: 'coding', engine: 'omp', skills: ['find-skills', 'plan-progress'] },
   researcher: {
@@ -64,6 +71,7 @@ describe('isi agent dan skill di repo', () => {
       // Urutan di frontmatter bebas; bundel selalu memakai urutan coreSkillsFor.
       expect(role.skills.filter((s) => core.includes(s)).sort()).toEqual([...core].sort());
       expect(role.skills.filter((s) => !core.includes(s))).toEqual(spec.skills);
+      expect(role.offeredSkills).toEqual(spec.offered ?? []);
     },
   );
 
@@ -421,6 +429,23 @@ describe('skill tersedia lewat indeks, bukan ditempel utuh (P9)', () => {
     expect(bundle.skills).toContain('find-skills');
     expect(bundle.systemPrompt).toContain(registry.skills.get('find-skills')!.body);
     expect(bundle.offeredSkills).toEqual(['ui-baseline']);
+  });
+
+  it('offered_skills role hanya baris indeks; pilihan manual atau eagerSkillPacks menempelkannya utuh', () => {
+    const body = registry.skills.get('find-skills')!.body;
+    const plain = buildBundle(registry, 'general', { skillNamePrefix: 'aios-' });
+    expect(plain.skills).not.toContain('find-skills');
+    expect(plain.offeredSkills).toEqual(['find-skills']);
+    expect(plain.systemPrompt).not.toContain(body);
+    expect(plain.systemPrompt).toContain(
+      `- aios-find-skills: ${registry.skills.get('find-skills')!.description}`,
+    );
+    const manual = buildBundle(registry, 'general', { extraSkills: ['find-skills'] });
+    expect(manual.offeredSkills).toEqual([]);
+    expect(manual.systemPrompt).toContain(body);
+    const eager = buildBundle(registry, 'general', { eagerSkillPacks: true });
+    expect(eager.skills).toContain('find-skills');
+    expect(eager.systemPrompt).not.toContain('# Skill tersedia');
   });
 
   it('eagerSkillPacks: fallback mesin tanpa indeks, suggestedSkills ditempel utuh seperti extraSkills', () => {

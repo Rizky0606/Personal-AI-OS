@@ -57,11 +57,21 @@ export const RoleFrontmatterSchema = z
     fallback_model: nonEmpty.optional(),
     approval: z.enum(['ask', 'auto-safe']),
     skills: z.array(SkillIdSchema).min(1),
+    /**
+     * Skill yang hanya ditawarkan lewat indeks (id + deskripsi) dan dibuka agent bila relevan, bukan ditempel utuh
+     * di setiap pesan. Untuk skill yang jarang dipakai supaya pesan sistem tetap ramping.
+     */
+    offered_skills: z.array(SkillIdSchema).default([]),
   })
-  .refine((r) => new Set(r.skills).size === r.skills.length, {
-    path: ['skills'],
-    message: 'skill tidak boleh dobel',
-  });
+  .refine(
+    (r) =>
+      new Set([...r.skills, ...r.offered_skills]).size ===
+      r.skills.length + r.offered_skills.length,
+    {
+      path: ['skills'],
+      message: 'skill tidak boleh dobel',
+    },
+  );
 export type RoleFrontmatter = z.infer<typeof RoleFrontmatterSchema>;
 
 /** Frontmatter `packages/roles/skills/<id>/SKILL.md`. `version` opsional (katalog P9); default "1". */

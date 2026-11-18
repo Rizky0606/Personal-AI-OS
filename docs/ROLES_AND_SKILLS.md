@@ -6,7 +6,7 @@ Aplikasi punya **dua agent tetap**. Yang membedakannya hanya ada tidaknya projec
 
 | Agent | Grup | Mesin | Dipakai untuk | Skill milik agent |
 | --- | --- | --- | --- | --- |
-| `general` | Umum | Hermes (server) | Chat umum di tab Chat dan semua chat Android: pertanyaan apa pun, menulis dan menjelaskan kode di chat, tidak terikat folder project | answer-first, clarify-once, find-skills |
+| `general` | Umum | Hermes (server) | Chat umum di tab Chat dan semua chat Android: pertanyaan apa pun, menulis dan menjelaskan kode di chat, tidak terikat folder project | answer-first, clarify-once; find-skills hanya ditawarkan lewat indeks (`offered_skills`) |
 | `project` | Coding | omp (worker Windows) | Chat per folder project di tab Project dan run kartu kanban: membaca, mencari, menjawab, dan mengubah kode di folder project itu (chat: bawaannya langsung di branch aktif folder project; kartu kanban: worktree run) | find-skills, plan-progress (selain skill inti; plan-progress = rencana dengan tool todo untuk tugas 3 langkah atau lebih, hanya untuk mesin yang punya tool todo) |
 | `researcher` | Umum | Research engine + Hermes | Hanya fitur Riset dan jadwal riset; tidak pernah dipilih untuk pesan chat | source-verification, citation, fact-vs-opinion |
 
@@ -65,6 +65,7 @@ model: coding-main # nama combo di 9Router
 fallback_model: coding-cheap
 approval: ask # ask | auto-safe (baca saja otomatis)
 skills: [scope-guard, read-context-first, plan-before-edit, verify-before-done, minimal-diff, rich-answers, propose-skill]
+offered_skills: [] # opsional: hanya baris indeks "Skill tersedia", isi dibuka agent bila relevan
 ---
 
 # Peran
@@ -77,6 +78,8 @@ skills: [scope-guard, read-context-first, plan-before-edit, verify-before-done, 
 ```
 
 Registri menolak file yang tidak valid (gateway gagal start, atau di mode dev perubahan ditolak dan versi lama dipakai). Agent `general` dan `project` wajib ada.
+
+`offered_skills` untuk skill milik agent yang jarang dipakai: isinya tidak ditempel di setiap pesan, hanya satu baris indeks (`- aios-find-skills: <deskripsi>` di Hermes), sama seperti paket kata kunci. Pilihan manual di composer dan fallback `SKILL_PACKS_EAGER_ENGINES` tetap menempelkannya utuh. `GET /roles` menampilkannya di `skills` agent itu. Agent `general` memakainya untuk `find-skills`: pesan sistem "Halo" turun dari 10.018 ke 8.850 karakter (input Hermes nyata 15.987 → 15.672 token; 13.362 token di antaranya prompt Hermes sendiri tanpa pesan sistem AIOS).
 
 ## Skill inti anti-melenceng
 

@@ -90,8 +90,13 @@ describe('bundel sebagai pesan sistem Hermes', () => {
     const [system, user] = request!.body.messages;
     expect(user).toEqual({ role: 'user', content: 'halo' });
     expect(system!.role).toBe('system');
-    // Bundel role di depan; run di server menambahkan aturan berkas untuk pemilik sesudahnya.
-    expect(system!.content.startsWith(env.roles.bundle('general').systemPrompt)).toBe(true);
+    // Bundel role di depan (indeks skill memakai nama Hermes aios-<id>); run di server menambahkan aturan berkas
+    // untuk pemilik sesudahnya.
+    expect(
+      system!.content.startsWith(
+        env.roles.bundle('general', undefined, { skillNamePrefix: 'aios-' }).systemPrompt,
+      ),
+    ).toBe(true);
     expect(system!.content).toContain(SERVER_FILES_RULE);
     for (const rule of AGENT_BEHAVIOR_RULES) expect(system!.content).toContain(rule);
     expect(system!.content).toContain('# Peran: Umum');
@@ -101,10 +106,12 @@ describe('bundel sebagai pesan sistem Hermes', () => {
       'rich-answers',
       'answer-first',
       'clarify-once',
-      'find-skills',
     ]) {
       expect(system!.content).toContain(`## ${skill}\n`);
     }
+    // Skill yang jarang dipakai hanya ditawarkan lewat indeks supaya pesan sistem tetap ramping.
+    expect(system!.content).not.toContain('## find-skills\n');
+    expect(system!.content).toContain('\n- aios-find-skills: ');
     for (const skill of CODING_CORE_SKILLS) expect(system!.content).not.toContain(`## ${skill}\n`);
     expect(system!.content).not.toContain('## ui-baseline');
     expect(run.agentRole).toBeNull();

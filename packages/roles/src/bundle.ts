@@ -88,9 +88,9 @@ export interface BundleOptions {
  * yang ditawarkan (P9, hanya id+deskripsi). Skill inti (`coreSkillsFor(role.group)`: universal, ditambah
  * skill inti coding untuk grup `coding`) selalu masuk utuh. Skill milik agent dan skill
  * manual (`extraSkills`) masuk berurutan selama muat di anggaran skill; yang tidak muat dilewati
- * (dilaporkan di `omittedSkills`), bukan dipotong di tengah. Skill `suggestedSkills` yang belum diminta
- * eksplisit (tidak ada di `extraSkills`/skill milik agent) hanya masuk sebagai baris indeks, tidak
- * dihitung ke anggaran skill (deskripsinya pendek, maks 200 karakter).
+ * (dilaporkan di `omittedSkills`), bukan dipotong di tengah. Skill `suggestedSkills` dan `offered_skills` role
+ * yang belum diminta eksplisit (tidak ada di `extraSkills`/skill milik agent) hanya masuk sebagai baris indeks,
+ * tidak dihitung ke anggaran skill (deskripsinya pendek, maks 200 karakter).
  */
 export function buildBundle(
   registry: RolesRegistry,
@@ -137,16 +137,17 @@ export function buildBundle(
   const extraSet = new Set(extraSkills);
   // Hanya "tawarkan lewat indeks" (bukan tempel utuh) bila BELUM diminta eksplisit sebagai skill milik
   // agent atau pilihan manual (extraSkills); permintaan eksplisit selalu menang.
+  const offerable = [...role.offeredSkills, ...suggestedSkills];
   const indexOnly = eagerSkillPacks
     ? new Set<string>()
     : new Set(
-        suggestedSkills.filter(
+        offerable.filter(
           (id) => !role.skills.includes(id) && !extraSet.has(id) && !coreIds.includes(id),
         ),
       );
   const pinnedCatalog = catalogSkills.filter((s) => s.pinned).map((s) => s.id);
   const candidates = eagerSkillPacks
-    ? new Set([...role.skills, ...extraSkills, ...pinnedCatalog, ...suggestedSkills])
+    ? new Set([...role.skills, ...extraSkills, ...pinnedCatalog, ...offerable])
     : new Set([...role.skills, ...extraSkills, ...pinnedCatalog]);
 
   for (const id of candidates) {
