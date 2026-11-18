@@ -35,11 +35,31 @@ function patternOf(kind: RuleKind, detail: string): string {
   return aiosToolOf(tool) || connectorToolOf(tool) ? tool : normalizeDetail(detail);
 }
 
+/** Skrip package manager: `npm test`, `npm run <skrip>`, `pnpm test|run <skrip>`, `yarn test|run <skrip>`, `bun run <skrip>`. */
+const PACKAGE_SCRIPT =
+  /^(?:npm (?:test|t|run [\w:.-]+)|(?:pnpm|yarn) (?:test|run [\w:.-]+)|bun run [\w:.-]+)$/;
+/** Argumen tambahan yang aman: literal tanpa metakarakter shell, kutip, atau ekspansi. */
+const PLAIN_ARGS = /^[\w@%+=:,./-]+(?: [\w@%+=:,./-]+)*$/;
+
+/**
+ * "Selalu" untuk skrip package manager mencakup argumen tambahan setelah `--`: `npm test` juga mengizinkan
+ * `npm test -- --run src/x.test.ts` (uji project: izin berulang tiap tes dijalankan per berkas). Aman karena yang
+ * dijalankan tetap skrip project yang sama yang sudah diizinkan selalu (skrip itu sendiri sudah menjalankan kode
+ * project apa pun); argumen setelah `--` hanya diteruskan ke skrip, bukan opsi package manager seperti `--prefix`
+ * yang bisa memindahkan folder. Perintah lain (mis. `git push`, `rm`) tetap cocok persis, karena argumen tambahan
+ * di sana mengubah tindakannya.
+ */
+function extendsScript(rule: string, command: string): boolean {
+  if (!PACKAGE_SCRIPT.test(rule) || !command.startsWith(`${rule} -- `)) return false;
+  return PLAIN_ARGS.test(command.slice(rule.length + 4));
+}
+
 /**
  * Aturan "selalu izinkan untuk project ini" (SECURITY_OPS.md). Omp tidak punya aturan permanen per pola
  * (docs/VERIFICATION.md), jadi disimpan di worker dan dijawab otomatis di sini. Sengaja sempit:
- * - perintah dan URL: cocok persis, bukan awalan, jadi `pnpm test` tidak membuka `pnpm test && rm -rf`.
- * - penulisan file: seluruh penulisan agent di worktree project itu (sudah terisolasi dan ditinjau sebelum diterima).
+ * - perintah dan URL: cocok persis, bukan awalan, jadi `pnpm test` tidak membuka `pnpm test && rm -rf`. Satu
+ *   pengecualian: skrip package manager mencakup argumen literal setelah `--` (lihat `extendsScript`).
+ * - penulisan file: seluruh penulisan agent di folder kerja run project itu, bukan `.git` (diperiksa coordinator).
  * - tool gateway (web_search, web_read): per nama tool; batas URL dan kueri ditegakkan gateway.
  * - tool konektor: per konektor dan per nama tool, tidak pernah per argumen (DESIGN_MCP_KONEKTOR.md #6);
  *   allowlist tool, anggaran, dan mode rencana tetap ditegakkan gateway.
@@ -69,7 +89,9 @@ export class ApprovalRules {
       (r) =>
         r.projectId === projectId &&
         r.kind === kind &&
-        (r.pattern === '*' || r.pattern === pattern),
+        (r.pattern === '*' ||
+          r.pattern === pattern ||
+          (kind === 'command' && extendsScript(r.pattern, pattern))),
     );
   }
 

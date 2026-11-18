@@ -468,6 +468,34 @@ describe('ApprovalRules', () => {
     expect(rules.matches('p1', 'network', 'pnpm test')).toBe(false);
   });
 
+  it('skrip package manager: "Selalu" mencakup argumen literal setelah --; perintah lain tetap persis', async () => {
+    await rules.add('p1', 'command', 'npm test');
+    await rules.add('p1', 'command', 'pnpm run typecheck');
+    await rules.add('p1', 'command', 'git push');
+
+    for (const cmd of [
+      'npm test -- --run src/Counter.test.tsx',
+      'npm test -- -t nama',
+      'pnpm run typecheck -- --pretty false',
+    ]) {
+      expect(rules.matches('p1', 'command', cmd), cmd).toBe(true);
+    }
+    for (const cmd of [
+      'npm test --prefix ../lain',
+      'npm test -- --run x && rm -rf /',
+      'npm test -- $(curl x)',
+      'npm test -- "a b"',
+      'npm test -- x; ls',
+      'npm testing -- x',
+      'npm install -- x',
+      'git push -- --force',
+      'git push --force',
+      'pnpm run typecheck2 -- x',
+    ]) {
+      expect(rules.matches('p1', 'command', cmd), cmd).toBe(false);
+    }
+  });
+
   it('penulisan file: satu aturan per project untuk semua penulisan', async () => {
     await rules.add('p1', 'file_write', 'Path: a.ts');
 
