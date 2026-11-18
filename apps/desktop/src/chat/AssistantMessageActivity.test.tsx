@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { RoleInfo } from '../api/gateway';
 import { copy } from '../copy';
 import { formatElapsed, savedActivity, type SavedTool } from '../realtime/activity';
+import { noteStopped } from '../realtime/stoppedRuns';
 import { allCheckpoints, fixtureActivity } from '../test/activityFixtures';
 import { orbStateOf } from './AgentOrb';
 import { AssistantMessage } from './AssistantMessage';
@@ -253,6 +254,18 @@ describe('jawaban lama: ringkasan dari data tersimpan', () => {
     expect(savedActivity(tools, timed('cancelled', '2026-11-02T10:00:03Z')).summary).toBe(
       'Dibatalkan · 3 dtk · 2 langkah',
     );
+  });
+
+  it('run yang dihentikan pemilik tetapi sudah mengubah berkas (needs_review): Dihentikan, bukan Selesai', () => {
+    const id = 'run-dihentikan-tersimpan';
+    noteStopped(id);
+    const activity = savedActivity(tools, { ...timed('needs_review', '2026-11-02T10:00:09Z'), id });
+    expect(activity.phase).toBe('cancelled');
+    expect(activity.summary).toBe('Dihentikan · 2 langkah');
+    expect(
+      savedActivity(tools, { ...timed('needs_review', '2026-11-02T10:00:09Z'), id: 'run-lain' })
+        .phase,
+    ).toBe('done');
   });
 
   it('selisih waktu negatif atau tidak terbaca tidak menghasilkan durasi; tanpa langkah tanpa bagian langkah', () => {

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { AgentOrb, orbStateOf } from './AgentOrb';
 
 describe('AgentOrb', () => {
-  it.each(['idle', 'thinking', 'tool', 'writing', 'done', 'error'] as const)(
+  it.each(['idle', 'thinking', 'tool', 'writing', 'done', 'error', 'stopped'] as const)(
     '%s tetap ornamen tersembunyi dari pembaca layar',
     (state) => {
       render(<AgentOrb state={state} />);
@@ -21,6 +21,13 @@ describe('AgentOrb', () => {
     expect(orb.querySelector('[data-orb-check]')).toHaveAttribute('pathLength', '1');
   });
 
+  it('run dihentikan: ikon kotak, bukan titik siap atau check selesai', () => {
+    render(<AgentOrb state="stopped" />);
+    const orb = screen.getByTestId('agent-orb');
+    expect(orb.querySelector('[data-orb-stop]')).not.toBeNull();
+    expect(orb.querySelector('[data-orb-check]')).toBeNull();
+  });
+
   it('mendukung ukuran ringkas 16 dan penuh 28', () => {
     const view = render(<AgentOrb state="idle" size={16} />);
     expect(screen.getByTestId('agent-orb')).toHaveAttribute('width', '16');
@@ -36,7 +43,7 @@ describe('AgentOrb', () => {
     ['waiting_approval', 'tool'],
     ['done', 'done'],
     ['error', 'error'],
-    ['cancelled', 'idle'],
+    ['cancelled', 'stopped'],
   ] as const)('memetakan fase %s ke orb %s', (phase, state) => {
     expect(orbStateOf(phase)).toBe(state);
   });

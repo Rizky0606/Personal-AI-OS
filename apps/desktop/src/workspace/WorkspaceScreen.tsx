@@ -23,6 +23,7 @@ import {
   type WorkspaceRun,
 } from './runs';
 import { useRunCancel } from './useRunCancel';
+import { wasStopped } from '../realtime/stoppedRuns';
 
 /**
  * Ruang Kerja: semua run coding sekaligus dengan status live, supaya beberapa tugas paralel terlihat tanpa
@@ -142,51 +143,58 @@ export function WorkspaceScreen() {
           aria-label={copy.workspace.title}
           className="divide-y divide-border overflow-hidden rounded-panel border border-border bg-surface"
         >
-          {items.map((item, index) => (
-            <li
-              key={item.run.id}
-              style={enterDelay(index)}
-              className="flex animate-aios-enter items-center gap-3 px-4 py-3 transition-colors duration-[120ms] ease-aios hover:bg-surface-2"
-            >
-              <span
-                role="img"
-                aria-label={copy.runStatus[item.run.status]}
-                className={cn('size-2 shrink-0 rounded-full', statusDotClass(item.run.status))}
-              />
-              <button
-                type="button"
-                onClick={() => open(item)}
-                aria-label={`${copy.workspace.open}: ${item.title || copy.workspace.untitled}`}
-                className="flex min-w-0 flex-1 flex-col items-start text-left"
+          {items.map((item, index) => {
+            // Dihentikan pemilik tetapi sudah mengubah berkas: gateway hanya mengirim needs_review.
+            const status =
+              item.run.status === 'needs_review' && wasStopped(item.run.id)
+                ? copy.workspace.stoppedReview
+                : copy.runStatus[item.run.status];
+            return (
+              <li
+                key={item.run.id}
+                style={enterDelay(index)}
+                className="flex animate-aios-enter items-center gap-3 px-4 py-3 transition-colors duration-[120ms] ease-aios hover:bg-surface-2"
               >
-                <span className="w-full truncate text-ui text-text">
-                  {item.title || copy.workspace.untitled}
-                </span>
-                <span className="flex w-full items-center gap-2 truncate text-meta text-text-3">
-                  <span>{copy.runStatus[item.run.status]}</span>
-                  {item.projectName ? <span>· {item.projectName}</span> : null}
-                  {item.run.branch ? (
-                    <span className="inline-flex items-center gap-1">
-                      · <GitBranch size={12} strokeWidth={1.5} aria-hidden="true" />
-                      {item.run.branch}
-                    </span>
-                  ) : null}
-                  <span>· {relativeTime(item.run.updatedAt)}</span>
-                </span>
-              </button>
-              {isCancellable(item.run.status) ? (
-                <Button
-                  variant="secondary"
-                  disabled={busyId === item.run.id}
-                  aria-label={`${copy.workspace.stop}: ${item.title || copy.workspace.untitled}`}
-                  onClick={() => void cancel(item.run.id)}
+                <span
+                  role="img"
+                  aria-label={status}
+                  className={cn('size-2 shrink-0 rounded-full', statusDotClass(item.run.status))}
+                />
+                <button
+                  type="button"
+                  onClick={() => open(item)}
+                  aria-label={`${copy.workspace.open}: ${item.title || copy.workspace.untitled}`}
+                  className="flex min-w-0 flex-1 flex-col items-start text-left"
                 >
-                  <Square size={14} strokeWidth={1.5} aria-hidden="true" />
-                  {copy.workspace.stop}
-                </Button>
-              ) : null}
-            </li>
-          ))}
+                  <span className="w-full truncate text-ui text-text">
+                    {item.title || copy.workspace.untitled}
+                  </span>
+                  <span className="flex w-full items-center gap-2 truncate text-meta text-text-3">
+                    <span>{status}</span>
+                    {item.projectName ? <span>· {item.projectName}</span> : null}
+                    {item.run.branch ? (
+                      <span className="inline-flex items-center gap-1">
+                        · <GitBranch size={12} strokeWidth={1.5} aria-hidden="true" />
+                        {item.run.branch}
+                      </span>
+                    ) : null}
+                    <span>· {relativeTime(item.run.updatedAt)}</span>
+                  </span>
+                </button>
+                {isCancellable(item.run.status) ? (
+                  <Button
+                    variant="secondary"
+                    disabled={busyId === item.run.id}
+                    aria-label={`${copy.workspace.stop}: ${item.title || copy.workspace.untitled}`}
+                    onClick={() => void cancel(item.run.id)}
+                  >
+                    <Square size={14} strokeWidth={1.5} aria-hidden="true" />
+                    {copy.workspace.stop}
+                  </Button>
+                ) : null}
+              </li>
+            );
+          })}
         </ul>
       </StateView>
     </Page>

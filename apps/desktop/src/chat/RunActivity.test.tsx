@@ -106,3 +106,20 @@ describe('RunActivity', () => {
     expect(screen.getByText('+2')).toBeInTheDocument();
   });
 });
+
+describe('RunActivity: run hening', () => {
+  it('menampilkan berapa lama run menunggu model sejak aktivitas terakhir, hanya saat hening', () => {
+    const live: LiveRun = {
+      ...newLiveRun('hening'),
+      status: 'running',
+      startedAt: 0,
+      lastEventAt: 0,
+    };
+    const view = render(<RunActivity activity={buildActivity(live, 21_000)} now={21_000} />);
+    expect(
+      screen.getByText('Menunggu model · 21 dtk sejak aktivitas terakhir'),
+    ).toBeInTheDocument();
+    view.rerender(<RunActivity activity={buildActivity(live, 5_000)} now={5_000} />);
+    expect(screen.queryByText(/Menunggu model/)).toBeNull();
+  });
+});

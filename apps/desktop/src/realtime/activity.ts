@@ -7,6 +7,7 @@ import {
 } from '@aios/contracts';
 import { copy } from '../copy';
 import { isSettled, type LiveRun, type ToolStep } from './liveRun';
+import { wasStopped } from './stoppedRuns';
 
 /**
  * Lapisan data aktivitas run (tanpa React, tanpa jam): mengubah `LiveRun` menjadi apa yang ditampilkan baris
@@ -48,6 +49,12 @@ export interface Activity {
   steps: ActivityStep[];
   summary: string | null;
   needsAttention: boolean;
+  /**
+   * Run berjalan tanpa event baru lebih dari `QUIET_AFTER_MS` (tidak ada tool berjalan, izin, atau pertanyaan yang
+   * ditunggu): lama hening sejak aktivitas terakhir, supaya pemilik tahu run menunggu model, bukan macet diam-diam.
+   * Tidak ada bila run tidak hening.
+   */
+  quietMs?: number;
 }
 
 export interface ActivityOptions {
@@ -55,6 +62,7 @@ export interface ActivityOptions {
 }
 
 export const DEFAULT_VISIBLE_STEPS = 3;
+export const QUIET_AFTER_MS = 15_000;
 export const HEADLINE_MAX = 80;
 export const TARGET_MAX = 60;
 
@@ -206,7 +214,8 @@ function phaseOf(live: LiveRun, running: ToolStep[]): ActivityPhase {
     case 'needs_review':
     case 'accepted':
     case 'rejected':
-      return 'done';
+      // Dihentikan pemilik tetapi sudah mengubah berkas: berakhir needs_review, bukan selesai.
+      return wasStopped(live.runId) ? 'cancelled' : 'done';
     case 'failed':
       return 'error';
     case 'cancelled':
@@ -265,7 +274,9 @@ export function buildActivity(live: LiveRun, now: number, options: ActivityOptio
       : phase === 'error'
         ? t.error
         : phase === 'cancelled'
-          ? t.cancelled
+          ? wasStopped(live.runId)
+            ? t.stopped
+            : t.cancelled
           : null;
   const summary =
     label === null
@@ -279,6 +290,11 @@ export function buildActivity(live: LiveRun, now: number, options: ActivityOptio
   const headline = headlineFrom(
     live.reasoningSummary?.trim() ? live.reasoningSummary : live.reasoning,
   );
+  const waitingOnOwner = live.approvals.length > 0 || live.questions.length > 0;
+  const quietMs =
+    !settled && phase !== 'waiting_approval' && running.length === 0 && !waitingOnOwner
+      ? now - (live.lastEventAt ?? now)
+      : 0;
 
   return {
     headline,
@@ -292,6 +308,7 @@ export function buildActivity(live: LiveRun, now: number, options: ActivityOptio
     needsAttention:
       live.tools.some((tool) => tool.status === 'error') ||
       (!settled && (live.approvals.length > 0 || live.status === 'waiting_approval')),
+    ...(quietMs > QUIET_AFTER_MS ? { quietMs } : {}),
   };
 }
 
@@ -306,6 +323,8 @@ export interface SavedTool {
 
 /** Bagian run tersimpan (entitas Run dari server) yang dipakai untuk ringkasan jawaban lama. */
 export interface SavedRunInfo {
+  /** Untuk mengenali run yang dihentikan pemilik dari perangkat ini. */
+  id?: string;
   status: LiveRun['status'];
   createdAt: string;
   updatedAt: string;
@@ -326,13 +345,25 @@ export function savedActivity(tools: SavedTool[], run: SavedRunInfo | null): Act
     durationMs: t.durationMs ?? null,
     startedAt: null,
   }));
+  const stopped = run?.id !== undefined && wasStopped(run.id);
   const phase: ActivityPhase =
-    run?.status === 'failed' ? 'error' : run?.status === 'cancelled' ? 'cancelled' : 'done';
+    run?.status === 'failed'
+      ? 'error'
+      : run?.status === 'cancelled' || stopped
+        ? 'cancelled'
+        : 'done';
   const timed = run !== null && ['completed', 'failed', 'cancelled'].includes(run.status);
   const span = timed ? Date.parse(run.updatedAt) - Date.parse(run.createdAt) : Number.NaN;
   const elapsedMs = Number.isFinite(span) && span >= 0 ? span : null;
   const t = copy.runActivity.summary;
-  const label = phase === 'error' ? t.error : phase === 'cancelled' ? t.cancelled : t.done;
+  const label =
+    phase === 'error'
+      ? t.error
+      : phase === 'cancelled'
+        ? stopped
+          ? t.stopped
+          : t.cancelled
+        : t.done;
   return {
     headline: null,
     phase,

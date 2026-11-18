@@ -6,6 +6,7 @@ import { copy } from '../copy';
 import { CONV, RUN_1, RUN_2, run } from '../test/fixtures';
 import { api, resetApi } from '../test/fakeServices';
 import { renderScreen } from '../test/render';
+import { noteStopped } from '../realtime/stoppedRuns';
 import type { WorkspaceRun } from './runs';
 
 vi.mock('../app/services', async () => (await import('../test/fakeServices')).fakeServices);
@@ -79,6 +80,20 @@ describe('WorkspaceScreen', () => {
     ).toHaveLength(1);
     await user.click(screen.getByRole('button', { name: `${copy.workspace.stop}: Berjalan` }));
     expect(api.cancelRun).toHaveBeenCalledWith(RUN_1);
+  });
+
+  it('run yang dihentikan pemilik tetapi menunggu tinjauan berlabel Dihentikan, bukan sekadar Perlu ditinjau', async () => {
+    noteStopped(RUN_1);
+    api.listRuns.mockResolvedValue([
+      entry({ id: RUN_1, status: 'needs_review' }, 'Dihentikan di tengah'),
+      entry({ id: RUN_2, status: 'needs_review' }, 'Selesai normal'),
+    ]);
+    await renderScreen(<WorkspaceScreen />, '/workspace');
+
+    expect(
+      await screen.findByRole('img', { name: copy.workspace.stoppedReview }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: copy.runStatus.needs_review })).toBeInTheDocument();
   });
 
   it('tanpa run: tombol Buka kanban pindah ke papan kartu', async () => {
