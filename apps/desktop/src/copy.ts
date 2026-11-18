@@ -1053,6 +1053,9 @@ export const copy = {
     loading: 'Memuat progres',
     empty: 'Belum ada aktivitas di percakapan ini',
     emptyAction: 'Tulis pesan',
+    /** Halaman tanpa chat (Riset, Jadwal, dan sejenisnya): Progres mengikuti chat yang terbuka. */
+    noSource: 'Progres mengikuti chat yang sedang dibuka. Halaman ini bukan chat.',
+    openChat: 'Buka chat',
     offline: 'Offline. Menampilkan data terakhir.',
     lightbox: {
       close: 'Tutup pratinjau',
@@ -1445,11 +1448,18 @@ export const copy = {
       'Pesan ini dan semua pesan sesudahnya dihapus permanen. AI tidak akan mengingatnya lagi.',
     deleteMessageConfirm: 'Hapus',
     deleteMessageFailed: 'Pesan belum terhapus.',
-    editLastHint: 'Pesan baru dikirim dari teks ini; jawaban lama tetap ada di riwayat.',
+    editLastHint: 'Ubah pesan terakhir di tempatnya; pesan itu dan jawabannya diganti.',
     offlineSend: 'Tidak ada koneksi. Pesan belum terkirim; sambungkan lalu kirim lagi.',
     sendFailed: 'Pesan belum terkirim. Teks dikembalikan ke kolom pesan.',
     stopFailed: 'Belum bisa menghentikan jawaban. Coba lagi.',
     runFailed: 'Jawaban gagal.',
+    /** Tombol di kartu error untuk galat yang bisa diulang; mengganti giliran yang gagal. */
+    retryFailed: 'Coba lagi',
+    /** Jaring pengaman "ingat ini" (event `memory.suggested`) di bawah jawaban. */
+    memorySuggestion: {
+      note: 'Belum tersimpan di memori. Simpan lewat Ingat agar dipakai di chat lain.',
+      action: 'Ingat ini…',
+    },
     workspace: {
       inPlace: (branch: string) => `Di branch ${branch}`,
       worktree: (branch: string) => `Di salinan ${branch}`,

@@ -1,7 +1,14 @@
-import type { Message, QuestionAnswer } from '@aios/contracts';
+import { rememberFactFrom, type Message, type QuestionAnswer } from '@aios/contracts';
 import type { RoleInfo } from '../api/gateway';
 import { useQuery } from '@tanstack/react-query';
-import { useLayoutEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
+import {
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from 'react';
 import { useConversationProgress } from '../api/queries';
 import { api } from '../app/services';
 import { copy } from '../copy';
@@ -37,10 +44,16 @@ export interface MessageListProps {
   failure: string | null;
   /** Mengulang pesan yang ditolak di worktree terpisah (folder project kotor, sibuk, atau detached HEAD). */
   onRetryInWorktree?: (() => void) | undefined;
+  /** Mengulang pesan terakhir yang gagal (galat `retryable`); menggantikan giliran yang gagal, bukan menggandakan. */
+  onRetry?: (() => void) | undefined;
+  /** Run yang gagal (run terakhir percakapan); jawabannya memakai Orb error, bukan netral. */
+  failedRunId?: string | null;
   /** Membuka tab Git untuk membereskan folder project. */
   onOpenGit?: (() => void) | undefined;
   /** Pesan pengguna terakhir yang boleh dikirim ulang (null saat jawaban berjalan). */
   editableUserId?: string | null;
+  /** Permintaan membuka editor pesan pengguna terakhir (pensil "Ubah pesan terakhir"); 0 = belum pernah. */
+  editLastRequest?: number;
   onResendLast?: () => void;
   /** Ubah dan hapus pesan hanya saat tidak ada jawaban yang berjalan. */
   canModify?: boolean;
@@ -103,13 +116,15 @@ const scrollToApproval = () =>
 type SavedAssistantProps = Omit<ComponentProps<typeof AssistantMessage>, 'run' | 'orb'> & {
   runId: string | null;
   conversationId: string;
+  /** Run jawaban ini gagal: Orb error. */
+  failed?: boolean;
 };
 
 /**
  * Jawaban lama (setelah muat ulang atau buka percakapan): ringkasan terlipat dari bagian tool dan waktu run yang
  * tersimpan. Run diambil hanya bila jawaban punya langkah tool; jawaban teks biasa tidak mendapat baris.
  */
-function SavedAssistantMessage({ runId, conversationId, ...props }: SavedAssistantProps) {
+function SavedAssistantMessage({ runId, conversationId, failed, ...props }: SavedAssistantProps) {
   const tools = savedTools(props.parts);
   // Berkas hasil kerja run ini dibaca dari agregat progress (cache yang sama dengan panel Progres), jadi
   // thumbnail di baris aktivitas tetap ada setelah muat ulang.
@@ -130,7 +145,8 @@ function SavedAssistantMessage({ runId, conversationId, ...props }: SavedAssista
     retry: false,
     staleTime: 60_000,
   });
-  if (tools.length === 0 && artifacts.length === 0) return <AssistantMessage {...props} />;
+  if (tools.length === 0 && artifacts.length === 0)
+    return <AssistantMessage {...props} {...(failed ? { orb: 'error' as const } : {})} />;
   const activity = savedActivity(tools, run.data ?? null);
   return (
     <AssistantMessage
@@ -147,6 +163,7 @@ function AssistantRow({
   finished,
   now,
   runId,
+  failed,
   ...props
 }: SavedAssistantProps & { finished: LiveRun | undefined; now: number }) {
   if (finished && runId !== null && finished.runId === runId) {
@@ -167,7 +184,34 @@ function AssistantRow({
       />
     );
   }
-  return <SavedAssistantMessage runId={runId} {...props} />;
+  return <SavedAssistantMessage runId={runId} failed={failed} {...props} />;
+}
+
+/**
+ * Jaring pengaman "ingat ini" (event `memory.suggested`): pemilik minta diingat tetapi tidak ada yang tersimpan.
+ * Menawarkan dialog Ingat berisi fakta ringkas; tidak menyimpan apa pun sendiri.
+ */
+function MemorySuggestion({
+  text,
+  onRemember,
+}: {
+  text: string;
+  onRemember: (text: string) => void;
+}) {
+  return (
+    <div
+      role="note"
+      className="flex flex-wrap items-center gap-3 rounded-panel border border-border bg-surface px-3 py-2 text-ui"
+    >
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="text-text-2">{copy.chat.memorySuggestion.note}</span>
+        <span className="break-words text-text">{text}</span>
+      </span>
+      <Button variant="secondary" onClick={() => onRemember(text)}>
+        {copy.chat.memorySuggestion.action}
+      </Button>
+    </div>
+  );
 }
 
 function liveParts(live: LiveRun): AssistantPart[] {
@@ -183,11 +227,13 @@ function LiveAssistant({
   roles,
   streaming,
   now,
+  footer,
 }: {
   live: LiveRun;
   roles: RoleInfo[];
   streaming: boolean;
   now: number;
+  footer?: ReactNode;
 }) {
   const activity = buildActivity(live, now);
   return (
@@ -207,6 +253,7 @@ function LiveAssistant({
         artifacts: live.artifacts,
         onApproval: scrollToApproval,
       }}
+      footer={footer}
     />
   );
 }
@@ -221,8 +268,11 @@ export function MessageList({
   now,
   failure,
   onRetryInWorktree,
+  onRetry,
+  failedRunId = null,
   onOpenGit,
   editableUserId = null,
+  editLastRequest = 0,
   onResendLast,
   canModify = false,
   onEditMessage,
@@ -298,13 +348,19 @@ export function MessageList({
                   : undefined
               }
               onResend={message.id === editableUserId ? onResendLast : undefined}
+              editRequest={message.id === editableUserId ? editLastRequest : undefined}
               onDelete={modifiable ? () => setToDelete(message.id) : undefined}
-              onRemember={() => setToRemember(messageText(message))}
+              // Dialog Ingat berisi fakta ringkas ("Pemilik suka …") bila pesannya permintaan mengingat.
+              onRemember={() => {
+                const text = messageText(message);
+                setToRemember(rememberFactFrom(text) ?? text);
+              }}
             />
           ) : message.author === 'assistant' ? (
             <AssistantRow
               key={message.id}
               runId={message.runId}
+              failed={failedRunId !== null && message.runId === failedRunId}
               conversationId={message.conversationId}
               finished={finished}
               now={now}
@@ -318,6 +374,9 @@ export function MessageList({
               onRichFollowUp={message.id === lastAssistantId ? onRichFollowUp : undefined}
               footer={
                 <>
+                  {finished?.memorySuggestion && message.runId === finished.runId ? (
+                    <MemorySuggestion text={finished.memorySuggestion} onRemember={setToRemember} />
+                  ) : null}
                   <SkillProposalCards
                     conversationId={message.conversationId}
                     messageId={message.id}
@@ -335,7 +394,20 @@ export function MessageList({
           ) : null,
         )}
         {pending ? <UserMessage text={pending} /> : null}
-        {live ? <LiveAssistant live={live} roles={roles} streaming={streaming} now={now} /> : null}
+        {live ? (
+          <LiveAssistant
+            live={live}
+            roles={roles}
+            streaming={streaming}
+            now={now}
+            footer={
+              // Run sudah selesai tetapi tampilan streaming belum dilepas: tawaran Ingat langsung terlihat.
+              !streaming && live.memorySuggestion ? (
+                <MemorySuggestion text={live.memorySuggestion} onRemember={setToRemember} />
+              ) : undefined
+            }
+          />
+        ) : null}
         {approvals.map((approval) => (
           <ApprovalPanel
             key={approval.approvalId}
@@ -360,8 +432,13 @@ export function MessageList({
           <ErrorBanner
             message={failure ? `${copy.chat.runFailed} ${failure}` : copy.chat.runFailed}
             action={
-              onRetryInWorktree || onOpenGit ? (
+              onRetry || onRetryInWorktree || onOpenGit ? (
                 <div className="flex shrink-0 flex-wrap justify-end gap-2">
+                  {onRetry ? (
+                    <Button variant="secondary" disabled={!canModify} onClick={onRetry}>
+                      {copy.chat.retryFailed}
+                    </Button>
+                  ) : null}
                   {onOpenGit ? (
                     <Button variant="secondary" onClick={onOpenGit}>
                       {copy.chat.workspace.openGit}

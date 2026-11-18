@@ -49,8 +49,8 @@ function itemText(item: unknown): string | null {
   const plain = cellText(item);
   if (plain !== null) return plain || null;
   if (typeof item !== 'object' || item === null) return null;
-  const head = firstText(item as LooseObject, HEAD_KEYS);
-  const body = firstText(item as LooseObject, BODY_KEYS);
+  const head = firstText(item, HEAD_KEYS);
+  const body = firstText(item, BODY_KEYS);
   return head && body ? `${head}: ${body}` : (head ?? body);
 }
 

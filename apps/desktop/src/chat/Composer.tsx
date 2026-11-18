@@ -1,15 +1,6 @@
 import type { OrbState } from './AgentOrb';
 import type { ModelInfo } from '../api/gateway';
-import {
-  ArrowUp,
-  ChevronDown,
-  Globe,
-  Paperclip,
-  Pencil,
-  Settings2,
-  Square,
-  X,
-} from 'lucide-react';
+import { ArrowUp, ChevronDown, Globe, Paperclip, Pencil, Settings2, Square, X } from 'lucide-react';
 import type { PromptTemplate } from '@aios/contracts';
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import * as Dropdown from '@radix-ui/react-dropdown-menu';

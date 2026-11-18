@@ -1,5 +1,5 @@
 import type { ProgressOutput } from '@aios/contracts';
-import { useNavigate } from '@tanstack/react-router';
+import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { WifiOff } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { apiErrorMessage } from '../api/errors';
@@ -40,6 +40,11 @@ export function ProgressPanel() {
   const { view, offline } = state;
   const phase = state.phase;
   const navigate = useNavigate();
+  // Halaman chat (umum, percakapan, chat project) punya kolom pesan; halaman lain (Riset, Jadwal, ...) tidak.
+  const onChatPage = useRouterState({
+    select: (st) => /^\/(?:$|chat\/|workspace\/)/.test(st.location.pathname),
+  });
+  const chatEmpty = state.hasSource || onChatPage;
   const push = useToastStore((s) => s.push);
   const openReview = useUiStore((s) => s.openReview);
   const conversationId = useUiStore((s) => s.progressSource?.conversationId);
@@ -128,15 +133,22 @@ export function ProgressPanel() {
       <StateView
         state={viewState}
         loadingLabel={copy.progress.loading}
-        emptyMessage={copy.progress.empty}
+        // Di luar halaman chat "Tulis pesan" tidak relevan: Progres mengikuti chat yang terbuka.
+        emptyMessage={chatEmpty ? copy.progress.empty : copy.progress.noSource}
         errorMessage={state.errorMessage}
         offlineMessage={copy.states.offline}
         retryLabel={copy.states.retry}
         onRetry={state.refetch}
         emptyAction={
-          <Button variant="secondary" onClick={focusComposer}>
-            {copy.progress.emptyAction}
-          </Button>
+          chatEmpty ? (
+            <Button variant="secondary" onClick={focusComposer}>
+              {copy.progress.emptyAction}
+            </Button>
+          ) : (
+            <Button variant="secondary" onClick={() => void navigate({ to: '/' })}>
+              {copy.progress.openChat}
+            </Button>
+          )
         }
       >
         <Section title={copy.progress.sections.progress}>

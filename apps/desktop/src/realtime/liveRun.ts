@@ -111,6 +111,11 @@ export interface LiveRun {
   contextUsed: ContextUsed | null;
   /** Folder kerja run coding (event `workspace.ready`); null sampai worker melaporkannya. */
   workspace: WorkspaceView | null;
+  /**
+   * Fakta ringkas dari event `memory.suggested`: pemilik minta diingat tetapi tidak ada usulan memori yang berhasil.
+   * Klien menawarkan dialog "Ingat ini" berisi teks ini; null bila tidak ada.
+   */
+  memorySuggestion: string | null;
 }
 
 export const isTerminal = (status: RunStatus): boolean => TERMINAL_RUN_STATUSES.includes(status);
@@ -146,6 +151,7 @@ export const newLiveRun = (runId: string): LiveRun => ({
   subagents: [],
   contextUsed: null,
   workspace: null,
+  memorySuggestion: null,
 });
 
 /** Memajukan waktu mulai ke waktu run dibuat di server bila lebih awal (reload di tengah run). */
@@ -341,6 +347,8 @@ function reduceEvent(run: LiveRun, event: ServerEvent, ts: number | undefined): 
         : { ...run, artifacts: [...run.artifacts, event] };
     case 'workspace.ready':
       return { ...run, workspace: { mode: event.mode, branch: event.branch } };
+    case 'memory.suggested':
+      return { ...run, memorySuggestion: event.text };
     case 'error':
       return {
         ...run,

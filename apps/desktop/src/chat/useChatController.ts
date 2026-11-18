@@ -377,11 +377,15 @@ export function useChatController(conversationId: string | undefined) {
     [live, fail, online],
   );
 
-  /** API tidak punya edit di tempat: teks pesan terakhir dimasukkan ke kolom pesan lalu dikirim sebagai pesan baru. */
+  /**
+   * Pensil "Ubah pesan terakhir": membuka editor di gelembung pesan pengguna terakhir. Mengirim dari sana memakai
+   * `editMessage` (pesan itu dan jawabannya diganti, sesi agent mulai ulang dengan riwayat sebelumnya), sama dengan
+   * tombol Ubah saat kursor di atas pesan.
+   */
+  const [editLastRequest, setEditLastRequest] = useState(0);
   const editLast = useCallback(() => {
     if (!lastUser || sending || streaming) return;
-    setDraft(messageText(lastUser));
-    setFocusNonce((n) => n + 1);
+    setEditLastRequest((n) => n + 1);
   }, [lastUser, sending, streaming]);
 
   /** Mengirim ulang teks pesan terakhir sebagai pesan baru (sama seperti Android). */
@@ -499,6 +503,12 @@ export function useChatController(conversationId: string | undefined) {
     void editMessage(lastUser.id, messageText(lastUser), { workspace: 'worktree' });
   }, [lastUser, editMessage]);
   const openGit = useCallback(() => openPanel('git'), [openPanel]);
+  // Galat yang bisa diulang (mis. Hermes macet): "Coba lagi" mengganti giliran yang gagal lewat edit pesan, sama
+  // seperti mengulang di worktree, jadi riwayat tidak berisi pesan ganda.
+  const retryFailed = useCallback(() => {
+    if (!lastUser) return;
+    void editMessage(lastUser.id, messageText(lastUser));
+  }, [lastUser, editMessage]);
 
   return {
     messages,
@@ -508,6 +518,9 @@ export function useChatController(conversationId: string | undefined) {
     /** Kode kegagalan run terakhir (mis. `workspace_dirty`), bila ada. */
     failureCode: failure ? failure.code : null,
     retryInWorktree: refusal !== null && lastUser ? retryInWorktree : undefined,
+    retryFailed: failure?.retryable && refusal === null && lastUser ? retryFailed : undefined,
+    /** Run terakhir yang gagal; jawabannya ditandai Orb error. */
+    failedRunId: failure ? (runId ?? null) : null,
     openGit: refusal !== null && WORKSPACE_REFUSALS[refusal] ? openGit : undefined,
     pending,
     draft,
@@ -546,6 +559,7 @@ export function useChatController(conversationId: string | undefined) {
     canSteer: codingLive,
     steer: (mode: 'steer' | 'followUp') => void steer(mode),
     editLast,
+    editLastRequest,
     /** Mengirim teks tertentu (saran lanjutan) tanpa menyentuh draf. */
     sendText: (text: string) => void send(text),
     sendRichFollowUp: (followUp: RichAnswerFollowUp) => void send(undefined, { followUp }),

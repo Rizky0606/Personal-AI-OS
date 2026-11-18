@@ -100,4 +100,12 @@ describe('izin di LiveRun', () => {
     });
     expect(run.workspace).toEqual({ mode: 'in_place', branch: 'main' });
   });
+  it('memory.suggested menyimpan fakta ringkas untuk tawaran Ingat', () => {
+    expect(newLiveRun('m').memorySuggestion).toBeNull();
+    const run = reduceLiveRun(newLiveRun('m'), {
+      type: 'memory.suggested',
+      text: 'Pemilik suka kopi tubruk.',
+    });
+    expect(run.memorySuggestion).toBe('Pemilik suka kopi tubruk.');
+  });
 });

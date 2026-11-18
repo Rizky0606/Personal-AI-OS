@@ -62,6 +62,14 @@ describe('ProgressPanel: empat state', () => {
     expect(screen.getByRole('button', { name: p.emptyAction })).toBeInTheDocument();
   });
 
+  it('kosong di halaman bukan chat (Riset): keterangan dan Buka chat, tanpa "Tulis pesan"', async () => {
+    await renderScreen(<ProgressPanel />, '/research');
+    expect(await screen.findByText(p.noSource)).toBeInTheDocument();
+    expect(screen.queryByText(p.empty)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: p.emptyAction })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: p.openChat })).toBeInTheDocument();
+  });
+
   it('kosong: percakapan ada tetapi belum ada aktivitas', async () => {
     source();
     await renderScreen(<ProgressPanel />);
