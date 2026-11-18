@@ -256,12 +256,38 @@ describe('WorktreeManager: mode in_place', () => {
     });
   });
 
-  it('dua pembukaan bersamaan di repo yang sama: hanya satu yang lolos', async () => {
+  it('dua pembukaan bersamaan di repo yang sama: keduanya pembaca, hanya satu yang bisa menjadi penulis', async () => {
     const results = await Promise.allSettled([
       manager.openInPlace(RUN_A, repo),
       manager.openInPlace(RUN_B, repo),
     ]);
-    expect(results.map((r) => r.status).sort()).toEqual(['fulfilled', 'rejected']);
+    expect(results.map((r) => r.status)).toEqual(['fulfilled', 'fulfilled']);
+    expect(manager.claimWrite(RUN_A)).toBe(true);
+    expect(manager.claimWrite(RUN_A)).toBe(true);
+    expect(manager.claimWrite(RUN_B)).toBe(false);
+    // B berbagi folder dengan penulis: tanpa tinjauan; A tetap penulis biasa.
+    expect(manager.isBystander(RUN_B)).toBe(true);
+    expect(manager.isBystander(RUN_A)).toBe(false);
+  });
+
+  it('pembaca tidak mengunci repo; penulis yang berjalan mengunci; pembaca yang tersisa tidak bisa menulis lagi', async () => {
+    await manager.openInPlace(RUN_A, repo);
+    // A belum meminta izin tulis: B boleh dibuka.
+    await manager.openInPlace(RUN_B, repo);
+    expect(manager.claimWrite(RUN_B)).toBe(true);
+    const third = '0192f0c4-7a1b-7c2d-aaaa-4a5b6c7d8e92';
+    await expect(manager.openInPlace(third, repo)).rejects.toMatchObject({
+      code: 'workspace_busy',
+      message: expect.stringContaining('sedang berjalan') as string,
+    });
+    // B selesai tanpa perubahan dan dilepas: A tetap pembaca (folder pernah dipakai penulis lain).
+    await manager.remove(RUN_B, { deleteBranch: true });
+    expect(manager.claimWrite(RUN_A)).toBe(false);
+    await manager.openInPlace(third, repo);
+    // Worktree selalu boleh menulis: foldernya milik run itu sendiri.
+    const fourth = '0192f0c4-7a1b-7c2d-aaaa-4a5b6c7d8e93';
+    await manager.create(fourth, repo);
+    expect(manager.claimWrite(fourth)).toBe(true);
   });
 
   it('mode rencana: folder kotor boleh, tidak memegang kunci repo', async () => {

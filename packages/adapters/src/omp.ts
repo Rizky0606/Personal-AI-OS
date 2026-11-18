@@ -1,5 +1,5 @@
 import { mkdir, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import {
   AIOS_NETWORK_TOOLS,
   AIOS_TOOLS_SERVER,
@@ -318,7 +318,10 @@ class OmpRun implements RunHandle {
     string,
     { key: string; toolCount: number; durationMs: number }
   >();
-  private readonly tools = new Map<string, { name: string; startedAt: number; text: string }>();
+  private readonly tools = new Map<
+    string,
+    { name: string; startedAt: number; text: string; target?: string; cwd?: string }
+  >();
   private readonly usage: Usage = { inputTokens: 0, outputTokens: 0 };
   private text = '';
   private lastAssistantText = '';
@@ -588,8 +591,11 @@ class OmpRun implements RunHandle {
     const id = str(frame.toolCallId);
     const name = str(frame.toolName);
     if (!id || !name) return;
-    this.tools.set(id, { name, startedAt: this.deps.now(), text: '' });
     const target = toolTarget(frame.args);
+    // cwd efektif tool (bash `cwd` relatif terhadap cwd run); dipakai worker menilai perintah baca saja.
+    const toolCwd = isRecord(frame.args) ? str(frame.args.cwd) : undefined;
+    const cwd = toolCwd && this.input.cwd ? resolve(this.input.cwd, toolCwd) : this.input.cwd;
+    this.tools.set(id, { name, startedAt: this.deps.now(), text: '', target, cwd });
     this.emit({
       type: 'tool.started',
       toolCallId: id,
@@ -703,13 +709,28 @@ class OmpRun implements RunHandle {
     const tool = match[1] ?? '';
     const approvalId = this.deps.newId();
     this.pending.set(approvalId, { ompId, options });
-    const toolCallId = [...this.tools.entries()].reverse().find(([, t]) => t.name === tool)?.[0];
+    // Tool yang meminta izin: nama sama dan (untuk perintah) target sama dengan detail. Bila beberapa kandidat
+    // berbeda cwd, cwd tidak dilaporkan (worker lalu tidak mengizinkan otomatis).
+    const command = /^Command: ([\s\S]*)$/.exec(match[2] ?? '')?.[1];
+    const candidates = [...this.tools.entries()].filter(
+      ([, t]) => t.name === tool && (command === undefined || t.target === clip(command, 500)),
+    );
+    const toolCallId = (
+      candidates.at(-1) ?? [...this.tools.entries()].reverse().find(([, t]) => t.name === tool)
+    )?.[0];
+    const cwds = new Set(candidates.map(([, t]) => t.cwd));
+    const cwd =
+      cwds.size === 1
+        ? [...cwds][0]
+        : candidates.length === 0 && command === undefined
+          ? this.input.cwd
+          : undefined;
     this.emit({
       type: 'approval.requested',
       approvalId,
       kind: approvalKind(tool),
       detail: approvalDetail(tool, match[2] ?? ''),
-      ...(this.input.cwd ? { cwd: this.input.cwd } : {}),
+      ...(cwd ? { cwd } : {}),
       ...(toolCallId ? { toolCallId } : {}),
     });
   }

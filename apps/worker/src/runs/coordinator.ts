@@ -27,6 +27,7 @@ import { COMMIT_INSTRUCTION } from './commit-message.js';
 import { withHistory } from './history.js';
 import { LINK_INSTRUCTION, isLinkFromPrompt } from './links.js';
 import { OmpNotFoundError } from './omp-path.js';
+import { inside, isReadOnlyCommand } from './readonly.js';
 import { ReviewError, type ReviewService } from './review.js';
 import type { ApprovalRules, RuleKind } from './rules.js';
 import { linkNodeModules } from '../preview/nodemodules.js';
@@ -89,6 +90,14 @@ interface RunState {
   pending: Map<string, { kind: RuleKind; detail: string }>;
   /** Izin yang dijawab otomatis oleh aturan "selalu": event resolved-nya tidak diteruskan. */
   silent: Set<string>;
+  /** Izin yang dijawab pemilik dengan "Selalu" dan aturannya tersimpan: event resolved-nya `remember: true`. */
+  remembered: Set<string>;
+  /** Izin yang dijawab dengan "Izinkan tulis berkas untuk run ini": event resolved-nya `forRun: true`. */
+  forRun: Set<string>;
+  /** Pemilik mengizinkan semua penulisan berkas di dalam folder kerja run ini (bukan `.git`), hanya run ini. */
+  writeGrant: boolean;
+  /** Penjelasan kunci repo (penulisan ditolak karena run lain menulis) sudah dikirim ke agent. */
+  lockNoticeSent: boolean;
   outbox: AgentEvent[];
   cancelRequested: boolean;
   terminal: boolean;
@@ -182,6 +191,10 @@ export class RunCoordinator {
       handle: undefined,
       pending: new Map(),
       silent: new Set(),
+      remembered: new Set(),
+      forRun: new Set(),
+      writeGrant: false,
+      lockNoticeSent: false,
       outbox: [],
       openedSkills: new Set(),
       cancelRequested: false,
@@ -254,9 +267,17 @@ export class RunCoordinator {
     const run = this.runs.get(cmd.runId);
     if (!run?.handle) return;
     const entry = run.pending.get(cmd.approvalId);
-    // "Selalu untuk project ini" disimpan di worker; omp hanya menerima izinkan-sekali.
-    if (cmd.decision === 'allow' && cmd.remember && entry) {
+    const allow = cmd.decision === 'allow' && entry !== undefined;
+    // "Selalu untuk project ini" disimpan di worker; omp hanya menerima izinkan-sekali. Event approval.resolved
+    // dari adapter selalu `remember: false`, jadi dicatat di sini supaya event dan audit gateway jujur (B9).
+    if (allow && cmd.remember) {
       await this.deps.rules.add(run.cmd.projectId, entry.kind, entry.detail);
+      run.remembered.add(cmd.approvalId);
+    }
+    // "Izinkan tulis berkas untuk run ini": penulisan berikutnya di dalam folder kerja dijawab otomatis.
+    if (allow && cmd.forRun === true && entry.kind === 'file_write') {
+      run.writeGrant = true;
+      run.forRun.add(cmd.approvalId);
     }
     try {
       await run.handle.resolveApproval(cmd.approvalId, cmd.decision, false);
@@ -585,7 +606,41 @@ export class RunCoordinator {
         void run.handle?.resolveApproval(event.approvalId, 'allow').catch(() => undefined);
         return;
       }
-      if (this.deps.rules.matches(run.cmd.projectId, event.kind, event.detail)) {
+      const root = run.workspace?.cwd;
+      // Perintah baca saja di folder kerja run (readonly.ts): tidak ditanyakan dan tidak mengunci repo.
+      if (
+        root &&
+        event.kind === 'command' &&
+        (await isReadOnlyCommand(event.detail, event.cwd, root))
+      ) {
+        run.silent.add(event.approvalId);
+        void run.handle?.resolveApproval(event.approvalId, 'allow').catch(() => undefined);
+        return;
+      }
+      // Izin yang bisa mengubah berkas menjadikan run in_place penulis repo. Bila run in_place lain sudah menulis di
+      // repo yang sama, izin ditolak tanpa bertanya: dua penulis di satu folder tidak bisa ditinjau terpisah.
+      if (
+        (event.kind === 'file_write' || event.kind === 'command') &&
+        !toolName.startsWith('mcp__') &&
+        !this.deps.worktrees.claimWrite(runId)
+      ) {
+        run.silent.add(event.approvalId);
+        void run.handle?.resolveApproval(event.approvalId, 'deny').catch(() => undefined);
+        if (!run.lockNoticeSent) {
+          run.lockNoticeSent = true;
+          void run.handle?.steer(LOCK_NOTICE).catch(() => undefined);
+        }
+        return;
+      }
+      // Aturan "Selalu" dan izin tulis per run untuk berkas hanya berlaku di dalam folder kerja run, bukan `.git`.
+      const writeInside =
+        event.kind === 'file_write' && root !== undefined && (await writeTargetsInside(event.detail, root));
+      const autoAllow =
+        event.kind === 'file_write'
+          ? writeInside &&
+            (run.writeGrant || this.deps.rules.matches(run.cmd.projectId, event.kind, event.detail))
+          : this.deps.rules.matches(run.cmd.projectId, event.kind, event.detail);
+      if (autoAllow) {
         run.silent.add(event.approvalId);
         void run.handle?.resolveApproval(event.approvalId, 'allow').catch(() => undefined);
         return;
@@ -594,6 +649,16 @@ export class RunCoordinator {
     } else if (event.type === 'approval.resolved') {
       if (run.silent.delete(event.approvalId)) return;
       run.pending.delete(event.approvalId);
+      const remembered = run.remembered.delete(event.approvalId);
+      const forRun = run.forRun.delete(event.approvalId);
+      if (remembered || forRun) {
+        this.forward(runId, run, {
+          ...event,
+          remember: remembered,
+          ...(forRun ? { forRun: true } : {}),
+        });
+        return;
+      }
     } else if (event.type === 'message.delta') {
       run.text = (run.text + event.text).slice(-TEXT_TAIL);
     } else if (event.type === 'tool.started') {
@@ -612,7 +677,13 @@ export class RunCoordinator {
       await this.publishDiff(runId, run);
     }
     this.forward(runId, run, event);
-    if (event.type === 'tool.finished' && event.status === 'ok' && !run.cmd.planOnly) {
+    // Pembaca yang berbagi folder dengan penulis lain: perubahan yang terlihat di folder itu milik penulis.
+    if (
+      event.type === 'tool.finished' &&
+      event.status === 'ok' &&
+      !run.cmd.planOnly &&
+      !this.deps.worktrees.isBystander(runId)
+    ) {
       await this.checkpoint(runId, run, run.steps.get(event.toolCallId) ?? 'langkah agent');
     }
   }
@@ -635,7 +706,8 @@ export class RunCoordinator {
 
   private async publishDiff(runId: string, run: RunState): Promise<void> {
     // Mode rencana tidak mengubah berkas; di in_place isinya bisa memuat perubahan pemilik, jadi tidak dilaporkan.
-    if (!run.workspace || run.workspace.planOnly) return;
+    // Begitu pula pembaca yang berbagi folder dengan penulis lain: perubahan di folder itu milik penulis.
+    if (!run.workspace || run.workspace.planOnly || this.deps.worktrees.isBystander(runId)) return;
     try {
       const files = await this.deps.review.stat(runId);
       const key = JSON.stringify(files);
@@ -721,9 +793,14 @@ export class RunCoordinator {
     this.deps.review.setMeta(runId, run.text);
     const workspace = this.deps.worktrees.get(runId);
     if (workspace) {
-      if (workspace.planOnly || (await this.deps.worktrees.isPristine(runId))) {
-        // Tanpa perubahan (atau mode rencana) tidak ada yang perlu ditinjau: worktree dan branch `aios/...`
-        // dibuang; in_place hanya melepas catatannya (folder project dan branch pemilik tidak disentuh).
+      if (
+        workspace.planOnly ||
+        this.deps.worktrees.isBystander(runId) ||
+        (await this.deps.worktrees.isPristine(runId))
+      ) {
+        // Tanpa perubahan, mode rencana, atau pembaca yang berbagi folder dengan penulis lain (tidak pernah mendapat
+        // izin tulis, jadi perubahan di folder bukan miliknya) tidak ada yang perlu ditinjau: worktree dan branch
+        // `aios/...` dibuang; in_place hanya melepas catatannya (folder project dan branch pemilik tidak disentuh).
         await this.deps.worktrees.remove(runId, { deleteBranch: true });
         this.deps.review.forget(runId);
       } else if (workspace.kind === 'in_place' || run.completed) {
@@ -762,6 +839,26 @@ export class RunCoordinator {
     }
     if (runs.length > 0) this.deps.reportPending(runs.slice(0, 100));
   }
+}
+
+/** Dikirim sekali ke agent saat izin tulisnya ditolak karena run in_place lain sudah menulis di repo yang sama. */
+const LOCK_NOTICE =
+  'Catatan sistem: folder project ini sedang diubah oleh run lain, jadi run ini hanya boleh membaca. Penulisan berkas dan perintah selain baca saja akan ditolak otomatis. Selesaikan dengan jawaban atau rencana tanpa mengubah berkas, dan sebutkan bahwa perubahan bisa dijalankan setelah run lain selesai.';
+
+/**
+ * Semua target izin tulis berkas (`Path:`/`File:` di detail omp, sebelum `Content:`) ada di dalam folder kerja run
+ * dan tidak di `.git`. Detail tanpa target yang dikenali dianggap tidak aman (tetap ditanyakan).
+ */
+export async function writeTargetsInside(detail: string, root: string): Promise<boolean> {
+  const header = detail.split(/\nContent:/)[0] ?? '';
+  const targets = [...header.matchAll(/^(?:Path|File): (.+)$/gm)].map((m) => (m[1] ?? '').trim());
+  if (targets.length === 0) return false;
+  for (const target of targets) {
+    const full = nodePath.resolve(root, target);
+    if (nodePath.relative(root, full).split(nodePath.sep).includes('.git')) return false;
+    if (!(await inside(root, full))) return false;
+  }
+  return true;
 }
 
 /**
