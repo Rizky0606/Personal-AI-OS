@@ -584,10 +584,169 @@ describe('cancel', () => {
     await finalRun((await send(conv.id, 'lagi')).run.id);
   });
 
+  it('setelah cancel, giliran berikutnya memakai sesi Hermes baru berisi riwayat dari DB (teks yang terlihat)', async () => {
+    answer('hai');
+    const conv = await createConversation();
+    await finalRun((await send(conv.id, 'halo')).run.id);
+    hermes.onRequest((s) => {
+      s.delta('Awal ');
+      s.delta('cerita');
+    });
+    const { run } = await send(conv.id, 'cerita panjang');
+    await until(
+      async () => (await storedEvents(run.id)).filter((e) => e.type === 'message.delta').length,
+      (n) => n === 2,
+    );
+    await env.post(`/runs/${run.id}/cancel`, {}, token);
+    await finalRun(run.id);
+
+    answer('lanjut');
+    await finalRun((await send(conv.id, 'lanjutkan')).run.id);
+    const session = (i: number) => hermes.requests[i]!.headers['x-hermes-session-id'];
+    expect(session(1)).toBe(`aios-${conv.id}`);
+    // Sesi lama Hermes bisa memuat jawaban penuh yang tidak pernah dilihat pemilik: tidak dipakai lagi.
+    expect(session(2)).not.toBe(session(1));
+    expect(hermes.requests[2]!.body.messages.filter((m) => m.role !== 'system')).toEqual([
+      { role: 'user', content: 'halo' },
+      { role: 'assistant', content: 'hai' },
+      { role: 'user', content: 'cerita panjang' },
+      { role: 'assistant', content: 'Awal cerita' },
+      { role: 'user', content: 'lanjutkan' },
+    ]);
+    const [row] = await env.database.handle.db
+      .select({ session: conversations.hermesSessionId })
+      .from(conversations)
+      .where(eq(conversations.id, conv.id));
+    expect(row?.session).toBe(session(2));
+  });
+
   it('cancel run yang tidak ada: 404', async () => {
     expect(
       (await env.post('/runs/0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f/cancel', {}, token)).statusCode,
     ).toBe(404);
+  });
+});
+
+describe('coba ulang otomatis (galat retryable sebelum keluaran)', () => {
+  it('Hermes gagal sebelum token pertama: dicoba sekali dengan sesi baru, run selesai tanpa event error', async () => {
+    answer('hai');
+    const conv = await createConversation();
+    await finalRun((await send(conv.id, 'halo')).run.id);
+    let n = 0;
+    hermes.onRequest((s, _req, res) => {
+      if (n++ === 0) {
+        res.writeHead(503).end();
+        return;
+      }
+      s.delta('pulih');
+      s.finish();
+      s.done();
+    });
+    const { run } = await send(conv.id, 'lagi');
+    const done = await finalRun(run.id);
+    expect(done.status).toBe('completed');
+    expect((await storedEvents(run.id)).map((e) => e.type)).not.toContain('error');
+    expect(hermes.requests).toHaveLength(3);
+    const [, first, retry] = hermes.requests;
+    expect(retry!.headers['x-hermes-session-id']).not.toBe(first!.headers['x-hermes-session-id']);
+    expect(retry!.body.messages.filter((m) => m.role !== 'system')).toEqual([
+      { role: 'user', content: 'halo' },
+      { role: 'assistant', content: 'hai' },
+      { role: 'user', content: 'lagi' },
+    ]);
+  });
+
+  it('gagal lagi pada percobaan ulang: failed dengan galat itu, hanya dua permintaan', async () => {
+    hermes.onRequest((_s, _req, res) => {
+      res.writeHead(503).end();
+    });
+    const conv = await createConversation();
+    const { run } = await send(conv.id, 'halo');
+    const done = await finalRun(run.id);
+    expect([done.status, done.error?.code]).toEqual(['failed', 'hermes_unavailable']);
+    expect(hermes.requests).toHaveLength(2);
+    expect((await storedEvents(run.id)).filter((e) => e.type === 'error')).toHaveLength(1);
+  });
+
+  it('tidak pernah diulang setelah ada keluaran (teks sebagian)', async () => {
+    hermes.onRequest((s) => {
+      s.delta('Separuh');
+      s.end();
+    });
+    const conv = await createConversation();
+    const { run } = await send(conv.id, 'halo');
+    expect((await finalRun(run.id)).error?.code).toBe('hermes_stream_truncated');
+    expect(hermes.requests).toHaveLength(1);
+  });
+});
+
+describe('jaring pengaman, perbaikan aios-ui, dan waktu', () => {
+  it('"tolong ingat bahwa…" tanpa tool memori: memory.suggested berisi fakta ringkas sebelum run.completed', async () => {
+    answer('Baik.');
+    const conv = await createConversation();
+    const { run } = await send(conv.id, 'Tolong ingat bahwa saya suka kopi tubruk ya');
+    await finalRun(run.id);
+    const events = await storedEvents(run.id);
+    const types = events.map((e) => e.type);
+    expect(events).toContainEqual({
+      type: 'memory.suggested',
+      text: 'Pemilik suka kopi tubruk.',
+    });
+    expect(types.indexOf('memory.suggested')).toBeLessThan(types.indexOf('run.completed'));
+
+    // Pesan biasa: tidak ada saran.
+    const plain = await send(conv.id, 'apa kabar?');
+    await finalRun(plain.run.id);
+    expect((await storedEvents(plain.run.id)).map((e) => e.type)).not.toContain('memory.suggested');
+  });
+
+  it('tool memory_propose berhasil: tidak ada memory.suggested', async () => {
+    hermes.onRequest((s) => {
+      s.toolProgress({ tool: 'mcp_aios_memory_propose', status: 'running', toolCallId: 'm1' });
+      s.toolProgress({ tool: 'mcp_aios_memory_propose', status: 'completed', toolCallId: 'm1' });
+      s.delta('Usulan memori dibuat.');
+      s.finish();
+      s.done();
+    });
+    const conv = await createConversation();
+    const { run } = await send(conv.id, 'ingat bahwa aku alergi kacang');
+    await finalRun(run.id);
+    expect((await storedEvents(run.id)).map((e) => e.type)).not.toContain('memory.suggested');
+  });
+
+  it('blok aios-ui beralias (chartType/title/max) disimpan dalam bentuk valid', async () => {
+    const bad =
+      '{"version":1,"components":[{"id":"pop","type":"chart","chartType":"bar","title":"Skor","labels":["A","B"],"values":[9,8],"max":10}]}';
+    answer(`Ini grafiknya.\n\n\`\`\`aios-ui\n${bad}\n\`\`\``);
+    const conv = await createConversation();
+    const { run } = await send(conv.id, 'grafik');
+    await finalRun(run.id);
+    const rows = await env.database.handle.db
+      .select()
+      .from(messages)
+      .where(eq(messages.runId, run.id));
+    expect(rows.find((m) => m.author === 'assistant')?.parts).toEqual([
+      {
+        type: 'text',
+        text: 'Ini grafiknya.\n\n```aios-ui\n{"version":1,"components":[{"id":"pop","type":"chart","chart":"bar","labels":["A","B"],"values":[9,8],"label":"Skor"}]}\n```',
+      },
+    ]);
+  });
+
+  it('pesan sistem diakhiri tanggal dan jam zona pemilik', async () => {
+    answer('ok');
+    const conv = await createConversation();
+    const { run } = await send(conv.id, 'hari apa sekarang?');
+    await finalRun(run.id);
+    const request = hermes.requests.find((r) =>
+      r.body.messages.some((m) => m.content === 'hari apa sekarang?'),
+    );
+    const system = request!.body.messages[0]!;
+    expect(system.role).toBe('system');
+    // Jam tes bisa dimajukan tes lain; format persisnya diuji di time-section.test.ts.
+    expect(system.content).toMatch(
+      /\n\n# Waktu\nSekarang \S+, \d{1,2} \S+ \d{4} pukul \d{2}\.\d{2} WIB\. Pakai ini untuk "hari ini", "minggu ini", dan tanggal relatif\.$/,
+    );
   });
 });
 

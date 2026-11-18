@@ -227,6 +227,7 @@ export async function createAuthEnv(
         text: string,
         history?: readonly { role: 'user' | 'assistant'; content: string }[],
         signal?: AbortSignal,
+        onQuery?: (query: string) => Promise<void>,
       ): Promise<string>;
     };
     /**
@@ -371,6 +372,7 @@ export async function createAuthEnv(
   });
   const runner = createRunner({
     db,
+    now,
     store,
     hub,
     observer,

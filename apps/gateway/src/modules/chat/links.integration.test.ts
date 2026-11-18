@@ -19,11 +19,11 @@ beforeAll(async () => {
   env = await createAuthEnv(inject('testDatabaseUrl'), {
     hermesUrl: hermes.url,
     web: {
-      contextFor: (text, history = []) => {
+      contextFor: async (text, history = [], _signal, onQuery) => {
         searched.push({ text, history: history.length });
-        return Promise.resolve(
-          '# Hasil pencarian web\n\n## [1] https://berita.dev/gpu — Harga GPU',
-        );
+        // Kueri buatan model (di sini tetap) dilaporkan sebelum mencari.
+        await onQuery?.('harga GPU terbaru');
+        return '# Hasil pencarian web\n\n## [1] https://berita.dev/gpu — Harga GPU';
       },
     },
     links: createLinkReader({
@@ -157,7 +157,10 @@ describe('konteks dikerjakan setelah run berjalan', () => {
     }
 
     const items = (await env.get(`/conversations/${conv.id}/messages`, token)).json<{
-      items: { author: string; parts: { type: string; name?: string; status?: string }[] }[];
+      items: {
+        author: string;
+        parts: { type: string; name?: string; status?: string; target?: string }[];
+      }[];
     }>().items;
     const tools = items
       .filter((m) => m.author === 'assistant')
@@ -169,6 +172,18 @@ describe('konteks dikerjakan setelah run berjalan', () => {
         ['cari_web', 'ok'],
       ]),
     );
+    // Langkah cari_web menampilkan kueri yang dibuat, bukan potongan pesan mentah.
+    const web = items.flatMap((m) => m.parts).find((p) => p.name === 'cari_web');
+    expect(web?.target).toBe('harga GPU terbaru');
+    const events = (await env.get(`/runs/${sent.run.id}/events`, token)).json<{
+      items: { event: { type: string; name?: string; target?: string } }[];
+    }>().items;
+    expect(
+      events
+        .map((e) => e.event)
+        .filter((e) => e.type === 'tool.started' && e.name === 'cari_web')
+        .map((e) => e.target),
+    ).toEqual([undefined, 'harga GPU terbaru']);
     const user = hermes.requests
       .at(-1)
       ?.body.messages.filter((m) => m.role === 'user')
