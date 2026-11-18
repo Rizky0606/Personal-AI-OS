@@ -1,5 +1,6 @@
 import {
   INITIAL_ROLE_IDS,
+  RichAnswerSchema,
   RoleIdSchema,
   SKILL_PROPOSAL_FENCE,
   SkillProposalBlockSchema,
@@ -11,6 +12,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import {
   AGENT_BEHAVIOR_RULES,
   BUNDLE_TOKEN_BUDGET,
+  CODING_CORE_SKILLS,
   CORE_SKILLS,
   MAX_CATALOG_INDEX,
   ROLES_PACKAGE_DIR,
@@ -23,6 +25,7 @@ import {
   estimateTokens,
   loadRegistry,
   splitFrontmatter,
+  coreSkillsFor,
 } from './index.js';
 
 const registry = loadRegistry();
@@ -57,12 +60,10 @@ describe('isi agent dan skill di repo', () => {
       expect(role.name).not.toBe('');
       expect(role.model).not.toBe('');
       expect(role.fallbackModel).not.toBeNull();
-      expect(role.skills.filter((s) => (CORE_SKILLS as readonly string[]).includes(s))).toEqual([
-        ...CORE_SKILLS,
-      ]);
-      expect(role.skills.filter((s) => !(CORE_SKILLS as readonly string[]).includes(s))).toEqual(
-        spec.skills,
-      );
+      const core = coreSkillsFor(role.group);
+      // Urutan di frontmatter bebas; bundel selalu memakai urutan coreSkillsFor.
+      expect(role.skills.filter((s) => core.includes(s)).sort()).toEqual([...core].sort());
+      expect(role.skills.filter((s) => !core.includes(s))).toEqual(spec.skills);
     },
   );
 
@@ -84,7 +85,7 @@ describe('isi agent dan skill di repo', () => {
   });
 
   it('setiap skill dimuat oleh inti, agent, atau paket skill; tidak ada yang yatim', () => {
-    const referenced = new Set<string>(CORE_SKILLS);
+    const referenced = new Set<string>([...CORE_SKILLS, ...CODING_CORE_SKILLS]);
     for (const spec of Object.values(SPEC)) for (const s of spec.skills) referenced.add(s);
     for (const pack of SKILL_PACKS) for (const s of pack.skills) referenced.add(s);
     expect([...registry.skills.keys()].sort()).toEqual([...referenced].sort());
@@ -218,6 +219,21 @@ describe('skill inti rich-answers (jawaban kaya untuk semua role)', () => {
     expect(parsed.components.length).toBeLessThanOrEqual(3);
     expect(parsed.components[0]!.type).toBe('table');
   });
+
+  it('contoh per komponen persis lolos skema ketat (tanpa perbaikan), termasuk chart', () => {
+    const examples = body
+      .split('\n')
+      .filter((line) => line.startsWith('- ') && line.includes('`{'))
+      .map((line) => /`(\{.*?\})`/.exec(line)![1]!);
+    const types = examples.map((json) => {
+      const component = JSON.parse(json) as { type: string };
+      const parsed = RichAnswerSchema.safeParse({ version: 1, components: [component] });
+      expect(parsed.success, json).toBe(true);
+      return component.type;
+    });
+    expect(types).toEqual(['table', 'chart', 'metric', 'choices', 'steps', 'checklist']);
+    expect(body).toContain('bukan `chartType`');
+  });
 });
 
 describe('skill plan-progress (rencana untuk panel Progres)', () => {
@@ -278,10 +294,8 @@ describe('bundel system prompt', () => {
 
     for (const rule of AGENT_BEHAVIOR_RULES) expect(bundle.systemPrompt).toContain(rule);
     expect(bundle.systemPrompt).toContain(role.body);
-    expect(bundle.skills).toEqual([
-      ...CORE_SKILLS,
-      ...role.skills.filter((s) => !(CORE_SKILLS as readonly string[]).includes(s)),
-    ]);
+    const core = coreSkillsFor(role.group);
+    expect(bundle.skills).toEqual([...core, ...role.skills.filter((s) => !core.includes(s))]);
     for (const skill of bundle.skills) {
       expect(bundle.systemPrompt).toContain(registry.skills.get(skill)!.body);
     }
@@ -299,7 +313,7 @@ describe('bundel system prompt', () => {
       extraSkills: ['ui-baseline', 'a11y-check', 'ui-baseline', 'skill-hantu'],
     });
     expect(withUi.skills).toEqual([
-      ...CORE_SKILLS,
+      ...coreSkillsFor('coding'),
       'find-skills',
       'plan-progress',
       'ui-baseline',
@@ -322,7 +336,8 @@ describe('bundel system prompt', () => {
     const coreTokens = buildBundle(registry, 'project', { skillsBudget: 1 }).tokens.skills;
     const budget = coreTokens + 300;
     const tight = buildBundle(registry, 'project', { skillsBudget: budget, extraSkills });
-    expect(tight.skills.slice(0, CORE_SKILLS.length)).toEqual([...CORE_SKILLS]);
+    const core = coreSkillsFor('coding');
+    expect(tight.skills.slice(0, core.length)).toEqual([...core]);
     expect(tight.omittedSkills.length).toBeGreaterThan(0);
     for (const id of tight.omittedSkills) {
       expect(tight.systemPrompt).not.toContain(`## ${id}\n`);
@@ -330,12 +345,32 @@ describe('bundel system prompt', () => {
     expect(tight.tokens.skills).toBeLessThanOrEqual(budget);
     expect(tight.overBudget).toBe(false);
     const tiny = buildBundle(registry, 'project', { skillsBudget: 100, extraSkills });
-    expect(tiny.skills).toEqual([...CORE_SKILLS]);
+    expect(tiny.skills).toEqual([...core]);
     expect(tiny.overBudget).toBe(true);
   });
 
   it('agent yang tidak ada: UnknownRoleError', () => {
     expect(() => buildBundle(registry, 'tukang-sulap')).toThrow(UnknownRoleError);
+  });
+
+  it('skill inti coding hanya untuk grup coding: agent umum tidak membawa plan-before-edit dkk.', () => {
+    const general = buildBundle(registry, 'general');
+    const project = buildBundle(registry, 'project');
+    for (const id of CODING_CORE_SKILLS) {
+      expect(general.skills).not.toContain(id);
+      expect(general.systemPrompt).not.toContain(`## ${id}\n`);
+      expect(project.skills).toContain(id);
+    }
+    // Tulisan kreatif dan pengetahuan umum dikerjakan langsung, dengan catatan bila belum pasti, bukan ditolak.
+    expect(general.systemPrompt).toMatch(/tanpa meminta izin/);
+    expect(general.systemPrompt).toContain('belum diverifikasi');
+  });
+
+  it('aturan perilaku: tidak mengklaim tersimpan/dijadwalkan/diusulkan tanpa sukses dari alat', () => {
+    const rule = AGENT_BEHAVIOR_RULES.find((r) => r.includes('diingat'));
+    expect(rule).toMatch(/alatnya mengembalikan sukses/);
+    expect(rule).toMatch(/tombol Ingat/);
+    expect(rule).toMatch(/layar Jadwal/);
   });
 });
 

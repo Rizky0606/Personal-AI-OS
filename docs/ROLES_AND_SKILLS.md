@@ -78,7 +78,9 @@ skills: [scope-guard, read-context-first, plan-before-edit, verify-before-done, 
 
 Registri menolak file yang tidak valid (gateway gagal start, atau di mode dev perubahan ditolak dan versi lama dipakai). Agent `general` dan `project` wajib ada.
 
-## Skill inti anti-melenceng (dimuat semua agent)
+## Skill inti anti-melenceng
+
+`CORE_SKILLS` (dimuat semua agent): `scope-guard`, `read-context-first`, `rich-answers`, `propose-skill`. `CODING_CORE_SKILLS` (hanya agent grup `coding`, yaitu `project`): `plan-before-edit`, `verify-before-done`, `minimal-diff`. `coreSkillsFor(group)` menggabungkannya. Dipisah sejak v1.2.0: skill coding itu membuat agent umum meminta persetujuan rencana untuk cerita fiksi dan menolak esai karena sumber "belum terverifikasi" (laporan uji umum B8). Agent umum menulis langsung tanpa meminta izin, dan memberi catatan "belum diverifikasi" untuk fakta spesifik yang belum pasti alih-alih menolak.
 
 | Skill | Isi aturan |
 | --- | --- |
@@ -127,6 +129,7 @@ Aturan ini berlaku untuk agent yang berjalan di aplikasi (bukan agent yang memba
 
 - Jawab dalam bahasa pengguna. Langsung ke jawaban, tanpa basa-basi.
 - Jangan mengarang fakta, path file, atau hasil perintah. Jika tidak tahu, katakan dan tawarkan cara mencari tahu.
+- Jangan menyatakan sesuatu sudah disimpan, dijadwalkan, diusulkan, atau diingat kecuali alatnya mengembalikan sukses di giliran ini. Tanpa itu, beri tahu cara melakukannya di aplikasi (tombol Ingat di pesan pemilik, layar Jadwal). Ditambahkan v1.2.0: Hermes produksi belum tersambung ke `aios_tools`, dan agent mengaku membuat usulan jadwal/memori yang tidak pernah ada (laporan uji umum B5). Status tersambung tidaknya tampil di layar Status (`agentTools.hermes` di `GET /status`).
 - Perintah yang mengubah sistem, menghapus file, atau mengakses jaringan selalu melalui approval kecuali ada aturan "selalu izinkan" untuk project itu.
 - Tidak pernah membaca atau mengirim file `.env`, kunci SSH, atau folder di luar project tanpa izin eksplisit.
 

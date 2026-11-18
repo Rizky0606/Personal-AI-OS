@@ -1,5 +1,11 @@
 import { INITIAL_ROLE_IDS, RoleListSchema, SendMessageResponseSchema } from '@aios/contracts';
-import { AGENT_BEHAVIOR_RULES, CORE_SKILLS, ROLES_PACKAGE_DIR, RegistryError } from '@aios/roles';
+import {
+  AGENT_BEHAVIOR_RULES,
+  CODING_CORE_SKILLS,
+  ROLES_PACKAGE_DIR,
+  RegistryError,
+  coreSkillsFor,
+} from '@aios/roles';
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -52,7 +58,10 @@ describe('GET /roles', () => {
       fallbackModel: 'coding-cheap',
       approval: 'ask',
     });
-    expect(project.skills).toEqual([...CORE_SKILLS, 'find-skills', 'plan-progress']);
+    expect(project.skills).toEqual([...coreSkillsFor('coding'), 'find-skills', 'plan-progress']);
+    // Agent umum tidak membawa skill inti coding (laporan uji umum B8).
+    const general = items.find((r) => r.id === 'general')!;
+    for (const id of CODING_CORE_SKILLS) expect(general.skills).not.toContain(id);
     // Isi prompt tidak ikut ke klien.
     expect(JSON.stringify(items)).not.toContain('Definition of done');
   });
@@ -88,7 +97,6 @@ describe('bundel sebagai pesan sistem Hermes', () => {
     expect(system!.content).toContain('# Peran: Umum');
     for (const skill of [
       'scope-guard',
-      'verify-before-done',
       // Skill inti: jawaban kaya sampai ke Hermes di chat umum tanpa kata kunci tampilan.
       'rich-answers',
       'answer-first',
@@ -97,6 +105,7 @@ describe('bundel sebagai pesan sistem Hermes', () => {
     ]) {
       expect(system!.content).toContain(`## ${skill}\n`);
     }
+    for (const skill of CODING_CORE_SKILLS) expect(system!.content).not.toContain(`## ${skill}\n`);
     expect(system!.content).not.toContain('## ui-baseline');
     expect(run.agentRole).toBeNull();
     expect((await env.get(`/runs/${run.id}`, token)).json<{ agentRole: string }>().agentRole).toBe(

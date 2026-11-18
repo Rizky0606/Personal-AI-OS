@@ -10,9 +10,6 @@ skills:
   [
     scope-guard,
     read-context-first,
-    plan-before-edit,
-    verify-before-done,
-    minimal-diff,
     rich-answers,
     propose-skill,
     source-verification,

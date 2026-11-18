@@ -2,19 +2,23 @@ import { RoleIdSchema } from '@aios/contracts';
 import { z } from 'zod';
 
 /**
- * Skill inti: dimuat untuk semua role (ROLES_AND_SKILLS.md). Lima pertama anti-melenceng; `rich-answers` mengatur
- * kapan jawaban memakai komponen aios-ui, berlaku di semua mesin yang jawabannya dirender klien; `propose-skill`
- * (P11) mengatur kapan agent boleh mengusulkan skill (satu blok `aios-skill-proposal`, disetujui pengguna).
+ * Skill inti universal: dimuat untuk semua role (ROLES_AND_SKILLS.md). `scope-guard` dan `read-context-first`
+ * anti-melenceng; `rich-answers` mengatur kapan jawaban memakai komponen aios-ui, berlaku di semua mesin yang
+ * jawabannya dirender klien; `propose-skill` (P11) mengatur kapan agent boleh mengusulkan skill (satu blok
+ * `aios-skill-proposal`, disetujui pengguna).
  */
-export const CORE_SKILLS = [
-  'scope-guard',
-  'read-context-first',
-  'plan-before-edit',
-  'verify-before-done',
-  'minimal-diff',
-  'rich-answers',
-  'propose-skill',
-] as const;
+export const CORE_SKILLS = ['scope-guard', 'read-context-first', 'rich-answers', 'propose-skill'] as const;
+
+/**
+ * Skill inti coding: dimuat hanya untuk role grup `coding`. Isinya soal mengubah berkas (rencana, verifikasi,
+ * diff minimal); di agent umum skill ini membuat agent menolak atau meminta izin untuk tugas menulis biasa.
+ */
+export const CODING_CORE_SKILLS = ['plan-before-edit', 'verify-before-done', 'minimal-diff'] as const;
+
+/** Skill inti untuk role pada grup tertentu: universal dulu, lalu skill inti coding bila grupnya `coding`. */
+export function coreSkillsFor(group: 'coding' | 'umum'): readonly string[] {
+  return group === 'coding' ? [...CORE_SKILLS, ...CODING_CORE_SKILLS] : CORE_SKILLS;
+}
 
 export const SkillIdSchema = z
   .string()

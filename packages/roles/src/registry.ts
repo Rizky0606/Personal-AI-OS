@@ -5,6 +5,7 @@ import { parse as parseYaml } from 'yaml';
 import { GENERAL_AGENT, PROJECT_AGENT } from './agents.js';
 import type { ZodType } from 'zod';
 import {
+  CODING_CORE_SKILLS,
   CORE_SKILLS,
   RoleFrontmatterSchema,
   SkillFrontmatterSchema,
@@ -158,6 +159,9 @@ export function loadRegistry(dir: string = ROLES_PACKAGE_DIR): RolesRegistry {
   if (roles.size === 0 && problems.length === 0) problems.push('tidak ada role');
   for (const core of CORE_SKILLS) {
     if (!skills.has(core)) problems.push(`skill inti "${core}" tidak ada`);
+  }
+  for (const core of CODING_CORE_SKILLS) {
+    if (!skills.has(core)) problems.push(`skill inti coding "${core}" tidak ada`);
   }
   for (const required of [GENERAL_AGENT, PROJECT_AGENT]) {
     if (roles.size > 0 && !roles.has(required)) problems.push(`agent "${required}" wajib ada`);
