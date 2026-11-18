@@ -49,8 +49,10 @@ export const SKILL_PACKS: readonly SkillPack[] = [
     id: 'frontend',
     skills: ['ui-baseline', 'a11y-check', 'ui-states', 'react-practices'],
     projectOnly: true,
+    // `page` polos sengaja tidak dipakai: pustaka TS biasa menyebut page-count.ts atau `page < 1`
+    // (paginasi), bukan halaman web. Hanya frasa yang jelas tentang tampilan web yang dihitung.
     pattern:
-      /\b(ui|ux|tampilan|layout|komponen|component|tombol|button|halaman|page|form|css|tailwind|style|styling|warna|responsif|responsive|navbar|modal|dialog|dark ?mode|mode gelap|react|jsx|tsx|frontend)\b/i,
+      /\b(ui|ux|tampilan|layout|komponen|component|tombol|button|halaman|web ?page|landing ?page|home ?page|page component|form|css|tailwind|style|styling|warna|responsif|responsive|navbar|modal|dialog|dark ?mode|mode gelap|react|jsx|tsx|vue|svelte|frontend)\b/i,
   },
   {
     id: 'backend',
