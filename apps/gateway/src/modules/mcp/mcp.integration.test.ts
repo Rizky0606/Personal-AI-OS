@@ -388,6 +388,33 @@ describe('MCP_TOOLS_ENABLED menyala', () => {
     expect(stolen.json()).toMatchObject({ code: 'run_not_owned' });
     expect((await post(on.env, ping, as(mine.token, mine.runId))).statusCode).toBe(200);
 
+    // Izin lain menunggu (mis. dua web_read paralel): tool yang sudah disetujui tetap boleh memanggil.
+    mine.fake.emit(mine.runId, {
+      type: 'approval.requested',
+      approvalId: '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e77',
+      kind: 'network',
+      detail: 'mcp__aios_tools_web_read',
+    });
+    await until(
+      async () =>
+        RunSchema.parse((await on.env.get(`/runs/${mine.runId}`, on.desktop)).json()).status ===
+        'waiting_approval',
+      'menunggu izin',
+    );
+    expect((await post(on.env, ping, as(mine.token, mine.runId))).statusCode).toBe(200);
+    mine.fake.emit(mine.runId, {
+      type: 'approval.resolved',
+      approvalId: '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e77',
+      decision: 'deny',
+      remember: false,
+    });
+    await until(
+      async () =>
+        RunSchema.parse((await on.env.get(`/runs/${mine.runId}`, on.desktop)).json()).status ===
+        'running',
+      'kembali berjalan',
+    );
+
     mine.fake.emit(mine.runId, { type: 'diff.updated', files: [] });
     mine.fake.emit(mine.runId, { type: 'run.completed', summary: 'selesai' });
     await until(
