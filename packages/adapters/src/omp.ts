@@ -2,6 +2,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
   AIOS_NETWORK_TOOLS,
+  AIOS_TOOLS_SERVER,
   QuestionSchema,
   aiosToolOf,
   connectorToolOf,
@@ -214,6 +215,7 @@ export function createOmpAdapter(options: OmpAdapterOptions): AgentAdapter {
         '  customDirectories:',
         `    - ${JSON.stringify(skillsDir)}`,
       ];
+      const tools: string[] = [];
       // Server MCP per run (tool browser worker) di direktori agent terisolasi, bukan di repo kerja.
       if (input.mcpServers && Object.keys(input.mcpServers).length > 0) {
         const servers = Object.fromEntries(
@@ -224,13 +226,22 @@ export function createOmpAdapter(options: OmpAdapterOptions): AgentAdapter {
         );
         await writeFile(join(agentDir, 'mcp.json'), JSON.stringify({ mcpServers: servers }));
         // Tanpa ini omp menyembunyikan tool MCP di balik perangkat xd:// dan model tidak melihatnya langsung.
-        overlay.push('tools:', '  xdev: false');
+        tools.push('  xdev: false');
       }
+      // Web bawaan omp (`web_search`, `read <URL>`) keluar langsung dari PC pemilik tanpa izin, audit, anggaran,
+      // dan pengaman SSRF gateway; omp tidak menanyakannya di mode always-ask (uji project 4k). Pembacaan URL
+      // lewat `read` selalu dimatikan (omp tidak bisa memaksa izin per URL publik). `web_search` dimatikan bila
+      // tool gateway tersedia (aios_tools menggantikannya); tanpa tool gateway, ia wajib lewat izin jaringan.
+      const gatewayTools = input.mcpServers?.[AIOS_TOOLS_SERVER] !== undefined;
+      overlay.push('fetch:', '  enabled: false');
+      if (gatewayTools) overlay.push('web_search:', '  enabled: false');
+      else tools.push('  approval:', '    web_search: prompt');
+      if (tools.length > 0) overlay.push('tools:', ...tools);
       // LSP (diagnostik setelah edit, definisi, referensi). Server bahasa dingin butuh ±20-25 detik di
       // panggilan pertama, lebih lama dari batas bawaan tool (20 detik, hasilnya "Operation aborted"); 60 detik
       // diuji cukup (VERIFICATION.md). Server bahasa hanya jalan bila ditemukan di worktree atau PATH.
       if (input.lsp === true) overlay.push('lsp:', `  requestTimeout: ${LSP_REQUEST_TIMEOUT_S}`);
-      if (overlay.length > 0) await writeFile(overlayFile, `${overlay.join('\n')}\n`);
+      await writeFile(overlayFile, `${overlay.join('\n')}\n`);
 
       const transport = await options.launch({
         runId: input.runId,
@@ -254,7 +265,8 @@ export function createOmpAdapter(options: OmpAdapterOptions): AgentAdapter {
           '--no-title',
           '--append-system-prompt',
           systemFile,
-          ...(overlay.length > 0 ? ['--config', overlayFile] : []),
+          '--config',
+          overlayFile,
           '--model',
           `${OMP_PROVIDER}/${model}`,
         ],
@@ -600,6 +612,10 @@ class OmpRun implements RunHandle {
         : frame.isError === true
           ? 'error'
           : 'ok';
+    // Alasan galat tool (mis. MCP `run_not_active`, URL di luar allowlist) dialirkan ke event run; tanpa ini
+    // galat tool MCP yang tidak pernah mengirim keluaran parsial tidak terlihat sama sekali (uji project 4k).
+    if (status === 'error' && result && !tool.text.includes(result))
+      this.emit({ type: 'tool.output', toolCallId: id, chunk: clip(result, 2000), stream: 'stderr' });
     this.emit({
       type: 'tool.finished',
       toolCallId: id,

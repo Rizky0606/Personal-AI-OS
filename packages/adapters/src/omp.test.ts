@@ -127,7 +127,7 @@ describe('peluncuran omp', () => {
     const overlay = launched.args[launched.args.indexOf('--config') + 1] ?? '';
     expect(overlay.startsWith(runDir)).toBe(true);
     expect(await readFile(overlay, 'utf8')).toBe(
-      `skills:\n  customDirectories:\n    - ${JSON.stringify(join(runDir, 'agent', 'skills'))}\ntools:\n  xdev: false\n`,
+      `skills:\n  customDirectories:\n    - ${JSON.stringify(join(runDir, 'agent', 'skills'))}\nfetch:\n  enabled: false\ntools:\n  xdev: false\n  approval:\n    web_search: prompt\n`,
     );
     expect(launched.env.OMP_MCP_STARTUP_TIMEOUT_MS).toBe('0');
   });
@@ -141,6 +141,24 @@ describe('peluncuran omp', () => {
     const overlay = launched.args[launched.args.indexOf('--config') + 1] ?? '';
     expect(await readFile(overlay, 'utf8')).toContain('customDirectories:');
     expect(launched.env.OMP_MCP_STARTUP_TIMEOUT_MS).toBeUndefined();
+  });
+
+  it('web bawaan omp: baca URL selalu mati; web_search mati bila aios_tools ada, selain itu lewat izin', async () => {
+    const { handle, launched } = await launchReplay('text-only', {
+      mcpServers: { aios_tools: { url: 'http://127.0.0.1:1/mcp/r' } },
+    });
+    await collect(handle);
+    const overlay = launched.args[launched.args.indexOf('--config') + 1] ?? '';
+    expect(await readFile(overlay, 'utf8')).toBe(
+      `skills:\n  customDirectories:\n    - ${JSON.stringify(join(runDir, 'agent', 'skills'))}\nfetch:\n  enabled: false\nweb_search:\n  enabled: false\ntools:\n  xdev: false\n`,
+    );
+
+    const off = await launchReplay('text-only');
+    await collect(off.handle);
+    const plain = off.launched.args[off.launched.args.indexOf('--config') + 1] ?? '';
+    expect(await readFile(plain, 'utf8')).toBe(
+      `skills:\n  customDirectories:\n    - ${JSON.stringify(join(runDir, 'agent', 'skills'))}\nfetch:\n  enabled: false\ntools:\n  approval:\n    web_search: prompt\n`,
+    );
   });
 
   it('skill: tanpa katalog --no-skills; dengan katalog hanya --skills=<id terpasang> dan SKILL.md ditulis di folder run', async () => {
@@ -361,7 +379,7 @@ describe('peluncuran omp', () => {
     expect(on.launched.args).not.toContain('--no-lsp');
     const overlay = on.launched.args[on.launched.args.indexOf('--config') + 1] ?? '';
     expect(await readFile(overlay, 'utf8')).toBe(
-      `skills:\n  customDirectories:\n    - ${JSON.stringify(join(runDir, 'agent', 'skills'))}\ntools:\n  xdev: false\nlsp:\n  requestTimeout: 60\n`,
+      `skills:\n  customDirectories:\n    - ${JSON.stringify(join(runDir, 'agent', 'skills'))}\nfetch:\n  enabled: false\ntools:\n  xdev: false\n  approval:\n    web_search: prompt\nlsp:\n  requestTimeout: 60\n`,
     );
   });
 
