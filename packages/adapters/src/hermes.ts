@@ -89,13 +89,13 @@ function statusError(status: number): AdapterError {
 
 /**
  * Adapter Hermes lewat `POST /v1/chat/completions` (stream). Riwayat percakapan dipegang Hermes
- * berdasarkan `X-Hermes-Session-Id`, jadi hanya pesan baru yang dikirim. Pembatalan memutus koneksi
- * (`AbortController`): **diverifikasi Sesi P5 di VPS bahwa Hermes TIDAK menghentikan eksekusi tool di
- * sisi server** saat koneksi SSE diputus (perintah `sleep` + `touch` tetap menghasilkan berkas beberapa
- * detik setelah koneksi klien dibunuh). `/v1/chat/completions` tidak mengembalikan run id apa pun (hanya
- * `X-Hermes-Session-Id` yang dipantulkan di header respons), jadi `POST /v1/runs/{id}/stop` TIDAK BISA
- * dipakai dari jalur ini — endpoint itu milik jalur submission `/v1/runs` yang terpisah dan tidak dipakai
- * adapter ini. Lihat docs/ADAPTER_EVENTS.md ("Pembatalan Hermes") untuk detail dan keputusan yang dibutuhkan.
+ * berdasarkan `X-Hermes-Session-Id`, jadi hanya pesan baru yang dikirim. Memutus koneksi SSE saja TIDAK
+ * menghentikan Hermes (diverifikasi Sesi P5: tool tetap berjalan; uji umum v1.2.0: sesi Hermes tetap menyimpan
+ * jawaban penuh 8.916 karakter padahal pemilik melihat 404). Karena itu pembatalan dan macet (`idle_timeout`)
+ * juga memanggil `POST /v1/runs/{id}/stop` dengan `id` chunk stream (`chatcmpl-…`): diverifikasi pada Hermes VPS
+ * 2026-11-18 menjawab 200 `{"status":"stopping"}` dan sesi hanya menyimpan ±420 karakter. Hermes tetap bisa
+ * menyimpan sedikit teks sesudah titik putus, jadi gateway juga memulai sesi baru berisi riwayat dari DB pada
+ * giliran berikutnya (runner). Lihat docs/ADAPTER_EVENTS.md ("Pembatalan Hermes").
  */
 export function createHermesAdapter(options: HermesAdapterOptions): AgentAdapter {
   const {
@@ -107,7 +107,24 @@ export function createHermesAdapter(options: HermesAdapterOptions): AgentAdapter
     fetch: doFetch = fetch,
     now = Date.now,
   } = options;
-  const url = `${options.baseUrl.replace(/\/+$/, '')}/v1/chat/completions`;
+  const base = options.baseUrl.replace(/\/+$/, '');
+  const url = `${base}/v1/chat/completions`;
+  const auth: Record<string, string> = apiKey ? { authorization: `Bearer ${apiKey}` } : {};
+
+  /** Menghentikan run Hermes di server (tool ikut berhenti). Upaya terbaik: galat dan jawaban diabaikan. */
+  async function stopOnServer(completionId: string): Promise<void> {
+    try {
+      const res = await doFetch(`${base}/v1/runs/${encodeURIComponent(completionId)}/stop`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', ...auth },
+        body: '{}',
+        signal: AbortSignal.timeout(5000),
+      });
+      await res.body?.cancel().catch(() => undefined);
+    } catch {
+      // Hermes lama tanpa /v1/runs atau tidak terjangkau: sesi baru di giliran berikutnya tetap menjaga riwayat.
+    }
+  }
 
   return {
     id: 'hermes',
@@ -116,9 +133,13 @@ export function createHermesAdapter(options: HermesAdapterOptions): AgentAdapter
     startRun(input: StartRunInput): Promise<RunHandle> {
       const controller = new AbortController();
       let reason: Abort | undefined;
+      /** `id` chunk pertama dari Hermes; dipakai untuk menghentikan run di server. */
+      let completionId: string | undefined;
       const stop = (why: Abort) => {
+        const first = reason === undefined;
         reason ??= why;
         controller.abort();
+        if (first && completionId && why !== 'connect_timeout') void stopOnServer(completionId);
       };
       if (input.signal?.aborted) stop('cancelled');
       input.signal?.addEventListener('abort', () => stop('cancelled'), { once: true });
@@ -156,7 +177,7 @@ export function createHermesAdapter(options: HermesAdapterOptions): AgentAdapter
               accept: 'text/event-stream',
               'x-hermes-session-key': sessionKey,
               ...(input.sessionId ? { 'x-hermes-session-id': input.sessionId } : {}),
-              ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}),
+              ...auth,
             },
             body: JSON.stringify({
               model: input.model ?? model,
@@ -271,6 +292,7 @@ export function createHermesAdapter(options: HermesAdapterOptions): AgentAdapter
               continue;
             }
             if (!isRecord(chunk)) continue;
+            if (!completionId && typeof chunk.id === 'string' && chunk.id) completionId = chunk.id;
             if (isRecord(chunk.error) && typeof chunk.error.message === 'string') {
               failure = chunk.error.message;
             }

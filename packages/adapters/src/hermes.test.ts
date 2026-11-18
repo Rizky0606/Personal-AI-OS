@@ -486,6 +486,46 @@ describe('adapter Hermes: cancel', () => {
     ).resolves.toBeUndefined();
   });
 
+  it('cancel dan macet menghentikan run di Hermes: POST /v1/runs/{id chunk}/stop dengan API key', async () => {
+    const withId = (id: string, content: string) =>
+      `data: ${JSON.stringify({ id, choices: [{ index: 0, delta: { content }, finish_reason: null }] })}\n\n`;
+    const { promise: stopCall, resolve: stopped } = Promise.withResolvers<Seen>();
+    const hermes = await mockHermes((req, res, seen) => {
+      if (req.url?.startsWith('/v1/runs/')) {
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end('{"status":"stopping"}');
+        stopped(seen);
+        return;
+      }
+      sseHead(res);
+      res.write(withId('chatcmpl-batal', 'awal'));
+    });
+    const handle = await createHermesAdapter({ baseUrl: hermes.url, apiKey: 'k' }).startRun({
+      runId: RUN_ID,
+      messageId: MESSAGE_ID,
+      prompt: 'panjang',
+    });
+    for await (const e of handle.events) if (e.type === 'message.delta') await handle.cancel();
+    const stop = await stopCall;
+    expect(stop).toMatchObject({ method: 'POST', url: '/v1/runs/chatcmpl-batal/stop' });
+    expect(stop.headers.authorization).toBe('Bearer k');
+
+    // Macet (idle): run di server juga dihentikan; event tetap hermes_stalled.
+    const stalled = await mockHermes((req, res) => {
+      if (req.url?.startsWith('/v1/runs/')) {
+        res.end('{}');
+        return;
+      }
+      sseHead(res);
+      res.write(withId('chatcmpl-macet', 'sebagian'));
+    });
+    const events = await collect({ baseUrl: stalled.url, idleTimeoutMs: 60 });
+    expect(events.at(-1)).toMatchObject({ code: 'hermes_stalled' });
+    await expect
+      .poll(() => stalled.seen.map((s) => s.url))
+      .toContain('/v1/runs/chatcmpl-macet/stop');
+  });
+
   it('cancel sebelum events dibaca, atau signal yang sudah batal: tidak ada panggilan ke Hermes', async () => {
     const hermes = await mockHermes((_req, res) => {
       res.end();
