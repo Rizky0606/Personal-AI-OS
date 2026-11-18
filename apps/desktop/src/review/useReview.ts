@@ -21,13 +21,21 @@ export function useReviewState(runId: string) {
   });
 }
 
-/** Pesan untuk galat keputusan review (gateway) atau operasi worker; selalu menyebut langkah berikutnya. */
-export function reviewErrorMessage(error: unknown, online: boolean): string {
-  if (error instanceof WorkerCallError) return workerErrorMessage(error);
+/** Aksi tinjauan; galatnya selalu menyebut aksi mana yang belum terjadi. */
+export type ReviewAction = 'accept' | 'reject' | 'comments' | 'revert' | 'restore';
+
+/**
+ * Pesan untuk galat keputusan review (gateway) atau operasi worker: aksi yang belum terjadi, sebabnya, dan langkah
+ * berikutnya. `worker_offline` dari gateway berarti worker yang memegang folder kerja run tidak tersambung (bukan
+ * "perubahan belum bisa dibaca").
+ */
+export function reviewErrorMessage(error: unknown, online: boolean, action: ReviewAction): string {
+  const failed = copy.review.actionFailed[action];
+  if (error instanceof WorkerCallError) return `${failed} ${workerErrorMessage(error)}`;
   if (error instanceof ApiProblem) {
-    if (error.code === 'run_not_reviewable') return copy.review.notReviewable;
-    if (error.code === 'review_failed') return `${copy.review.failed} ${error.message}`;
-    if (error.code === 'worker_offline') return copy.review.workerOffline;
+    if (error.code === 'run_not_reviewable') return `${failed} ${copy.review.notReviewable}`;
+    if (error.code === 'review_failed') return `${failed} ${error.message}`;
+    if (error.code === 'worker_offline') return `${failed} ${copy.review.holderOffline}`;
   }
-  return `${copy.review.failed} ${apiErrorMessage(error, online)}`;
+  return `${failed} ${apiErrorMessage(error, online)}`;
 }

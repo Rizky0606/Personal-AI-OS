@@ -1,5 +1,6 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import { Button } from './Button';
+import { ErrorBanner } from './ErrorBanner';
 
 export interface ConfirmDialogProps {
   open: boolean;
@@ -11,6 +12,8 @@ export interface ConfirmDialogProps {
   /** Aksi merusak (membuang pekerjaan): tombol konfirmasi bergaya bahaya. */
   destructive?: boolean;
   busy?: boolean;
+  /** Aksi gagal: pesan tampil di dalam dialog (bukan toast di belakang overlay); dialog tetap terbuka untuk dicoba lagi. */
+  error?: string | null;
   onConfirm: () => void;
 }
 
@@ -24,6 +27,7 @@ export function ConfirmDialog({
   cancelLabel,
   destructive = false,
   busy = false,
+  error = null,
   onConfirm,
 }: ConfirmDialogProps) {
   return (
@@ -33,6 +37,7 @@ export function ConfirmDialog({
         <Dialog.Content className="fixed top-24 left-1/2 z-50 flex animate-aios-dialog w-[min(440px,calc(100vw-2rem))] -translate-x-1/2 flex-col gap-3 rounded-panel border border-border bg-surface p-5 shadow-float">
           <Dialog.Title className="text-section font-semibold text-text">{title}</Dialog.Title>
           <Dialog.Description className="text-ui text-text-2">{body}</Dialog.Description>
+          {error ? <ErrorBanner message={error} /> : null}
           <div className="mt-2 flex justify-end gap-2">
             <Dialog.Close asChild>
               <Button variant="secondary" autoFocus>

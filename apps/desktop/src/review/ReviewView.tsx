@@ -18,7 +18,7 @@ import type { DiffView } from './DiffTable';
 import { FileDiff } from './FileDiff';
 import { FileList } from './FileList';
 import { OpinionPanel } from './OpinionPanel';
-import { reviewKey, useReviewState } from './useReview';
+import { reviewKey, useReviewState, type ReviewAction } from './useReview';
 import { useReviewActions } from './useReviewActions';
 
 type Dialogs = { kind: 'accept' } | { kind: 'reject' } | { kind: 'revert'; path: string } | null;
@@ -89,6 +89,17 @@ export function ReviewView({ runId }: { runId: string }) {
             : 'content';
 
   const refresh = () => void queryClient.invalidateQueries({ queryKey: reviewKey(runId) });
+  // Galat aksi berdialog tampil di dialog itu; menutup atau membuka dialog membuang galat lama.
+  const openDialog = (next: NonNullable<Dialogs>) => {
+    actions.clearError();
+    setDialog(next);
+  };
+  const closeDialog = () => {
+    actions.clearError();
+    setDialog(null);
+  };
+  const errorOf = (action: ReviewAction) =>
+    actions.error?.action === action ? actions.error.message : null;
 
   const saveComment = (path: string, line: number, body: string) => {
     setComments((current) => [
@@ -149,7 +160,7 @@ export function ReviewView({ runId }: { runId: string }) {
           <Button
             variant="primary"
             disabled={!state || busy || blocked || state.files.length === 0}
-            onClick={() => setDialog({ kind: 'accept' })}
+            onClick={() => openDialog({ kind: 'accept' })}
           >
             {copy.review.accept}
           </Button>
@@ -163,7 +174,7 @@ export function ReviewView({ runId }: { runId: string }) {
           <Button
             variant="danger"
             disabled={!state || busy || blocked}
-            onClick={() => setDialog({ kind: 'reject' })}
+            onClick={() => openDialog({ kind: 'reject' })}
           >
             {copy.review.reject}
           </Button>
@@ -240,7 +251,7 @@ export function ReviewView({ runId }: { runId: string }) {
                         ),
                       )
                     }
-                    onRevert={() => setDialog({ kind: 'revert', path: file.path })}
+                    onRevert={() => openDialog({ kind: 'revert', path: file.path })}
                   />
                 ))}
               </div>
@@ -255,7 +266,9 @@ export function ReviewView({ runId }: { runId: string }) {
             <CheckpointList
               checkpoints={state.checkpoints}
               busy={locked}
-              onRestore={(id) => void actions.restore(id)}
+              error={errorOf('restore')}
+              onRestore={actions.restore}
+              onDismiss={actions.clearError}
               onRefresh={refresh}
             />
           ) : null}
@@ -265,38 +278,41 @@ export function ReviewView({ runId }: { runId: string }) {
       {state && dialog?.kind === 'accept' ? (
         <AcceptDialog
           open
-          onOpenChange={(open) => !open && setDialog(null)}
+          onOpenChange={(open) => !open && closeDialog()}
           state={state}
           chatRun={run.data?.taskId === null}
           busy={actions.busy}
+          error={errorOf('accept')}
           onAccept={(options) =>
-            void actions.accept(options, state.targetBranch).then((ok) => ok && setDialog(null))
+            void actions.accept(options, state.targetBranch).then((ok) => ok && closeDialog())
           }
         />
       ) : null}
       <ConfirmDialog
         open={dialog?.kind === 'reject'}
-        onOpenChange={(open) => !open && setDialog(null)}
+        onOpenChange={(open) => !open && closeDialog()}
         title={copy.review.rejectTitle}
         body={inPlace ? copy.review.rejectBodyInPlace : copy.review.rejectBody}
         confirmLabel={copy.review.rejectConfirm}
         cancelLabel={copy.review.cancel}
         destructive
         busy={actions.busy}
-        onConfirm={() => void actions.reject().then((ok) => ok && setDialog(null))}
+        error={errorOf('reject')}
+        onConfirm={() => void actions.reject().then((ok) => ok && closeDialog())}
       />
       <ConfirmDialog
         open={dialog?.kind === 'revert'}
-        onOpenChange={(open) => !open && setDialog(null)}
+        onOpenChange={(open) => !open && closeDialog()}
         title={copy.review.revertConfirmTitle}
         body={dialog?.kind === 'revert' ? copy.review.revertConfirmBody(dialog.path) : ''}
         confirmLabel={copy.review.revertConfirm}
         cancelLabel={copy.review.cancel}
         destructive
         busy={actions.busy}
+        error={errorOf('revert')}
         onConfirm={() => {
           if (dialog?.kind !== 'revert') return;
-          void actions.revertFile(dialog.path).then(() => setDialog(null));
+          void actions.revertFile(dialog.path).then((ok) => ok && closeDialog());
         }}
       />
     </div>

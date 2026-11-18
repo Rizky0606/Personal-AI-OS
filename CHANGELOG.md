@@ -46,6 +46,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/); ve
 - **Dialog "Branch" project tidak lagi menjanjikan hal yang tidak dikerjakan worker:** teksnya dulu menyebut branch project sebagai dasar worktree tiap tugas dan tujuan merge, padahal worker selalu memakai branch yang sedang checkout di folder project. `defaultBranch` kini disebut apa adanya: label di bilah atas; agent bekerja di branch aktif (ganti lewat tab Git). Sengaja tidak disambungkan ke worker karena mode branch aktif justru memakai branch yang sedang checkout.
 - **Worktree yatim dibersihkan:** worktree dari run yang dihentikan, gagal, atau terputus (termasuk sisa versi lama tanpa catatan di `.aios-worktrees`/folder data worker) dihapus saat worker mulai; branch `aios/*`-nya hanya dihapus bila commit ujungnya juga ada di branch lain.
 - **Ref checkpoint per id run** (`refs/aios/cp/<id run>`), tidak lagi diturunkan dari nama branch.
+- **Galat terima/tolak tinjauan tampil di dalam dialog** (desktop): bila Terima, Tolak semua, Batalkan perubahan file, atau Kembali ke checkpoint gagal, pesannya tampil di dialog yang tetap terbuka (bukan toast 4 detik di belakang overlay) dan menyebut aksi yang belum terjadi ("Perubahan belum dibuang.", "Perubahan belum diterima.", …). `worker_offline` dari gateway kini dijelaskan sebagai worker pemegang folder kerja run yang tidak tersambung, bukan "perubahan belum bisa dibaca". Tombol aksi bisa ditekan lagi untuk mencoba ulang; menutup dialog membuang galat lama.
 
 ## [1.1.0] - 2026-11-15
 

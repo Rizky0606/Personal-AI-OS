@@ -1206,7 +1206,15 @@ export const copy = {
     rejectConfirm: 'Buang perubahan',
     rejected: 'Perubahan dibuang.',
     cancel: 'Batal',
-    failed: 'Keputusan belum terkirim.',
+    actionFailed: {
+      accept: 'Perubahan belum diterima.',
+      reject: 'Perubahan belum dibuang.',
+      comments: 'Komentar belum terkirim ke agent.',
+      revert: 'File belum dikembalikan.',
+      restore: 'Belum kembali ke checkpoint.',
+    },
+    holderOffline:
+      'Worker yang memegang folder kerja run ini tidak tersambung. Nyalakan worker di PC itu, lalu coba lagi.',
     notReviewable: 'Run ini sudah tidak menunggu tinjauan.',
     checkpoints: {
       empty: 'Belum ada checkpoint. Checkpoint dibuat otomatis setelah agent mengubah file.',
