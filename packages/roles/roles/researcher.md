@@ -4,7 +4,6 @@ name: Peneliti
 group: umum
 engine: research
 model: research-main
-fallback_model: general-cheap
 approval: auto-safe
 skills:
   [

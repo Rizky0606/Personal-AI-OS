@@ -234,7 +234,6 @@ export const RoleInfoSchema = z
     group: z.enum(['coding', 'umum']),
     engine: z.enum(['omp', 'hermes', 'research']),
     model: z.string().min(1),
-    fallbackModel: z.string().nullable(),
     approval: z.enum(['ask', 'auto-safe']),
     skills: z.array(z.string()),
   })

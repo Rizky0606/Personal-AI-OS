@@ -104,7 +104,7 @@ Di worktree tanpa `node_modules`, `npm run typecheck` gagal `tsc: not found` (ex
 | Fakta | Bukti |
 | --- | --- |
 | Model run coding = pilihan pemilik di composer, atau combo milik role (`coding-main`) | `apps/gateway/src/modules/runs/runner.ts:604-605` |
-| `fallback_model: coding-cheap` hanya dilaporkan di `GET /roles`, tidak dipakai saat run | `apps/gateway/src/modules/roles/service.ts:110-111` |
+| `fallback_model` role dihapus (fix/project-inti): nilainya (`coding-cheap`, `general-cheap`) tidak pernah dipakai run dan combo itu tidak ada di 9Router; fallback antar-penyedia dikerjakan combo 9Router | `packages/roles/roles/*.md`, `GET /roles` tanpa `fallbackModel` |
 | 9Router lokal (`GET /v1/models`, tanpa kunci): 43 model; combo hanya `coding-main` (`coding-cheap` tidak ada) | diamati 2026-11-17 |
 | Model hulu yang menjawab `coding-main`: `gpt-6-luna` (field `model` di stream) | diamati di 7 run sungguhan |
 | `models.yml` per run: `reasoning: false`, `contextWindow: 128000`, `maxTokens: 8192` untuk model apa pun | `packages/adapters/src/omp.ts:274-292` |

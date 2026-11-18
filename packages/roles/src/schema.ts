@@ -41,7 +41,6 @@ export const RoleFrontmatterSchema = z
     engine: z.enum(['omp', 'hermes', 'research']),
     /** Nama combo di 9Router. */
     model: nonEmpty,
-    fallback_model: nonEmpty.optional(),
     approval: z.enum(['ask', 'auto-safe']),
     skills: z.array(SkillIdSchema).min(1),
   })

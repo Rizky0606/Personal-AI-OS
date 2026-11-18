@@ -20,7 +20,6 @@ export interface Role {
   group: RoleFrontmatter['group'];
   engine: RoleFrontmatter['engine'];
   model: string;
-  fallbackModel: string | null;
   approval: RoleFrontmatter['approval'];
   /** Skill yang tertulis di frontmatter, sesuai urutan. */
   skills: string[];
@@ -144,7 +143,6 @@ export function loadRegistry(dir: string = ROLES_PACKAGE_DIR): RolesRegistry {
         group: meta.group,
         engine: meta.engine,
         model: meta.model,
-        fallbackModel: meta.fallback_model ?? null,
         approval: meta.approval,
         skills: meta.skills,
         body: parts.body,

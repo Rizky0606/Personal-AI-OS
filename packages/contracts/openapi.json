@@ -3906,12 +3906,6 @@
             "type": "string",
             "minLength": 1
           },
-          "fallbackModel": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
           "approval": {
             "type": "string",
             "enum": [
@@ -3932,7 +3926,6 @@
           "group",
           "engine",
           "model",
-          "fallbackModel",
           "approval",
           "skills"
         ]
