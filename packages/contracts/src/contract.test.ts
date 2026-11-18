@@ -9,6 +9,8 @@ import {
   McpConnectorSchema,
   MemoryProposalQuerySchema,
   MemoryProposalSchema,
+  ProjectWorkerStatusSchema,
+  RebindProjectWorkerRequestSchema,
   UpdateMemoryRequestSchema,
 } from './api-schemas.js';
 import { ConnectorNameSchema, connectorServerName, connectorToolOf } from './connectors.js';
@@ -89,6 +91,8 @@ const DOCUMENTED_ENDPOINTS = [
   'POST /projects',
   'PATCH /projects/:id',
   'DELETE /projects/:id',
+  'GET /projects/:id/worker',
+  'PUT /projects/:id/worker',
   'GET /projects/:id/tasks',
   'POST /tasks',
   'PATCH /tasks/:id',
@@ -699,6 +703,24 @@ describe('entitas', () => {
     expect(PageQuerySchema.parse({}).limit).toBe(50);
     expect(PageQuerySchema.safeParse({ limit: '101' }).success).toBe(false);
     expect(PageQuerySchema.parse({ limit: '20', before: ID_A }).limit).toBe(20);
+  });
+
+  it('worker project: ikat ulang wajib id perangkat; status memuat online dan dicabut', () => {
+    expect(RebindProjectWorkerRequestSchema.safeParse({ workerDeviceId: ID_A }).success).toBe(true);
+    expect(RebindProjectWorkerRequestSchema.safeParse({ workerDeviceId: 'pc-baru' }).success).toBe(
+      false,
+    );
+    expect(RebindProjectWorkerRequestSchema.safeParse({}).success).toBe(false);
+    const status = {
+      workerDeviceId: ID_A,
+      name: 'PC Kantor worker',
+      online: false,
+      revoked: true,
+      lastSeenAt: TS,
+    };
+    expect(ProjectWorkerStatusSchema.safeParse(status).success).toBe(true);
+    expect(ProjectWorkerStatusSchema.safeParse({ ...status, lastSeenAt: null }).success).toBe(true);
+    expect(ProjectWorkerStatusSchema.safeParse({ ...status, online: undefined }).success).toBe(false);
   });
 });
 

@@ -891,6 +891,27 @@ export const UpdateProjectRequestSchema = z
   })
   .meta({ id: 'UpdateProjectRequest' });
 
+/**
+ * `PUT /projects/:id/worker`: mengikat project ke perangkat worker aktif lain (mis. PC baru). Hanya `workerDeviceId`
+ * yang berubah; riwayat percakapan dan kartu tetap.
+ */
+export const RebindProjectWorkerRequestSchema = z
+  .object({ workerDeviceId: IdSchema })
+  .meta({ id: 'RebindProjectWorkerRequest' });
+
+/** `GET /projects/:id/worker`: perangkat worker project dan sambungannya ke hub worker gateway saat ini. */
+export const ProjectWorkerStatusSchema = z
+  .object({
+    workerDeviceId: IdSchema,
+    name: z.string(),
+    /** Tersambung ke hub worker gateway (`/v1/worker/ws`) saat ini. */
+    online: z.boolean(),
+    /** Perangkat sudah dicabut; run project ini tidak bisa jalan sampai project diikat ke worker aktif. */
+    revoked: z.boolean(),
+    lastSeenAt: TimestampSchema.nullable(),
+  })
+  .meta({ id: 'ProjectWorkerStatus' });
+
 export const CreateTaskRequestSchema = z
   .object({
     projectId: IdSchema,
