@@ -7,13 +7,22 @@ import { z } from 'zod';
  * jawabannya dirender klien; `propose-skill` (P11) mengatur kapan agent boleh mengusulkan skill (satu blok
  * `aios-skill-proposal`, disetujui pengguna).
  */
-export const CORE_SKILLS = ['scope-guard', 'read-context-first', 'rich-answers', 'propose-skill'] as const;
+export const CORE_SKILLS = [
+  'scope-guard',
+  'read-context-first',
+  'rich-answers',
+  'propose-skill',
+] as const;
 
 /**
  * Skill inti coding: dimuat hanya untuk role grup `coding`. Isinya soal mengubah berkas (rencana, verifikasi,
  * diff minimal); di agent umum skill ini membuat agent menolak atau meminta izin untuk tugas menulis biasa.
  */
-export const CODING_CORE_SKILLS = ['plan-before-edit', 'verify-before-done', 'minimal-diff'] as const;
+export const CODING_CORE_SKILLS = [
+  'plan-before-edit',
+  'verify-before-done',
+  'minimal-diff',
+] as const;
 
 /** Skill inti untuk role pada grup tertentu: universal dulu, lalu skill inti coding bila grupnya `coding`. */
 export function coreSkillsFor(group: 'coding' | 'umum'): readonly string[] {

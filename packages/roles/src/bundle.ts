@@ -141,10 +141,7 @@ export function buildBundle(
     ? new Set<string>()
     : new Set(
         suggestedSkills.filter(
-          (id) =>
-            !role.skills.includes(id) &&
-            !extraSet.has(id) &&
-            !coreIds.includes(id),
+          (id) => !role.skills.includes(id) && !extraSet.has(id) && !coreIds.includes(id),
         ),
       );
   const pinnedCatalog = catalogSkills.filter((s) => s.pinned).map((s) => s.id);
