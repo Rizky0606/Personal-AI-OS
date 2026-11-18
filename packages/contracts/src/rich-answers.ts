@@ -185,3 +185,148 @@ export const RichAnswerFollowUpSchema = z
   })
   .meta({ id: 'RichAnswerFollowUp' });
 export type RichAnswerFollowUp = z.infer<typeof RichAnswerFollowUpSchema>;
+
+/** Field yang dikenal per jenis komponen; field lain dibuang saat perbaikan (mis. `max` di grafik). */
+const COMPONENT_KEYS: Record<RichComponent['type'], readonly string[]> = {
+  metric: ['id', 'type', 'label', 'value', 'unit', 'tone', 'trend'],
+  table: ['id', 'type', 'columns', 'rows'],
+  chart: ['id', 'type', 'chart', 'labels', 'values', 'tone', 'label'],
+  checklist: ['id', 'type', 'label', 'items'],
+  choices: ['id', 'type', 'label', 'mode', 'options'],
+  slider: ['id', 'type', 'label', 'min', 'max', 'step', 'value', 'tone'],
+  callout: ['id', 'type', 'tone', 'title', 'text'],
+  steps: ['id', 'type', 'label', 'items'],
+  kv: ['id', 'type', 'items'],
+};
+
+/** Nama lain yang sering ditulis model untuk satu field, per jenis komponen (alias -> nama skema). */
+const COMPONENT_ALIASES: Partial<Record<RichComponent['type'], Record<string, string>>> = {
+  chart: {
+    chartType: 'chart',
+    chart_type: 'chart',
+    kind: 'chart',
+    variant: 'chart',
+    title: 'label',
+    categories: 'labels',
+    xLabels: 'labels',
+    x: 'labels',
+    data: 'values',
+    series: 'values',
+    y: 'values',
+  },
+  table: { headers: 'columns', header: 'columns', head: 'columns', data: 'rows', body: 'rows' },
+  metric: { title: 'label', name: 'label' },
+  checklist: { title: 'label' },
+  choices: { title: 'label', choices: 'options', items: 'options' },
+  slider: { title: 'label' },
+  steps: { title: 'label', steps: 'items' },
+  callout: { label: 'title', body: 'text', content: 'text', variant: 'tone' },
+  kv: { pairs: 'items', rows: 'items' },
+};
+
+const isPlainObject = (v: unknown): v is Record<string, unknown> =>
+  typeof v === 'object' && v !== null && !Array.isArray(v);
+
+/** Angka yang ditulis sebagai teks ("7", "7,5") menjadi angka; selain itu dibiarkan. */
+const toNumber = (v: unknown): unknown => {
+  if (typeof v !== 'string') return v;
+  const n = Number(v.trim().replace(',', '.'));
+  return v.trim() !== '' && Number.isFinite(n) ? n : v;
+};
+
+function repairComponent(raw: unknown, index: number): unknown {
+  if (!isPlainObject(raw) || typeof raw.type !== 'string' || !(raw.type in COMPONENT_KEYS)) {
+    return raw;
+  }
+  const type = raw.type as RichComponent['type'];
+  const aliases = COMPONENT_ALIASES[type] ?? {};
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(raw)) {
+    const name = COMPONENT_KEYS[type].includes(key) ? key : aliases[key];
+    // Field asli menang atas alias bila keduanya ada.
+    if (name && !(name in out && name === aliases[key])) out[name] = value;
+  }
+  if (typeof out.id !== 'string' || !/^[a-zA-Z0-9_-]{1,80}$/.test(out.id)) {
+    out.id = `komponen-${index + 1}`;
+  }
+  if (type === 'chart') {
+    if (typeof out.chart === 'string') {
+      const kind = out.chart.toLowerCase();
+      out.chart = kind === 'column' || kind === 'bars' ? 'bar' : kind === 'area' ? 'line' : kind;
+    }
+    out.chart ??= 'bar';
+    // `data: [{label, value}]` menjadi dua deret.
+    if (Array.isArray(out.values) && out.values.every(isPlainObject) && out.labels === undefined) {
+      const points = out.values;
+      out.labels = points.map((p) => String(p.label ?? p.name ?? p.x ?? ''));
+      out.values = points.map((p) => toNumber(p.value ?? p.y));
+    }
+    if (Array.isArray(out.values)) out.values = out.values.map(toNumber);
+    if (Array.isArray(out.labels)) out.labels = out.labels.map((l) => String(l));
+  }
+  if (type === 'table' && Array.isArray(out.rows)) {
+    out.rows = out.rows.map((row) =>
+      Array.isArray(row)
+        ? row.map((cell) => (typeof cell === 'string' ? cell : String(cell)))
+        : row,
+    );
+  }
+  if (type === 'metric' && typeof out.value === 'string') out.value = toNumber(out.value);
+  if (type === 'slider') {
+    for (const key of ['min', 'max', 'step', 'value']) out[key] = toNumber(out[key]);
+  }
+  return out;
+}
+
+/**
+ * Perbaikan longgar untuk isi blok `aios-ui` yang ditulis model: alias umum (`chartType` -> `chart`, `headers` ->
+ * `columns`), field tak dikenal dibuang, angka berupa teks diubah, `id` dan `version` yang hilang dilengkapi. Hasil
+ * hanya dipakai bila lolos `RichAnswerSchema` (yang tetap ketat); bila tidak, `null`.
+ */
+export function repairRichAnswer(raw: unknown): RichAnswer | null {
+  const strict = RichAnswerSchema.safeParse(raw);
+  if (strict.success) return strict.data;
+  if (!isPlainObject(raw)) return null;
+  const list = Array.isArray(raw.components)
+    ? raw.components
+    : isPlainObject(raw.component)
+      ? [raw.component]
+      : typeof raw.type === 'string'
+        ? [raw]
+        : null;
+  if (!list) return null;
+  const repaired = RichAnswerSchema.safeParse({
+    version: 1,
+    components: list.map(repairComponent),
+  });
+  return repaired.success ? repaired.data : null;
+}
+
+const AIOS_UI_FENCE =
+  /(^|\n)([ \t]*)(`{3,}|~{3,})aios-ui[ \t]*\n([\s\S]*?)\n[ \t]*\3[ \t]*(?=\n|$)/g;
+
+/**
+ * Menulis ulang setiap blok `aios-ui` yang tidak valid tetapi bisa diperbaiki (`repairRichAnswer`) menjadi JSON yang
+ * valid. Blok yang sudah valid, terlalu besar, bukan JSON, atau tetap tidak valid dibiarkan apa adanya (klien
+ * menampilkan fallback). Dipakai gateway saat jawaban selesai, sebelum disimpan.
+ */
+export function repairRichAnswerBlocks(text: string): string {
+  if (!text.includes('aios-ui')) return text;
+  return text.replace(
+    AIOS_UI_FENCE,
+    (whole: string, start: string, indent: string, fence: string, body: string) => {
+      if (new TextEncoder().encode(body).byteLength > RICH_ANSWER_LIMITS.maxJsonBytes) return whole;
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(body) as unknown;
+      } catch {
+        return whole;
+      }
+      if (RichAnswerSchema.safeParse(parsed).success) return whole;
+      const repaired = repairRichAnswer(parsed);
+      return repaired
+        ? `${start}${indent}${fence}aios-ui\n${JSON.stringify(repaired)}\n${indent}${fence}`
+        : whole;
+    },
+  );
+}

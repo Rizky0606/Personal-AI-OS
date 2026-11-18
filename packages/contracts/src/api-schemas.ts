@@ -1320,6 +1320,12 @@ export const StatusSchema = z
     ),
     /** Run yang belum selesai (di luar menunggu tinjauan). */
     activeRuns: z.number().int().nonnegative(),
+    /**
+     * Tool aplikasi (`aios_tools`) untuk agent. `mcp`: server MCP gateway menyala (MCP_TOOLS_ENABLED). `hermes`:
+     * principal Hermes dikonfigurasi (MCP_HERMES_TOKEN_SHA256, docs/RUNBOOK_HERMES_MCP.md); bila false, chat umum
+     * tidak bisa mengusulkan memori atau jadwal sendiri, pemilik memakai tombol Ingat dan layar Jadwal.
+     */
+    agentTools: z.object({ mcp: z.boolean(), hermes: z.boolean() }),
   })
   .meta({ id: 'Status' });
 
