@@ -98,6 +98,47 @@ describe('lebar panel kanan', () => {
   });
 });
 
+describe('Cari di web per percakapan', () => {
+  it('chat baru mulai mati; nyala per percakapan dan bisa dimatikan', () => {
+    const ui = () => useUiStore.getState();
+    expect(ui().webSearchByConversation).toEqual({});
+    ui().setWebSearch('c1', true);
+    ui().setWebSearch('baru', true);
+    expect(ui().webSearchByConversation).toEqual({ c1: true, baru: true });
+    ui().setWebSearch('c1', false);
+    expect(ui().webSearchByConversation).toEqual({ baru: true });
+  });
+
+  it('kunci chat baru tidak disimpan; nilai rusak dibuang saat dipulihkan', async () => {
+    useUiStore.getState().setWebSearch('c1', true);
+    useUiStore.getState().setWebSearch('baru', true);
+    const saved = JSON.parse(localStorage.getItem('aios.ui') ?? '{}') as {
+      state: Record<string, unknown>;
+    };
+    expect(saved.state.webSearchByConversation).toEqual({ c1: true });
+
+    localStorage.setItem(
+      'aios.ui',
+      JSON.stringify({
+        state: { webSearchByConversation: { c2: true, c3: 'ya', baru: true, '': true } },
+        version: 2,
+      }),
+    );
+    await useUiStore.persist.rehydrate();
+    expect(useUiStore.getState().webSearchByConversation).toEqual({ c2: true });
+  });
+
+  it('sakelar global lama (v1) dibuang, bukan dipindah ke chat mana pun', async () => {
+    localStorage.setItem(
+      'aios.ui',
+      JSON.stringify({ state: { webSearch: true, theme: 'dark' }, version: 1 }),
+    );
+    await useUiStore.persist.rehydrate();
+    expect(useUiStore.getState()).not.toHaveProperty('webSearch');
+    expect(useUiStore.getState()).toMatchObject({ theme: 'dark', webSearchByConversation: {} });
+  });
+});
+
 describe('tema', () => {
   it('terang/gelap memasang data-theme; ikut sistem melepasnya', () => {
     const root = document.createElement('html');

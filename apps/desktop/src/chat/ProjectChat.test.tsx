@@ -103,7 +103,7 @@ describe('chat per project', () => {
     );
   });
 
-  it('Cari di web: sakelar di menu Opsi tampil di chat umum dan project, diingat, dan dikirim bersama pesan', async () => {
+  it('Cari di web: sakelar di menu Opsi menampilkan chip Web, dikirim bersama pesan, dan pindah ke percakapan yang dibuat', async () => {
     api.createConversation.mockResolvedValue({
       id: CONV,
       title: '',
@@ -122,19 +122,45 @@ describe('chat per project', () => {
     const user = userEvent.setup();
     await renderScreen(<ChatScreen />);
 
+    expect(screen.queryByRole('button', { name: copy.chat.web.off })).not.toBeInTheDocument();
     await openOptions(user);
     const item = await screen.findByRole('menuitemcheckbox', { name: copy.chat.web.chip });
     expect(item).toHaveAttribute('aria-checked', 'false');
     await user.click(item);
-    expect(useUiStore.getState().webSearch).toBe(true);
     expect(item).toHaveAttribute('aria-checked', 'true');
     await user.keyboard('{Escape}');
+    expect(screen.getByText(copy.chat.web.active)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: copy.chat.web.off })).toBeInTheDocument();
 
     await user.type(field(), 'berita GPU terbaru{Enter}');
     expect(api.sendMessage).toHaveBeenCalledWith(
       CONV,
       expect.objectContaining({ text: 'berita GPU terbaru', webSearch: true }),
     );
+    // Pertanyaan lanjutan di percakapan ini tetap mencari; chat baru berikutnya mulai mati.
+    expect(useUiStore.getState().webSearchByConversation).toEqual({ [CONV]: true });
+  });
+
+  it('Cari di web: chip × mematikannya; chat baru tidak mewarisi sakelar percakapan lain', async () => {
+    // Sakelar menyala di percakapan lain dan sisa chat baru yang ditinggal: chat baru tetap mulai mati.
+    useUiStore.setState({ webSearchByConversation: { [CONV]: true, baru: true } });
+    const user = userEvent.setup();
+    await renderScreen(<ChatScreen />);
+
+    await screen.findByRole('button', { name: copy.chat.composerOptions });
+    expect(screen.queryByRole('button', { name: copy.chat.web.off })).not.toBeInTheDocument();
+    await openOptions(user);
+    const item = await screen.findByRole('menuitemcheckbox', { name: copy.chat.web.chip });
+    expect(item).toHaveAttribute('aria-checked', 'false');
+    await user.click(item);
+    await user.keyboard('{Escape}');
+
+    await user.click(screen.getByRole('button', { name: copy.chat.web.off }));
+    expect(screen.queryByText(copy.chat.web.active)).not.toBeInTheDocument();
+    await openOptions(user);
+    expect(
+      await screen.findByRole('menuitemcheckbox', { name: copy.chat.web.chip }),
+    ).toHaveAttribute('aria-checked', 'false');
   });
 
   it('tanpa sakelar Cari di web, pesan tidak membawa webSearch', async () => {

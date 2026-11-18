@@ -1,6 +1,15 @@
 import type { OrbState } from './AgentOrb';
 import type { ModelInfo } from '../api/gateway';
-import { ArrowUp, ChevronDown, Paperclip, Pencil, Settings2, Square, X } from 'lucide-react';
+import {
+  ArrowUp,
+  ChevronDown,
+  Globe,
+  Paperclip,
+  Pencil,
+  Settings2,
+  Square,
+  X,
+} from 'lucide-react';
 import type { PromptTemplate } from '@aios/contracts';
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import * as Dropdown from '@radix-ui/react-dropdown-menu';
@@ -64,7 +73,7 @@ export interface ComposerProps {
    * tidak tampil. Mengirim dengan sakelar ini aktif membuat tim, bukan pesan biasa. */
   teamMode?: boolean;
   onTeamMode?: (on: boolean) => void;
-  /** Cari di web untuk pesan berikutnya; tanpa onWebSearch sakelarnya tidak tampil. */
+  /** Cari di web untuk percakapan ini; tanpa onWebSearch sakelar dan chip "Web" tidak tampil. */
   webSearch?: boolean;
   onWebSearch?: (on: boolean) => void;
   /** Paket skill tambahan untuk pesan berikutnya; tanpa onSkillPacks menunya tidak tampil. */
@@ -514,6 +523,23 @@ export function Composer({
                 onSkillPacks={onSkillPacks}
                 skillOptions={skillOptions}
               />
+            ) : null}
+            {onWebSearch && webSearch ? (
+              // Sakelar menyala harus terlihat tanpa membuka Opsi, dan bisa dimatikan langsung dari sini.
+              <span
+                title={copy.chat.web.activeHint}
+                className="inline-flex h-7 items-center gap-1 rounded-full border border-accent bg-accent-soft pr-0.5 pl-3 text-meta text-text"
+              >
+                <Globe size={12} strokeWidth={1.5} aria-hidden="true" />
+                {copy.chat.web.active}
+                <IconButton
+                  label={copy.chat.web.off}
+                  onClick={() => onWebSearch(false)}
+                  className="size-6 rounded-full"
+                >
+                  <X size={12} strokeWidth={1.5} aria-hidden="true" />
+                </IconButton>
+              </span>
             ) : null}
             <span className="ml-auto flex items-center gap-1">
               {onAddFiles ? (

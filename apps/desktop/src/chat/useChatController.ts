@@ -61,8 +61,10 @@ export function useChatController(conversationId: string | undefined) {
 
   const [draft, setDraft] = useState('');
   const model = useUiStore((s) => s.model);
-  const webSearch = useUiStore((s) => s.webSearch);
-  const setWebSearch = useUiStore((s) => s.setWebSearch);
+  // Cari di web per percakapan, dengan kunci sementara yang sama seperti mesin untuk chat yang belum punya id.
+  const webSearchKey = conversationId ?? NEW_CHAT_ENGINE_KEY;
+  const webSearch = useUiStore((s) => s.webSearchByConversation[webSearchKey] === true);
+  const setWebSearchFor = useUiStore((s) => s.setWebSearch);
   const skillPacks = useUiStore((s) => s.skillPacks);
   const setSkillPacks = useUiStore((s) => s.setSkillPacks);
   const setModel = useUiStore((s) => s.setModel);
@@ -143,9 +145,15 @@ export function useChatController(conversationId: string | undefined) {
     setSeenSignal(newChatSignal);
     if (conversationId === undefined) {
       setDraft('');
+      setWebSearchFor(NEW_CHAT_ENGINE_KEY, false);
       setFocusNonce((n) => n + 1);
     }
-  }, [newChatSignal, seenSignal, conversationId]);
+  }, [newChatSignal, seenSignal, conversationId, setWebSearchFor]);
+
+  // Chat baru selalu mulai tanpa Cari di web, walau sakelarnya dinyalakan di chat baru sebelumnya lalu ditinggal.
+  useEffect(() => {
+    if (conversationId === undefined) setWebSearchFor(NEW_CHAT_ENGINE_KEY, false);
+  }, [conversationId, setWebSearchFor]);
 
   // Membuka percakapan yang jawabannya masih berjalan (aplikasi ditutup di tengah jawaban): lanjut mengikuti.
   const resumeId = latestRunId(messages);
@@ -222,9 +230,11 @@ export function useChatController(conversationId: string | undefined) {
           // Sudah diketahui: rute tujuan tidak perlu memuatnya lagi (jawaban yang sedang tampil tidak berkedip).
           queryClient.setQueryData(['conversation', created.id], created);
           id = created.id;
-          // Pilihan mesin chat baru ikut ke percakapan yang baru dibuat.
+          // Pilihan mesin dan Cari di web chat baru ikut ke percakapan yang baru dibuat; chat baru berikutnya mulai bersih.
           if (engine.effective !== 'auto') setEngineChoice(id, engine.effective);
           setEngineChoice(NEW_CHAT_ENGINE_KEY, 'auto');
+          if (webSearch) setWebSearchFor(id, true);
+          setWebSearchFor(NEW_CHAT_ENGINE_KEY, false);
         }
         const response = await api.sendMessage(id, {
           text: body || (options?.followUp ? `Rich answer ${options.followUp.action}` : ''),
@@ -270,6 +280,7 @@ export function useChatController(conversationId: string | undefined) {
       planFirst,
       teamMode,
       webSearch,
+      setWebSearchFor,
       skillPacks,
       setSkillPacks,
       queryClient,
@@ -415,6 +426,8 @@ export function useChatController(conversationId: string | undefined) {
           model: model ?? undefined,
           engine: engineWire,
           workspace: options?.workspace,
+          // Ubah dan Coba lagi mengikuti sakelar Cari di web percakapan ini, sama seperti kiriman biasa.
+          webSearch: webSearch ? true : undefined,
         });
         dropFrom(conversationId, messageId);
         addMessageToCache(queryClient, conversationId, response.message);
@@ -437,6 +450,7 @@ export function useChatController(conversationId: string | undefined) {
       push,
       model,
       engineWire,
+      webSearch,
       dropFrom,
       queryClient,
       fail,
@@ -548,7 +562,7 @@ export function useChatController(conversationId: string | undefined) {
     teamMode,
     setTeamMode,
     webSearch,
-    setWebSearch,
+    setWebSearch: (on: boolean) => setWebSearchFor(webSearchKey, on),
     skillPacks,
     setSkillPacks,
     awaitingPlanApproval,
