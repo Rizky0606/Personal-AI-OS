@@ -303,6 +303,12 @@ function modelsYaml(llm: { baseUrl: string; apiKey: string }, model: string): st
   ].join('\n');
 }
 
+/** Pemisah paragraf antar-giliran asisten, memperhitungkan baris baru yang sudah ada di akhir teks. */
+function turnSeparator(previous: string): string {
+  if (previous.endsWith('\n\n')) return '';
+  return previous.endsWith('\n') ? '\n' : '\n\n';
+}
+
 class OmpRun implements RunHandle {
   readonly runId: string;
   readonly events = new AsyncQueue<AgentEvent>();
@@ -316,6 +322,8 @@ class OmpRun implements RunHandle {
   private readonly usage: Usage = { inputTokens: 0, outputTokens: 0 };
   private text = '';
   private lastAssistantText = '';
+  /** Giliran asisten baru dimulai dan belum ada teksnya (pemisah narasi, lihat onMessageUpdate). */
+  private newTurn = false;
   private finished = false;
   private cancelRequested = false;
   private promptSent = false;
@@ -433,6 +441,10 @@ class OmpRun implements RunHandle {
       case 'response':
         if (frame.id === 'cfg-retry') this.sendPrompt();
         return;
+      case 'message_start':
+        // Giliran asisten baru (setelah hasil tool): teks berikutnya dipisah dari giliran sebelumnya.
+        if (isRecord(frame.message) && frame.message.role === 'assistant') this.newTurn = true;
+        return;
       case 'message_update':
         this.onMessageUpdate(frame);
         return;
@@ -542,8 +554,12 @@ class OmpRun implements RunHandle {
     const delta = str(update.delta);
     if (delta === undefined || delta === '') return;
     if (update.type === 'text_delta') {
-      this.text += delta;
-      this.emit({ type: 'message.delta', messageId: this.input.messageId, text: delta });
+      // Delta dari omp mentah per giliran; tanpa pemisah narasi antar-giliran menempel ("…terdampak.Pemanggil
+      // ada di…", uji project 2b). Pemisah ditambahkan di sumber supaya gateway, worker, dan klien sama.
+      const text = this.newTurn && this.text ? `${turnSeparator(this.text)}${delta}` : delta;
+      this.newTurn = false;
+      this.text += text;
+      this.emit({ type: 'message.delta', messageId: this.input.messageId, text });
     } else if (update.type === 'thinking_delta') {
       this.emit({ type: 'reasoning.delta', messageId: this.input.messageId, text: delta });
     }
@@ -552,6 +568,8 @@ class OmpRun implements RunHandle {
   private onMessageEnd(frame: Record<string, unknown>): void {
     const message = frame.message;
     if (!isRecord(message) || message.role !== 'assistant') return;
+    // Cadangan bila versi omp tidak mengirim message_start: giliran berikutnya tetap dipisah.
+    this.newTurn = true;
     const usage = message.usage;
     if (isRecord(usage)) {
       const n = (v: unknown) => (typeof v === 'number' && v > 0 ? Math.trunc(v) : 0);

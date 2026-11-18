@@ -964,6 +964,68 @@ describe('urutan frame sintetis (bentuk frame dari rekaman)', () => {
     ]);
   });
 
+  it('narasi antar-giliran: giliran asisten baru dipisah paragraf; ringkasan tetap jawaban terakhir', async () => {
+    const { transport, handle } = await boot({ t: 0 });
+    const say = (delta: string) =>
+      frame(transport, { type: 'message_update', assistantMessageEvent: { type: 'text_delta', delta } });
+    const end = (text: string) =>
+      frame(transport, {
+        type: 'message_end',
+        message: { role: 'assistant', content: [{ type: 'text', text }] },
+      });
+    frame(transport, { type: 'message_start', message: { role: 'assistant' } });
+    say('Saya cek yang terdampak.');
+    end('Saya cek yang terdampak.');
+    frame(transport, { type: 'message_start', message: { role: 'toolResult' } });
+    frame(transport, { type: 'message_start', message: { role: 'assistant' } });
+    say('Pemanggil ada di cart.ts.\n');
+    end('Pemanggil ada di cart.ts.\n');
+    // Tanpa message_start (versi omp lain): message_end sebelumnya tetap menandai giliran baru.
+    say('Selesai.');
+    end('Selesai.');
+    frame(transport, { id: 'p1', type: 'prompt_result', status: 'completed' });
+
+    const events = await collect(handle);
+
+    const deltas = events.flatMap((e) => (e.type === 'message.delta' ? [e.text] : []));
+    expect(deltas).toEqual([
+      'Saya cek yang terdampak.',
+      '\n\nPemanggil ada di cart.ts.\n',
+      '\nSelesai.',
+    ]);
+    expect(events.at(-1)).toMatchObject({ type: 'run.completed', summary: 'Selesai.' });
+  });
+
+  it('alasan galat tool dialirkan sebagai keluaran stderr (galat MCP tanpa keluaran parsial)', async () => {
+    const { transport, handle } = await boot({ t: 0 });
+    frame(transport, {
+      type: 'tool_execution_start',
+      toolCallId: 'call_w',
+      toolName: 'mcp__aios_tools_web_read',
+      args: { url: 'https://vitest.dev/' },
+    });
+    frame(transport, {
+      type: 'tool_execution_end',
+      toolCallId: 'call_w',
+      toolName: 'mcp__aios_tools_web_read',
+      result: { content: [{ type: 'text', text: 'MCP error: 409 run_not_active' }] },
+      isError: true,
+    });
+    frame(transport, { id: 'p1', type: 'prompt_result', status: 'completed' });
+
+    const events = await collect(handle);
+
+    expect(events.slice(1, 3)).toEqual([
+      {
+        type: 'tool.output',
+        toolCallId: 'call_w',
+        chunk: 'MCP error: 409 run_not_active',
+        stream: 'stderr',
+      },
+      { type: 'tool.finished', toolCallId: 'call_w', status: 'error', durationMs: 0 },
+    ]);
+  });
+
   it('frame dan subjenis yang tidak dikenal diabaikan: run tetap selesai dan tidak ada event error', async () => {
     const { transport, handle } = await boot({ t: 0 });
     frame(transport, { type: 'frame_masa_depan', payload: { a: 1 } });
