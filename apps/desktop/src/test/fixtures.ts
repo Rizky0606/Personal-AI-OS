@@ -39,6 +39,7 @@ export function run(over: Partial<Run> = {}): Run {
     workspace: null,
     usage: null,
     error: null,
+    endReason: null,
     planOnly: false,
     createdAt: TS,
     updatedAt: TS,
