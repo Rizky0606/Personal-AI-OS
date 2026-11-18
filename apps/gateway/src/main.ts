@@ -215,7 +215,11 @@ async function main(): Promise<void> {
     store,
     hub,
     observer,
-    adapter: createHermesAdapter({ baseUrl: config.HERMES_URL, apiKey: config.HERMES_API_KEY }),
+    adapter: createHermesAdapter({
+      baseUrl: config.HERMES_URL,
+      apiKey: config.HERMES_API_KEY,
+      sessionKey: config.HERMES_SESSION_KEY,
+    }),
     // Satu sakelar: route /v1/mcp dan `run.start.gatewayTools` menyala bersama (docs/DESIGN_MCP_TOOLS.md).
     workerAdapter: createWorkerRelayAdapter({
       relay: workerRelay,
