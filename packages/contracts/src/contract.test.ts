@@ -720,7 +720,9 @@ describe('entitas', () => {
     };
     expect(ProjectWorkerStatusSchema.safeParse(status).success).toBe(true);
     expect(ProjectWorkerStatusSchema.safeParse({ ...status, lastSeenAt: null }).success).toBe(true);
-    expect(ProjectWorkerStatusSchema.safeParse({ ...status, online: undefined }).success).toBe(false);
+    expect(ProjectWorkerStatusSchema.safeParse({ ...status, online: undefined }).success).toBe(
+      false,
+    );
   });
 });
 

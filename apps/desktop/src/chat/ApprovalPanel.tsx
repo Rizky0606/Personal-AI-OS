@@ -52,7 +52,11 @@ export function ApprovalPanel({ approval, busy, onResolve }: ApprovalPanelProps)
           {gatewayTool ? copy.approval.allowAlwaysTool(gatewayTool) : copy.approval.allowAlways}
         </Button>
         {approval.kind === 'file_write' ? (
-          <Button variant="secondary" disabled={busy} onClick={() => onResolve('allow', false, true)}>
+          <Button
+            variant="secondary"
+            disabled={busy}
+            onClick={() => onResolve('allow', false, true)}
+          >
             {copy.approval.allowRunWrites}
           </Button>
         ) : null}
