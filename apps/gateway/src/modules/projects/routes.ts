@@ -1,6 +1,7 @@
 import {
   CreateProjectRequestSchema,
   IdParamsSchema,
+  RebindProjectWorkerRequestSchema,
   UpdateProjectRequestSchema,
 } from '@aios/contracts';
 import type { FastifyPluginCallback } from 'fastify';
@@ -40,6 +41,18 @@ export const projectRoutes: FastifyPluginCallback<{ projects: ProjectsService }>
     await projects.remove(requireAuth(req).deviceId, IdParamsSchema.parse(req.params).id);
     return reply.code(204).send();
   });
+
+  app.get('/projects/:id/worker', guard, (req) =>
+    projects.workerStatus(IdParamsSchema.parse(req.params).id),
+  );
+
+  app.put('/projects/:id/worker', guard, (req) =>
+    projects.rebindWorker(
+      requireAuth(req).deviceId,
+      IdParamsSchema.parse(req.params).id,
+      RebindProjectWorkerRequestSchema.parse(req.body).workerDeviceId,
+    ),
+  );
 
   done();
 };

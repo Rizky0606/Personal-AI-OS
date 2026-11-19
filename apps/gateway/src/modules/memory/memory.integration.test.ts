@@ -15,6 +15,7 @@ import { createAuthEnv, type AuthEnv } from '../../testing/auth-env.js';
 import { startFakeHermes, type FakeHermes } from '../../testing/fake-hermes.js';
 import { DEFAULT_RECALL_BUDGET_CHARS, memoryTitle, RECALL_SECTION_HEADER } from './recall.js';
 import { MAX_MEMORIES } from './service.js';
+import { timeSection } from '../runs/runner.js';
 
 let env: AuthEnv;
 let hermes: FakeHermes;
@@ -242,7 +243,8 @@ describe('memori: recall per pesan', () => {
       `- ${PINNED}`,
       '- Zona waktu Asia/Jakarta.',
     ].join('\n');
-    expect(system.endsWith(before)).toBe(true);
+    // Bagian memori tetap sama persis; sesudahnya hanya bagian Waktu (selalu terakhir di pesan sistem).
+    expect(system.endsWith(`${before}\n\n${timeSection(env.clock.now)}`)).toBe(true);
     expect(used).toHaveLength(1);
     const { items, ...counts } = used[0]!.memory;
     expect(counts).toEqual({ read: 3, total: 3, mode: 'all' });

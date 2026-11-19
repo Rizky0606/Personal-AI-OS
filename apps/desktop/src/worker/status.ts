@@ -1,3 +1,5 @@
+import type { ProjectWorkerStatusSchema } from '@aios/contracts';
+import type { z } from 'zod';
 import type { WorkerSnapshot } from './localClient';
 
 export type WorkerIndicator = 'connected' | 'reconnecting' | 'off';
@@ -19,4 +21,20 @@ export function workerIndicator(snapshot: WorkerSnapshot): WorkerIndicator {
     case 'offline':
       return snapshot.status.deviceId === null ? 'reconnecting' : 'off';
   }
+}
+
+export type ProjectWorkerIndicator = 'connected' | 'offline' | 'revoked' | 'other';
+
+/**
+ * Keadaan worker project aktif menurut gateway. "Dicabut" dan "worker lain" berarti run project ini tidak akan
+ * sampai ke worker PC ini sampai project diikat ulang; `ownDeviceId` null = worker PC ini belum terdaftar, jadi
+ * project tidak bisa dibandingkan dan hanya status online yang dipakai.
+ */
+export function projectWorkerIndicator(
+  status: z.infer<typeof ProjectWorkerStatusSchema>,
+  ownDeviceId: string | null,
+): ProjectWorkerIndicator {
+  if (status.revoked) return 'revoked';
+  if (ownDeviceId !== null && status.workerDeviceId !== ownDeviceId) return 'other';
+  return status.online ? 'connected' : 'offline';
 }

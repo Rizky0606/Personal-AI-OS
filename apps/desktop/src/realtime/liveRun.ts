@@ -1,5 +1,6 @@
 import {
   TERMINAL_RUN_STATUSES,
+  type RunEndReason,
   type RunStatus,
   type RunWorkspace,
   type ServerEvent,
@@ -21,6 +22,8 @@ export interface ToolStep {
   startedAt: number | null;
   /** Baris output terbaru untuk aktivitas live. */
   output?: string;
+  /** Alasan galat dari mesin (`tool.output` stderr, mis. galat tool MCP), ditampilkan di langkah yang gagal. */
+  errorText?: string;
 }
 
 export interface LiveSource {
@@ -80,6 +83,11 @@ export interface LiveRun {
   runId: string;
   role: string | null;
   status: RunStatus;
+  /**
+   * Alasan run berakhir dari gateway (`run.status.endReason` atau `Run.endReason`): `stopped` = dihentikan pemilik,
+   * `superseded` = digantikan run lanjutan. Bertahan sampai status berikutnya membawa alasan baru; null bila tidak ada.
+   */
+  endReason: RunEndReason | null;
   /** ID pesan asisten, diketahui dari delta pertama. */
   messageId: string | null;
   text: string;
@@ -111,6 +119,11 @@ export interface LiveRun {
   contextUsed: ContextUsed | null;
   /** Folder kerja run coding (event `workspace.ready`); null sampai worker melaporkannya. */
   workspace: WorkspaceView | null;
+  /**
+   * Fakta ringkas dari event `memory.suggested`: pemilik minta diingat tetapi tidak ada usulan memori yang berhasil.
+   * Klien menawarkan dialog "Ingat ini" berisi teks ini; null bila tidak ada.
+   */
+  memorySuggestion: string | null;
 }
 
 export const isTerminal = (status: RunStatus): boolean => TERMINAL_RUN_STATUSES.includes(status);
@@ -126,6 +139,7 @@ export const newLiveRun = (runId: string): LiveRun => ({
   runId,
   role: null,
   status: 'queued',
+  endReason: null,
   messageId: null,
   text: '',
   reasoning: '',
@@ -146,6 +160,7 @@ export const newLiveRun = (runId: string): LiveRun => ({
   subagents: [],
   contextUsed: null,
   workspace: null,
+  memorySuggestion: null,
 });
 
 /** Memajukan waktu mulai ke waktu run dibuat di server bila lebih awal (reload di tengah run). */
@@ -178,7 +193,7 @@ function reduceEvent(run: LiveRun, event: ServerEvent, ts: number | undefined): 
   const at = ts !== undefined && Number.isFinite(ts) ? ts : null;
   switch (event.type) {
     case 'run.status':
-      return { ...run, status: event.status };
+      return { ...run, status: event.status, endReason: event.endReason ?? run.endReason };
     case 'route.decided':
       return { ...run, role: event.role };
     case 'message.delta':
@@ -270,10 +285,15 @@ function reduceEvent(run: LiveRun, event: ServerEvent, ts: number | undefined): 
     case 'tool.output': {
       const output = event.chunk.split(/\r?\n/).filter(Boolean).at(-1);
       if (!output) return run;
+      const errorText = event.stream === 'stderr' ? event.chunk.trim().slice(0, 300) : undefined;
       return {
         ...run,
         lastActivity: 'tool',
-        tools: run.tools.map((tool) => (tool.id === event.toolCallId ? { ...tool, output } : tool)),
+        tools: run.tools.map((tool) =>
+          tool.id === event.toolCallId
+            ? { ...tool, output, ...(errorText ? { errorText } : {}) }
+            : tool,
+        ),
       };
     }
     case 'tool.finished': {
@@ -341,6 +361,8 @@ function reduceEvent(run: LiveRun, event: ServerEvent, ts: number | undefined): 
         : { ...run, artifacts: [...run.artifacts, event] };
     case 'workspace.ready':
       return { ...run, workspace: { mode: event.mode, branch: event.branch } };
+    case 'memory.suggested':
+      return { ...run, memorySuggestion: event.text };
     case 'error':
       return {
         ...run,

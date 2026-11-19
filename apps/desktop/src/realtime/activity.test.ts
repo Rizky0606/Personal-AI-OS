@@ -325,6 +325,24 @@ describe('buildActivity: waktu, ringkasan, perhatian', () => {
     expect(buildActivity(run({ status: 'needs_review', endedAt: T0 + 2000 }), T0).summary).toBe(
       'Selesai · 2 dtk',
     );
+    // Dihentikan pemilik setelah mengubah berkas: gateway mengakhirinya needs_review dengan endReason stopped.
+    const stopped = buildActivity(
+      run({ status: 'needs_review', endReason: 'stopped', endedAt: T0 + 2000 }),
+      T0,
+    );
+    expect(stopped.phase).toBe('cancelled');
+    expect(stopped.summary).toBe('Dihentikan · 2 dtk');
+    expect(
+      buildActivity(run({ status: 'cancelled', endReason: 'stopped', endedAt: T0 + 2000 }), T0)
+        .summary,
+    ).toBe('Dihentikan · 2 dtk');
+    // Digantikan run lanjutan: bukan "Ditolak", label netral.
+    const superseded = buildActivity(
+      run({ status: 'rejected', endReason: 'superseded', endedAt: T0 + 2000 }),
+      T0,
+    );
+    expect(superseded.phase).toBe('done');
+    expect(superseded.summary).toBe('Dilanjutkan di run berikutnya · 2 dtk');
   });
 
   it('needsAttention: tool error atau menunggu persetujuan; tool ditolak/dibatalkan tidak', () => {
@@ -357,6 +375,22 @@ describe('buildActivity: waktu, ringkasan, perhatian', () => {
       ).needsAttention,
     ).toBe(false);
   });
+
+  it('hening lebih dari 15 dtk tanpa tool/izin/pertanyaan: quietMs sejak event terakhir; selain itu tidak ada', () => {
+    const quiet = run({ lastEventAt: T0, lastActivity: 'reasoning' });
+    expect(buildActivity(quiet, T0 + 20_000).quietMs).toBe(20_000);
+    expect(buildActivity(quiet, T0 + 10_000).quietMs).toBeUndefined();
+    // Tool yang sedang berjalan (mis. npm test) atau izin yang menunggu pemilik bukan "menunggu model".
+    const busy = run({ lastEventAt: T0, tools: [tool({ id: 'a', status: 'running' })] });
+    expect(buildActivity(busy, T0 + 60_000).quietMs).toBeUndefined();
+    expect(
+      buildActivity(run({ lastEventAt: T0, status: 'waiting_approval' }), T0 + 60_000).quietMs,
+    ).toBeUndefined();
+    expect(
+      buildActivity(run({ lastEventAt: T0, status: 'completed', endedAt: T0 }), T0 + 60_000)
+        .quietMs,
+    ).toBeUndefined();
+  });
 });
 
 describe('buildActivity: sifat', () => {
@@ -378,5 +412,29 @@ describe('buildActivity: sifat', () => {
   it('now tidak dibaca dari jam: hasil sama untuk masukan sama', () => {
     const live = run({ tools: [tool({ id: 'a' })] });
     expect(buildActivity(live, T0 + 5000)).toEqual(buildActivity(live, T0 + 5000));
+  });
+});
+
+describe('buildActivity: alasan galat', () => {
+  it('langkah gagal membawa alasan stderr; langkah berhasil tidak', () => {
+    const activity = buildActivity(
+      run({
+        tools: [
+          tool({
+            id: 'a',
+            name: 'read',
+            status: 'error',
+            durationMs: 5,
+            errorText: 'URL reads are disabled by settings.',
+          }),
+          tool({ id: 'b', status: 'ok', durationMs: 5, errorText: 'peringatan' }),
+        ],
+      }),
+      T0 + 1000,
+    );
+    expect(activity.steps.map((s) => s.error)).toEqual([
+      'URL reads are disabled by settings.',
+      undefined,
+    ]);
   });
 });

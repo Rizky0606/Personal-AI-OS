@@ -1,7 +1,7 @@
 import { copy } from '../copy';
 import { cn } from '../lib/cn';
 import { relativeTime } from '../lib/time';
-import { statusDotClass, type WorkspaceRun } from '../workspace/runs';
+import { runStatusLabel, statusDotClass, type WorkspaceRun } from '../workspace/runs';
 
 /** Ringkasan aktivitas terakhir project: judul run terbaru, status (titik token + teks), dan waktunya. */
 export function LastActivity({ entry }: { entry: WorkspaceRun | undefined }) {
@@ -14,7 +14,7 @@ export function LastActivity({ entry }: { entry: WorkspaceRun | undefined }) {
           aria-hidden="true"
           className={cn('size-2 shrink-0 rounded-full', statusDotClass(entry.run.status))}
         />
-        <span>{copy.runStatus[entry.run.status]}</span>
+        <span>{runStatusLabel(entry.run)}</span>
         <span className="text-text-3">{relativeTime(entry.run.updatedAt)}</span>
       </span>
     </span>

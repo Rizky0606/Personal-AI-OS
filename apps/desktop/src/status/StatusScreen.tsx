@@ -175,6 +175,21 @@ export function StatusScreen() {
                 </div>
               </Section>
 
+              <Section id="st-agent-tools" title={p.agentTools}>
+                <Rows
+                  rows={[
+                    [
+                      p.agentToolsHermes,
+                      <Dot
+                        key="hermes"
+                        ok={status.agentTools.hermes}
+                        label={status.agentTools.hermes ? p.agentToolsOn : p.agentToolsOff}
+                      />,
+                    ],
+                  ]}
+                />
+              </Section>
+
               <Section id="st-workers" title={p.workers}>
                 <Rows
                   rows={[

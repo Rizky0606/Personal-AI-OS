@@ -42,6 +42,7 @@ const status: SystemStatus = {
     { queue: 'schedule', queued: 0, active: 0, failed: 0 },
   ],
   activeRuns: 2,
+  agentTools: { mcp: true, hermes: false },
 };
 
 beforeEach(() => {
@@ -85,6 +86,19 @@ describe('StatusScreen', () => {
 
     const research = screen.getByRole('row', { name: /research/ });
     expect(within(research).getByText('3')).toHaveClass('text-danger');
+  });
+
+  it('Hermes tanpa aios_tools dinyatakan jelas; tersambung bila principal Hermes dikonfigurasi', async () => {
+    api.getStatus.mockResolvedValue(status);
+    const off = await renderScreen(<StatusScreen />, '/status');
+    const section = await screen.findByRole('region', { name: copy.status.page.agentTools });
+    expect(within(section).getByText(copy.status.page.agentToolsHermes)).toBeInTheDocument();
+    expect(within(section).getByText(copy.status.page.agentToolsOff)).toBeInTheDocument();
+    off.unmount();
+
+    api.getStatus.mockResolvedValue({ ...status, agentTools: { mcp: true, hermes: true } });
+    await renderScreen(<StatusScreen />, '/status');
+    expect(await screen.findByText(copy.status.page.agentToolsOn)).toBeInTheDocument();
   });
 
   it('omp tidak terpasang dan worker lokal belum tersambung ditampilkan apa adanya', async () => {

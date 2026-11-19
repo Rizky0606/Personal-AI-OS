@@ -15,6 +15,29 @@ describe('tool output display', () => {
     run = reduceLiveRun(run, { type: 'tool.output', toolCallId: 'unknown', chunk: 'ignored' }, 3);
     expect(run.tools).toHaveLength(1);
   });
+
+  it('stderr dari mesin disimpan sebagai alasan galat langkah itu', () => {
+    let run = newLiveRun('output');
+    run = reduceLiveRun(run, { type: 'tool.started', toolCallId: 't1', name: 'read' }, 1);
+    run = reduceLiveRun(
+      run,
+      {
+        type: 'tool.output',
+        toolCallId: 't1',
+        chunk: 'URL reads are disabled by settings.\n',
+        stream: 'stderr',
+      },
+      2,
+    );
+    run = reduceLiveRun(run, { type: 'tool.started', toolCallId: 't2', name: 'bash' }, 3);
+    run = reduceLiveRun(
+      run,
+      { type: 'tool.output', toolCallId: 't2', chunk: 'ok', stream: 'stdout' },
+      4,
+    );
+    expect(run.tools[0]?.errorText).toBe('URL reads are disabled by settings.');
+    expect(run.tools[1]?.errorText).toBeUndefined();
+  });
 });
 const RUN = '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e9f';
 const A1 = '0192f0c4-7a1b-7c2d-a001-4a5b6c7d8e91';
@@ -99,5 +122,26 @@ describe('izin di LiveRun', () => {
       base: 'f'.repeat(40),
     });
     expect(run.workspace).toEqual({ mode: 'in_place', branch: 'main' });
+  });
+  it('memory.suggested menyimpan fakta ringkas untuk tawaran Ingat', () => {
+    expect(newLiveRun('m').memorySuggestion).toBeNull();
+    const run = reduceLiveRun(newLiveRun('m'), {
+      type: 'memory.suggested',
+      text: 'Pemilik suka kopi tubruk.',
+    });
+    expect(run.memorySuggestion).toBe('Pemilik suka kopi tubruk.');
+  });
+});
+
+describe('endReason di LiveRun', () => {
+  it('run.status membawa endReason; status berikutnya tanpa alasan tidak menghapusnya, alasan baru menggantinya', () => {
+    let run = reduceLiveRun(newLiveRun(RUN), { type: 'run.status', status: 'running' });
+    expect(run.endReason).toBeNull();
+    run = reduceLiveRun(run, { type: 'run.status', status: 'needs_review', endReason: 'stopped' });
+    expect(run.endReason).toBe('stopped');
+    run = reduceLiveRun(run, { type: 'run.status', status: 'needs_review' });
+    expect(run.endReason).toBe('stopped');
+    run = reduceLiveRun(run, { type: 'run.status', status: 'rejected', endReason: 'superseded' });
+    expect(run.endReason).toBe('superseded');
   });
 });

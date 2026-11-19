@@ -7,6 +7,7 @@ import type { Block, ListItem } from './parse';
 import { createIncrementalParser } from './incremental';
 import { parseRichAnswer } from '../rich/richAnswerParser';
 import { RichAnswer, RichAnswerSkeleton } from '../rich/RichAnswer';
+import { RichAnswerFallback } from '../rich/RichAnswerFallback';
 import '../rich/rich.css';
 export interface MarkdownProps {
   source: string;
@@ -193,15 +194,15 @@ function BlockView({
       if (block.language.toLowerCase() === 'aios-ui') {
         if (!block.closed) return <RichAnswerSkeleton />;
         const parsed = parseRichAnswer(block.code);
-        if (parsed.kind === 'valid')
-          return (
-            <RichAnswer
-              value={parsed.value}
-              blockId={richBlockId}
-              readOnly={richReadOnly}
-              onFollowUp={onRichFollowUp}
-            />
-          );
+        if (parsed.kind === 'invalid') return <RichAnswerFallback code={block.code} />;
+        return (
+          <RichAnswer
+            value={parsed.value}
+            blockId={richBlockId}
+            readOnly={richReadOnly}
+            onFollowUp={onRichFollowUp}
+          />
+        );
       }
       return <CodeBlock language={block.language} code={block.code} closed={block.closed} />;
     }

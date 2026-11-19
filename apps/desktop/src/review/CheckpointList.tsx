@@ -8,7 +8,12 @@ import { EmptyState } from '../ui/EmptyState';
 export interface CheckpointListProps {
   checkpoints: Checkpoint[];
   busy: boolean;
-  onRestore: (checkpointId: string) => void;
+  /** Galat kembali ke checkpoint; tampil di dialog konfirmasi yang tetap terbuka. */
+  error: string | null;
+  /** True bila berhasil; dialog hanya ditutup saat berhasil. */
+  onRestore: (checkpointId: string) => Promise<boolean>;
+  /** Dialog ditutup tanpa memulihkan: galat lama dibuang. */
+  onDismiss: () => void;
   onRefresh: () => void;
 }
 
@@ -20,7 +25,14 @@ const time = (iso: string) =>
   });
 
 /** Checkpoint dibuat otomatis setelah setiap langkah agent yang mengubah file; kembali ke mana pun dari daftar ini. */
-export function CheckpointList({ checkpoints, busy, onRestore, onRefresh }: CheckpointListProps) {
+export function CheckpointList({
+  checkpoints,
+  busy,
+  error,
+  onRestore,
+  onDismiss,
+  onRefresh,
+}: CheckpointListProps) {
   const [target, setTarget] = useState<{ id: string; label: string } | null>(null);
   if (checkpoints.length === 0) {
     return (
@@ -67,16 +79,21 @@ export function CheckpointList({ checkpoints, busy, onRestore, onRefresh }: Chec
       </ol>
       <ConfirmDialog
         open={target !== null}
-        onOpenChange={(open) => !open && setTarget(null)}
+        onOpenChange={(open) => {
+          if (open) return;
+          setTarget(null);
+          onDismiss();
+        }}
         title={copy.review.checkpoints.confirmTitle}
         body={copy.review.checkpoints.confirmBody}
         confirmLabel={copy.review.checkpoints.confirm}
         cancelLabel={copy.review.cancel}
         destructive
         busy={busy}
+        error={error}
         onConfirm={() => {
-          if (target) onRestore(target.id);
-          setTarget(null);
+          if (!target) return;
+          void onRestore(target.id).then((ok) => ok && setTarget(null));
         }}
       />
     </>

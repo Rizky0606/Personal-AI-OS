@@ -346,16 +346,36 @@ describe('ChatScreen: ubah pesan terakhir dan jalankan ulang', () => {
       message({ author: 'assistant', agentRole: 'general', runId: RUN_1, text: 'Jawaban lama' }),
     );
 
-  it('Ubah pesan terakhir memindahkan teksnya ke kolom pesan untuk dikirim sebagai pesan baru', async () => {
-    api.listMessages.mockResolvedValue(history());
+  it('pensil Ubah pesan terakhir membuka editor di gelembung pesan itu; Kirim mengganti pesan dan jawabannya', async () => {
+    const data = history();
+    api.listMessages.mockResolvedValue(data);
     api.getRun.mockResolvedValue(run({ id: RUN_1, status: 'completed' }));
+    api.editMessage.mockResolvedValue({
+      message: message({ author: 'user', text: 'Pertanyaan revisi', runId: RUN_2 }),
+      run: run({ id: RUN_2 }),
+    });
     const user = userEvent.setup();
     await renderScreen(<ChatScreen conversationId={CONV} />);
 
+    await user.type(field(), 'draf');
     await user.click(await screen.findByRole('button', { name: copy.chat.editLast }));
 
-    expect(field()).toHaveValue('Pertanyaan saya');
-    expect(field()).toHaveFocus();
+    // Bukan menyalin ke kolom pesan: editor di tempat, draf tidak disentuh.
+    const editor = screen.getByRole('textbox', { name: copy.chat.editLabel });
+    expect(editor).toHaveValue('Pertanyaan saya');
+    expect(editor).toHaveFocus();
+    expect(field()).toHaveValue('draf');
+    await user.clear(editor);
+    await user.type(editor, 'Pertanyaan revisi{Enter}');
+
+    expect(api.editMessage).toHaveBeenCalledWith(
+      data.items[0]?.id,
+      expect.objectContaining({ text: 'Pertanyaan revisi' }),
+    );
+    expect(api.sendMessage).not.toHaveBeenCalled();
+    expect(await screen.findByText('Pertanyaan revisi')).toBeInTheDocument();
+    expect(screen.queryByText('Jawaban lama')).not.toBeInTheDocument();
+    runs.release(RUN_2);
   });
 
   it('Kirim ulang di bawah pesan terakhir mengirim teks yang sama tanpa menyentuh draf', async () => {
@@ -484,7 +504,7 @@ describe('ChatScreen: ubah pesan terakhir dan jalankan ulang', () => {
   });
 
   /** Run yang masih berjalan saat percakapan dibuka, lalu ditolak worker dengan `code`. */
-  const refusedRun = async (code: string) => {
+  const refusedRun = async (code: string, retryable = false) => {
     const failed = uid();
     const mine = message({ author: 'user', text: 'Perbaiki tes', runId: failed });
     api.listMessages.mockResolvedValue(page(mine));
@@ -500,7 +520,7 @@ describe('ChatScreen: ubah pesan terakhir dan jalankan ulang', () => {
         type: 'error',
         code,
         message: 'Folder project tidak bisa dipakai langsung.',
-        retryable: false,
+        retryable,
       });
       emit(`run:${failed}`, { type: 'run.status', status: 'failed' });
     });
@@ -546,5 +566,109 @@ describe('ChatScreen: ubah pesan terakhir dan jalankan ulang', () => {
 
     expect(within(alert).queryByRole('button')).toBeNull();
     runs.release(failed);
+  });
+
+  it('galat yang bisa diulang (hermes_stalled): Coba lagi di kartu error mengganti giliran lewat edit', async () => {
+    const user = userEvent.setup();
+    const { failed, mine, alert } = await refusedRun('hermes_stalled', true);
+
+    expect(
+      within(alert).queryByRole('button', { name: copy.chat.workspace.retryWorktree }),
+    ).toBeNull();
+    await user.click(within(alert).getByRole('button', { name: copy.chat.retryFailed }));
+    expect(api.editMessage).toHaveBeenCalledWith(
+      mine.id,
+      expect.objectContaining({ text: 'Perbaiki tes' }),
+    );
+    expect(api.editMessage.mock.calls[0]?.[1]).not.toHaveProperty('workspace', 'worktree');
+    expect(api.sendMessage).not.toHaveBeenCalled();
+    runs.release(failed);
+  });
+
+  it('jawaban yang gagal memakai Orb error, bukan netral', async () => {
+    const failed = uid();
+    const mine = message({ author: 'user', text: 'Halo', runId: failed });
+    const reply = message({ author: 'assistant', agentRole: 'general', runId: failed, text: '' });
+    api.listMessages.mockResolvedValueOnce(page(mine)).mockResolvedValue(page(mine, reply));
+    api.getRun.mockResolvedValue(run({ id: failed, status: 'running' }));
+    await renderScreen(<ChatScreen conversationId={CONV} />);
+    await waitFor(() => expect(runs.get(failed)).toBeDefined());
+    act(() => {
+      emit(`run:${failed}`, {
+        type: 'error',
+        code: 'hermes_stalled',
+        message: 'Hermes berhenti mengirim data.',
+        retryable: true,
+      });
+      emit(`run:${failed}`, { type: 'run.status', status: 'failed' });
+    });
+    await screen.findByRole('alert');
+    await waitFor(() =>
+      expect(
+        screen.getAllByTestId('agent-orb').map((orb) => orb.getAttribute('data-state')),
+      ).toEqual(['error']),
+    );
+    runs.release(failed);
+  });
+});
+
+describe('ChatScreen: ingat ini', () => {
+  it('memory.suggested: kartu di bawah jawaban membuka dialog Ingat berisi fakta ringkas', async () => {
+    const open = uid();
+    const mine = message({
+      author: 'user',
+      text: 'Tolong ingat bahwa saya suka kopi tubruk ya',
+      runId: open,
+    });
+    const reply = message({
+      author: 'assistant',
+      agentRole: 'general',
+      runId: open,
+      text: 'Baik.',
+    });
+    api.listMessages.mockResolvedValueOnce(page(mine)).mockResolvedValue(page(mine, reply));
+    api.getRun.mockResolvedValue(run({ id: open, status: 'running' }));
+    const user = userEvent.setup();
+    await renderScreen(<ChatScreen conversationId={CONV} />);
+    await waitFor(() => expect(runs.get(open)).toBeDefined());
+    act(() => {
+      emit(`run:${open}`, { type: 'message.delta', messageId: reply.id, text: 'Baik.' });
+      emit(`run:${open}`, { type: 'memory.suggested', text: 'Pemilik suka kopi tubruk.' });
+      emit(`run:${open}`, { type: 'run.completed', summary: 'Baik.' });
+      emit(`run:${open}`, { type: 'run.status', status: 'completed' });
+    });
+
+    await user.click(
+      await screen.findByRole('button', { name: copy.chat.memorySuggestion.action }),
+    );
+    const dialog = await screen.findByRole('dialog', { name: copy.memory.rememberTitle });
+    expect(within(dialog).getByRole('textbox')).toHaveValue('Pemilik suka kopi tubruk.');
+    runs.release(open);
+  });
+
+  it('Ingat di pesan "tolong ingat bahwa…" berisi fakta ringkas, pesan lain apa adanya', async () => {
+    api.listMessages.mockResolvedValue(
+      page(
+        message({ author: 'user', text: 'Tolong ingat bahwa aku alergi kacang.', runId: RUN_1 }),
+        message({ author: 'assistant', agentRole: 'general', runId: RUN_1, text: 'Siap.' }),
+        message({ author: 'user', text: 'Kota saya Bandung', runId: RUN_2 }),
+      ),
+    );
+    api.getRun.mockResolvedValue(run({ id: RUN_2, status: 'completed' }));
+    const user = userEvent.setup();
+    await renderScreen(<ChatScreen conversationId={CONV} />);
+
+    const first = (await screen.findByText('Tolong ingat bahwa aku alergi kacang.')).closest(
+      'article',
+    )!;
+    await user.click(within(first).getByRole('button', { name: copy.chat.remember }));
+    let dialog = await screen.findByRole('dialog', { name: copy.memory.rememberTitle });
+    expect(within(dialog).getByRole('textbox')).toHaveValue('Pemilik alergi kacang.');
+    await user.click(within(dialog).getByRole('button', { name: copy.chat.cancel }));
+
+    const second = screen.getByText('Kota saya Bandung').closest('article')!;
+    await user.click(within(second).getByRole('button', { name: copy.chat.remember }));
+    dialog = await screen.findByRole('dialog', { name: copy.memory.rememberTitle });
+    expect(within(dialog).getByRole('textbox')).toHaveValue('Kota saya Bandung');
   });
 });

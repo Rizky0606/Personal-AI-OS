@@ -256,12 +256,38 @@ describe('WorktreeManager: mode in_place', () => {
     });
   });
 
-  it('dua pembukaan bersamaan di repo yang sama: hanya satu yang lolos', async () => {
+  it('dua pembukaan bersamaan di repo yang sama: keduanya pembaca, hanya satu yang bisa menjadi penulis', async () => {
     const results = await Promise.allSettled([
       manager.openInPlace(RUN_A, repo),
       manager.openInPlace(RUN_B, repo),
     ]);
-    expect(results.map((r) => r.status).sort()).toEqual(['fulfilled', 'rejected']);
+    expect(results.map((r) => r.status)).toEqual(['fulfilled', 'fulfilled']);
+    expect(manager.claimWrite(RUN_A)).toBe(true);
+    expect(manager.claimWrite(RUN_A)).toBe(true);
+    expect(manager.claimWrite(RUN_B)).toBe(false);
+    // B berbagi folder dengan penulis: tanpa tinjauan; A tetap penulis biasa.
+    expect(manager.isBystander(RUN_B)).toBe(true);
+    expect(manager.isBystander(RUN_A)).toBe(false);
+  });
+
+  it('pembaca tidak mengunci repo; penulis yang berjalan mengunci; pembaca yang tersisa tidak bisa menulis lagi', async () => {
+    await manager.openInPlace(RUN_A, repo);
+    // A belum meminta izin tulis: B boleh dibuka.
+    await manager.openInPlace(RUN_B, repo);
+    expect(manager.claimWrite(RUN_B)).toBe(true);
+    const third = '0192f0c4-7a1b-7c2d-aaaa-4a5b6c7d8e92';
+    await expect(manager.openInPlace(third, repo)).rejects.toMatchObject({
+      code: 'workspace_busy',
+      message: expect.stringContaining('sedang berjalan') as string,
+    });
+    // B selesai tanpa perubahan dan dilepas: A tetap pembaca (folder pernah dipakai penulis lain).
+    await manager.remove(RUN_B, { deleteBranch: true });
+    expect(manager.claimWrite(RUN_A)).toBe(false);
+    await manager.openInPlace(third, repo);
+    // Worktree selalu boleh menulis: foldernya milik run itu sendiri.
+    const fourth = '0192f0c4-7a1b-7c2d-aaaa-4a5b6c7d8e93';
+    await manager.create(fourth, repo);
+    expect(manager.claimWrite(fourth)).toBe(true);
   });
 
   it('mode rencana: folder kotor boleh, tidak memegang kunci repo', async () => {
@@ -442,6 +468,52 @@ describe('ApprovalRules', () => {
     expect(rules.matches('p1', 'network', 'pnpm test')).toBe(false);
   });
 
+  it('skrip package manager: "Selalu" mencakup argumen literal setelah --; perintah lain tetap persis', async () => {
+    await rules.add('p1', 'command', 'npm test');
+    await rules.add('p1', 'command', 'pnpm run typecheck');
+    await rules.add('p1', 'command', 'git push');
+
+    for (const cmd of [
+      'npm test -- --run src/Counter.test.tsx',
+      'npm test -- -t nama',
+      'pnpm run typecheck -- --pretty false',
+    ]) {
+      expect(rules.matches('p1', 'command', cmd), cmd).toBe(true);
+    }
+    for (const cmd of [
+      'npm test --prefix ../lain',
+      'npm test -- --run x && rm -rf /',
+      'npm test -- $(curl x)',
+      'npm test -- "a b"',
+      'npm test -- x; ls',
+      'npm testing -- x',
+      'npm install -- x',
+      'git push -- --force',
+      'git push --force',
+      'pnpm run typecheck2 -- x',
+      // Baris baru memisahkan perintah bagi shell: perintah kedua tidak ikut "Selalu".
+      'npm test -- x\ncurl -o /tmp/a http://h/a',
+      'npm test -- x\r\ncurl -o /tmp/a http://h/a',
+      // Argumen yang menunjuk ke luar folder kerja (tulis atau muat kode di sana).
+      'npm test -- --outputFile=/home/u/x',
+      'pnpm run typecheck -- --outDir ../x',
+      'npm test -- -o/tmp/x',
+      'npm test -- C:/Users/x',
+      'npm test -- ~/x',
+    ]) {
+      expect(rules.matches('p1', 'command', cmd), cmd).toBe(false);
+    }
+  });
+
+  it('perintah berbaris banyak cocok hanya dengan baris yang sama persis', async () => {
+    await rules.add('p1', 'command', 'git push origin main');
+    await rules.add('p1', 'command', 'cat <<EOF > a.txt\nisi\nEOF');
+
+    expect(rules.matches('p1', 'command', 'git push origin\nmain')).toBe(false);
+    expect(rules.matches('p1', 'command', 'cat <<EOF  > a.txt\r\nisi\nEOF ')).toBe(true);
+    expect(rules.matches('p1', 'command', 'cat <<EOF > a.txt isi EOF')).toBe(false);
+  });
+
   it('penulisan file: satu aturan per project untuk semua penulisan', async () => {
     await rules.add('p1', 'file_write', 'Path: a.ts');
 
@@ -502,8 +574,9 @@ describe('ApprovalRules', () => {
   it('tool mcp di luar konektor terdaftar tetap cocok hanya pada detail penuh yang sama', async () => {
     await rules.add('p1', 'command', 'mcp__github__x\nArguments:\n{"a":1}');
 
+    // Baris baru dipertahankan (bagi shell, baris baru memisahkan perintah).
     expect(rules.list('p1')).toEqual([
-      { projectId: 'p1', kind: 'command', pattern: 'mcp__github__x Arguments: {"a":1}' },
+      { projectId: 'p1', kind: 'command', pattern: 'mcp__github__x\nArguments:\n{"a":1}' },
     ]);
     expect(rules.matches('p1', 'command', 'mcp__github__x\nArguments:\n{"a":1}')).toBe(true);
     expect(rules.matches('p1', 'command', 'mcp__github__x\nArguments:\n{"a":2}')).toBe(false);

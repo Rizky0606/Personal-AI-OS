@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
   AdapterError,
+  APPROVAL_DETAIL_MAX,
   AsyncQueue,
   type AgentAdapter,
   type RunHandle,
@@ -16,7 +17,7 @@ import { canonicalize } from '../paths/normalize.js';
 import { ProcessManager } from '../process/manager.js';
 import { ProjectBindings } from '../projects/bindings.js';
 import { ReviewService } from './review.js';
-import { RunCoordinator } from './coordinator.js';
+import { RunCoordinator, writeTargetsInside } from './coordinator.js';
 import { OmpNotFoundError } from './omp-path.js';
 import { ProjectSetupStore } from './setup.js';
 import { ApprovalRules } from './rules.js';
@@ -464,6 +465,12 @@ describe('RunCoordinator: event dan approval', () => {
       remember: true,
     });
     await until(() => handle.resolved.length === 1, 'dijawab');
+    // B9: aturan tersimpan, jadi event yang diteruskan ke gateway mencatat remember: true.
+    await until(() => types().includes('approval.resolved'), 'approval.resolved');
+    expect(events().find((e) => e.type === 'approval.resolved')).toMatchObject({
+      approvalId: APPROVAL,
+      remember: true,
+    });
     const before = sent.length;
 
     handle.events.push({
@@ -478,6 +485,118 @@ describe('RunCoordinator: event dan approval', () => {
     await new Promise((r) => setTimeout(r, 30));
     expect(sent.length).toBe(before); // tidak ada permintaan atau hasil yang diteruskan ke pengguna
     expect(rules.matches(PROJECT, 'command', 'node --test')).toBe(true);
+  });
+
+  it('perintah baca saja di folder run diizinkan tanpa bertanya; cwd di luar atau perintah lain tetap ditanyakan', async () => {
+    const handle = await running();
+    const cwd = worktrees.get(RUN)?.cwd ?? '';
+    handle.events.push({
+      type: 'approval.requested',
+      approvalId: APPROVAL,
+      kind: 'command',
+      detail: 'git diff --stat',
+      cwd,
+    });
+    await until(() => handle.resolved.length === 1, 'dijawab otomatis');
+    expect(handle.resolved[0]).toEqual([APPROVAL, 'allow', undefined]);
+
+    handle.events.push({
+      type: 'approval.requested',
+      approvalId: APPROVAL_2,
+      kind: 'command',
+      detail: 'git status',
+      cwd: base,
+    });
+    const third = '0192f0c4-7a1b-7c2d-a005-4a5b6c7d8e97';
+    handle.events.push({
+      type: 'approval.requested',
+      approvalId: third,
+      kind: 'command',
+      detail: 'git diff && npm test',
+      cwd,
+    });
+    await until(
+      () => types().filter((t) => t === 'approval.requested').length === 2,
+      'dua permintaan diteruskan',
+    );
+    expect(handle.resolved).toHaveLength(1);
+  });
+
+  it('"Izinkan tulis berkas untuk run ini": tulis berikutnya di folder run otomatis, .git dan luar folder tetap ditanyakan, run lain tidak', async () => {
+    const handle = await running();
+    const write = (approvalId: string, path: string) =>
+      handle.events.push({
+        type: 'approval.requested',
+        approvalId,
+        kind: 'file_write',
+        detail: `Path: ${path}\nContent:\nisi`,
+      });
+    write(APPROVAL, 'a.ts');
+    await until(() => types().includes('approval.requested'), 'permintaan izin');
+    await coordinator.resolveApproval({
+      type: 'approval.resolve',
+      runId: RUN,
+      approvalId: APPROVAL,
+      decision: 'allow',
+      remember: false,
+      forRun: true,
+    });
+    await until(() => types().includes('approval.resolved'), 'approval.resolved');
+    expect(events().find((e) => e.type === 'approval.resolved')).toMatchObject({
+      remember: false,
+      forRun: true,
+    });
+    // Tidak menjadi aturan project.
+    expect(rules.list(PROJECT)).toEqual([]);
+
+    handle.events.push({
+      type: 'approval.requested',
+      approvalId: APPROVAL_2,
+      kind: 'file_write',
+      detail: 'File: src/b.ts',
+    });
+    await until(() => handle.resolved.length === 2, 'tulis kedua otomatis');
+    expect(handle.resolved[1]).toEqual([APPROVAL_2, 'allow', undefined]);
+
+    const before = types().filter((t) => t === 'approval.requested').length;
+    write('0192f0c4-7a1b-7c2d-a005-4a5b6c7d8e98', '.git/config');
+    write('0192f0c4-7a1b-7c2d-a005-4a5b6c7d8e99', '../luar.txt');
+    await until(
+      () => types().filter((t) => t === 'approval.requested').length === before + 2,
+      '.git dan luar folder ditanyakan',
+    );
+    expect(handle.resolved).toHaveLength(2);
+  });
+
+  it('detail izin yang dipotong adapter: tidak diizinkan otomatis (baca saja, aturan), "Selalu" tidak disimpan', async () => {
+    const handle = await running();
+    const cwd = worktrees.get(RUN)?.cwd ?? '';
+    // `ls a a a …; rm -rf x`: bagian berbahaya jatuh setelah batas potong, yang terlihat hanya `ls a a a …`.
+    const full = `ls ${'a '.repeat(APPROVAL_DETAIL_MAX)}; rm -rf x`;
+    const clipped = `${full.slice(0, APPROVAL_DETAIL_MAX - 1)}…`;
+    // Aturan lama yang tersimpan dari detail terpotong yang sama juga tidak berlaku.
+    await rules.add(PROJECT, 'command', clipped);
+    handle.events.push({
+      type: 'approval.requested',
+      approvalId: APPROVAL,
+      kind: 'command',
+      detail: clipped,
+      cwd,
+    });
+    await until(() => types().includes('approval.requested'), 'ditanyakan ke pemilik');
+    expect(handle.resolved).toHaveLength(0);
+
+    await rules.remove(PROJECT);
+    await coordinator.resolveApproval({
+      type: 'approval.resolve',
+      runId: RUN,
+      approvalId: APPROVAL,
+      decision: 'allow',
+      remember: true,
+    });
+    await until(() => types().includes('approval.resolved'), 'approval.resolved');
+    expect(rules.list(PROJECT)).toEqual([]);
+    expect(events().find((e) => e.type === 'approval.resolved')).toMatchObject({ remember: false });
   });
 
   it('mode rencana: semua izin ditolak otomatis tanpa bertanya, juga yang punya aturan "selalu"', async () => {
@@ -865,6 +984,124 @@ describe('RunCoordinator: mode in_place (langsung di branch aktif)', () => {
     expect(adapter.inputs).toHaveLength(0);
     expect(worktrees.get(RUN)).toBeUndefined();
     expect(await fs.readFile(path.join(repo, 'math.js'), 'utf8')).toBe('diubah pemilik\n');
+  });
+
+  it('pertanyaan baca saja tidak mengunci repo; penulis kedua ditolak otomatis; pembaca dilepas tanpa tinjauan', async () => {
+    coordinator.start(inPlace());
+    await until(() => adapter.handles.length === 1, 'run A dimulai');
+    const reader = adapter.handle;
+    // A belum meminta izin tulis: B boleh berjalan di folder yang sama (dulu workspace_busy, uji project 4f).
+    coordinator.start(inPlace({ runId: RUN_2 }));
+    await until(() => adapter.handles.length === 2, 'run B dimulai');
+    const writer = adapter.handle;
+    writer.events.push({
+      type: 'approval.requested',
+      approvalId: APPROVAL,
+      kind: 'file_write',
+      detail: 'Path: math.test.js\nContent:\nx',
+    });
+    await until(() => types(RUN_2).includes('approval.requested'), 'izin B ditanyakan');
+
+    // A kini meminta tulis: ditolak tanpa bertanya, dengan penjelasan sekali.
+    reader.events.push({
+      type: 'approval.requested',
+      approvalId: APPROVAL_2,
+      kind: 'command',
+      detail: 'npm install',
+    });
+    await until(() => reader.resolved.length === 1, 'A ditolak otomatis');
+    expect(reader.resolved[0]).toEqual([APPROVAL_2, 'deny', undefined]);
+    expect(reader.steered).toHaveLength(1);
+    expect(types(RUN)).not.toContain('approval.requested');
+
+    await coordinator.resolveApproval({
+      type: 'approval.resolve',
+      runId: RUN_2,
+      approvalId: APPROVAL,
+      decision: 'allow',
+      remember: false,
+    });
+    await fs.writeFile(path.join(repo, 'math.test.js'), "require('node:test');\n");
+    // A selesai: perubahan di folder milik B, jadi A tidak membuat diff dan tidak menunggu tinjauan.
+    reader.events.push({ type: 'run.completed', summary: 'Penjelasan' });
+    reader.events.end();
+    await until(() => worktrees.get(RUN) === undefined, 'A dilepas');
+    expect(types(RUN)).not.toContain('diff.updated');
+    expect(await fs.readFile(path.join(repo, 'math.test.js'), 'utf8')).toContain('node:test');
+
+    writer.events.push({ type: 'run.completed', summary: 'Tes ditambahkan' });
+    writer.events.end();
+    await until(() => !coordinator.activeRunIds.includes(RUN_2), 'B selesai');
+    expect(types(RUN_2)).toContain('diff.updated');
+    expect(worktrees.get(RUN_2)).toBeDefined();
+  });
+
+  it('izin tulis yang ditolak pemilik melepas kunci repo; run lain bisa mulai tanpa menunggu run ini selesai', async () => {
+    coordinator.start(inPlace());
+    await until(() => adapter.handles.length === 1, 'run A dimulai');
+    const a = adapter.handle;
+    a.events.push({
+      type: 'approval.requested',
+      approvalId: APPROVAL,
+      kind: 'command',
+      detail: 'npm install',
+    });
+    await until(() => types().includes('approval.requested'), 'izin A ditanyakan');
+
+    // Selama izin tulis A menunggu, A memegang kunci: run in_place lain ditolak workspace_busy.
+    coordinator.start(inPlace({ runId: RUN_2 }));
+    await until(() => types(RUN_2).includes('error'), 'B ditolak');
+    expect(events(RUN_2)[0]).toMatchObject({ type: 'error', code: 'workspace_busy' });
+    await until(() => !coordinator.activeRunIds.includes(RUN_2), 'B dilepas');
+
+    await coordinator.resolveApproval({
+      type: 'approval.resolve',
+      runId: RUN,
+      approvalId: APPROVAL,
+      decision: 'deny',
+      remember: false,
+    });
+    const third = '0192f0c4-7a1b-7c2d-aaaa-4a5b6c7d8e92';
+    coordinator.start(inPlace({ runId: third }));
+    await until(() => adapter.handles.length === 2, 'run ketiga dimulai walau A masih berjalan');
+    expect(coordinator.activeRunIds).toContain(RUN);
+  });
+
+  it('izin tulis yang diizinkan tetap memegang kunci sampai run selesai', async () => {
+    coordinator.start(inPlace());
+    await until(() => adapter.handles.length === 1, 'run A dimulai');
+    adapter.handle.events.push({
+      type: 'approval.requested',
+      approvalId: APPROVAL,
+      kind: 'command',
+      detail: 'npm install',
+    });
+    await until(() => types().includes('approval.requested'), 'izin A ditanyakan');
+    await coordinator.resolveApproval({
+      type: 'approval.resolve',
+      runId: RUN,
+      approvalId: APPROVAL,
+      decision: 'allow',
+      remember: false,
+    });
+    // Izin tulis kedua ditolak: A sudah pernah boleh menulis, jadi kunci tetap dipegang.
+    adapter.handle.events.push({
+      type: 'approval.requested',
+      approvalId: APPROVAL_2,
+      kind: 'command',
+      detail: 'npm run build',
+    });
+    await until(() => types().filter((t) => t === 'approval.requested').length === 2, 'izin kedua');
+    await coordinator.resolveApproval({
+      type: 'approval.resolve',
+      runId: RUN,
+      approvalId: APPROVAL_2,
+      decision: 'deny',
+      remember: false,
+    });
+    coordinator.start(inPlace({ runId: RUN_2 }));
+    await until(() => types(RUN_2).includes('error'), 'B ditolak');
+    expect(events(RUN_2)[0]).toMatchObject({ type: 'error', code: 'workspace_busy' });
   });
 
   it('dihentikan dengan perubahan: diff terakhir sebelum cancelled, tetap bisa ditinjau, dilaporkan ke gateway', async () => {
@@ -1482,6 +1719,36 @@ describe('RunCoordinator: konektor MCP', () => {
 
     expect(handle.resolved.map((r) => r[1])).toEqual(['deny', 'deny']);
     expect(types()).not.toContain('approval.requested');
+  });
+});
+describe('writeTargetsInside', () => {
+  it('target di folder run diterima; .git (termasuk varian huruf, titik akhir, symlink) dan luar folder ditolak', async () => {
+    await fs.mkdir(path.join(repo, 'src'), { recursive: true });
+    await fs.symlink(path.join(repo, '.git'), path.join(repo, 'tautan'));
+    const write = (target: string) => writeTargetsInside(`Path: ${target}\nContent:\nisi`, repo);
+
+    expect(await write('src/a.ts')).toBe(true);
+    expect(await writeTargetsInside('File: src/a.ts\nFile: math.js', repo)).toBe(true);
+    for (const target of [
+      '.git/config',
+      '.GIT/config',
+      '.git./config',
+      'src/../.git/hooks/pre-commit',
+      'tautan/config',
+      '../luar.txt',
+      '/etc/passwd',
+    ]) {
+      expect(await write(target), target).toBe(false);
+    }
+  });
+
+  it('detail yang dipotong sebelum Content: (daftar target bisa tidak lengkap) ditolak', async () => {
+    const files = Array.from({ length: 400 }, (_, i) => `File: src/berkas-${i}.ts`).join('\n');
+    const clipped = `${files.slice(0, APPROVAL_DETAIL_MAX - 1)}…`;
+    expect(await writeTargetsInside(clipped, repo)).toBe(false);
+    // Dipotong di dalam isi berkas: daftar target utuh, jadi tetap dinilai.
+    const big = `Path: src/besar.ts\nContent:\n${'x'.repeat(APPROVAL_DETAIL_MAX)}`;
+    expect(await writeTargetsInside(`${big.slice(0, APPROVAL_DETAIL_MAX - 1)}…`, repo)).toBe(true);
   });
 });
 

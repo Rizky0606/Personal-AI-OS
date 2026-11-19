@@ -44,7 +44,7 @@ export interface RunsService {
     actorDeviceId: string,
     runId: string,
     approvalId: string,
-    input: { decision: 'allow' | 'deny'; remember: boolean },
+    input: { decision: 'allow' | 'deny'; remember: boolean; forRun?: boolean },
   ): Promise<Approval>;
   /** Mengarahkan agent yang sedang berjalan dengan teks baru. */
   steer(runId: string, text: string, mode?: SteerMode): Promise<void>;
@@ -119,14 +119,22 @@ export function createRunsService(deps: {
   }
 
   /** Status akhir tinjauan; hanya dari needs_review (dua permintaan bersamaan tidak berlaku ganda). */
-  async function settle(run: typeof runs.$inferSelect, status: 'accepted' | 'rejected') {
+  async function settle(
+    run: typeof runs.$inferSelect,
+    status: 'accepted' | 'rejected',
+    endReason?: 'superseded',
+  ) {
     const [updated] = await db
       .update(runs)
-      .set({ status })
+      .set({ status, ...(endReason ? { endReason } : {}) })
       .where(and(eq(runs.id, run.id), eq(runs.status, 'needs_review')))
       .returning();
     if (!updated) throw notReviewable();
-    const stored = await store.append(run.id, { type: 'run.status', status });
+    const stored = await store.append(run.id, {
+      type: 'run.status',
+      status,
+      ...(endReason ? { endReason } : {}),
+    });
     if (run.conversationId) hub.publishLive(`conversation:${run.conversationId}`, stored.event);
     observer?.notify(run.id);
     return updated;
@@ -209,7 +217,12 @@ export function createRunsService(deps: {
       return toRunDto(await load(id));
     },
 
-    async resolveApproval(actorDeviceId, runId, approvalId, { decision, remember }) {
+    async resolveApproval(
+      actorDeviceId,
+      runId,
+      approvalId,
+      { decision, remember, forRun = false },
+    ) {
       const [row] = await db
         .select()
         .from(approvals)
@@ -222,8 +235,16 @@ export function createRunsService(deps: {
           'Permintaan izin ini sudah diputuskan.',
         );
       }
+      // "Untuk run ini" hanya untuk izin tulis berkas yang diizinkan, dan bukan sekaligus aturan "Selalu".
+      if (forRun && (decision !== 'allow' || remember || row.kind !== 'file_write')) {
+        throw new AppError(
+          400,
+          'approval_scope_invalid',
+          'Izin untuk run ini hanya berlaku untuk mengizinkan tulis berkas, tanpa "Selalu".',
+        );
+      }
       try {
-        const outcome = await runner.resolveApproval(runId, approvalId, decision, remember);
+        const outcome = await runner.resolveApproval(runId, approvalId, decision, remember, forRun);
         if (outcome === 'inactive') {
           throw new AppError(409, 'run_not_active', 'Run ini tidak sedang berjalan di gateway.');
         }
@@ -245,7 +266,7 @@ export function createRunsService(deps: {
       await writeAudit(db, {
         actorDeviceId,
         action: 'approval.decided',
-        target: `approval:${approvalId} ${decision}${remember ? ' remember' : ''}`,
+        target: `approval:${approvalId} ${decision}${remember ? ' remember' : ''}${forRun ? ' run' : ''}`,
       });
       return toApprovalDto(updated ?? row);
     },
@@ -326,7 +347,8 @@ export function createRunsService(deps: {
             },
             { continueFromRunId: run.id, ...(run.taskId ? { taskId: run.taskId } : {}) },
           );
-          const settled = await settle(run, 'rejected');
+          // Run ini digantikan run revisi, bukan ditolak pemilik (desktop membedakannya lewat endReason).
+          const settled = await settle(run, 'rejected', 'superseded');
           await writeAudit(db, {
             actorDeviceId,
             action: 'run.review',

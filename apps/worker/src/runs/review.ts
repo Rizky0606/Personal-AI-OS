@@ -8,7 +8,11 @@ import type {
   ReviewFile,
   ReviewState,
 } from '@aios/contracts';
-import { fallbackCommitMessage, parseCommitMessage } from './commit-message.js';
+import {
+  combineCommitMessages,
+  fallbackCommitMessage,
+  parseCommitMessage,
+} from './commit-message.js';
 import type { InPlaceWorkspace, Workspace, Worktree, WorktreeManager } from './worktree.js';
 
 export class ReviewError extends Error {
@@ -112,7 +116,11 @@ export function parseNumstat(raw: string): Stat[] {
  *   isi base dan hanya berkas buatan run yang dihapus (berkas yang diabaikan git tidak pernah disentuh).
  */
 export class ReviewService {
-  private readonly meta = new Map<string, { text: string; commit: string | undefined }>();
+  /** `commits`: pesan sah dari run sebelumnya dalam tinjauan yang sama (lewat `inherit`); `commit`: run ini. */
+  private readonly meta = new Map<
+    string,
+    { text: string; commit: string | undefined; commits: string[] }
+  >();
   private readonly chains = new Map<string, Promise<unknown>>();
 
   constructor(
@@ -125,17 +133,20 @@ export class ReviewService {
 
   /** Teks jawaban agent (ekor) dan pesan commit yang ditulisnya; diisi koordinator saat run selesai. */
   setMeta(runId: string, text: string): void {
-    // Pesan commit dari run pertama menggambarkan seluruh perubahan; revisi tidak menimpanya.
-    const previous = this.meta.get(runId)?.commit;
-    this.meta.set(runId, { text, commit: previous ?? parseCommitMessage(text) });
+    const commits = this.meta.get(runId)?.commits ?? [];
+    this.meta.set(runId, { text, commit: parseCommitMessage(text), commits });
   }
 
-  /** Run lanjutan mewarisi usulan pesan commit run sebelumnya. */
+  /**
+   * Run lanjutan masuk tinjauan yang sama: pesan run sebelumnya disimpan, lalu pesan yang diusulkan menggabungkan
+   * semua run (lihat `combineCommitMessages`), karena satu commit hasil terima memuat perubahan semuanya.
+   */
   inherit(fromRunId: string, toRunId: string): void {
     const meta = this.meta.get(fromRunId);
     if (!meta) return;
     this.meta.delete(fromRunId);
-    this.meta.set(toRunId, meta);
+    const commits = meta.commit ? [...meta.commits, meta.commit] : meta.commits;
+    this.meta.set(toRunId, { text: meta.text, commit: undefined, commits });
   }
 
   forget(runId: string): void {
@@ -491,8 +502,9 @@ export class ReviewService {
 
   private commitMessage(runId: string, files: { path: string }[]): string {
     const meta = this.meta.get(runId);
+    const messages = meta ? [...meta.commits, ...(meta.commit ? [meta.commit] : [])] : [];
     return (
-      meta?.commit ??
+      combineCommitMessages(messages) ??
       fallbackCommitMessage(
         meta?.text ?? '',
         files.map((f) => f.path),

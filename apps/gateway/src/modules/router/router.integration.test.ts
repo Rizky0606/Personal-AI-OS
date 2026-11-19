@@ -11,7 +11,7 @@ import { projects, routingDecisions, runEvents } from '../../db/schema/index.js'
 import { createAuthEnv, type AuthEnv } from '../../testing/auth-env.js';
 import { startFakeHermes, type FakeHermes } from '../../testing/fake-hermes.js';
 import { startMockServer, type MockServer } from '../../testing/mock-server.js';
-import { SERVER_FILES_RULE, SUGGEST_RULE } from '../runs/runner.js';
+import { SERVER_FILES_RULE, SUGGEST_RULE, timeSection } from '../runs/runner.js';
 
 let env: AuthEnv;
 let hermes: FakeHermes;
@@ -31,6 +31,7 @@ const serverPrompt = (extraSkills: string[] = [], suggested: string[] = []) =>
     }).systemPrompt,
     SUGGEST_RULE,
     SERVER_FILES_RULE,
+    timeSection(env.clock.now),
   ].join('\n\n');
 
 beforeAll(async () => {

@@ -556,7 +556,10 @@ describe.skipIf(ompPath === null)('run coding dengan omp sungguhan', () => {
     });
 
     expect(result).toMatchObject({ ok: true, merged: true, mergeSkipped: null });
-    expect(git(repo, 'log', '-1', '--format=%s', 'main')).toBe('feat: tambah sub dan mul');
+    // Pesan commit merangkum semua run di worktree: subjek run pertama, lalu ringkasan run revisi.
+    expect(git(repo, 'log', '-1', '--format=%s', 'main')).toBe(
+      'feat: tambah sub dan mul; perbaiki mul',
+    );
     expect(git(repo, 'rev-list', '--count', `${mainBefore}..main`)).toBe('1');
     expect((await fs.readFile(path.join(repo, 'math.js'), 'utf8')).replace(/\r/g, '')).toBe(FIXED);
     expect(git(repo, 'branch', '--list', 'aios/*')).toBe('');

@@ -6,12 +6,18 @@ import { api, runs, workerApi } from '../app/services';
 import { copy } from '../copy';
 import { useUiStore } from '../state/uiStore';
 import { useToastStore } from '../ui/Toaster';
-import { reviewErrorMessage, reviewKey } from './useReview';
+import { reviewErrorMessage, reviewKey, type ReviewAction } from './useReview';
+
+export interface ReviewActionError {
+  action: ReviewAction;
+  message: string;
+}
 
 /**
  * Semua aksi tinjauan: terima, tolak, kembalikan ke agent dengan komentar (gateway), serta batalkan file dan
- * kembali ke checkpoint (worker lokal). Satu operasi pada satu waktu; galat tampil sebagai toast dan keadaan
- * panel tidak berubah.
+ * kembali ke checkpoint (worker lokal). Satu operasi pada satu waktu; keadaan panel tidak berubah bila gagal.
+ * Aksi berdialog (terima, tolak, batalkan file, checkpoint) menaruh galatnya di `error` supaya tampil di dalam
+ * dialog yang tetap terbuka; kirim komentar tidak punya dialog, jadi galatnya toast.
  */
 export function useReviewActions(runId: string, onState: (state: ReviewState) => void) {
   const queryClient = useQueryClient();
@@ -19,6 +25,7 @@ export function useReviewActions(runId: string, onState: (state: ReviewState) =>
   const push = useToastStore((s) => s.push);
   const setReviewRunId = useUiStore((s) => s.setReviewRunId);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<ReviewActionError | null>(null);
 
   const afterDecision = useCallback(async () => {
     setReviewRunId(null);
@@ -29,15 +36,18 @@ export function useReviewActions(runId: string, onState: (state: ReviewState) =>
     );
   }, [queryClient, setReviewRunId]);
 
-  /** Menjalankan satu aksi; false bila gagal (pesan sudah ditampilkan). */
+  /** Menjalankan satu aksi; false bila gagal (pesan sudah ditampilkan atau ada di `error`). */
   const guarded = useCallback(
-    async (action: () => Promise<void>): Promise<boolean> => {
+    async (action: ReviewAction, work: () => Promise<void>): Promise<boolean> => {
       setBusy(true);
+      setError(null);
       try {
-        await action();
+        await work();
         return true;
-      } catch (error) {
-        push(reviewErrorMessage(error, online), 'danger');
+      } catch (cause) {
+        const message = reviewErrorMessage(cause, online, action);
+        if (action === 'comments') push(message, 'danger');
+        else setError({ action, message });
         // Hasil yang sudah diputuskan di tempat lain: segarkan status supaya panel ikut menutup.
         void queryClient.invalidateQueries({ queryKey: ['run'] });
         return false;
@@ -50,9 +60,11 @@ export function useReviewActions(runId: string, onState: (state: ReviewState) =>
 
   return {
     busy,
+    error,
+    clearError: () => setError(null),
 
     accept: (options: { merge: boolean; commitMessage: string }, target: string | null) =>
-      guarded(async () => {
+      guarded('accept', async () => {
         const result = await api.reviewRun(runId, { decision: 'accept', ...options });
         const skipped = result.mergeSkipped ? copy.review.mergeSkipped[result.mergeSkipped] : null;
         push(
@@ -66,14 +78,14 @@ export function useReviewActions(runId: string, onState: (state: ReviewState) =>
       }),
 
     reject: () =>
-      guarded(async () => {
+      guarded('reject', async () => {
         await api.reviewRun(runId, { decision: 'reject' });
         push(copy.review.rejected);
         await afterDecision();
       }),
 
     sendComments: (comments: ReviewComment[]) =>
-      guarded(async () => {
+      guarded('comments', async () => {
         const result = await api.reviewRun(runId, { decision: 'reject', comments });
         if (result.revisionRunId) {
           runs.track(result.revisionRunId);
@@ -85,7 +97,7 @@ export function useReviewActions(runId: string, onState: (state: ReviewState) =>
       }),
 
     revertFile: (path: string) =>
-      guarded(async () => {
+      guarded('revert', async () => {
         const next = await workerApi.reviewRevertFile(runId, path);
         queryClient.setQueryData([...reviewKey(runId), true], next);
         onState(next);
@@ -93,7 +105,7 @@ export function useReviewActions(runId: string, onState: (state: ReviewState) =>
       }),
 
     restore: (checkpointId: string) =>
-      guarded(async () => {
+      guarded('restore', async () => {
         const next = await workerApi.reviewUndo(runId, checkpointId);
         queryClient.setQueryData([...reviewKey(runId), true], next);
         onState(next);

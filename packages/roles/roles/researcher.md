@@ -4,15 +4,11 @@ name: Peneliti
 group: umum
 engine: research
 model: research-main
-fallback_model: general-cheap
 approval: auto-safe
 skills:
   [
     scope-guard,
     read-context-first,
-    plan-before-edit,
-    verify-before-done,
-    minimal-diff,
     rich-answers,
     propose-skill,
     source-verification,

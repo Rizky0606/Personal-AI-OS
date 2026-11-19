@@ -33,6 +33,8 @@ describe('GET /status', () => {
     });
     expect(status.activeRuns).toBe(0);
     expect(status.jobs).toEqual([]);
+    // Bawaan produksi: Hermes tidak tersambung ke aios_tools (usulan memori/jadwal dari chat umum tidak tersedia).
+    expect(status.agentTools).toEqual({ mcp: false, hermes: false });
   });
 
   it('worker yang dicabut tidak muncul; tanpa token 401', async () => {

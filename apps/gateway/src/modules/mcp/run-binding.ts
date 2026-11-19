@@ -1,4 +1,4 @@
-import { IdSchema, RUN_ID_HEADER } from '@aios/contracts';
+import { IdSchema, RUN_ID_HEADER, type RunStatus } from '@aios/contracts';
 import type { FastifyRequest } from 'fastify';
 import { AppError } from '../../errors.js';
 import { requireAuth } from '../auth/guard.js';
@@ -18,6 +18,16 @@ export interface WorkerRun {
 export interface RunBindingDeps {
   runs: Pick<RunsService, 'get' | 'projectId'>;
   projects: Pick<ProjectsService, 'workerOf'>;
+}
+
+/**
+ * Status run yang agent-nya masih hidup di worker. `waiting_approval` ikut: selama satu izin lain menunggu
+ * (mis. dua `web_read` paralel, atau event `approval.resolved` worker belum diproses gateway) tool yang sudah
+ * disetujui tetap jalan. Dulu hanya `running` yang diterima, sehingga panggilan itu gagal 409 `run_not_active`
+ * dan omp hanya melihat galat (uji project 4k: 5 dari 6 `web_read` gagal).
+ */
+export function isRunExecuting(status: RunStatus): boolean {
+  return status === 'running' || status === 'waiting_approval';
 }
 
 /**
@@ -41,7 +51,7 @@ export async function requireWorkerRun(
   if (!projectId || (await deps.projects.workerOf(projectId)) !== auth.deviceId)
     throw new AppError(403, 'run_not_owned', 'Run ini bukan milik worker ini.');
   const run = await deps.runs.get(runId);
-  if (run.status !== 'running')
+  if (!isRunExecuting(run.status))
     throw new AppError(409, 'run_not_active', 'Run ini tidak sedang berjalan di gateway.');
   return {
     runId,

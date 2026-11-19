@@ -222,6 +222,16 @@ describe('run coding lewat worker', () => {
       status: 'pending',
     });
 
+    // "Untuk run ini" hanya untuk izin tulis berkas yang diizinkan (ini izin perintah): 400, izin tetap menunggu.
+    const scoped = await env.post(
+      `/runs/${run.id}/approvals/${APPROVAL_ID}`,
+      { decision: 'allow', forRun: true },
+      desktop,
+    );
+    expect(scoped.statusCode).toBe(400);
+    expect(problem(scoped).code).toBe('approval_scope_invalid');
+    expect(fake.command('approval.resolve')).toBeUndefined();
+
     const decided = await env.post(
       `/runs/${run.id}/approvals/${APPROVAL_ID}`,
       { decision: 'allow', remember: true },
@@ -245,9 +255,38 @@ describe('run coding lewat worker', () => {
       type: 'approval.resolved',
       approvalId: APPROVAL_ID,
       decision: 'allow',
-      remember: false,
+      // Worker mencatat aturan yang tersimpan (B9).
+      remember: true,
     });
     await until(async () => (await statusOf(run.id)) === 'running', 'kembali running');
+    const rowOf = async (id: string) =>
+      (await env.database.handle.db.select().from(approvals).where(eq(approvals.id, id)))[0];
+    expect(await rowOf(APPROVAL_ID)).toMatchObject({ status: 'allowed', remember: true });
+
+    // Pemilik memilih "Selalu", tetapi worker tidak menyimpan aturannya (mis. detail terpotong): baris izin
+    // mengikuti yang benar-benar berlaku menurut worker, bukan permintaan.
+    const second = '0192f0c4-7a1b-7c2d-a00f-4a5b6c7d8e9f';
+    fake.emit(run.id, {
+      type: 'approval.requested',
+      approvalId: second,
+      kind: 'command',
+      detail: 'node --test --watch',
+    });
+    await until(async () => (await statusOf(run.id)) === 'waiting_approval', 'izin kedua');
+    const again = await env.post(
+      `/runs/${run.id}/approvals/${second}`,
+      { decision: 'allow', remember: true },
+      desktop,
+    );
+    expect(again.statusCode, again.body).toBe(200);
+    fake.emit(run.id, {
+      type: 'approval.resolved',
+      approvalId: second,
+      decision: 'allow',
+      remember: false,
+    });
+    await until(async () => (await rowOf(second))?.remember === false, 'remember dari worker');
+    await until(async () => (await statusOf(run.id)) === 'running', 'kembali running lagi');
     fake.emit(run.id, {
       type: 'tool.output',
       toolCallId: 'call_1',
@@ -323,6 +362,8 @@ describe('run coding lewat worker', () => {
       'queued',
       'routing',
       'preparing',
+      'running',
+      'waiting_approval',
       'running',
       'waiting_approval',
       'running',
@@ -734,7 +775,13 @@ describe('folder kerja run coding: in_place dan worktree', () => {
 
     expect((await cancelling).statusCode).toBe(200);
     await until(async () => (await statusOf(run.id)) === 'needs_review', 'needs_review');
-    expect(await getRun(run.id)).toMatchObject({ workspace: 'in_place', branch: 'main' });
+    // Dihentikan pemilik: endReason membedakannya dari run yang selesai sendiri (error tetap null).
+    expect(await getRun(run.id)).toMatchObject({
+      workspace: 'in_place',
+      branch: 'main',
+      error: null,
+      endReason: 'stopped',
+    });
     fake.close();
   });
 
@@ -751,7 +798,10 @@ describe('folder kerja run coding: in_place dan worktree', () => {
       retryable: false,
     });
     await until(async () => (await statusOf(run.id)) === 'needs_review', 'needs_review');
-    expect((await getRun(run.id)).error).toMatchObject({ code: 'run_timeout' });
+    expect(await getRun(run.id)).toMatchObject({
+      error: { code: 'run_timeout' },
+      endReason: null,
+    });
     await env.runner.idle();
 
     const plain = await startRun(conversationId, 'coba lagi');
@@ -773,7 +823,7 @@ describe('folder kerja run coding: in_place dan worktree', () => {
     fake.emit(run.id, { type: 'diff.updated', files: [file] });
     fake.emit(run.id, { type: 'run.status', status: 'cancelled' });
     expect((await cancelling).statusCode).toBe(200);
-    expect(await statusOf(run.id)).toBe('cancelled');
+    expect(await getRun(run.id)).toMatchObject({ status: 'cancelled', endReason: 'stopped' });
     fake.close();
   });
 
@@ -836,6 +886,16 @@ describe('folder kerja run coding: in_place dan worktree', () => {
     expect(command.continueFromRunId).toBe(first.id);
     expect(command.workspace).toBeUndefined();
     await until(async () => (await statusOf(first.id)) === 'rejected', 'run lama ditutup');
+    // Digantikan pesan lanjutan, bukan ditolak pemilik.
+    expect(await getRun(first.id)).toMatchObject({ endReason: 'superseded' });
+    // Event run.status penutupnya juga membawa alasan, supaya klien live tidak menampilkan "Ditolak".
+    const firstEvents = (await env.get(`/runs/${first.id}/events?limit=500`, desktop))
+      .json<{ items: { event: AgentEvent }[] }>()
+      .items.map((i) => i.event);
+    expect(firstEvents.filter((e) => e.type === 'run.status').at(-1)).toMatchObject({
+      status: 'rejected',
+      endReason: 'superseded',
+    });
     expect(await getRun(second.id)).toMatchObject({
       branch: workerBranchFor(first.id),
       workspace: 'worktree',

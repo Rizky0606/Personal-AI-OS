@@ -227,6 +227,7 @@ export async function createAuthEnv(
         text: string,
         history?: readonly { role: 'user' | 'assistant'; content: string }[],
         signal?: AbortSignal,
+        onQuery?: (query: string) => Promise<void>,
       ): Promise<string>;
     };
     /**
@@ -316,8 +317,8 @@ export async function createAuthEnv(
   });
   const skillCurator = createSkillCurator({ db, skills, manager: skillManager, hub, now });
   const skillUsage = createSkillUsage({ db, skills, manager: skillManager, now });
-  const projects = createProjectsService({ db });
   const workerHub = createWorkerHub();
+  const projects = createProjectsService({ db, isWorkerOnline: (id) => workerHub.isOnline(id) });
   const workerRelay = createWorkerRelay({ hub: workerHub, projects });
   workerHub.onPresence((deviceId, online) => workerRelay.presence(deviceId, online));
   const observer = createRunObserver();
@@ -371,6 +372,7 @@ export async function createAuthEnv(
   });
   const runner = createRunner({
     db,
+    now,
     store,
     hub,
     observer,
@@ -509,13 +511,22 @@ export async function createAuthEnv(
     health: { readiness: () => Promise.resolve(READY) },
     isWorkerOnline: (id) => workerHub.isOnline(id),
     queues: boss,
+    agentTools: {
+      mcp: options.mcpTools !== undefined,
+      hermes: Boolean(options.mcpTools?.hermesTokenSha256),
+    },
     now,
   });
   const agentProposals = createAgentProposalService({ db, hub, tasks, schedules, push, now });
   const app = buildApp({
     config: { LOG_LEVEL: options.logStream ? 'info' : 'silent', NODE_ENV: 'test' },
     health: { readiness: () => Promise.reject(new Error('tidak dipakai')) },
-    auth: createAuthService({ db, keys, now }),
+    auth: createAuthService({
+      db,
+      keys,
+      now,
+      onWorkerReplaced: (replaced, deviceId) => workerRelay.moveDevice(replaced, deviceId),
+    }),
     devices: createDevicesService({ db, now }),
     llm: {
       client,

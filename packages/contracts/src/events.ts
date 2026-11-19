@@ -3,6 +3,8 @@ import { IdSchema, RoleIdSchema, RunErrorSchema, TimestampSchema, UsageSchema } 
 import {
   ApprovalDecisionSchema,
   ApprovalKindSchema,
+  MEMORY_TEXT_MAX,
+  RunEndReasonSchema,
   RunWorkspaceSchema,
   ScheduleRunStatusSchema,
   TaskSchema,
@@ -14,6 +16,8 @@ import { RunStatusSchema } from './run-status.js';
 export const RunStatusEventSchema = z.object({
   type: z.literal('run.status'),
   status: RunStatusSchema,
+  /** Ada bila status ini terjadi karena pemilik menghentikan run (`stopped`) atau run digantikan (`superseded`). */
+  endReason: RunEndReasonSchema.optional(),
 });
 
 export const RouteDecidedEventSchema = z.object({
@@ -86,7 +90,10 @@ export const ApprovalResolvedEventSchema = z.object({
   type: z.literal('approval.resolved'),
   approvalId: IdSchema,
   decision: ApprovalDecisionSchema,
+  /** Aturan "Selalu untuk project ini" tersimpan di worker untuk izin ini. */
   remember: z.boolean(),
+  /** Dijawab "Izinkan tulis berkas untuk run ini": penulisan berkas berikutnya di folder run diizinkan otomatis. */
+  forRun: z.boolean().optional(),
 });
 
 export const DiffFileSchema = z.object({
@@ -309,6 +316,16 @@ export const ContextUsedEventSchema = z.object({
     .max(20),
 });
 
+/**
+ * Jaring pengaman "ingat ini" (chat umum): pesan pemilik meminta sesuatu diingat, tetapi tidak ada tool memori yang
+ * berhasil di giliran ini. Dikirim gateway sebelum status akhir run; klien menawarkan dialog "Ingat ini" berisi
+ * `text` (fakta ringkas hasil `rememberFactFrom`, tanpa panggilan model). Tidak menyimpan apa pun dengan sendirinya.
+ */
+export const MemorySuggestedEventSchema = z.object({
+  type: z.literal('memory.suggested'),
+  text: z.string().min(1).max(MEMORY_TEXT_MAX),
+});
+
 export const RunCompletedEventSchema = z.object({
   type: z.literal('run.completed'),
   summary: z.string(),
@@ -342,6 +359,7 @@ export const AgentEventSchema = z
     ErrorEventSchema,
     ArtifactCreatedEventSchema,
     ContextUsedEventSchema,
+    MemorySuggestedEventSchema,
     RunCompletedEventSchema,
   ])
   .meta({ id: 'AgentEvent' });

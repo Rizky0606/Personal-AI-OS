@@ -1,7 +1,8 @@
 import { mkdir, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import {
   AIOS_NETWORK_TOOLS,
+  AIOS_TOOLS_SERVER,
   QuestionSchema,
   aiosToolOf,
   connectorToolOf,
@@ -51,6 +52,12 @@ export interface OmpAdapterOptions {
   launch: (spec: OmpLaunch) => OmpTransport | Promise<OmpTransport>;
   /** Titik akhir LLM yang dipakai omp: proxy lokal worker (menyisipkan token perangkat) dan kunci lokalnya. */
   llm: { baseUrl: string; apiKey: string };
+  /**
+   * Isian model di `models.yml` per run (bawaan `OMP_MODEL_DEFAULTS`). `reasoning: true` membuat omp mengirim
+   * `reasoning_effort` ke 9Router; `contextWindow` dipakai omp untuk pemadatan konteks, `maxTokens` sebagai
+   * `max_completion_tokens` per jawaban.
+   */
+  model?: Partial<OmpModelLimits>;
   /** Waktu menunggu frame `ready` setelah proses dimulai. */
   readyTimeoutMs?: number;
   /** Waktu menunggu omp berhenti sendiri setelah `abort` sebelum proses dimatikan. */
@@ -58,6 +65,24 @@ export interface OmpAdapterOptions {
   now?: () => number;
   newId?: () => string;
 }
+
+export interface OmpModelLimits {
+  reasoning: boolean;
+  contextWindow: number;
+  maxTokens: number;
+}
+
+/**
+ * Bawaan `models.yml`. `reasoning: false`: diukur 2026-11-19 lewat proxy pencatat ke 9Router lokal, `true` hanya
+ * menambah `reasoning_effort: "high"` di permintaan; combo `coding-main` (hulu `gpt-6-luna`, katalog 9Router
+ * `reasoning: false`) tidak mengirim `reasoning_content` dan jawabannya sama. 8192 token keluaran cukup di run uji
+ * (360–1.205 token per run); naikkan lewat opsi bila `write` berkas besar terpotong.
+ */
+export const OMP_MODEL_DEFAULTS: OmpModelLimits = {
+  reasoning: false,
+  contextWindow: 128_000,
+  maxTokens: 8192,
+};
 
 /** Provider di `models.yml` per run; model dipilih sebagai `aios/<id>`. */
 export const OMP_PROVIDER = 'aios';
@@ -127,12 +152,18 @@ function approvalKind(tool: string): ApprovalKind {
   return 'command';
 }
 
+/**
+ * Panjang maksimum detail izin. Detail yang lebih panjang dipotong (diakhiri `…`), jadi bukan perintah utuh: worker
+ * tidak boleh mengizinkannya otomatis atau menyimpannya sebagai aturan "Selalu".
+ */
+export const APPROVAL_DETAIL_MAX = 4000;
+
 /** `Command: x` menjadi `x` (perintah persis); detail lain dipertahankan apa adanya. */
 function approvalDetail(tool: string, rest: string): string {
   const command = /^Command: ([\s\S]*)$/.exec(rest);
   // Tool MCP: nama tool ikut di baris pertama, karena argumennya saja tidak menjelaskan apa yang dipanggil.
-  if (tool.startsWith('mcp__')) return clip(rest ? `${tool}\n${rest}` : tool, 4000);
-  return clip(command ? (command[1] ?? '') : rest || tool, 4000);
+  if (tool.startsWith('mcp__')) return clip(rest ? `${tool}\n${rest}` : tool, APPROVAL_DETAIL_MAX);
+  return clip(command ? (command[1] ?? '') : rest || tool, APPROVAL_DETAIL_MAX);
 }
 
 function toolTarget(args: unknown): string | undefined {
@@ -193,6 +224,7 @@ export function createOmpAdapter(options: OmpAdapterOptions): AgentAdapter {
       const skillsDir = join(agentDir, 'skills');
       const systemFile = join(runDir, 'system.md');
       const overlayFile = join(runDir, 'overlay.yml');
+      const guardFile = join(runDir, 'read-guard.mjs');
       await mkdir(skillsDir, { recursive: true });
       // Hanya folder ini yang dipasang ke overlay `skills.customDirectories`; skill dari provider lain di mesin
       // pengguna (mis. ~/.claude) tidak ikut karena PI_CODING_AGENT_DIR terisolasi dan tanpa pencarian lain.
@@ -206,7 +238,10 @@ export function createOmpAdapter(options: OmpAdapterOptions): AgentAdapter {
           `---\nname: ${skill.id}\ndescription: ${JSON.stringify(skill.description)}\n---\n\n${skill.body}\n`,
         );
       }
-      await writeFile(join(agentDir, 'models.yml'), modelsYaml(options.llm, model));
+      await writeFile(
+        join(agentDir, 'models.yml'),
+        modelsYaml(options.llm, model, { ...OMP_MODEL_DEFAULTS, ...options.model }),
+      );
       await writeFile(systemFile, input.systemPrompt ?? '');
       // Pengaturan per run lewat overlay di folder run (bukan di repo kerja).
       const overlay: string[] = [
@@ -214,6 +249,7 @@ export function createOmpAdapter(options: OmpAdapterOptions): AgentAdapter {
         '  customDirectories:',
         `    - ${JSON.stringify(skillsDir)}`,
       ];
+      const tools: string[] = [];
       // Server MCP per run (tool browser worker) di direktori agent terisolasi, bukan di repo kerja.
       if (input.mcpServers && Object.keys(input.mcpServers).length > 0) {
         const servers = Object.fromEntries(
@@ -224,13 +260,28 @@ export function createOmpAdapter(options: OmpAdapterOptions): AgentAdapter {
         );
         await writeFile(join(agentDir, 'mcp.json'), JSON.stringify({ mcpServers: servers }));
         // Tanpa ini omp menyembunyikan tool MCP di balik perangkat xd:// dan model tidak melihatnya langsung.
-        overlay.push('tools:', '  xdev: false');
+        tools.push('  xdev: false');
       }
+      // Web bawaan omp (`web_search`, `read <URL>`) keluar langsung dari PC pemilik tanpa izin, audit, anggaran,
+      // dan pengaman SSRF gateway; omp tidak menanyakannya di mode always-ask (uji project 4k). Pembacaan URL
+      // lewat `read` selalu dimatikan (omp tidak bisa memaksa izin per URL publik). `web_search` dimatikan bila
+      // tool gateway tersedia (aios_tools menggantikannya); tanpa tool gateway, ia wajib lewat izin jaringan.
+      const gatewayTools = input.mcpServers?.[AIOS_TOOLS_SERVER] !== undefined;
+      // Tool `github` omp (baca isu/PR lewat `gh` dengan kredensial pemilik, berjenjang read) dipaku mati juga, supaya
+      // `.omp/config.yml` di repo kerja tidak bisa menyalakannya tanpa izin.
+      overlay.push('fetch:', '  enabled: false', 'github:', '  enabled: false');
+      if (gatewayTools) overlay.push('web_search:', '  enabled: false');
+      else tools.push('  approval:', '    web_search: prompt');
+      if (tools.length > 0) overlay.push('tools:', ...tools);
       // LSP (diagnostik setelah edit, definisi, referensi). Server bahasa dingin butuh ±20-25 detik di
       // panggilan pertama, lebih lama dari batas bawaan tool (20 detik, hasilnya "Operation aborted"); 60 detik
       // diuji cukup (VERIFICATION.md). Server bahasa hanya jalan bila ditemukan di worktree atau PATH.
       if (input.lsp === true) overlay.push('lsp:', `  requestTimeout: ${LSP_REQUEST_TIMEOUT_S}`);
-      if (overlay.length > 0) await writeFile(overlayFile, `${overlay.join('\n')}\n`);
+      await writeFile(overlayFile, `${overlay.join('\n')}\n`);
+      // Tool baca omp (read, grep, glob, ...) berjenjang read: di mode always-ask tidak pernah ditanyakan, jadi
+      // agent bisa membaca `..` atau path absolut lain (uji project 4i). Hook ini menolaknya di luar folder kerja run
+      // dan folder run (skill); dimuat dengan --hook, yang tetap berlaku walau --no-extensions.
+      await writeFile(guardFile, readGuardSource([cwd, runDir]));
 
       const transport = await options.launch({
         runId: input.runId,
@@ -252,9 +303,12 @@ export function createOmpAdapter(options: OmpAdapterOptions): AgentAdapter {
             : ['--no-skills']),
           ...(input.lsp === true ? [] : ['--no-lsp']),
           '--no-title',
+          '--hook',
+          guardFile,
           '--append-system-prompt',
           systemFile,
-          ...(overlay.length > 0 ? ['--config', overlayFile] : []),
+          '--config',
+          overlayFile,
           '--model',
           `${OMP_PROVIDER}/${model}`,
         ],
@@ -271,7 +325,61 @@ export function createOmpAdapter(options: OmpAdapterOptions): AgentAdapter {
   };
 }
 
-function modelsYaml(llm: { baseUrl: string; apiKey: string }, model: string): string {
+/** Tool baca omp yang argumen path-nya dibatasi ke folder kerja run. */
+export const READ_GUARDED_TOOLS = ['read', 'grep', 'glob', 'find', 'search', 'ast_grep', 'lsp'];
+
+/**
+ * Sumber hook omp (`tool_call`) yang memblokir tool baca dengan path di luar `roots`. Pemeriksaan leksikal (tanpa
+ * menyelesaikan symlink), supaya tautan yang dibuat worker atau pemilik di dalam folder kerja (mis. `node_modules`)
+ * tetap bisa dibaca; `..`, path absolut lain, dan `~` ditolak. URL internal (`skill://`, `artifact://`, ...) dan URL
+ * web (sudah ditolak `fetch.enabled: false`) tidak diperiksa di sini.
+ */
+export function readGuardSource(roots: string[]): string {
+  return `import path from 'node:path';
+const ROOTS = ${JSON.stringify(roots)}.map((r) => path.resolve(r));
+const TOOLS = new Set(${JSON.stringify(READ_GUARDED_TOOLS)});
+const KEYS = ['path', 'paths', 'file', 'file_path', 'cwd'];
+// Pola glob/find berupa path (mis. ../**/*.ts); pola grep adalah regex, bukan path.
+function values(tool, input) {
+  const out = [];
+  for (const key of tool === 'glob' || tool === 'find' ? [...KEYS, 'pattern'] : KEYS) {
+    const v = input?.[key];
+    for (const item of Array.isArray(v) ? v : [v]) {
+      if (typeof item === 'string') out.push(...item.split(';').map((s) => s.trim()).filter(Boolean));
+    }
+  }
+  return out;
+}
+function outside(value) {
+  if (/^[a-z][a-z0-9+.-]*:[/][/]/i.test(value)) return false;
+  if (value.startsWith('~')) return true;
+  // Pemilih baris (berkas.ts:10-20) dipotong; huruf drive Windows (C:) dipertahankan.
+  const drive = /^[A-Za-z]:/.test(value) ? value.slice(0, 2) : '';
+  const target = path.resolve(ROOTS[0], drive + value.slice(drive.length).split(':')[0]);
+  return !ROOTS.some((root) => {
+    const rel = path.relative(root, target);
+    return rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel));
+  });
+}
+export default function aiosReadGuard(pi) {
+  pi.on('tool_call', (event) => {
+    if (!TOOLS.has(event.toolName)) return undefined;
+    const bad = values(event.toolName, event.input).find(outside);
+    if (bad === undefined) return undefined;
+    return {
+      block: true,
+      reason: 'Ditolak AIOS: membaca di luar folder kerja run tidak diizinkan (' + bad + '). Bekerja hanya dengan berkas di folder project; bila butuh isi dari luar, minta pemilik menyalinnya ke pesan.',
+    };
+  });
+}
+`;
+}
+
+function modelsYaml(
+  llm: { baseUrl: string; apiKey: string },
+  model: string,
+  limits: OmpModelLimits,
+): string {
   const q = (value: string) => JSON.stringify(value);
   return [
     'providers:',
@@ -283,12 +391,18 @@ function modelsYaml(llm: { baseUrl: string; apiKey: string }, model: string): st
     '    models:',
     `      - id: ${q(model)}`,
     `        name: ${q(model)}`,
-    '        reasoning: false',
+    `        reasoning: ${limits.reasoning}`,
     '        input: [text]',
-    '        contextWindow: 128000',
-    '        maxTokens: 8192',
+    `        contextWindow: ${limits.contextWindow}`,
+    `        maxTokens: ${limits.maxTokens}`,
     '',
   ].join('\n');
+}
+
+/** Pemisah paragraf antar-giliran asisten, memperhitungkan baris baru yang sudah ada di akhir teks. */
+function turnSeparator(previous: string): string {
+  if (previous.endsWith('\n\n')) return '';
+  return previous.endsWith('\n') ? '\n' : '\n\n';
 }
 
 class OmpRun implements RunHandle {
@@ -300,10 +414,15 @@ class OmpRun implements RunHandle {
     string,
     { key: string; toolCount: number; durationMs: number }
   >();
-  private readonly tools = new Map<string, { name: string; startedAt: number; text: string }>();
+  private readonly tools = new Map<
+    string,
+    { name: string; startedAt: number; text: string; target?: string; cwd?: string }
+  >();
   private readonly usage: Usage = { inputTokens: 0, outputTokens: 0 };
   private text = '';
   private lastAssistantText = '';
+  /** Giliran asisten baru dimulai dan belum ada teksnya (pemisah narasi, lihat onMessageUpdate). */
+  private newTurn = false;
   private finished = false;
   private cancelRequested = false;
   private promptSent = false;
@@ -421,6 +540,10 @@ class OmpRun implements RunHandle {
       case 'response':
         if (frame.id === 'cfg-retry') this.sendPrompt();
         return;
+      case 'message_start':
+        // Giliran asisten baru (setelah hasil tool): teks berikutnya dipisah dari giliran sebelumnya.
+        if (isRecord(frame.message) && frame.message.role === 'assistant') this.newTurn = true;
+        return;
       case 'message_update':
         this.onMessageUpdate(frame);
         return;
@@ -530,8 +653,12 @@ class OmpRun implements RunHandle {
     const delta = str(update.delta);
     if (delta === undefined || delta === '') return;
     if (update.type === 'text_delta') {
-      this.text += delta;
-      this.emit({ type: 'message.delta', messageId: this.input.messageId, text: delta });
+      // Delta dari omp mentah per giliran; tanpa pemisah narasi antar-giliran menempel ("…terdampak.Pemanggil
+      // ada di…", uji project 2b). Pemisah ditambahkan di sumber supaya gateway, worker, dan klien sama.
+      const text = this.newTurn && this.text ? `${turnSeparator(this.text)}${delta}` : delta;
+      this.newTurn = false;
+      this.text += text;
+      this.emit({ type: 'message.delta', messageId: this.input.messageId, text });
     } else if (update.type === 'thinking_delta') {
       this.emit({ type: 'reasoning.delta', messageId: this.input.messageId, text: delta });
     }
@@ -540,6 +667,8 @@ class OmpRun implements RunHandle {
   private onMessageEnd(frame: Record<string, unknown>): void {
     const message = frame.message;
     if (!isRecord(message) || message.role !== 'assistant') return;
+    // Cadangan bila versi omp tidak mengirim message_start: giliran berikutnya tetap dipisah.
+    this.newTurn = true;
     const usage = message.usage;
     if (isRecord(usage)) {
       const n = (v: unknown) => (typeof v === 'number' && v > 0 ? Math.trunc(v) : 0);
@@ -558,8 +687,11 @@ class OmpRun implements RunHandle {
     const id = str(frame.toolCallId);
     const name = str(frame.toolName);
     if (!id || !name) return;
-    this.tools.set(id, { name, startedAt: this.deps.now(), text: '' });
     const target = toolTarget(frame.args);
+    // cwd efektif tool (bash `cwd` relatif terhadap cwd run); dipakai worker menilai perintah baca saja.
+    const toolCwd = isRecord(frame.args) ? str(frame.args.cwd) : undefined;
+    const cwd = toolCwd && this.input.cwd ? resolve(this.input.cwd, toolCwd) : this.input.cwd;
+    this.tools.set(id, { name, startedAt: this.deps.now(), text: '', target, cwd });
     this.emit({
       type: 'tool.started',
       toolCallId: id,
@@ -600,6 +732,15 @@ class OmpRun implements RunHandle {
         : frame.isError === true
           ? 'error'
           : 'ok';
+    // Alasan galat tool (mis. MCP `run_not_active`, URL di luar allowlist) dialirkan ke event run; tanpa ini
+    // galat tool MCP yang tidak pernah mengirim keluaran parsial tidak terlihat sama sekali (uji project 4k).
+    if (status === 'error' && result && !tool.text.includes(result))
+      this.emit({
+        type: 'tool.output',
+        toolCallId: id,
+        chunk: clip(result, 2000),
+        stream: 'stderr',
+      });
     this.emit({
       type: 'tool.finished',
       toolCallId: id,
@@ -669,13 +810,27 @@ class OmpRun implements RunHandle {
     const tool = match[1] ?? '';
     const approvalId = this.deps.newId();
     this.pending.set(approvalId, { ompId, options });
-    const toolCallId = [...this.tools.entries()].reverse().find(([, t]) => t.name === tool)?.[0];
+    // Tool yang meminta izin: nama sama dan (untuk perintah) target sama dengan detail. Bila beberapa kandidat
+    // berbeda cwd, cwd tidak dilaporkan (worker lalu tidak mengizinkan otomatis).
+    const command = /^Command: ([\s\S]*)$/.exec(match[2] ?? '')?.[1];
+    const candidates = [...this.tools.entries()].filter(
+      ([, t]) => t.name === tool && (command === undefined || t.target === clip(command, 500)),
+    );
+    const toolCallId = (candidates.at(-1) ??
+      [...this.tools.entries()].reverse().find(([, t]) => t.name === tool))?.[0];
+    const cwds = new Set(candidates.map(([, t]) => t.cwd));
+    const cwd =
+      cwds.size === 1
+        ? [...cwds][0]
+        : candidates.length === 0 && command === undefined
+          ? this.input.cwd
+          : undefined;
     this.emit({
       type: 'approval.requested',
       approvalId,
       kind: approvalKind(tool),
       detail: approvalDetail(tool, match[2] ?? ''),
-      ...(this.input.cwd ? { cwd: this.input.cwd } : {}),
+      ...(cwd ? { cwd } : {}),
       ...(toolCallId ? { toolCallId } : {}),
     });
   }

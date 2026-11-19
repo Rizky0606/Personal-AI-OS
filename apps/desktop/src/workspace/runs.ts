@@ -1,11 +1,27 @@
 import {
   TERMINAL_RUN_STATUSES,
+  type RunEndReason,
   type RunStatus,
   type WorkspaceRunListSchema,
 } from '@aios/contracts';
 import type { z } from 'zod';
+import { copy } from '../copy';
 
 export type WorkspaceRun = z.infer<typeof WorkspaceRunListSchema>['items'][number];
+
+/**
+ * Label status run di daftar. `endReason` dari gateway membedakan run yang dihentikan pemilik tetapi sudah mengubah
+ * berkas (`needs_review`) dan run yang digantikan run lanjutan (`rejected`) dari tinjauan dan penolakan biasa.
+ */
+export function runStatusLabel(run: { status: RunStatus; endReason: RunEndReason | null }): string {
+  if (run.status === 'needs_review' && run.endReason === 'stopped') {
+    return copy.workspace.stoppedReview;
+  }
+  if (run.status === 'rejected' && run.endReason === 'superseded') {
+    return copy.workspace.superseded;
+  }
+  return copy.runStatus[run.status];
+}
 
 export type RunFilter = 'all' | 'active' | 'review' | 'done';
 

@@ -142,8 +142,11 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
               now={now}
               failure={chat.failure}
               onRetryInWorktree={chat.retryInWorktree}
+              onRetry={chat.retryFailed}
+              failedRunId={chat.failedRunId}
               onOpenGit={chat.openGit}
               editableUserId={chat.editableUserId}
+              editLastRequest={chat.editLastRequest}
               onResendLast={chat.resendLast}
               canModify={chat.canModify}
               onEditMessage={chat.editMessage}
@@ -162,7 +165,9 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
           </StateView>
         )}
       </div>
-      {chat.reviewRunId ? <ReviewBanner runId={chat.reviewRunId} /> : null}
+      {chat.reviewRunId ? (
+        <ReviewBanner runId={chat.reviewRunId} stopped={chat.reviewStopped} />
+      ) : null}
       {chat.awaitingPlanApproval ? (
         <PlanBanner onApprove={chat.approvePlan} disabled={chat.sending || !chat.online} />
       ) : null}

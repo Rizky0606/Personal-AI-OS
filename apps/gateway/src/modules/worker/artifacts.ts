@@ -7,6 +7,7 @@ import type { EventStore } from '../runs/store.js';
 import type { RunsService } from '../runs/service.js';
 import type { ProjectsService } from '../projects/service.js';
 import type { FilesService } from '../files/service.js';
+import { isRunExecuting } from '../mcp/run-binding.js';
 
 export const MAX_SCREENSHOT_BYTES = 10 * 1024 * 1024;
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
@@ -70,7 +71,7 @@ export const workerArtifactRoutes: FastifyPluginCallback<WorkerArtifactDeps> = (
       if (!projectId || (await deps.projects.workerOf(projectId)) !== auth.deviceId)
         throw new AppError(403, 'run_not_owned', 'Run ini bukan milik worker ini.');
       const run = await deps.runs.get(runId);
-      if (run.status !== 'running')
+      if (!isRunExecuting(run.status))
         throw new AppError(409, 'run_not_active', 'Run ini tidak sedang berjalan di gateway.');
       const record = await deps.files.saveGenerated({
         name: `screenshot-${randomUUID()}.png`,

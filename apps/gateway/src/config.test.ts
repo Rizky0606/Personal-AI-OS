@@ -16,6 +16,15 @@ describe('loadConfig', () => {
     expect(c.SEARXNG_URL).toBe('http://127.0.0.1:8888');
     expect(c.READY_TIMEOUT_MS).toBe(2000);
     expect(c.HERMES_API_KEY).toBeUndefined();
+    expect(c.HERMES_SESSION_KEY).toBe('owner');
+  });
+
+  it('HERMES_SESSION_KEY bisa diganti untuk gateway uji; nilai dengan spasi atau baris baru ditolak', () => {
+    expect(loadConfig({ ...base, HERMES_SESSION_KEY: 'uji-umum' }).HERMES_SESSION_KEY).toBe(
+      'uji-umum',
+    );
+    expect(() => loadConfig({ ...base, HERMES_SESSION_KEY: 'a b' })).toThrow(ConfigError);
+    expect(() => loadConfig({ ...base, HERMES_SESSION_KEY: 'a\nb' })).toThrow(ConfigError);
   });
 
   it('produksi menolak HOST non-loopback kecuali ALLOW_PUBLIC_BIND=true', () => {

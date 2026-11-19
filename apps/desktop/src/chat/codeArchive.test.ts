@@ -45,6 +45,17 @@ describe('extractCodeFiles', () => {
   it('tanpa blok kode: kosong', () => {
     expect(extractCodeFiles('Hanya teks biasa.')).toEqual([]);
   });
+
+  it('blok milik aplikasi (aios-ui, aios-skill-proposal) tidak menjadi berkas', () => {
+    const md = [
+      '```aios-ui\n{"version":1,"components":[]}\n```',
+      '```AIOS-UI\n{}\n```',
+      '```aios-skill-proposal\n{"kind":"new"}\n```',
+      '```py hitung.py\nprint(1)\n```',
+    ].join('\n\n');
+    expect(extractCodeFiles(md)).toEqual([{ path: 'hitung.py', content: 'print(1)\n' }]);
+    expect(extractCodeFiles('```aios-ui\n{}\n```')).toEqual([]);
+  });
 });
 
 describe('safePath', () => {

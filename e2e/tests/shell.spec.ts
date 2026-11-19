@@ -361,21 +361,22 @@ test('panel kanan: buka dan tutup menggeser area utama bertahap, tidak melompat'
 
   // Animasi slot panel dijeda lalu digeser waktunya (Web Animations API): bukti bertahap yang tidak bergantung
   // pada frame rate atau beban mesin. Lebar area utama harus turun mulus dari lebar awal ke lebar akhir.
+  // Animasi dijeda di dalam pemeriksaan yang sama dengan pencariannya: animasi 240 ms bisa selesai di antara dua
+  // panggilan evaluate pada mesin yang sibuk.
   const sweep = async (name: 'aios-panel-open' | 'aios-panel-close') => {
-    await page.waitForFunction(
-      (animation) =>
-        document
-          .querySelector('[data-panel-slot]')
-          ?.getAnimations()
-          .some((a) => (a as CSSAnimation).animationName === animation),
-      name,
-    );
+    await page.waitForFunction((animation) => {
+      const anim = document
+        .querySelector('[data-panel-slot]')
+        ?.getAnimations()
+        .find((a) => (a as CSSAnimation).animationName === animation);
+      anim?.pause();
+      return anim !== undefined;
+    }, name);
     return page.evaluate((animation) => {
       const slot = document.querySelector('[data-panel-slot]')!;
       const anim = slot
         .getAnimations()
         .find((a) => (a as CSSAnimation).animationName === animation)!;
-      anim.pause();
       const total = Number(anim.effect!.getComputedTiming().endTime);
       const width = (time: number) => {
         anim.currentTime = time;

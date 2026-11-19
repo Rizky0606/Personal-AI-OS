@@ -116,6 +116,7 @@ export class RunTracker {
           {
             ...live,
             status: run.status,
+            endReason: run.endReason ?? live.endReason,
             error: run.error ?? live.error,
             // Event penutup tidak pernah sampai: waktu selesai dari server supaya elapsed berhenti.
             endedAt:

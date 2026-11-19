@@ -103,7 +103,7 @@ describe('chat per project', () => {
     );
   });
 
-  it('Cari di web: sakelar di menu Opsi tampil di chat umum dan project, diingat, dan dikirim bersama pesan', async () => {
+  it('Cari di web: sakelar di menu Opsi menampilkan chip Web, dikirim bersama pesan, dan pindah ke percakapan yang dibuat', async () => {
     api.createConversation.mockResolvedValue({
       id: CONV,
       title: '',
@@ -122,19 +122,45 @@ describe('chat per project', () => {
     const user = userEvent.setup();
     await renderScreen(<ChatScreen />);
 
+    expect(screen.queryByRole('button', { name: copy.chat.web.off })).not.toBeInTheDocument();
     await openOptions(user);
     const item = await screen.findByRole('menuitemcheckbox', { name: copy.chat.web.chip });
     expect(item).toHaveAttribute('aria-checked', 'false');
     await user.click(item);
-    expect(useUiStore.getState().webSearch).toBe(true);
     expect(item).toHaveAttribute('aria-checked', 'true');
     await user.keyboard('{Escape}');
+    expect(screen.getByText(copy.chat.web.active)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: copy.chat.web.off })).toBeInTheDocument();
 
     await user.type(field(), 'berita GPU terbaru{Enter}');
     expect(api.sendMessage).toHaveBeenCalledWith(
       CONV,
       expect.objectContaining({ text: 'berita GPU terbaru', webSearch: true }),
     );
+    // Pertanyaan lanjutan di percakapan ini tetap mencari; chat baru berikutnya mulai mati.
+    expect(useUiStore.getState().webSearchByConversation).toEqual({ [CONV]: true });
+  });
+
+  it('Cari di web: chip × mematikannya; chat baru tidak mewarisi sakelar percakapan lain', async () => {
+    // Sakelar menyala di percakapan lain dan sisa chat baru yang ditinggal: chat baru tetap mulai mati.
+    useUiStore.setState({ webSearchByConversation: { [CONV]: true, baru: true } });
+    const user = userEvent.setup();
+    await renderScreen(<ChatScreen />);
+
+    await screen.findByRole('button', { name: copy.chat.composerOptions });
+    expect(screen.queryByRole('button', { name: copy.chat.web.off })).not.toBeInTheDocument();
+    await openOptions(user);
+    const item = await screen.findByRole('menuitemcheckbox', { name: copy.chat.web.chip });
+    expect(item).toHaveAttribute('aria-checked', 'false');
+    await user.click(item);
+    await user.keyboard('{Escape}');
+
+    await user.click(screen.getByRole('button', { name: copy.chat.web.off }));
+    expect(screen.queryByText(copy.chat.web.active)).not.toBeInTheDocument();
+    await openOptions(user);
+    expect(
+      await screen.findByRole('menuitemcheckbox', { name: copy.chat.web.chip }),
+    ).toHaveAttribute('aria-checked', 'false');
   });
 
   it('tanpa sakelar Cari di web, pesan tidak membawa webSearch', async () => {
@@ -266,7 +292,7 @@ describe('lampiran konteks dari preview', () => {
 describe('panel izin inline', () => {
   async function runWithApproval(
     extra: () => void = () => undefined,
-    approval: { kind: 'command' | 'network'; detail: string } = {
+    approval: { kind: 'command' | 'network' | 'file_write'; detail: string } = {
       kind: 'command',
       detail: 'node --test',
     },
@@ -360,6 +386,19 @@ describe('panel izin inline', () => {
     expect(api.resolveApproval).toHaveBeenLastCalledWith(RUN_X, APPROVAL, {
       decision: 'deny',
       remember: false,
+    });
+  });
+
+  it('izin tulis berkas: tombol "Izinkan tulis berkas untuk run ini" mengirim forRun=true; perintah tidak punya tombol itu', async () => {
+    api.resolveApproval.mockResolvedValue({} as never);
+    const user = userEvent.setup();
+    await runWithApproval(undefined, { kind: 'file_write', detail: 'Path: src/a.ts\nContent:\nx' });
+    const panel = await screen.findByRole('group', { name: copy.approval.title.file_write });
+    await user.click(within(panel).getByRole('button', { name: copy.approval.allowRunWrites }));
+    expect(api.resolveApproval).toHaveBeenLastCalledWith(RUN_X, APPROVAL, {
+      decision: 'allow',
+      remember: false,
+      forRun: true,
     });
   });
 
@@ -604,6 +643,32 @@ describe('hasil run coding menunggu tinjauan', () => {
       }),
     );
     expect(await screen.findByRole('button', { name: copy.review.open })).toBeInTheDocument();
+  });
+
+  it('run yang dihentikan pemilik (endReason stopped): pengingat memperingatkan hasil setengah jadi', async () => {
+    useUiStore.getState().setActiveProject(PROJECT);
+    api.listMessages.mockResolvedValue(
+      page(message({ author: 'user', text: 'tes', runId: RUN_X })),
+    );
+    api.getRun.mockResolvedValue({ ...reviewRun('needs_review'), endReason: 'stopped' });
+    await renderScreen(<ChatScreen conversationId={CONV} />);
+    expect(await screen.findByText(copy.review.readyStopped)).toBeInTheDocument();
+  });
+
+  it('dihentikan di depan mata: endReason dari event run.status, sebelum DTO diperbarui', async () => {
+    useUiStore.getState().setActiveProject(PROJECT);
+    api.listMessages.mockResolvedValue(
+      page(message({ author: 'user', text: 'tes', runId: RUN_X })),
+    );
+    api.getRun.mockResolvedValue(run({ id: RUN_X, status: 'running' }));
+    await renderScreen(<ChatScreen conversationId={CONV} />);
+    await waitFor(() => expect(runs.get(RUN_X)).toBeDefined());
+    act(() => {
+      emit(`run:${RUN_X}`, { type: 'run.status', status: 'running' });
+      emit(`run:${RUN_X}`, { type: 'run.status', status: 'needs_review', endReason: 'stopped' });
+    });
+    expect(await screen.findByText(copy.review.readyStopped)).toBeInTheDocument();
+    expect(screen.queryByText(copy.review.ready)).toBeNull();
   });
 
   it('run biasa (completed) tidak menampilkan pengingat; meninggalkan percakapan membersihkan tab Diff', async () => {

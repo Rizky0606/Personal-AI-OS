@@ -247,6 +247,14 @@ describe('principal Hermes (slice 4): token layanan dari loopback, tanpa run', (
     expect(app.statusCode).toBe(401);
   });
 
+  it('GET /status: agentTools.hermes hanya true bila MCP menyala dan principal Hermes dikonfigurasi', async () => {
+    const tools = async (gw: Gateway) =>
+      (await gw.env.get('/status', gw.desktop)).json<{ agentTools: unknown }>().agentTools;
+    expect(await tools(herm)).toEqual({ mcp: true, hermes: true });
+    expect(await tools(on)).toEqual({ mcp: true, hermes: false });
+    expect(await tools(off)).toEqual({ mcp: false, hermes: false });
+  });
+
   it('tools/list tanpa tool kanban; task_list/task_propose = tool tidak dikenal; worker tetap berfungsi', async () => {
     const init = await send(herm.env, {
       jsonrpc: '2.0',
@@ -387,6 +395,33 @@ describe('MCP_TOOLS_ENABLED menyala', () => {
     expect(stolen.statusCode).toBe(403);
     expect(stolen.json()).toMatchObject({ code: 'run_not_owned' });
     expect((await post(on.env, ping, as(mine.token, mine.runId))).statusCode).toBe(200);
+
+    // Izin lain menunggu (mis. dua web_read paralel): tool yang sudah disetujui tetap boleh memanggil.
+    mine.fake.emit(mine.runId, {
+      type: 'approval.requested',
+      approvalId: '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e77',
+      kind: 'network',
+      detail: 'mcp__aios_tools_web_read',
+    });
+    await until(
+      async () =>
+        RunSchema.parse((await on.env.get(`/runs/${mine.runId}`, on.desktop)).json()).status ===
+        'waiting_approval',
+      'menunggu izin',
+    );
+    expect((await post(on.env, ping, as(mine.token, mine.runId))).statusCode).toBe(200);
+    mine.fake.emit(mine.runId, {
+      type: 'approval.resolved',
+      approvalId: '0192f0c4-7a1b-7c2d-8e3f-4a5b6c7d8e77',
+      decision: 'deny',
+      remember: false,
+    });
+    await until(
+      async () =>
+        RunSchema.parse((await on.env.get(`/runs/${mine.runId}`, on.desktop)).json()).status ===
+        'running',
+      'kembali berjalan',
+    );
 
     mine.fake.emit(mine.runId, { type: 'diff.updated', files: [] });
     mine.fake.emit(mine.runId, { type: 'run.completed', summary: 'selesai' });

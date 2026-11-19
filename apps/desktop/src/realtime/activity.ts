@@ -4,6 +4,7 @@ import {
   AIOS_PROPOSE_TOOLS,
   aiosToolOf,
   connectorToolOf,
+  type RunEndReason,
 } from '@aios/contracts';
 import { copy } from '../copy';
 import { isSettled, type LiveRun, type ToolStep } from './liveRun';
@@ -28,6 +29,8 @@ export interface ActivityStep {
   /** Selesai: durasi dari mesin. Berjalan: sejak mulai (null bila waktu mulai tak diketahui). */
   durationMs: number | null;
   startedAt: number | null;
+  /** Langkah gagal: alasan galat dari mesin bila ada (mis. "URL reads are disabled by settings."). */
+  error?: string;
 }
 
 export interface ActivityCurrent {
@@ -48,6 +51,12 @@ export interface Activity {
   steps: ActivityStep[];
   summary: string | null;
   needsAttention: boolean;
+  /**
+   * Run berjalan tanpa event baru lebih dari `QUIET_AFTER_MS` (tidak ada tool berjalan, izin, atau pertanyaan yang
+   * ditunggu): lama hening sejak aktivitas terakhir, supaya pemilik tahu run menunggu model, bukan macet diam-diam.
+   * Tidak ada bila run tidak hening.
+   */
+  quietMs?: number;
 }
 
 export interface ActivityOptions {
@@ -55,6 +64,7 @@ export interface ActivityOptions {
 }
 
 export const DEFAULT_VISIBLE_STEPS = 3;
+export const QUIET_AFTER_MS = 15_000;
 export const HEADLINE_MAX = 80;
 export const TARGET_MAX = 60;
 
@@ -206,7 +216,8 @@ function phaseOf(live: LiveRun, running: ToolStep[]): ActivityPhase {
     case 'needs_review':
     case 'accepted':
     case 'rejected':
-      return 'done';
+      // Dihentikan pemilik tetapi sudah mengubah berkas: berakhir needs_review, bukan selesai.
+      return live.endReason === 'stopped' ? 'cancelled' : 'done';
     case 'failed':
       return 'error';
     case 'cancelled':
@@ -238,6 +249,7 @@ export function buildActivity(live: LiveRun, now: number, options: ActivityOptio
           : Math.max(0, now - t.startedAt)
         : (t.durationMs ?? null),
     startedAt: t.startedAt,
+    ...(t.status === 'error' && t.errorText ? { error: t.errorText } : {}),
   }));
 
   // Yang terbaru dimulai; waktu sama atau tak diketahui: yang datang belakangan.
@@ -259,14 +271,7 @@ export function buildActivity(live: LiveRun, now: number, options: ActivityOptio
   const elapsedMs = live.startedAt === null || end === null ? 0 : Math.max(0, end - live.startedAt);
 
   const t = copy.runActivity.summary;
-  const label =
-    phase === 'done'
-      ? t.done
-      : phase === 'error'
-        ? t.error
-        : phase === 'cancelled'
-          ? t.cancelled
-          : null;
+  const label = endLabel(phase, live.endReason);
   const summary =
     label === null
       ? null
@@ -279,6 +284,11 @@ export function buildActivity(live: LiveRun, now: number, options: ActivityOptio
   const headline = headlineFrom(
     live.reasoningSummary?.trim() ? live.reasoningSummary : live.reasoning,
   );
+  const waitingOnOwner = live.approvals.length > 0 || live.questions.length > 0;
+  const quietMs =
+    !settled && phase !== 'waiting_approval' && running.length === 0 && !waitingOnOwner
+      ? now - (live.lastEventAt ?? now)
+      : 0;
 
   return {
     headline,
@@ -292,6 +302,7 @@ export function buildActivity(live: LiveRun, now: number, options: ActivityOptio
     needsAttention:
       live.tools.some((tool) => tool.status === 'error') ||
       (!settled && (live.approvals.length > 0 || live.status === 'waiting_approval')),
+    ...(quietMs > QUIET_AFTER_MS ? { quietMs } : {}),
   };
 }
 
@@ -304,9 +315,19 @@ export interface SavedTool {
   durationMs?: number | undefined;
 }
 
+/** Label ringkasan fase akhir; `endReason` membedakan dihentikan pemilik dan digantikan run lanjutan. */
+function endLabel(phase: ActivityPhase, endReason: RunEndReason | null): string | null {
+  const t = copy.runActivity.summary;
+  if (phase === 'error') return t.error;
+  if (phase === 'cancelled') return endReason === 'stopped' ? t.stopped : t.cancelled;
+  if (phase === 'done') return endReason === 'superseded' ? t.superseded : t.done;
+  return null;
+}
+
 /** Bagian run tersimpan (entitas Run dari server) yang dipakai untuk ringkasan jawaban lama. */
 export interface SavedRunInfo {
   status: LiveRun['status'];
+  endReason: LiveRun['endReason'];
   createdAt: string;
   updatedAt: string;
 }
@@ -326,13 +347,18 @@ export function savedActivity(tools: SavedTool[], run: SavedRunInfo | null): Act
     durationMs: t.durationMs ?? null,
     startedAt: null,
   }));
+  const endReason = run?.endReason ?? null;
   const phase: ActivityPhase =
-    run?.status === 'failed' ? 'error' : run?.status === 'cancelled' ? 'cancelled' : 'done';
+    run?.status === 'failed'
+      ? 'error'
+      : run?.status === 'cancelled' || endReason === 'stopped'
+        ? 'cancelled'
+        : 'done';
   const timed = run !== null && ['completed', 'failed', 'cancelled'].includes(run.status);
   const span = timed ? Date.parse(run.updatedAt) - Date.parse(run.createdAt) : Number.NaN;
   const elapsedMs = Number.isFinite(span) && span >= 0 ? span : null;
   const t = copy.runActivity.summary;
-  const label = phase === 'error' ? t.error : phase === 'cancelled' ? t.cancelled : t.done;
+  const label = endLabel(phase, endReason) ?? t.done;
   return {
     headline: null,
     phase,

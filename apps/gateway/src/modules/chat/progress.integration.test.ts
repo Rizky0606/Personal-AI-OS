@@ -7,8 +7,9 @@ import {
   SendMessageResponseSchema,
   type AgentEvent,
 } from '@aios/contracts';
+import { and, eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, inject, it } from 'vitest';
-import { memories } from '../../db/schema/index.js';
+import { memories, messages, runEvents } from '../../db/schema/index.js';
 import { createAuthEnv, type AuthEnv } from '../../testing/auth-env.js';
 import { startFakeHermes, type FakeHermes } from '../../testing/fake-hermes.js';
 
@@ -275,8 +276,6 @@ describe('GET /conversations/:id/progress', () => {
     const conv = await newConversation();
     const run = await sendAndFinish(conv.id, [{ type: 'text', text: 'Buat berkas' }]);
     const file = await upload('hasil.txt', 'dua belas bytes');
-    const { messages } = await import('../../db/schema/index.js');
-    const { eq, and } = await import('drizzle-orm');
     const db = env.database.handle.db;
     const [assistant] = await db
       .select()
@@ -318,9 +317,15 @@ describe('GET /conversations/:id/progress', () => {
         source: 'screenshot',
       });
     }
+    // Cap waktu sama persis (event beruntun di milidetik yang sama): yang terakhir dicatat tetap duluan.
+    await env.database.handle.db
+      .update(runEvents)
+      .set({ ts: new Date('2026-11-19T10:00:00.000Z') })
+      .where(and(eq(runEvents.runId, run), eq(runEvents.type, 'artifact.created')));
     const result = await progress(conv.id);
     expect(result.outputs).toHaveLength(50);
     expect(result.outputs[0]).toMatchObject({ name: 'hasil-59.png' });
+    expect(result.outputs[49]).toMatchObject({ name: 'hasil-10.png' });
   });
 
   it('percakapan lain tidak ikut tercampur', async () => {

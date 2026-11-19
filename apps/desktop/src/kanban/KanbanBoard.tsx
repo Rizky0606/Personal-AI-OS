@@ -20,6 +20,8 @@ export interface BoardActions {
   edit: (task: Task) => void;
   move: (task: Task, placement: Placement) => void;
   cancelRun: (runId: string) => void;
+  /** Membuka percakapan run kartu, tempat izin dijawab dan hasilnya terlihat. */
+  openRun: (task: Task) => void;
 }
 
 export interface KanbanBoardProps {
@@ -133,6 +135,7 @@ export function KanbanBoard({ tasks, roles, actions }: KanbanBoardProps) {
                 onMoveTo={(t, target) => actions.move(t, dropPlacement(board, t.id, target))}
                 onStep={step}
                 onCancelRun={actions.cancelRun}
+                onOpenRun={actions.openRun}
                 onDragStart={onDragStart}
                 onDragEnd={() => {
                   setDragging(null);

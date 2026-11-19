@@ -3,6 +3,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 import { useState } from 'react';
 import { copy } from '../copy';
 import { Button } from '../ui/Button';
+import { ErrorBanner } from '../ui/ErrorBanner';
 import { Switch } from '../ui/Switch';
 import { TextField } from '../ui/TextField';
 
@@ -13,6 +14,8 @@ export interface AcceptDialogProps {
   /** Run dari percakapan (bukan kartu kanban): hasil worktree digabungkan ke branch kerja secara bawaan. */
   chatRun: boolean;
   busy: boolean;
+  /** Terima gagal: pesan tampil di dialog yang tetap terbuka, supaya bisa dicoba lagi. */
+  error: string | null;
   onAccept: (options: { merge: boolean; commitMessage: string }) => void;
 }
 
@@ -26,6 +29,7 @@ export function AcceptDialog({
   state,
   chatRun,
   busy,
+  error,
   onAccept,
 }: AcceptDialogProps) {
   const [message, setMessage] = useState(state.commitMessage);
@@ -77,6 +81,7 @@ export function AcceptDialog({
               />
             </div>
           )}
+          {error ? <ErrorBanner message={error} /> : null}
           <div className="mt-2 flex justify-end gap-2">
             <Dialog.Close asChild>
               <Button variant="secondary">{copy.review.cancel}</Button>

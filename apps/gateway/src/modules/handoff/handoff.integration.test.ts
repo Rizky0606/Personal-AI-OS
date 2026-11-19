@@ -145,11 +145,12 @@ describe('POST /conversations/:id/handoff', () => {
       await new Promise((r) => setTimeout(r, 20));
     }
 
+    // Sesi Hermes baru: ringkasan ikut sebagai riwayat yang dilipat ke pesan user pertama.
     const sentMessages = hermes.requests.at(-1)?.body.messages ?? [];
-    const contents = sentMessages.map((m) => `${m.role}:${String(m.content)}`);
-    expect(contents.some((c) => c.startsWith('user:' + HANDOFF_PREFIX))).toBe(true);
-    expect(contents.join('\n')).toContain('pelanggan minta diskon 10%');
-    expect(contents.at(-1)).toContain('Lanjutkan pekerjaan tadi');
+    const user = String(sentMessages.filter((m) => m.role === 'user').at(-1)?.content ?? '');
+    expect(user).toContain(`[Pemilik]\n${HANDOFF_PREFIX}`);
+    expect(user).toContain('pelanggan minta diskon 10%');
+    expect(user).toMatch(/Pesan sekarang:\n.*Lanjutkan pekerjaan tadi/);
   });
 
   it('pesan panjang dipotong sebelum diringkas', async () => {

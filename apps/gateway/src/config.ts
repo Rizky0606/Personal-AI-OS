@@ -30,6 +30,11 @@ const EnvSchema = z.object({
   HERMES_URL: withDefault(httpUrl, 'http://127.0.0.1:8642'),
   HERMES_API_KEY: optionalString,
   /**
+   * Nilai `X-Hermes-Session-Key`: cakupan memori jangka panjang Hermes. Bawaan `owner`. Gateway uji yang memakai
+   * Hermes produksi wajib mengisi kunci lain supaya sesi dan memori uji tidak bercampur dengan milik pemilik.
+   */
+  HERMES_SESSION_KEY: withDefault(z.string().regex(/^[A-Za-z0-9._:-]{1,128}$/), 'owner'),
+  /**
    * Folder skill Hermes (mis. ~/.hermes/skills). Bila diisi, setiap perubahan katalog skill menyalin skill
    * yang aktif untuk mesin hermes ke `<folder>/aios/`; hanya subfolder aios/ yang ditulis. Kosong = mati.
    */

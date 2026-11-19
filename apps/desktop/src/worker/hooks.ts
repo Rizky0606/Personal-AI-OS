@@ -29,3 +29,15 @@ export function useBindings() {
 
 /** Project terdaftar di server (semua perangkat). */
 export const useProjects = () => useQuery({ queryKey: ['projects'], queryFn: api.listProjects });
+
+/**
+ * Worker project aktif menurut hub worker gateway (bukan worker lokal); disegarkan tiap 15 detik. Tanpa project
+ * aktif tidak ada permintaan.
+ */
+export const useProjectWorker = (projectId: string | null) =>
+  useQuery({
+    queryKey: ['projects', projectId, 'worker'],
+    queryFn: () => api.getProjectWorker(projectId ?? ''),
+    enabled: projectId !== null,
+    refetchInterval: 15_000,
+  });

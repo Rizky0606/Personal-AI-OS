@@ -74,4 +74,44 @@ describe('Markdown', () => {
 
     expect(screen.getByText('print(1)')).toBeInTheDocument();
   });
+
+  it('blok aios-ui dari laporan uji (chartType/title/max) diperbaiki lalu tampil sebagai grafik', () => {
+    const json =
+      '{"version":1,"components":[{"id":"popularitas-db","type":"chart","chartType":"bar","title":"Skor popularitas","labels":["PostgreSQL","MySQL"],"values":[9,8],"max":10}]}';
+    const { container } = render(<Markdown source={'```aios-ui\n' + json + '\n```'} />);
+
+    expect(
+      screen.getByRole('figure', { name: 'Skor popularitas: PostgreSQL 9, MySQL 8' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(copy.richFallback.noteWithData)).not.toBeInTheDocument();
+    expect(container.querySelector('pre')).toBeNull();
+  });
+
+  it('blok aios-ui yang tetap tidak valid tampil sebagai data tabel, JSON mentah tertutup', () => {
+    // Nilai bukan angka tidak bisa diperbaiki: grafik tidak mungkin, datanya tetap terbaca.
+    const json =
+      '{"version":1,"components":[{"type":"chart","chartType":"bar","title":"Skor popularitas","labels":["PostgreSQL","MySQL"],"values":["tinggi","sedang"]}]}';
+    const { container } = render(<Markdown source={'```aios-ui\n' + json + '\n```'} />);
+
+    expect(screen.getByText(copy.richFallback.noteWithData)).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Skor popularitas' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'PostgreSQL' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'tinggi' })).toBeInTheDocument();
+    // JSON mentah hanya ada di balik disclosure yang tertutup, bukan blok kode utama.
+    expect(screen.queryByRole('button', { name: copy.chat.copy })).not.toBeInTheDocument();
+    const details = container.querySelector('details');
+    expect(details).not.toBeNull();
+    expect(details?.open).toBe(false);
+    expect(details?.querySelector('summary')).toHaveTextContent(copy.richFallback.showRaw);
+    expect(details?.querySelector('pre')).toHaveTextContent('chartType');
+  });
+
+  it('blok aios-ui yang bukan JSON hanya menampilkan keterangan', () => {
+    const { container } = render(<Markdown source={'```aios-ui\n{bukan json\n```'} />);
+
+    expect(screen.getByText(copy.richFallback.note)).toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    expect(screen.queryByRole('list')).not.toBeInTheDocument();
+    expect(container.querySelector('details')?.open).toBe(false);
+  });
 });

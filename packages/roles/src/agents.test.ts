@@ -54,6 +54,27 @@ describe('selectSkills', () => {
     expect(pick(text, GENERAL_AGENT).packs).not.toEqual(expect.arrayContaining(['backend']));
   });
 
+  it.each([
+    'page-count.ts',
+    'if (page < 1) return []',
+    'paginate page',
+    'pecah paginate.ts ke page-count.ts',
+  ])('kata page di pustaka TS (%s) tidak memuat paket frontend', (text) => {
+    expect(pick(text).packs).not.toContain('frontend');
+  });
+
+  it.each([
+    'buat landing page produk',
+    'rapikan web page profil',
+    'pecah page component jadi dua',
+    'perbaiki halaman login',
+    'ubah Profile.tsx',
+    'buat komponen Card.vue',
+    'atur warna tombol dengan tailwind',
+  ])('frasa tampilan (%s) tetap memuat paket frontend', (text) => {
+    expect(pick(text).packs).toContain('frontend');
+  });
+
   it('pilihan pengguna menambah, pencabutan mengalahkan kata kunci, skill tak dikenal dibuang', () => {
     const { skills } = pick('ubah tombol checkout', PROJECT_AGENT, {
       agent: PROJECT_AGENT,

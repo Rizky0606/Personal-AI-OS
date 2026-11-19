@@ -1,10 +1,10 @@
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import type { AgentEvent } from '@aios/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { createOmpAdapter, pickOption, type OmpTransport } from './omp.js';
+import { createOmpAdapter, pickOption, type OmpAdapterOptions, type OmpTransport } from './omp.js';
 import { AsyncQueue } from './queue.js';
 import { replayTransport, type ReplayTransport } from './testing/replay.js';
 import { AdapterError, type RunHandle, type StartRunInput } from './types.js';
@@ -35,9 +35,15 @@ const input = (over: Partial<StartRunInput> = {}): StartRunInput => ({
   ...over,
 });
 
+type GuardHandler = (event: {
+  toolName: string;
+  input: Record<string, unknown>;
+}) => { block?: boolean } | undefined;
+
 async function launchReplay(
   fixture: string,
   over: Partial<StartRunInput> = {},
+  model?: OmpAdapterOptions['model'],
 ): Promise<{
   handle: RunHandle;
   transport: ReplayTransport;
@@ -54,6 +60,7 @@ async function launchReplay(
     llm: { baseUrl: 'http://127.0.0.1:4555/v1', apiKey: 'kunci-lokal' },
     newId: () => `0192f0c4-7a1b-7c2d-a${String(++ids).padStart(3, '0')}-4a5b6c7d8e91`,
     abortGraceMs: 500,
+    ...(model ? { model } : {}),
   });
   const handle = await adapter.startRun(input(over));
   return { handle, transport, launched };
@@ -103,6 +110,43 @@ describe('peluncuran omp', () => {
     expect(await readFile(overlay, 'utf8')).toContain('customDirectories:');
   });
 
+  it('hook penjaga baca dimuat lewat --hook dari folder run: baca di luar folder kerja ditolak', async () => {
+    const { handle, launched } = await launchReplay('text-only', { cwd: runDir });
+    await collect(handle);
+    const guardFile = launched.args[launched.args.indexOf('--hook') + 1] ?? '';
+    expect(guardFile).toBe(join(runDir, 'read-guard.mjs'));
+    // Berkas hook dibuat adapter saat run dimulai; hanya bisa dimuat dinamis.
+    const guard = (await import(pathToFileURL(guardFile).href)) as {
+      default: (pi: { on: (event: string, fn: GuardHandler) => void }) => void;
+    };
+    let handler: GuardHandler | undefined;
+    guard.default({ on: (_event, fn) => (handler = fn) });
+    const blocked = (toolName: string, input: Record<string, unknown>) =>
+      handler?.({ toolName, input })?.block === true;
+
+    for (const [tool, input] of [
+      ['read', { path: 'src/a.ts:10-20' }],
+      ['read', { path: join(runDir, 'agent', 'skills', 'x', 'SKILL.md') }],
+      ['read', { path: 'skill://scope-guard' }],
+      ['grep', { pattern: '\\.\\./', path: 'src' }],
+      ['glob', { pattern: '**/*.ts' }],
+      ['bash', { command: 'cat ../x' }],
+    ] as const) {
+      expect(blocked(tool, input), `${tool} ${JSON.stringify(input)}`).toBe(false);
+    }
+    for (const [tool, input] of [
+      ['read', { path: '../luar.txt' }],
+      ['read', { path: '/etc/passwd' }],
+      ['read', { path: '~/.ssh/id_ed25519' }],
+      ['grep', { pattern: 'x', path: 'src;..' }],
+      ['glob', { pattern: '../**/*.ts' }],
+      ['ast_grep', { paths: ['src', '/home'] }],
+      ['lsp', { file: '/etc/hosts' }],
+    ] as const) {
+      expect(blocked(tool, input), `${tool} ${JSON.stringify(input)}`).toBe(true);
+    }
+  });
+
   it('server MCP run: mcp.json dan overlay ditulis di folder run (bukan worktree), tool tampil langsung, tunggu koneksi', async () => {
     const { handle, launched } = await launchReplay('text-only', {
       mcpServers: {
@@ -127,7 +171,7 @@ describe('peluncuran omp', () => {
     const overlay = launched.args[launched.args.indexOf('--config') + 1] ?? '';
     expect(overlay.startsWith(runDir)).toBe(true);
     expect(await readFile(overlay, 'utf8')).toBe(
-      `skills:\n  customDirectories:\n    - ${JSON.stringify(join(runDir, 'agent', 'skills'))}\ntools:\n  xdev: false\n`,
+      `skills:\n  customDirectories:\n    - ${JSON.stringify(join(runDir, 'agent', 'skills'))}\nfetch:\n  enabled: false\ngithub:\n  enabled: false\ntools:\n  xdev: false\n  approval:\n    web_search: prompt\n`,
     );
     expect(launched.env.OMP_MCP_STARTUP_TIMEOUT_MS).toBe('0');
   });
@@ -141,6 +185,24 @@ describe('peluncuran omp', () => {
     const overlay = launched.args[launched.args.indexOf('--config') + 1] ?? '';
     expect(await readFile(overlay, 'utf8')).toContain('customDirectories:');
     expect(launched.env.OMP_MCP_STARTUP_TIMEOUT_MS).toBeUndefined();
+  });
+
+  it('web bawaan omp: baca URL selalu mati; web_search mati bila aios_tools ada, selain itu lewat izin', async () => {
+    const { handle, launched } = await launchReplay('text-only', {
+      mcpServers: { aios_tools: { url: 'http://127.0.0.1:1/mcp/r' } },
+    });
+    await collect(handle);
+    const overlay = launched.args[launched.args.indexOf('--config') + 1] ?? '';
+    expect(await readFile(overlay, 'utf8')).toBe(
+      `skills:\n  customDirectories:\n    - ${JSON.stringify(join(runDir, 'agent', 'skills'))}\nfetch:\n  enabled: false\ngithub:\n  enabled: false\nweb_search:\n  enabled: false\ntools:\n  xdev: false\n`,
+    );
+
+    const off = await launchReplay('text-only');
+    await collect(off.handle);
+    const plain = off.launched.args[off.launched.args.indexOf('--config') + 1] ?? '';
+    expect(await readFile(plain, 'utf8')).toBe(
+      `skills:\n  customDirectories:\n    - ${JSON.stringify(join(runDir, 'agent', 'skills'))}\nfetch:\n  enabled: false\ngithub:\n  enabled: false\ntools:\n  approval:\n    web_search: prompt\n`,
+    );
   });
 
   it('skill: tanpa katalog --no-skills; dengan katalog hanya --skills=<id terpasang> dan SKILL.md ditulis di folder run', async () => {
@@ -361,7 +423,7 @@ describe('peluncuran omp', () => {
     expect(on.launched.args).not.toContain('--no-lsp');
     const overlay = on.launched.args[on.launched.args.indexOf('--config') + 1] ?? '';
     expect(await readFile(overlay, 'utf8')).toBe(
-      `skills:\n  customDirectories:\n    - ${JSON.stringify(join(runDir, 'agent', 'skills'))}\ntools:\n  xdev: false\nlsp:\n  requestTimeout: 60\n`,
+      `skills:\n  customDirectories:\n    - ${JSON.stringify(join(runDir, 'agent', 'skills'))}\nfetch:\n  enabled: false\ngithub:\n  enabled: false\ntools:\n  xdev: false\n  approval:\n    web_search: prompt\nlsp:\n  requestTimeout: 60\n`,
     );
   });
 
@@ -374,6 +436,22 @@ describe('peluncuran omp', () => {
     expect(yaml).toContain('apiKey: "kunci-lokal"');
     expect(yaml).toContain('- id: "combo/code"');
     expect(yaml).toContain('authHeader: true');
+  });
+
+  it('models.yml: bawaan reasoning false, 128000/8192; opsi model menimpa sebagian', async () => {
+    const first = await launchReplay('text-only');
+    await collect(first.handle);
+    const yaml = await readFile(join(runDir, 'agent', 'models.yml'), 'utf8');
+    expect(yaml).toContain('reasoning: false');
+    expect(yaml).toContain('contextWindow: 128000');
+    expect(yaml).toContain('maxTokens: 8192');
+
+    const second = await launchReplay('text-only', {}, { reasoning: true, maxTokens: 32000 });
+    await collect(second.handle);
+    const tuned = await readFile(join(runDir, 'agent', 'models.yml'), 'utf8');
+    expect(tuned).toContain('reasoning: true');
+    expect(tuned).toContain('contextWindow: 128000');
+    expect(tuned).toContain('maxTokens: 32000');
   });
 
   it('cwd atau runDir kosong ditolak sebelum proses dimulai', async () => {
@@ -943,6 +1021,71 @@ describe('urutan frame sintetis (bentuk frame dari rekaman)', () => {
     expect(events.slice(0, 2)).toEqual([
       { type: 'reasoning.delta', messageId: MESSAGE, text: 'Pertama, baca berkasnya. ' },
       { type: 'message.delta', messageId: MESSAGE, text: 'Selesai.' },
+    ]);
+  });
+
+  it('narasi antar-giliran: giliran asisten baru dipisah paragraf; ringkasan tetap jawaban terakhir', async () => {
+    const { transport, handle } = await boot({ t: 0 });
+    const say = (delta: string) =>
+      frame(transport, {
+        type: 'message_update',
+        assistantMessageEvent: { type: 'text_delta', delta },
+      });
+    const end = (text: string) =>
+      frame(transport, {
+        type: 'message_end',
+        message: { role: 'assistant', content: [{ type: 'text', text }] },
+      });
+    frame(transport, { type: 'message_start', message: { role: 'assistant' } });
+    say('Saya cek yang terdampak.');
+    end('Saya cek yang terdampak.');
+    frame(transport, { type: 'message_start', message: { role: 'toolResult' } });
+    frame(transport, { type: 'message_start', message: { role: 'assistant' } });
+    say('Pemanggil ada di cart.ts.\n');
+    end('Pemanggil ada di cart.ts.\n');
+    // Tanpa message_start (versi omp lain): message_end sebelumnya tetap menandai giliran baru.
+    say('Selesai.');
+    end('Selesai.');
+    frame(transport, { id: 'p1', type: 'prompt_result', status: 'completed' });
+
+    const events = await collect(handle);
+
+    const deltas = events.flatMap((e) => (e.type === 'message.delta' ? [e.text] : []));
+    expect(deltas).toEqual([
+      'Saya cek yang terdampak.',
+      '\n\nPemanggil ada di cart.ts.\n',
+      '\nSelesai.',
+    ]);
+    expect(events.at(-1)).toMatchObject({ type: 'run.completed', summary: 'Selesai.' });
+  });
+
+  it('alasan galat tool dialirkan sebagai keluaran stderr (galat MCP tanpa keluaran parsial)', async () => {
+    const { transport, handle } = await boot({ t: 0 });
+    frame(transport, {
+      type: 'tool_execution_start',
+      toolCallId: 'call_w',
+      toolName: 'mcp__aios_tools_web_read',
+      args: { url: 'https://vitest.dev/' },
+    });
+    frame(transport, {
+      type: 'tool_execution_end',
+      toolCallId: 'call_w',
+      toolName: 'mcp__aios_tools_web_read',
+      result: { content: [{ type: 'text', text: 'MCP error: 409 run_not_active' }] },
+      isError: true,
+    });
+    frame(transport, { id: 'p1', type: 'prompt_result', status: 'completed' });
+
+    const events = await collect(handle);
+
+    expect(events.slice(1, 3)).toEqual([
+      {
+        type: 'tool.output',
+        toolCallId: 'call_w',
+        chunk: 'MCP error: 409 run_not_active',
+        stream: 'stderr',
+      },
+      { type: 'tool.finished', toolCallId: 'call_w', status: 'error', durationMs: 0 },
     ]);
   });
 

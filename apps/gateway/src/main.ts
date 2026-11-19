@@ -148,8 +148,8 @@ async function main(): Promise<void> {
   const skillUsage = createSkillUsage({ db, skills, manager: skillManager });
   const teamStore = createTeamEventStore(db, hub);
   const store = createEventStore(db, hub);
-  const projects = createProjectsService({ db });
   const workerHub = createWorkerHub();
+  const projects = createProjectsService({ db, isWorkerOnline: (id) => workerHub.isOnline(id) });
   const workerRelay = createWorkerRelay({ hub: workerHub, projects });
   workerHub.onPresence((deviceId, online) => workerRelay.presence(deviceId, online));
   const observer = createRunObserver(log);
@@ -215,7 +215,11 @@ async function main(): Promise<void> {
     store,
     hub,
     observer,
-    adapter: createHermesAdapter({ baseUrl: config.HERMES_URL, apiKey: config.HERMES_API_KEY }),
+    adapter: createHermesAdapter({
+      baseUrl: config.HERMES_URL,
+      apiKey: config.HERMES_API_KEY,
+      sessionKey: config.HERMES_SESSION_KEY,
+    }),
     // Satu sakelar: route /v1/mcp dan `run.start.gatewayTools` menyala bersama (docs/DESIGN_MCP_TOOLS.md).
     workerAdapter: createWorkerRelayAdapter({
       relay: workerRelay,
@@ -341,7 +345,12 @@ async function main(): Promise<void> {
   const app = buildApp({
     config,
     health,
-    auth: createAuthService({ db, keys, log: { warn: (obj, msg) => app.log.warn(obj, msg) } }),
+    auth: createAuthService({
+      db,
+      keys,
+      log: { warn: (obj, msg) => app.log.warn(obj, msg) },
+      onWorkerReplaced: (replaced, deviceId) => workerRelay.moveDevice(replaced, deviceId),
+    }),
     devices: createDevicesService({ db }),
     llm: {
       client,
@@ -382,6 +391,11 @@ async function main(): Promise<void> {
       health,
       isWorkerOnline: (id) => workerHub.isOnline(id),
       queues: boss,
+      // Hermes hanya tersambung ke aios_tools bila MCP menyala DAN principal Hermes dikonfigurasi.
+      agentTools: {
+        mcp: config.MCP_TOOLS_ENABLED === 'true',
+        hermes: config.MCP_TOOLS_ENABLED === 'true' && Boolean(config.MCP_HERMES_TOKEN_SHA256),
+      },
     }),
     worker: { hub: workerHub, relay: workerRelay },
     ws: {

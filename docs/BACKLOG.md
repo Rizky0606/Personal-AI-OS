@@ -187,7 +187,7 @@ Sumber: `docs/VERIFICATION.md` bagian 4. Selesaikan sebelum fase yang disebut.
 - [ ] **Anggaran:** skill ≤ 4.000 token (dokumen). Anggaran seluruh bundel ≤ 6.000 token adalah **asumsi saya** (dokumen hanya menetapkan anggaran skill). Token diperkirakan `ceil(karakter / 3,5)` tanpa tokenizer (condong ke angka besar). Ukuran sekarang (perkiraan): general 1.259, debugger 1.321, reviewer 1.410, researcher 1.422, writer 1.436, backend 1.767, frontend 2.042; skill saja 877–1.723. Tes memastikan setiap role di bawah kedua anggaran.
 - [ ] **Format bundel:** `# Aturan perilaku agent` → `# Peran: <nama>` + isi role → `# Skill inti` → `# Skill khusus`, tiap skill sebagai `## <id>` diikuti isinya.
 - [ ] **Model dan combo di frontmatter adalah nama yang saya pilih:** `general-main`, `general-cheap`, `research-main` untuk role Umum; `coding-main` dan `coding-cheap` untuk role Coding (dua yang terakhir muncul di dokumen). Combo ini harus dibuat di 9Router; Hermes sendiri mengabaikan `model` (VERIFICATION.md). `approval`: `auto-safe` untuk researcher dan reviewer (baca saja), `ask` untuk sisanya.
-- [ ] **`GET /roles`** mengembalikan `RoleInfo` (id, name, group, engine, model, fallbackModel, approval, skills) dengan `skills` = skill inti + khusus. Isi prompt, handoff, dan contoh tidak dikirim ke klien (dipakai router di Fase 8). `RoleListSchema` ditambahkan ke contracts.
+- [ ] **`GET /roles`** mengembalikan `RoleInfo` (id, name, group, engine, model, approval, skills) dengan `skills` = skill inti + khusus. Isi prompt, handoff, dan contoh tidak dikirim ke klien (dipakai router di Fase 8). `RoleListSchema` ditambahkan ke contracts.
 - [x] **Hanya role `general` yang dipakai run** — diselesaikan di Fase 8 (router otomatis dan pilihan manual).
 - [ ] **Bundel dikirim sebagai satu pesan `system` di setiap request ke Hermes** (~1.300 token untuk general). Dokumentasi Hermes menyatakan pesan sistem ditumpuk di atas prompt inti-nya, tetapi **tidak terverifikasi** apakah pesan itu juga ikut tersimpan di transkrip sesi dan menumpuk tiap giliran. Cek di VPS; bila menumpuk, kirim hanya pada giliran pertama sesi atau saat role berubah.
 
@@ -941,9 +941,10 @@ Slice 1 selesai di cabang `feat/mcp-konektor`: konektor HTTP jarak jauh dengan t
 - [x] **Catatan "Dependensi worktree"**: worktree dengan `package.json` tanpa `node_modules` membuat agent menjalankan perintah instal sesuai lockfile (lewat approval, tanpa membuat lockfile baru) sebelum typecheck.
 - [ ] **Perintah verifikasi milik pemilik di Setup worktree**, dijalankan worker setelah agent selesai; hasil tampil di tinjauan dan dikirim balik ke agent bila gagal. Satu-satunya lapis yang tidak bergantung pada kepatuhan model.
 - [ ] **Server bahasa TypeScript tidak ada di PC pemilik**: LSP omp nyala bawaan tetapi `typescript-language-server` jarang ada di `devDependencies`; tanpa server di PATH, `lsp` menjawab "No language server found". Belum ada pemeriksaan atau petunjuk di desktop.
-- [ ] **`reasoning: false` untuk semua model di `models.yml` run omp** (`packages/adapters/src/omp.ts`): belum diukur apakah combo 9Router mendukung penalaran dan apakah menyalakannya memperdalam analisis.
+- [x] **`reasoning: false` untuk semua model di `models.yml` run omp** — kini bisa diatur per worker (`AIOS_OMP_REASONING`, `AIOS_OMP_CONTEXT_WINDOW`, `AIOS_OMP_MAX_TOKENS`); bawaan tetap `false` karena `coding-main` tidak mengirim penalaran (diukur lewat proxy, `DESIGN_PRESISI_AGENT.md` 2.6). Sisa: pengaturan per model/combo dari gateway bila combo penalaran dipakai.
 - [ ] **Tanda "hanya format" per berkas di tinjauan** (hunk yang berbeda hanya spasi), bila scope creep jenis format ulang teramati di project nyata.
-- [ ] **`fallback_model: coding-cheap` tidak dipakai saat run** dan combo itu tidak ada di 9Router: hapus dari role atau terapkan sebagai fallback sungguhan.
+- [x] **`fallback_model: coding-cheap` tidak dipakai saat run** dan combo itu tidak ada di 9Router — dihapus dari role, skema frontmatter, registry, dan `RoleInfo` (fix/project-inti): fallback antar-penyedia sudah dikerjakan combo 9Router, dan mengulang run coding dengan model lain setelah agent mulai mengubah berkas tidak aman.
+- [x] **Gerbang baca di luar folder run** — diselesaikan dengan hook `tool_call` per run dari adapter (`read-guard.mjs`, lihat `docs/SECURITY_OPS.md`), bukan `always-ask-cached`: tidak butuh grant awal, tidak memakai `approval-cache.db`, dan baca di dalam folder tetap diam. Baca di luar folder ditolak, bukan ditanyakan (adapter belum menjawab dialog `confirm` hook). Sisa: opsi "izinkan baca folder ini" bila pemilik memang butuh.
 
 ## Temuan: kerja langsung di branch aktif (feat/branch-aktif)
 
@@ -960,3 +961,20 @@ Slice 1 selesai di cabang `feat/mcp-konektor`: konektor HTTP jarak jauh dengan t
 - [ ] **Android tidak bisa meninjau** hasil run `in_place` (diff hanya dibaca dari worker lokal), padahal hasil itu memblokir run berikutnya di repo yang sama (`workspace_busy`) sampai diputuskan dari desktop.
 - [ ] **Aksi tab Git pemilik tidak dikunci selama run `in_place`** (stage, commit, checkout, pull). Commit atau pindah branch pemilik di tengah run ditangani saat tinjauan (`headMoved`: maju = commit di atas HEAD terbaru; berganti/ditulis ulang = `head_moved`), tetapi tab Git belum memperingatkan bahwa run sedang memakai folder itu.
 - [ ] **Penolakan `workspace_busy`/`workspace_dirty` belum memberi tautan ke run yang memblokir**; tombol satu klik hanya "Jalankan sekali ini di worktree terpisah" dan "Buka tab Git".
+
+## Temuan: chat umum (uji umum v1.2.0, `fix/chat-umum`)
+
+- [x] **Keputusan: sesi Hermes baru membawa riwayat di pesan user.** Hermes mengabaikan riwayat di body bila `X-Hermes-Session-Id` dikirim, jadi adapter melipatnya ke pesan user giliran pertama (`foldHistory`). Konsekuensi: transkrip Hermes untuk sesi itu memuat blok `<riwayat>`, dan judul Hermes untuk sesi itu bisa diambil dari blok tersebut (judul AIOS tidak terpengaruh).
+- [ ] **±84% token input "Halo" milik Hermes sendiri** (13.362 dari 15.672 token; diukur tanpa pesan sistem AIOS). Memangkasnya perlu konfigurasi Hermes (mis. toolset platform `api_server`), di luar repo ini; keputusan pemilik.
+- [ ] **Judul percakapan dibuat dua kali** (gateway `TITLE_MODEL` dan `auxiliary.title_generation` Hermes untuk sesinya sendiri yang tidak dipakai AIOS). Hermes tidak punya sakelar per permintaan; satu-satunya cara aman adalah `auxiliary.title_generation.enabled: false` di konfigurasi Hermes (keputusan pemilik). Judul gateway dipertahankan.
+- [ ] **Usulan memori/jadwal dari chat umum di produksi** butuh runbook `docs/RUNBOOK_HERMES_MCP.md` dijalankan (`MCP_HERMES_TOKEN_SHA256` + server MCP `aios` di Hermes). Sampai itu, layar Status menyatakan Hermes tidak tersambung dan chat menawarkan tombol Ingat.
+- [ ] **`rememberFactFrom` hanya mengenali pesan yang DIAWALI permintaan mengingat** ("tolong ingat bahwa…", "catat…", "remember that…"; heuristik tanpa model); kalimat bebas seperti "jangan lupa aku vegetarian" belum memicu tawaran Ingat.
+- [ ] **Percobaan ulang otomatis hanya untuk pesan chat ke Hermes** (yang punya `freshSession`) sebelum keluaran pertama; run coding (omp) dan dsh tidak diulang otomatis.
+- [ ] Jadwal yang meminta "minimal tiga sumber" bisa dipenuhi halaman indeks/kategori (uji umum B9); belum ada penyaring rujukan.
+- [ ] Pemilih model chat umum tetap "Model diatur di server Hermes" (PRD W1 menyebut pilih model); butuh `direct_model_requests` di Hermes.
+
+## Temuan uji chat project (fix/ui-project, laporan `/tmp/uji-project/LAPORAN.md` B6)
+
+- [x] **Gateway tidak menandai run yang dihentikan pemilik tetapi sudah mengubah berkas.** Diselesaikan dengan `Run.endReason = stopped` (fix/project-inti, migrasi `0024`) yang juga dibawa `run.status`; desktop memakainya untuk "Dihentikan" di ringkasan jawaban, banner tinjauan, dan daftar run, dan catatan localStorage sementara (`stoppedRuns.ts`) dihapus.
+- [x] **Run yang dilanjutkan pesan berikutnya tampil "Ditolak".** Diselesaikan dengan `Run.endReason = superseded`; desktop menampilkan "Dilanjutkan di run berikutnya" di daftar run dan ringkasan jawaban.
+- [ ] **Android belum memakai `Run.endReason`**: run yang dihentikan dengan perubahan masih tampil seperti tinjauan biasa, dan run yang digantikan tampil "Ditolak".

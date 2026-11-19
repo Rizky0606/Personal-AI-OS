@@ -32,19 +32,26 @@ export function formatDuration(ms: number): string {
 export function ToolStepRow({ step }: { step: ActivityStep }) {
   const label = copy.chat.tool[step.status];
   return (
-    <li className="flex min-w-0 items-center gap-2 py-0.5 text-ui text-text-2">
-      {statusIcon[step.status]}
-      <span className="sr-only">{label}: </span>
-      <span className={cn('shrink-0', step.status === 'error' && 'text-danger')}>{step.label}</span>
-      {step.target ? (
-        <span title={step.target} className="min-w-0 truncate font-mono text-meta text-text-3">
-          {step.target}
+    <li className="py-0.5 text-ui text-text-2">
+      <div className="flex min-w-0 items-center gap-2">
+        {statusIcon[step.status]}
+        <span className="sr-only">{label}: </span>
+        <span className={cn('shrink-0', step.status === 'error' && 'text-danger')}>
+          {step.label}
         </span>
-      ) : null}
-      {step.durationMs !== null && step.status !== 'running' ? (
-        <span className="ml-auto shrink-0 font-mono text-meta text-text-3">
-          {formatDuration(step.durationMs)}
-        </span>
+        {step.target ? (
+          <span title={step.target} className="min-w-0 truncate font-mono text-meta text-text-3">
+            {step.target}
+          </span>
+        ) : null}
+        {step.durationMs !== null && step.status !== 'running' ? (
+          <span className="ml-auto shrink-0 font-mono text-meta text-text-3">
+            {formatDuration(step.durationMs)}
+          </span>
+        ) : null}
+      </div>
+      {step.error ? (
+        <p className="mt-0.5 ml-6 font-mono text-meta break-words text-danger">{step.error}</p>
       ) : null}
     </li>
   );

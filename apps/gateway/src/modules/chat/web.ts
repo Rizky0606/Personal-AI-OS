@@ -18,8 +18,16 @@ export interface WebTurn {
 }
 
 export interface WebContext {
-  /** Bagian prompt berisi hasil pencarian web untuk `text`; selalu mengembalikan teks (kegagalan dicatat di dalamnya). */
-  contextFor(text: string, history?: readonly WebTurn[], signal?: AbortSignal): Promise<string>;
+  /**
+   * Bagian prompt berisi hasil pencarian web untuk `text`; selalu mengembalikan teks (kegagalan dicatat di dalamnya).
+   * `onQuery` menerima kueri yang dibuat model sebelum pencarian (ditampilkan di langkah `cari_web`).
+   */
+  contextFor(
+    text: string,
+    history?: readonly WebTurn[],
+    signal?: AbortSignal,
+    onQuery?: (query: string) => Promise<void>,
+  ): Promise<string>;
 }
 
 const QUERY_SYSTEM = [
@@ -88,8 +96,9 @@ export function createWebContext(deps: {
   }
 
   return {
-    async contextFor(text, history = [], signal) {
+    async contextFor(text, history = [], signal, onQuery) {
       const query = await queryFor(text, history, signal);
+      await onQuery?.(query);
       let results: SearchResult[];
       try {
         results = await deps.search.search(query, signal);

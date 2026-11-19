@@ -27,7 +27,8 @@ export interface StartRunInput {
   sessionId?: string | undefined;
   /**
    * Riwayat sebelum `prompt`, kronologis. Hanya diisi pada giliran pertama sesi baru (setelah percakapan
-   * dipotong lewat edit/hapus pesan), karena sesi lama di mesin masih memuat bagian yang dibuang.
+   * dipotong lewat edit/hapus pesan, atau run sebelumnya dihentikan/gagal), karena sesi lama di mesin bisa memuat
+   * bagian yang dibuang atau tidak pernah dilihat pemilik. Hermes dengan `sessionId` melipatnya ke pesan user.
    */
   history?: readonly { role: 'user' | 'assistant'; content: string }[] | undefined;
   /** Gambar lampiran pesan ini (base64). Hanya Hermes; omp mengabaikannya. */
@@ -73,7 +74,16 @@ export interface RunHandle {
   /** Menarik arahan dari antrean agent sebelum diproses (`text` persis seperti di `queue.updated`). */
   removeQueued(queue: QueueName, text: string): Promise<void>;
   cancel(): Promise<void>;
-  resolveApproval(id: string, decision: 'allow' | 'deny', remember?: boolean): Promise<void>;
+  /**
+   * `forRun`: "Izinkan tulis berkas untuk run ini" (hanya dipakai relay worker; worker yang menegakkannya).
+   * Adapter lain mengabaikannya.
+   */
+  resolveApproval(
+    id: string,
+    decision: 'allow' | 'deny',
+    remember?: boolean,
+    forRun?: boolean,
+  ): Promise<void>;
   /** Menjawab pertanyaan agent (`question.asked`); `cancelled` membuat agent memakai pilihan yang direkomendasikan. */
   answerQuestion(
     questionId: string,

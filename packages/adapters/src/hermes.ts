@@ -88,14 +88,32 @@ function statusError(status: number): AdapterError {
 }
 
 /**
+ * Riwayat dari aplikasi + pesan baru sebagai satu pesan user, untuk giliran pertama sesi Hermes baru (Hermes
+ * mengabaikan riwayat di body bila `X-Hermes-Session-Id` dikirim).
+ */
+export function foldHistory(
+  history: NonNullable<StartRunInput['history']>,
+  prompt: string,
+): string {
+  const turns = history
+    .map((turn) => `[${turn.role === 'user' ? 'Pemilik' : 'Asisten'}]\n${turn.content}`)
+    .join('\n\n');
+  return [
+    'Riwayat percakapan ini sebelum pesan sekarang, disalin aplikasi karena sesi agent baru. Pakai sebagai konteks; jangan dibalas satu per satu.',
+    `<riwayat>\n${turns}\n</riwayat>`,
+    `Pesan sekarang:\n${prompt}`,
+  ].join('\n\n');
+}
+
+/**
  * Adapter Hermes lewat `POST /v1/chat/completions` (stream). Riwayat percakapan dipegang Hermes
- * berdasarkan `X-Hermes-Session-Id`, jadi hanya pesan baru yang dikirim. Pembatalan memutus koneksi
- * (`AbortController`): **diverifikasi Sesi P5 di VPS bahwa Hermes TIDAK menghentikan eksekusi tool di
- * sisi server** saat koneksi SSE diputus (perintah `sleep` + `touch` tetap menghasilkan berkas beberapa
- * detik setelah koneksi klien dibunuh). `/v1/chat/completions` tidak mengembalikan run id apa pun (hanya
- * `X-Hermes-Session-Id` yang dipantulkan di header respons), jadi `POST /v1/runs/{id}/stop` TIDAK BISA
- * dipakai dari jalur ini — endpoint itu milik jalur submission `/v1/runs` yang terpisah dan tidak dipakai
- * adapter ini. Lihat docs/ADAPTER_EVENTS.md ("Pembatalan Hermes") untuk detail dan keputusan yang dibutuhkan.
+ * berdasarkan `X-Hermes-Session-Id`, jadi hanya pesan baru yang dikirim. Memutus koneksi SSE saja TIDAK
+ * menghentikan Hermes (diverifikasi Sesi P5: tool tetap berjalan; uji umum v1.2.0: sesi Hermes tetap menyimpan
+ * jawaban penuh 8.916 karakter padahal pemilik melihat 404). Karena itu pembatalan dan macet (`idle_timeout`)
+ * juga memanggil `POST /v1/runs/{id}/stop` dengan `id` chunk stream (`chatcmpl-…`): diverifikasi pada Hermes VPS
+ * 2026-11-18 menjawab 200 `{"status":"stopping"}` dan sesi hanya menyimpan ±420 karakter. Hermes tetap bisa
+ * menyimpan sedikit teks sesudah titik putus, jadi gateway juga memulai sesi baru berisi riwayat dari DB pada
+ * giliran berikutnya (runner). Lihat docs/ADAPTER_EVENTS.md ("Pembatalan Hermes").
  */
 export function createHermesAdapter(options: HermesAdapterOptions): AgentAdapter {
   const {
@@ -107,7 +125,24 @@ export function createHermesAdapter(options: HermesAdapterOptions): AgentAdapter
     fetch: doFetch = fetch,
     now = Date.now,
   } = options;
-  const url = `${options.baseUrl.replace(/\/+$/, '')}/v1/chat/completions`;
+  const base = options.baseUrl.replace(/\/+$/, '');
+  const url = `${base}/v1/chat/completions`;
+  const auth: Record<string, string> = apiKey ? { authorization: `Bearer ${apiKey}` } : {};
+
+  /** Menghentikan run Hermes di server (tool ikut berhenti). Upaya terbaik: galat dan jawaban diabaikan. */
+  async function stopOnServer(completionId: string): Promise<void> {
+    try {
+      const res = await doFetch(`${base}/v1/runs/${encodeURIComponent(completionId)}/stop`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', ...auth },
+        body: '{}',
+        signal: AbortSignal.timeout(5000),
+      });
+      await res.body?.cancel().catch(() => undefined);
+    } catch {
+      // Hermes lama tanpa /v1/runs atau tidak terjangkau: sesi baru di giliran berikutnya tetap menjaga riwayat.
+    }
+  }
 
   return {
     id: 'hermes',
@@ -116,9 +151,13 @@ export function createHermesAdapter(options: HermesAdapterOptions): AgentAdapter
     startRun(input: StartRunInput): Promise<RunHandle> {
       const controller = new AbortController();
       let reason: Abort | undefined;
+      /** `id` chunk pertama dari Hermes; dipakai untuk menghentikan run di server. */
+      let completionId: string | undefined;
       const stop = (why: Abort) => {
+        const first = reason === undefined;
         reason ??= why;
         controller.abort();
+        if (first && completionId && why !== 'connect_timeout') void stopOnServer(completionId);
       };
       if (input.signal?.aborted) stop('cancelled');
       input.signal?.addEventListener('abort', () => stop('cancelled'), { once: true });
@@ -130,20 +169,27 @@ export function createHermesAdapter(options: HermesAdapterOptions): AgentAdapter
           | ({ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } })[];
         const messages: { role: string; content: Content }[] = [];
         if (input.systemPrompt) messages.push({ role: 'system', content: input.systemPrompt });
-        // Sesi baru setelah percakapan dipotong: Hermes belum punya transkripnya, jadi riwayat dikirim di sini.
-        for (const turn of input.history ?? []) messages.push({ ...turn });
+        // Sesi baru (setelah percakapan dipotong, run dihentikan atau gagal): Hermes belum punya transkripnya.
+        // Dengan X-Hermes-Session-Id Hermes MENGABAIKAN riwayat di body dan memuatnya dari state.db (terbukti di
+        // Hermes VPS 2026-11-18: riwayat di body tidak menambah token input), jadi riwayat dilipat ke pesan user
+        // giliran ini, yang disimpan Hermes sehingga giliran berikutnya tetap membawanya. Tanpa sesi, Hermes
+        // memakai riwayat di body.
+        const history = input.history ?? [];
+        const fold = Boolean(input.sessionId) && history.length > 0;
+        if (!fold) for (const turn of history) messages.push({ ...turn });
+        const prompt = fold ? foldHistory(history, input.prompt) : input.prompt;
         // Gambar dikirim inline sebagai data URL (Hermes menolak upload berkas, tetapi menerima gambar).
         messages.push({
           role: 'user',
           content: input.images?.length
             ? [
-                { type: 'text', text: input.prompt },
+                { type: 'text', text: prompt },
                 ...input.images.map((image) => ({
                   type: 'image_url' as const,
                   image_url: { url: `data:${image.mime};base64,${image.data}` },
                 })),
               ]
-            : input.prompt,
+            : prompt,
         });
 
         const connectTimer = setTimeout(() => stop('connect_timeout'), connectTimeoutMs);
@@ -156,7 +202,7 @@ export function createHermesAdapter(options: HermesAdapterOptions): AgentAdapter
               accept: 'text/event-stream',
               'x-hermes-session-key': sessionKey,
               ...(input.sessionId ? { 'x-hermes-session-id': input.sessionId } : {}),
-              ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}),
+              ...auth,
             },
             body: JSON.stringify({
               model: input.model ?? model,
@@ -271,6 +317,7 @@ export function createHermesAdapter(options: HermesAdapterOptions): AgentAdapter
               continue;
             }
             if (!isRecord(chunk)) continue;
+            if (!completionId && typeof chunk.id === 'string' && chunk.id) completionId = chunk.id;
             if (isRecord(chunk.error) && typeof chunk.error.message === 'string') {
               failure = chunk.error.message;
             }

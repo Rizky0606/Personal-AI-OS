@@ -81,6 +81,30 @@ describe('WorkspaceScreen', () => {
     expect(api.cancelRun).toHaveBeenCalledWith(RUN_1);
   });
 
+  it('run yang dihentikan pemilik tetapi menunggu tinjauan berlabel Dihentikan, bukan sekadar Perlu ditinjau', async () => {
+    api.listRuns.mockResolvedValue([
+      entry({ id: RUN_1, status: 'needs_review', endReason: 'stopped' }, 'Dihentikan di tengah'),
+      entry({ id: RUN_2, status: 'needs_review' }, 'Selesai normal'),
+    ]);
+    await renderScreen(<WorkspaceScreen />, '/workspace');
+
+    expect(
+      await screen.findByRole('img', { name: copy.workspace.stoppedReview }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: copy.runStatus.needs_review })).toBeInTheDocument();
+  });
+
+  it('run yang digantikan run lanjutan berlabel netral, bukan Ditolak', async () => {
+    api.listRuns.mockResolvedValue([
+      entry({ id: RUN_1, status: 'rejected', endReason: 'superseded' }, 'Dilanjutkan'),
+      entry({ id: RUN_2, status: 'rejected' }, 'Ditolak pemilik'),
+    ]);
+    await renderScreen(<WorkspaceScreen />, '/workspace');
+
+    expect(await screen.findByRole('img', { name: copy.workspace.superseded })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: copy.runStatus.rejected })).toBeInTheDocument();
+  });
+
   it('tanpa run: tombol Buka kanban pindah ke papan kartu', async () => {
     api.listRuns.mockResolvedValue([]);
     const user = userEvent.setup();
