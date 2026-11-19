@@ -99,6 +99,8 @@ export async function conversationProgress(
   const tools = new Set<string>();
   const outputs: ProgressOutput[] = [];
   const seenFiles = new Set<string>();
+  // Urutan event di dalam run (seq) untuk output dari event: pemecah seri bila cap waktunya sama persis.
+  const seqOf = new Map<ProgressOutput, number>();
   for (const row of events) {
     const event = row.payload;
     if (event.type === 'tool.started') tools.add(event.name);
@@ -125,7 +127,7 @@ export async function conversationProgress(
       };
     } else if (event.type === 'artifact.created') {
       seenFiles.add(event.fileId);
-      outputs.push({
+      const output: ProgressOutput = {
         kind: isRasterImageMime(event.mime) ? 'image' : 'file',
         runId: row.runId,
         at: iso(row.ts),
@@ -133,7 +135,9 @@ export async function conversationProgress(
         name: event.name,
         mime: event.mime,
         size: event.size,
-      });
+      };
+      outputs.push(output);
+      seqOf.set(output, row.seq);
     }
   }
   used.tools = [...tools];
@@ -237,14 +241,16 @@ export async function conversationProgress(
       });
 
   // Beberapa output bisa punya cap waktu yang persis sama (event dicatat di detik/milidetik yang sama di
-  // bawah beban tinggi); tanpa pemecah seri kedua urutannya tidak deterministik antar-panggilan (ketahuan
+  // bawah beban tinggi); tanpa pemecah seri urutannya tidak deterministik antar-panggilan (ketahuan
   // flaky di CI, bukan lokal, karena lebih banyak pekerjaan paralel). Pemecah seri: run lebih baru duluan
-  // (byRun terbalik, konsisten dengan "hasil kerja terbaru dulu"), lalu `kind` sebagai jatuhan terakhir.
+  // (byRun terbalik, konsisten dengan "hasil kerja terbaru dulu"), lalu `kind`, lalu event yang lebih akhir
+  // di run yang sama (seq lebih besar) duluan.
   outputs.sort((a, b) => {
     if (a.at !== b.at) return a.at < b.at ? 1 : -1;
     const runDiff = byRun(b, a);
     if (runDiff !== 0) return runDiff;
-    return a.kind < b.kind ? -1 : a.kind > b.kind ? 1 : 0;
+    if (a.kind !== b.kind) return a.kind < b.kind ? -1 : 1;
+    return (seqOf.get(b) ?? -1) - (seqOf.get(a) ?? -1);
   });
   return { plan, outputs: outputs.slice(0, PROGRESS_OUTPUTS_MAX), used };
 }
