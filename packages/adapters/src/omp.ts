@@ -266,7 +266,9 @@ export function createOmpAdapter(options: OmpAdapterOptions): AgentAdapter {
       // lewat `read` selalu dimatikan (omp tidak bisa memaksa izin per URL publik). `web_search` dimatikan bila
       // tool gateway tersedia (aios_tools menggantikannya); tanpa tool gateway, ia wajib lewat izin jaringan.
       const gatewayTools = input.mcpServers?.[AIOS_TOOLS_SERVER] !== undefined;
-      overlay.push('fetch:', '  enabled: false');
+      // Tool `github` omp (baca isu/PR lewat `gh` dengan kredensial pemilik, berjenjang read) dipaku mati juga, supaya
+      // `.omp/config.yml` di repo kerja tidak bisa menyalakannya tanpa izin.
+      overlay.push('fetch:', '  enabled: false', 'github:', '  enabled: false');
       if (gatewayTools) overlay.push('web_search:', '  enabled: false');
       else tools.push('  approval:', '    web_search: prompt');
       if (tools.length > 0) overlay.push('tools:', ...tools);

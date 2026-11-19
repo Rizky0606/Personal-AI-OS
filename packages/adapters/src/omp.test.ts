@@ -129,7 +129,7 @@ describe('peluncuran omp', () => {
     const overlay = launched.args[launched.args.indexOf('--config') + 1] ?? '';
     expect(overlay.startsWith(runDir)).toBe(true);
     expect(await readFile(overlay, 'utf8')).toBe(
-      `skills:\n  customDirectories:\n    - ${JSON.stringify(join(runDir, 'agent', 'skills'))}\nfetch:\n  enabled: false\ntools:\n  xdev: false\n  approval:\n    web_search: prompt\n`,
+      `skills:\n  customDirectories:\n    - ${JSON.stringify(join(runDir, 'agent', 'skills'))}\nfetch:\n  enabled: false\ngithub:\n  enabled: false\ntools:\n  xdev: false\n  approval:\n    web_search: prompt\n`,
     );
     expect(launched.env.OMP_MCP_STARTUP_TIMEOUT_MS).toBe('0');
   });
@@ -152,14 +152,14 @@ describe('peluncuran omp', () => {
     await collect(handle);
     const overlay = launched.args[launched.args.indexOf('--config') + 1] ?? '';
     expect(await readFile(overlay, 'utf8')).toBe(
-      `skills:\n  customDirectories:\n    - ${JSON.stringify(join(runDir, 'agent', 'skills'))}\nfetch:\n  enabled: false\nweb_search:\n  enabled: false\ntools:\n  xdev: false\n`,
+      `skills:\n  customDirectories:\n    - ${JSON.stringify(join(runDir, 'agent', 'skills'))}\nfetch:\n  enabled: false\ngithub:\n  enabled: false\nweb_search:\n  enabled: false\ntools:\n  xdev: false\n`,
     );
 
     const off = await launchReplay('text-only');
     await collect(off.handle);
     const plain = off.launched.args[off.launched.args.indexOf('--config') + 1] ?? '';
     expect(await readFile(plain, 'utf8')).toBe(
-      `skills:\n  customDirectories:\n    - ${JSON.stringify(join(runDir, 'agent', 'skills'))}\nfetch:\n  enabled: false\ntools:\n  approval:\n    web_search: prompt\n`,
+      `skills:\n  customDirectories:\n    - ${JSON.stringify(join(runDir, 'agent', 'skills'))}\nfetch:\n  enabled: false\ngithub:\n  enabled: false\ntools:\n  approval:\n    web_search: prompt\n`,
     );
   });
 
@@ -381,7 +381,7 @@ describe('peluncuran omp', () => {
     expect(on.launched.args).not.toContain('--no-lsp');
     const overlay = on.launched.args[on.launched.args.indexOf('--config') + 1] ?? '';
     expect(await readFile(overlay, 'utf8')).toBe(
-      `skills:\n  customDirectories:\n    - ${JSON.stringify(join(runDir, 'agent', 'skills'))}\nfetch:\n  enabled: false\ntools:\n  xdev: false\n  approval:\n    web_search: prompt\nlsp:\n  requestTimeout: 60\n`,
+      `skills:\n  customDirectories:\n    - ${JSON.stringify(join(runDir, 'agent', 'skills'))}\nfetch:\n  enabled: false\ngithub:\n  enabled: false\ntools:\n  xdev: false\n  approval:\n    web_search: prompt\nlsp:\n  requestTimeout: 60\n`,
     );
   });
 

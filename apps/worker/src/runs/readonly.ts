@@ -2,7 +2,7 @@ import { promises as fs } from 'node:fs';
 import nodePath from 'node:path';
 
 /**
- * Perintah baca saja yang diizinkan worker tanpa bertanya (SECURITY_OPS.md, "Perintah baca saja"). Daftar sengaja
+ * Perintah baca saja yang diizinkan worker tanpa bertanya (SECURITY_OPS.md, "Worker dan eksekusi"). Daftar sengaja
  * sempit dan ditulis per perintah; yang tidak cocok persis tetap ditanyakan ke pemilik:
  * - `git status|diff|log|show` tanpa opsi global (`-c`, `-C`, `--git-dir`, ...) dan tanpa opsi yang menulis,
  *   menjalankan program, atau membaca berkas di luar argumen (`--output`, `--ext-diff`, `--textconv`, `-O<berkas>`),
