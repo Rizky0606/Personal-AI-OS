@@ -2,7 +2,7 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { copy } from '../copy';
-import { api, resetApi } from '../test/fakeServices';
+import { resetApi } from '../test/fakeServices';
 import { renderScreen } from '../test/render';
 
 vi.mock('../app/services', async () => (await import('../test/fakeServices')).fakeServices);
@@ -24,14 +24,11 @@ describe('WorkspaceSidebar: aksi di keadaan kosong', () => {
     ).toBeInTheDocument();
   });
 
-  it('di Kelola project (addInMain): tombol tambah hanya di area utama, sidebar menawarkan muat ulang', async () => {
-    const user = userEvent.setup();
+  it('di Kelola project (addInMain): tombol tambah hanya di area utama; sidebar hanya petunjuk tanpa Coba lagi', async () => {
     await renderScreen(<WorkspaceSidebar addInMain />, '/projects');
-    expect(await screen.findByText(copy.projects.empty)).toBeInTheDocument();
+    expect(await screen.findByText(copy.projects.emptySidebar)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: copy.projects.add })).not.toBeInTheDocument();
-
-    api.listProjects.mockClear();
-    await user.click(screen.getByRole('button', { name: copy.states.retry }));
-    expect(api.listProjects).toHaveBeenCalled();
+    // Daftar yang memang kosong bukan galat: tidak ada "Coba lagi" di belakang dialog Tambah project.
+    expect(screen.queryByRole('button', { name: copy.states.retry })).not.toBeInTheDocument();
   });
 });

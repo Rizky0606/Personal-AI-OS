@@ -23,6 +23,9 @@
 .aios-agent-orb-error {
   color: var(--status-error);
 }
+.aios-agent-orb-stopped {
+  color: var(--aios-text-3);
+}
 @media (prefers-reduced-motion: no-preference) {
   .aios-agent-orb-thinking circle:first-child {
     animation: aios-orb-spin 1400ms linear infinite;

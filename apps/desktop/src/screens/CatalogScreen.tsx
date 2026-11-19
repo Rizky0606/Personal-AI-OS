@@ -1,6 +1,8 @@
 import { AgentOrb, type OrbState } from '../chat/AgentOrb';
 import { RunActivity } from '../chat/RunActivity';
+import { ApprovalPanel } from '../chat/ApprovalPanel';
 import type { Activity } from '../realtime/activity';
+import type { PendingApproval } from '../realtime/liveRun';
 import { Plus } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { copy } from '../copy';
@@ -16,7 +18,7 @@ import { StateView, type ViewState } from '../ui/StateView';
 import { TextField } from '../ui/TextField';
 import { useToastStore } from '../ui/Toaster';
 
-const ORB_STATES: OrbState[] = ['idle', 'thinking', 'tool', 'writing', 'done', 'error'];
+const ORB_STATES: OrbState[] = ['idle', 'thinking', 'tool', 'writing', 'done', 'error', 'stopped'];
 
 const phaseActivity = (phase: Activity['phase'], patch: Partial<Activity> = {}): Activity => ({
   headline: 'Memeriksa konfigurasi build',
@@ -49,6 +51,31 @@ const RUN_PHASES: Activity[] = [
   phaseActivity('waiting_approval', { needsAttention: true }),
   phaseActivity('done', { summary: 'Selesai · 12 dtk · 1 langkah' }),
   phaseActivity('error', { summary: 'Gagal · 12 dtk · 1 langkah' }),
+  phaseActivity('cancelled', { summary: 'Dihentikan · 36 dtk · 12 langkah' }),
+  phaseActivity('thinking', { quietMs: 21_000 }),
+];
+
+const approvalOf = (id: string, kind: PendingApproval['kind'], detail: string) => ({
+  approvalId: id,
+  kind,
+  detail,
+  cwd: '/repo',
+  toolCallId: undefined,
+});
+
+const APPROVALS: PendingApproval[] = [
+  approvalOf('perintah', 'command', 'npm test -- --run'),
+  approvalOf(
+    'tulis',
+    'file_write',
+    'Path: test/paginate.test.ts\nContent:\nimport { describe } from "vitest";\n',
+  ),
+  approvalOf('ubah', 'file_write', 'File: src/util/format.ts'),
+  approvalOf(
+    'subagent',
+    'command',
+    'Context:\nKonteks bersama\nBatch agents: scout ×2\nAgent: scout\nTask:\nCari semua pemanggil render.',
+  ),
 ];
 
 const TOKENS = [
@@ -216,8 +243,21 @@ export function CatalogScreen() {
           ))}
         </div>
         <div className="flex flex-col gap-2">
-          {RUN_PHASES.map((activity) => (
-            <RunActivity key={activity.phase} activity={activity} now={0} />
+          {RUN_PHASES.map((activity, index) => (
+            <RunActivity key={index} activity={activity} now={0} />
+          ))}
+        </div>
+      </Section>
+
+      <Section title="Permintaan izin">
+        <div className="flex flex-col gap-3">
+          {APPROVALS.map((approval) => (
+            <ApprovalPanel
+              key={approval.approvalId}
+              approval={approval}
+              busy={false}
+              onResolve={() => undefined}
+            />
           ))}
         </div>
       </Section>

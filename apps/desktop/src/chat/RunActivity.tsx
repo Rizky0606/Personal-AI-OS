@@ -157,6 +157,11 @@ export function RunActivity({ activity, onApproval, output, artifacts = [] }: Ru
         {/* Nama tombol memuat teks yang terlihat (WCAG 2.5.3) lalu aksinya, bukan aksi saja. */}
         <span className="sr-only">{ui.toggle}</span>
       </button>
+      {activity.quietMs !== undefined ? (
+        <p data-run-quiet className="font-mono text-meta text-text-3">
+          {ui.quiet(formatElapsed(activity.quietMs))}
+        </p>
+      ) : null}
       {artifacts.length > 0 && !open ? <ArtifactPreviews artifacts={artifacts} /> : null}
       {open ? (
         <div className="flex animate-aios-enter flex-col gap-2 border-l border-border pl-3">

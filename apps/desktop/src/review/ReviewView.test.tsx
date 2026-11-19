@@ -98,9 +98,16 @@ const open = async () => {
 describe('Tinjau perubahan: tampilan', () => {
   it('tanpa run yang menunggu tinjauan: petunjuk; dengan run: ringkasan, branch, dan file', async () => {
     useUiStore.getState().setReviewRunId(null);
-    const view = await renderScreen(<DiffPanel />);
+    const view = await renderScreen(<DiffPanel />, '/kanban');
     expect(await screen.findByText(copy.review.empty)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: copy.review.openKanban })).toBeInTheDocument();
     view.unmount();
+    // Di chat project, tab Diff tidak menawarkan papan kartu: hasil datang dari pesan di chat ini.
+    const chat = await renderScreen(<DiffPanel />, `/workspace/${uid()}`);
+    expect(await screen.findByText(copy.review.emptyChat)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: copy.review.writeMessage })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: copy.review.openKanban })).toBeNull();
+    chat.unmount();
     useUiStore.getState().setReviewRunId(RUN);
 
     await open();
@@ -347,20 +354,27 @@ describe('Tinjau perubahan: terima dan tolak', () => {
     expect(await screen.findByText(copy.review.rejected)).toBeInTheDocument();
   });
 
-  it('keputusan gagal: pesan galat dengan langkah berikutnya; panel dan komentar tetap', async () => {
-    api.reviewRun.mockRejectedValue(new ApiProblem(503, 'worker_offline', 'x'));
+  it('terima gagal: galat sesuai aksi di dalam dialog yang tetap terbuka; coba lagi berhasil', async () => {
+    api.reviewRun.mockRejectedValueOnce(new ApiProblem(503, 'worker_offline', 'x'));
+    api.reviewRun.mockResolvedValueOnce(accepted);
     const user = userEvent.setup();
     await open();
     await user.click(screen.getByRole('button', { name: copy.review.accept }));
     const dialog = await screen.findByRole('dialog', { name: copy.review.acceptTitle });
     await user.click(within(dialog).getByRole('button', { name: copy.review.accept }));
 
-    expect(await screen.findByText(copy.review.workerOffline)).toBeInTheDocument();
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+      `${copy.review.actionFailed.accept} ${copy.review.holderOffline}`,
+    );
     expect(useUiStore.getState().reviewRunId).toBe(RUN);
-    expect(screen.getByRole('dialog', { name: copy.review.acceptTitle })).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: copy.review.accept }));
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: copy.review.acceptTitle })).toBeNull(),
+    );
+    expect(api.reviewRun).toHaveBeenCalledTimes(2);
   });
 
-  it('galat dari worker saat menerapkan: detail ditampilkan', async () => {
+  it('tolak gagal: galat penolakan (bukan terima) di dialog; menutup dialog membuang galat', async () => {
     api.reviewRun.mockRejectedValue(
       new ApiProblem(409, 'review_failed', 'Hasil run ini sudah tidak ada.'),
     );
@@ -370,9 +384,15 @@ describe('Tinjau perubahan: terima dan tolak', () => {
     const dialog = await screen.findByRole('dialog', { name: copy.review.rejectTitle });
     await user.click(within(dialog).getByRole('button', { name: copy.review.rejectConfirm }));
 
-    expect(
-      await screen.findByText(`${copy.review.failed} Hasil run ini sudah tidak ada.`),
-    ).toBeInTheDocument();
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+      `${copy.review.actionFailed.reject} Hasil run ini sudah tidak ada.`,
+    );
+    expect(screen.getByRole('dialog', { name: copy.review.rejectTitle })).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole('button', { name: copy.review.cancel }));
+    await user.click(screen.getByRole('button', { name: copy.review.reject }));
+    const again = await screen.findByRole('dialog', { name: copy.review.rejectTitle });
+    expect(within(again).queryByRole('alert')).toBeNull();
   });
 });
 
@@ -530,8 +550,9 @@ describe('Tinjau perubahan: batalkan file dan checkpoint', () => {
     expect(await screen.findByText(copy.review.checkpoints.empty)).toBeInTheDocument();
   });
 
-  it('operasi worker gagal: toast galat dari kode worker', async () => {
-    workerApi.reviewUndo.mockRejectedValue(new WorkerCallError('run_active', 'x'));
+  it('kembali ke checkpoint gagal: galat di dalam dialog yang tetap terbuka, bisa dicoba lagi', async () => {
+    workerApi.reviewUndo.mockRejectedValueOnce(new WorkerCallError('run_active', 'x'));
+    workerApi.reviewUndo.mockResolvedValueOnce(state());
     const user = userEvent.setup();
     await open();
     await user.click(screen.getByRole('tab', { name: new RegExp(copy.review.tabs.checkpoints) }));
@@ -545,7 +566,16 @@ describe('Tinjau perubahan: batalkan file dan checkpoint', () => {
     });
     await user.click(within(dialog).getByRole('button', { name: copy.review.checkpoints.confirm }));
 
-    expect(await screen.findByText(copy.workerErrors.run_active)).toBeInTheDocument();
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+      `${copy.review.actionFailed.restore} ${copy.workerErrors.run_active}`,
+    );
+    await user.click(within(dialog).getByRole('button', { name: copy.review.checkpoints.confirm }));
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('dialog', { name: copy.review.checkpoints.confirmTitle }),
+      ).toBeNull(),
+    );
+    expect(workerApi.reviewUndo).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -620,10 +650,10 @@ describe('Tinjau perubahan: pendapat kedua', () => {
 });
 
 describe('Tinjau perubahan: aksi keadaan kosong', () => {
-  it('tanpa run: tombol Buka papan kartu menuju /kanban', async () => {
+  it('tanpa run di luar chat: tombol Buka papan kartu menuju /kanban', async () => {
     useUiStore.getState().setReviewRunId(null);
     const user = userEvent.setup();
-    const { router } = await renderScreen(<DiffPanel />);
+    const { router } = await renderScreen(<DiffPanel />, '/schedules');
     await user.click(await screen.findByRole('button', { name: copy.review.openKanban }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/kanban'));
   });

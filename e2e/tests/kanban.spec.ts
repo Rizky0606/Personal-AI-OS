@@ -51,9 +51,15 @@ test('kanban: kartu baru, pindah dengan keyboard, pecah dengan AI, dan Kerjakan 
   // Kerjakan dengan AI: kartu masuk Running (run menunggu izin di percakapannya).
   await page.getByRole('button', { name: 'Menu kartu Tambah halaman profil' }).click();
   await page.getByRole('menuitem', { name: 'Kerjakan dengan AI' }).click();
-  await expect(
-    page.getByRole('region', { name: /^Running, 1 kartu/ }).getByText('Tambah halaman profil'),
-  ).toBeVisible();
+  const running = page.getByRole('region', { name: /^Running, 1 kartu/ });
+  await expect(running.getByText('Tambah halaman profil')).toBeVisible();
+
+  // Run kartu berhenti di izin (omp nyata): kartu menandainya dan Buka run membuka percakapan tempat izin dijawab.
+  if (!(await control.hasOmp())) return;
+  await expect(running.getByText('Menunggu izin').first()).toBeVisible({ timeout: 60_000 });
+  await running.getByRole('button', { name: 'Buka run' }).click();
+  await expect(page).toHaveURL(/\/workspace\/[^/]+\/[^/]+$/);
+  await expect(page.getByText(/Agent meminta izin/).first()).toBeVisible();
 });
 
 test('kanban: seret kartu dari Backlog ke Todo dengan penanda tujuan, dan tetap di Todo setelah dimuat ulang', async ({

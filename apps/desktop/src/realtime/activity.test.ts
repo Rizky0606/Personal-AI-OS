@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildActivity, formatElapsed, truncateTarget } from './activity';
 import { newLiveRun, type LiveRun, type ToolStep } from './liveRun';
+import { noteStopped } from './stoppedRuns';
 
 const T0 = Date.parse('2026-10-29T10:00:00Z');
 const run = (over: Partial<LiveRun> = {}): LiveRun => ({
@@ -325,6 +326,14 @@ describe('buildActivity: waktu, ringkasan, perhatian', () => {
     expect(buildActivity(run({ status: 'needs_review', endedAt: T0 + 2000 }), T0).summary).toBe(
       'Selesai · 2 dtk',
     );
+    // Dihentikan pemilik setelah mengubah berkas: gateway mengakhirinya needs_review tanpa penanda.
+    noteStopped('run-dihentikan');
+    const stopped = buildActivity(
+      run({ runId: 'run-dihentikan', status: 'needs_review', endedAt: T0 + 2000 }),
+      T0,
+    );
+    expect(stopped.phase).toBe('cancelled');
+    expect(stopped.summary).toBe('Dihentikan · 2 dtk');
   });
 
   it('needsAttention: tool error atau menunggu persetujuan; tool ditolak/dibatalkan tidak', () => {
@@ -356,6 +365,22 @@ describe('buildActivity: waktu, ringkasan, perhatian', () => {
         T0,
       ).needsAttention,
     ).toBe(false);
+  });
+
+  it('hening lebih dari 15 dtk tanpa tool/izin/pertanyaan: quietMs sejak event terakhir; selain itu tidak ada', () => {
+    const quiet = run({ lastEventAt: T0, lastActivity: 'reasoning' });
+    expect(buildActivity(quiet, T0 + 20_000).quietMs).toBe(20_000);
+    expect(buildActivity(quiet, T0 + 10_000).quietMs).toBeUndefined();
+    // Tool yang sedang berjalan (mis. npm test) atau izin yang menunggu pemilik bukan "menunggu model".
+    const busy = run({ lastEventAt: T0, tools: [tool({ id: 'a', status: 'running' })] });
+    expect(buildActivity(busy, T0 + 60_000).quietMs).toBeUndefined();
+    expect(
+      buildActivity(run({ lastEventAt: T0, status: 'waiting_approval' }), T0 + 60_000).quietMs,
+    ).toBeUndefined();
+    expect(
+      buildActivity(run({ lastEventAt: T0, status: 'completed', endedAt: T0 }), T0 + 60_000)
+        .quietMs,
+    ).toBeUndefined();
   });
 });
 

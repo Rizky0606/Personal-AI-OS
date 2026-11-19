@@ -131,6 +131,7 @@ function Board({ projectId, projectName }: { projectId: string; projectName: str
             edit: (task) => setDialog({ kind: 'task', task }),
             move: (task, placement) => void actions.move(task.id, placement),
             cancelRun: (runId) => void actions.cancelRun(runId),
+            openRun: (task) => void actions.openRun(task),
           }}
         />
       </StateView>
@@ -141,6 +142,15 @@ function Board({ projectId, projectName }: { projectId: string; projectName: str
           open
           onOpenChange={(open) => !open && setDialog(null)}
           task={dialog.task}
+          onOpenRun={
+            dialog.task?.runId
+              ? () => {
+                  const task = dialog.task;
+                  setDialog(null);
+                  if (task) void actions.openRun(task);
+                }
+              : undefined
+          }
           onSave={async (input) => {
             if (dialog.task) await actions.edit(dialog.task.id, input);
             else {

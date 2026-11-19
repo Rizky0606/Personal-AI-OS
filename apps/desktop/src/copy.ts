@@ -769,6 +769,7 @@ export const copy = {
     listLabel: 'Daftar project',
     loading: 'Memuat project',
     empty: 'Belum ada project. Pilih folder project untuk mendaftarkannya.',
+    emptySidebar: 'Belum ada project. Tambahkan lewat tombol Tambah project di area utama.',
     add: 'Tambah project',
     workerOff:
       'Worker belum tersambung. Project belum bisa ditambahkan, tetapi daftar tetap tampil.',
@@ -952,6 +953,8 @@ export const copy = {
       done: 'Selesai',
       error: 'Gagal',
       cancelled: 'Dibatalkan',
+      /** Dihentikan pemilik dari perangkat ini (juga bila sudah mengubah berkas dan menunggu tinjauan). */
+      stopped: 'Dihentikan',
       steps: (n: number) => `${n} langkah`,
       separator: ' · ',
     },
@@ -962,6 +965,7 @@ export const copy = {
       openApproval: 'Buka approval',
       timeline: 'Linimasa langkah',
       moreSteps: (n: number) => `+${n} langkah lainnya`,
+      quiet: (elapsed: string) => `Menunggu model · ${elapsed} sejak aktivitas terakhir`,
       phase: {
         idle: 'Siap',
         thinking: 'Menyiapkan',
@@ -1124,6 +1128,14 @@ export const copy = {
     waiting: 'Run menunggu jawaban Anda.',
     failed: 'Keputusan belum terkirim.',
     alwaysHint: 'Hanya untuk perintah yang persis sama di project ini.',
+    fileWriteHint:
+      'Berlaku untuk SEMUA penulisan dan pengubahan berkas oleh agent di project ini, bukan hanya berkas ini. Hasilnya tetap ditinjau sebelum diterima.',
+    file: 'Berkas',
+    showContent: (lines: number) => `Lihat isi baru (${lines} baris)`,
+    subagentTitle: 'Agent meminta izin menjalankan subagent',
+    subagents: 'Subagent',
+    subagentTask: 'Tugas subagent',
+    subagentHint: 'Hanya untuk permintaan subagent yang persis sama di project ini.',
     gatewayTitle: (tool: string) => `Agent meminta izin memakai tool ${tool}`,
     allowAlwaysTool: (tool: string) => `Selalu untuk ${tool} di project ini`,
     gatewayHint: (tool: string) =>
@@ -1140,8 +1152,13 @@ export const copy = {
     openKanban: 'Buka papan kartu',
     title: 'Tinjau perubahan',
     ready: 'Hasil run siap ditinjau. Periksa perubahannya, lalu terima atau kembalikan ke agent.',
+    readyStopped:
+      'Run dihentikan sebelum selesai, jadi perubahannya mungkin setengah jadi. Periksa dulu sebelum menerima.',
     open: 'Tinjau perubahan',
     empty: 'Belum ada perubahan untuk ditinjau. Hasil run coding muncul di sini.',
+    emptyChat:
+      'Belum ada perubahan untuk ditinjau. Minta agent mengubah kode lewat pesan; hasilnya muncul di sini.',
+    writeMessage: 'Tulis pesan',
     noChanges: 'Agent tidak mengubah file apa pun.',
     loading: 'Memuat perubahan…',
     workerOffline: 'Worker di PC ini belum tersambung, jadi perubahan belum bisa dibaca.',
@@ -1227,7 +1244,15 @@ export const copy = {
     rejectConfirm: 'Buang perubahan',
     rejected: 'Perubahan dibuang.',
     cancel: 'Batal',
-    failed: 'Keputusan belum terkirim.',
+    actionFailed: {
+      accept: 'Perubahan belum diterima.',
+      reject: 'Perubahan belum dibuang.',
+      comments: 'Komentar belum terkirim ke agent.',
+      revert: 'File belum dikembalikan.',
+      restore: 'Belum kembali ke checkpoint.',
+    },
+    holderOffline:
+      'Worker yang memegang folder kerja run ini tidak tersambung. Nyalakan worker di PC itu, lalu coba lagi.',
     notReviewable: 'Run ini sudah tidak menunggu tinjauan.',
     checkpoints: {
       empty: 'Belum ada checkpoint. Checkpoint dibuat otomatis setelah agent mengubah file.',
@@ -1291,6 +1316,7 @@ export const copy = {
     open: 'Buka',
     stop: 'Hentikan',
     untitled: 'Tanpa judul',
+    stoppedReview: 'Dihentikan, perlu ditinjau',
   },
   runStatus: {
     queued: 'Mengantre',
@@ -1873,6 +1899,7 @@ export const copy = {
       todo: 'Todo',
       running: 'Sedang dikerjakan',
       queued: 'Menunggu giliran',
+      waitingApproval: 'Menunggu izin',
       review: 'Menunggu tinjauan',
       done: 'Selesai',
     },
@@ -1884,6 +1911,8 @@ export const copy = {
     moveUp: 'Geser naik',
     moveDown: 'Geser turun',
     cancelRun: 'Hentikan run',
+    openRun: 'Buka run',
+    openRunFailed: 'Run kartu ini tidak bisa dibuka.',
     dequeue: 'Keluar dari antrean',
     cardMenu: (title: string) => `Menu kartu ${title}`,
     cardHint: 'Alt + panah menggeser kartu',

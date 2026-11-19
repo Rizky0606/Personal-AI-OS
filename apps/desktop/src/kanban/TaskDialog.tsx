@@ -17,13 +17,15 @@ export interface TaskDialogProps {
   /** Kartu yang diubah; kosong = kartu baru. */
   task?: Task | undefined;
   onSave: (input: { title: string; body: string; agentRole: string | null }) => Promise<void>;
+  /** Kartu punya run: buka percakapannya (izin, langkah agent, hasil). */
+  onOpenRun?: (() => void) | undefined;
 }
 
 /**
  * Kartu baru atau ubah kartu. Deskripsi Markdown dengan pratinjau. Kartu yang sedang dikerjakan atau
  * menunggu tinjauan hanya bisa dilihat.
  */
-export function TaskDialog({ open, onOpenChange, task, onSave }: TaskDialogProps) {
+export function TaskDialog({ open, onOpenChange, task, onSave, onOpenRun }: TaskDialogProps) {
   const online = useOnline();
   const [title, setTitle] = useState(task?.title ?? '');
   const [body, setBody] = useState(task?.body ?? '');
@@ -65,7 +67,13 @@ export function TaskDialog({ open, onOpenChange, task, onSave }: TaskDialogProps
       size="md"
       closeLabel={d.close}
       footer={
-        readOnly ? undefined : (
+        readOnly ? (
+          onOpenRun ? (
+            <Button variant="primary" onClick={onOpenRun}>
+              {copy.kanban.openRun}
+            </Button>
+          ) : undefined
+        ) : (
           <>
             <Button variant="secondary" onClick={() => setPreview((p) => !p)}>
               {preview ? d.write : d.preview}

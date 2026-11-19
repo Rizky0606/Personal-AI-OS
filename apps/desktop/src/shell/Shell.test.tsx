@@ -22,7 +22,15 @@ const { Shell } = await import('./Shell');
 
 async function renderShell(path = '/', screens: Record<string, () => ReactNode> = {}) {
   const root = createRootRoute({ component: Shell });
-  const paths = ['/', '/projects', '/kanban', '/schedules', '/research', '/settings'];
+  const paths = [
+    '/',
+    '/projects',
+    '/kanban',
+    '/schedules',
+    '/research',
+    '/settings',
+    '/workspace/$projectId/$conversationId',
+  ];
   const router = createRouter({
     routeTree: root.addChildren(
       paths.map((p) =>
@@ -301,6 +309,42 @@ describe('Shell', () => {
     ).toBeInTheDocument();
     expect(await screen.findByText(copy.research.listEmpty)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: copy.research.newResearch })).toBeInTheDocument();
+  });
+
+  it('chat project: judul topbar adalah nama project (bukan "Project") dan chip tidak mengulang namanya', async () => {
+    const { api } = await import('../test/fakeServices');
+    const id = '0192f0c4-7a1b-7c2d-a001-4a5b6c7d8e91';
+    api.listProjects.mockResolvedValue([
+      {
+        id,
+        name: 'Toko Online',
+        workerDeviceId: '0192f0c4-7a1b-7c2d-a003-4a5b6c7d8e93',
+        stack: { languages: [], frameworks: [] },
+        defaultBranch: 'main',
+        instructions: '',
+        createdAt: '2026-10-22T06:38:00Z',
+        updatedAt: '2026-10-22T06:38:00Z',
+      },
+    ]);
+    useUiStore.setState({ activeProjectId: id });
+    await renderShell(`/workspace/${id}/0192f0c4-7a1b-7c2d-a002-4a5b6c7d8e92`);
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Toko Online' }),
+    ).toBeInTheDocument();
+    const location = screen.getByRole('group', { name: copy.shell.location });
+    expect(within(location).getAllByText('Toko Online')).toHaveLength(1);
+    expect(within(location).getByText('main')).toBeInTheDocument();
+  });
+
+  it('sidebar Kanban: petunjuk memilih project hanya bila belum ada project terpilih', async () => {
+    const view = await renderShell('/kanban');
+    expect(await screen.findByText(copy.kanban.sidebarHint)).toBeInTheDocument();
+    view.unmount();
+
+    useUiStore.setState({ activeProjectId: '0192f0c4-7a1b-7c2d-a001-4a5b6c7d8e91' });
+    await renderShell('/kanban');
+    expect(screen.queryByText(copy.kanban.sidebarHint)).not.toBeInTheDocument();
   });
 
   it('sidebar chat menampilkan percakapan dari server dan tombol Chat baru', async () => {

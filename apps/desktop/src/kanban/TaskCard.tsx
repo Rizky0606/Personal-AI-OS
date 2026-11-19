@@ -1,14 +1,17 @@
 import type { Task } from '@aios/contracts';
 import { MoreHorizontal } from 'lucide-react';
-import type { DragEvent, KeyboardEvent } from 'react';
+import { useEffect, type DragEvent, type KeyboardEvent } from 'react';
 import type { RoleInfo } from '../api/gateway';
 import { AgentOrb, orbStateOf } from '../chat/AgentOrb';
 import { RoleChip } from '../chat/RoleChip';
 import { useLiveRun } from '../app/hooks';
+import { runs } from '../app/services';
+import type { LiveRun } from '../realtime/liveRun';
 import { buildActivity } from '../realtime/activity';
 import { copy } from '../copy';
 import { cn } from '../lib/cn';
 import { ActionMenu, type MenuAction } from '../ui/ActionMenu';
+import { Button } from '../ui/Button';
 import { IconButton } from '../ui/IconButton';
 import {
   STATUS_DOT,
@@ -32,27 +35,49 @@ export interface TaskCardProps {
   onMoveTo: (task: Task, status: Task['status']) => void;
   onStep: (task: Task, direction: Direction) => void;
   onCancelRun: (runId: string) => void;
+  /** Membuka percakapan run kartu (tempat izin dijawab). */
+  onOpenRun: (task: Task) => void;
   onDragStart: (event: DragEvent, task: Task) => void;
   onDragEnd: () => void;
   /** Baru dilepas di kolom ini: animasi mendarat singkat. */
   landed?: boolean;
 }
 
+/**
+ * Run kartu yang sedang dikerjakan diikuti lewat pelacak run (event live), supaya kartu tahu kapan run menunggu izin.
+ * Tanpa ini kartu hanya tahu kolomnya dan selalu tampil "Bekerja".
+ */
+function useCardRun(runId: string | null): LiveRun | undefined {
+  useEffect(() => {
+    if (runId) runs.track(runId);
+  }, [runId]);
+  return useLiveRun(runId);
+}
+
 /** Orb kecil dan fase singkat untuk kartu yang sedang dikerjakan agent (dari buildActivity bila run live ada). */
-function AgentStatus({ runId }: { runId: string }) {
-  const live = useLiveRun(runId);
-  const phase = live ? buildActivity(live, live.lastEventAt ?? live.startedAt ?? 0).phase : 'tool';
+function AgentStatus({ live, onOpenRun }: { live: LiveRun | undefined; onOpenRun: () => void }) {
+  // Sebelum event pertama (replay) tiba, fase belum diketahui: tetap "Bekerja" seperti kolomnya.
+  const phase =
+    live && live.lastEventAt !== null ? buildActivity(live, live.lastEventAt).phase : 'tool';
   return (
-    <p className="flex items-center gap-2 text-meta text-text-2">
-      <AgentOrb state={orbStateOf(phase)} size={16} />
-      {copy.runActivity.ui.phase[phase]}
-    </p>
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <p className="flex items-center gap-2 text-meta text-text-2">
+        <AgentOrb state={orbStateOf(phase)} size={16} />
+        {copy.runActivity.ui.phase[phase]}
+      </p>
+      {phase === 'waiting_approval' ? (
+        <Button variant="secondary" className="h-6 px-2 text-meta" onClick={onOpenRun}>
+          {copy.kanban.openRun}
+        </Button>
+      ) : null}
+    </div>
   );
 }
 
 /** Titik status menurut kolom; antrean berupa cincin kosong. Teksnya ikut dibacakan (warna bukan satu-satunya penanda). */
-function statusOf(task: Task): { dot: string; text: string } {
+function statusOf(task: Task, waiting: boolean): { dot: string; text: string } {
   if (isQueued(task)) return { dot: 'border border-text-2', text: copy.kanban.status.queued };
+  if (waiting) return { dot: 'bg-warning', text: copy.kanban.status.waitingApproval };
   return { dot: STATUS_DOT[task.status], text: copy.kanban.status[task.status] };
 }
 
@@ -77,12 +102,18 @@ export function TaskCard({
   onMoveTo,
   onStep,
   onCancelRun,
+  onOpenRun,
   onDragStart,
   onDragEnd,
   landed = false,
 }: TaskCardProps) {
-  const status = statusOf(task);
   const locked = isLocked(task);
+  const live = useCardRun(locked ? task.runId : null);
+  const waiting =
+    locked &&
+    live !== undefined &&
+    (live.status === 'waiting_approval' || live.approvals.length > 0);
+  const status = statusOf(task, waiting);
   const queued = isQueued(task);
   const diff = formatDiffStat(task.diffStat);
 
@@ -99,6 +130,9 @@ export function TaskCard({
   }
   if (task.status === 'review' && task.runId) {
     actions.push({ id: 'review', label: copy.kanban.openReview, onSelect: () => onOpen(task) });
+  }
+  if (task.runId && (locked || task.status === 'review')) {
+    actions.push({ id: 'open-run', label: copy.kanban.openRun, onSelect: () => onOpenRun(task) });
   }
   if (locked && task.runId) {
     const runId = task.runId;
@@ -191,7 +225,13 @@ export function TaskCard({
         {diff ? <span className="font-mono text-meta tabular-nums text-text-2">{diff}</span> : null}
       </div>
 
-      {task.status === 'running' && task.runId ? <AgentStatus runId={task.runId} /> : null}
+      {locked ? <AgentStatus live={live} onOpenRun={() => onOpenRun(task)} /> : null}
+      {task.status === 'review' ? (
+        <p className="flex items-center gap-2 text-meta text-text-2">
+          <span aria-hidden="true" className="size-2 rounded-full bg-warning" />
+          {copy.kanban.status.review}
+        </p>
+      ) : null}
 
       {task.branch ? (
         <p className="truncate font-mono text-caption text-text-3" title={task.branch}>
