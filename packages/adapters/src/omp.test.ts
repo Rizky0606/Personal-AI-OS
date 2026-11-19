@@ -1,7 +1,7 @@
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import type { AgentEvent } from '@aios/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createOmpAdapter, pickOption, type OmpAdapterOptions, type OmpTransport } from './omp.js';
@@ -34,6 +34,11 @@ const input = (over: Partial<StartRunInput> = {}): StartRunInput => ({
   runDir,
   ...over,
 });
+
+type GuardHandler = (event: {
+  toolName: string;
+  input: Record<string, unknown>;
+}) => { block?: boolean } | undefined;
 
 async function launchReplay(
   fixture: string,
@@ -103,6 +108,43 @@ describe('peluncuran omp', () => {
     const overlay = launched.args[launched.args.indexOf('--config') + 1] ?? '';
     expect(overlay.startsWith(runDir)).toBe(true);
     expect(await readFile(overlay, 'utf8')).toContain('customDirectories:');
+  });
+
+  it('hook penjaga baca dimuat lewat --hook dari folder run: baca di luar folder kerja ditolak', async () => {
+    const { handle, launched } = await launchReplay('text-only', { cwd: runDir });
+    await collect(handle);
+    const guardFile = launched.args[launched.args.indexOf('--hook') + 1] ?? '';
+    expect(guardFile).toBe(join(runDir, 'read-guard.mjs'));
+    // Berkas hook dibuat adapter saat run dimulai; hanya bisa dimuat dinamis.
+    const guard = (await import(pathToFileURL(guardFile).href)) as {
+      default: (pi: { on: (event: string, fn: GuardHandler) => void }) => void;
+    };
+    let handler: GuardHandler | undefined;
+    guard.default({ on: (_event, fn) => (handler = fn) });
+    const blocked = (toolName: string, input: Record<string, unknown>) =>
+      handler?.({ toolName, input })?.block === true;
+
+    for (const [tool, input] of [
+      ['read', { path: 'src/a.ts:10-20' }],
+      ['read', { path: join(runDir, 'agent', 'skills', 'x', 'SKILL.md') }],
+      ['read', { path: 'skill://scope-guard' }],
+      ['grep', { pattern: '\\.\\./', path: 'src' }],
+      ['glob', { pattern: '**/*.ts' }],
+      ['bash', { command: 'cat ../x' }],
+    ] as const) {
+      expect(blocked(tool, input), `${tool} ${JSON.stringify(input)}`).toBe(false);
+    }
+    for (const [tool, input] of [
+      ['read', { path: '../luar.txt' }],
+      ['read', { path: '/etc/passwd' }],
+      ['read', { path: '~/.ssh/id_ed25519' }],
+      ['grep', { pattern: 'x', path: 'src;..' }],
+      ['glob', { pattern: '../**/*.ts' }],
+      ['ast_grep', { paths: ['src', '/home'] }],
+      ['lsp', { file: '/etc/hosts' }],
+    ] as const) {
+      expect(blocked(tool, input), `${tool} ${JSON.stringify(input)}`).toBe(true);
+    }
   });
 
   it('server MCP run: mcp.json dan overlay ditulis di folder run (bukan worktree), tool tampil langsung, tunggu koneksi', async () => {

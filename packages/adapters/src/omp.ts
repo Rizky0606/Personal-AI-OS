@@ -224,6 +224,7 @@ export function createOmpAdapter(options: OmpAdapterOptions): AgentAdapter {
       const skillsDir = join(agentDir, 'skills');
       const systemFile = join(runDir, 'system.md');
       const overlayFile = join(runDir, 'overlay.yml');
+      const guardFile = join(runDir, 'read-guard.mjs');
       await mkdir(skillsDir, { recursive: true });
       // Hanya folder ini yang dipasang ke overlay `skills.customDirectories`; skill dari provider lain di mesin
       // pengguna (mis. ~/.claude) tidak ikut karena PI_CODING_AGENT_DIR terisolasi dan tanpa pencarian lain.
@@ -277,6 +278,10 @@ export function createOmpAdapter(options: OmpAdapterOptions): AgentAdapter {
       // diuji cukup (VERIFICATION.md). Server bahasa hanya jalan bila ditemukan di worktree atau PATH.
       if (input.lsp === true) overlay.push('lsp:', `  requestTimeout: ${LSP_REQUEST_TIMEOUT_S}`);
       await writeFile(overlayFile, `${overlay.join('\n')}\n`);
+      // Tool baca omp (read, grep, glob, ...) berjenjang read: di mode always-ask tidak pernah ditanyakan, jadi
+      // agent bisa membaca `..` atau path absolut lain (uji project 4i). Hook ini menolaknya di luar folder kerja run
+      // dan folder run (skill); dimuat dengan --hook, yang tetap berlaku walau --no-extensions.
+      await writeFile(guardFile, readGuardSource([cwd, runDir]));
 
       const transport = await options.launch({
         runId: input.runId,
@@ -298,6 +303,8 @@ export function createOmpAdapter(options: OmpAdapterOptions): AgentAdapter {
             : ['--no-skills']),
           ...(input.lsp === true ? [] : ['--no-lsp']),
           '--no-title',
+          '--hook',
+          guardFile,
           '--append-system-prompt',
           systemFile,
           '--config',
@@ -316,6 +323,56 @@ export function createOmpAdapter(options: OmpAdapterOptions): AgentAdapter {
       return new OmpRun(input, transport, { now, newId, options }).start();
     },
   };
+}
+
+/** Tool baca omp yang argumen path-nya dibatasi ke folder kerja run. */
+export const READ_GUARDED_TOOLS = ['read', 'grep', 'glob', 'find', 'search', 'ast_grep', 'lsp'];
+
+/**
+ * Sumber hook omp (`tool_call`) yang memblokir tool baca dengan path di luar `roots`. Pemeriksaan leksikal (tanpa
+ * menyelesaikan symlink), supaya tautan yang dibuat worker atau pemilik di dalam folder kerja (mis. `node_modules`)
+ * tetap bisa dibaca; `..`, path absolut lain, dan `~` ditolak. URL internal (`skill://`, `artifact://`, ...) dan URL
+ * web (sudah ditolak `fetch.enabled: false`) tidak diperiksa di sini.
+ */
+export function readGuardSource(roots: string[]): string {
+  return `import path from 'node:path';
+const ROOTS = ${JSON.stringify(roots)}.map((r) => path.resolve(r));
+const TOOLS = new Set(${JSON.stringify(READ_GUARDED_TOOLS)});
+const KEYS = ['path', 'paths', 'file', 'file_path', 'cwd'];
+// Pola glob/find berupa path (mis. ../**/*.ts); pola grep adalah regex, bukan path.
+function values(tool, input) {
+  const out = [];
+  for (const key of tool === 'glob' || tool === 'find' ? [...KEYS, 'pattern'] : KEYS) {
+    const v = input?.[key];
+    for (const item of Array.isArray(v) ? v : [v]) {
+      if (typeof item === 'string') out.push(...item.split(';').map((s) => s.trim()).filter(Boolean));
+    }
+  }
+  return out;
+}
+function outside(value) {
+  if (/^[a-z][a-z0-9+.-]*:[/][/]/i.test(value)) return false;
+  if (value.startsWith('~')) return true;
+  // Pemilih baris (berkas.ts:10-20) dipotong; huruf drive Windows (C:) dipertahankan.
+  const drive = /^[A-Za-z]:/.test(value) ? value.slice(0, 2) : '';
+  const target = path.resolve(ROOTS[0], drive + value.slice(drive.length).split(':')[0]);
+  return !ROOTS.some((root) => {
+    const rel = path.relative(root, target);
+    return rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel));
+  });
+}
+export default function aiosReadGuard(pi) {
+  pi.on('tool_call', (event) => {
+    if (!TOOLS.has(event.toolName)) return undefined;
+    const bad = values(event.toolName, event.input).find(outside);
+    if (bad === undefined) return undefined;
+    return {
+      block: true,
+      reason: 'Ditolak AIOS: membaca di luar folder kerja run tidak diizinkan (' + bad + '). Bekerja hanya dengan berkas di folder project; bila butuh isi dari luar, minta pemilik menyalinnya ke pesan.',
+    };
+  });
+}
+`;
 }
 
 function modelsYaml(
