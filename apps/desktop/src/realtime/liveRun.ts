@@ -21,6 +21,8 @@ export interface ToolStep {
   startedAt: number | null;
   /** Baris output terbaru untuk aktivitas live. */
   output?: string;
+  /** Alasan galat dari mesin (`tool.output` stderr, mis. galat tool MCP), ditampilkan di langkah yang gagal. */
+  errorText?: string;
 }
 
 export interface LiveSource {
@@ -270,10 +272,15 @@ function reduceEvent(run: LiveRun, event: ServerEvent, ts: number | undefined): 
     case 'tool.output': {
       const output = event.chunk.split(/\r?\n/).filter(Boolean).at(-1);
       if (!output) return run;
+      const errorText = event.stream === 'stderr' ? event.chunk.trim().slice(0, 300) : undefined;
       return {
         ...run,
         lastActivity: 'tool',
-        tools: run.tools.map((tool) => (tool.id === event.toolCallId ? { ...tool, output } : tool)),
+        tools: run.tools.map((tool) =>
+          tool.id === event.toolCallId
+            ? { ...tool, output, ...(errorText ? { errorText } : {}) }
+            : tool,
+        ),
       };
     }
     case 'tool.finished': {

@@ -28,6 +28,8 @@ export interface ActivityStep {
   /** Selesai: durasi dari mesin. Berjalan: sejak mulai (null bila waktu mulai tak diketahui). */
   durationMs: number | null;
   startedAt: number | null;
+  /** Langkah gagal: alasan galat dari mesin bila ada (mis. "URL reads are disabled by settings."). */
+  error?: string;
 }
 
 export interface ActivityCurrent {
@@ -238,6 +240,7 @@ export function buildActivity(live: LiveRun, now: number, options: ActivityOptio
           : Math.max(0, now - t.startedAt)
         : (t.durationMs ?? null),
     startedAt: t.startedAt,
+    ...(t.status === 'error' && t.errorText ? { error: t.errorText } : {}),
   }));
 
   // Yang terbaru dimulai; waktu sama atau tak diketahui: yang datang belakangan.
