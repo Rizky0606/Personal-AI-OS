@@ -48,7 +48,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/); ve
 - **Agent umum tanpa skill inti coding (uji umum B8):** `plan-before-edit`, `verify-before-done`, dan `minimal-diff` kini hanya untuk grup coding. Tulisan kreatif dan pengetahuan umum dikerjakan langsung, dengan catatan "belum diverifikasi" untuk angka atau fakta yang belum pasti, bukan ditolak atau meminta persetujuan rencana.
 - **Aturan perilaku semua agent:** jangan menyatakan sesuatu tersimpan, dijadwalkan, diusulkan, atau diingat kecuali alatnya mengembalikan sukses di giliran ini; tanpa itu arahkan ke tombol Ingat atau layar Jadwal.
 - **Pesan sistem membawa tanggal dan jam** di zona pemilik (bagian "Waktu" di akhir, supaya awalan prompt tetap sama untuk cache).
-- **Pesan sistem agent umum lebih ramping:** `find-skills` hanya ditawarkan lewat indeks dan kalimat berkas/ZIP yang dobel dibuang (10.018 → 8.850 karakter; input Hermes nyata untuk "Halo" 15.987 → 15.672 token, 13.362 token di antaranya prompt Hermes sendiri).
+- **Pesan sistem agent umum lebih ramping:** tanpa skill inti coding (lihat di atas), `find-skills` hanya ditawarkan lewat indeks, dan kalimat berkas/ZIP yang dobel dibuang. Pesan sistem "Halo": 10.975 karakter (`main` 1.1.x) → 10.018 → 8.850; input Hermes nyata 15.987 → 15.672 token, 13.362 token di antaranya prompt Hermes sendiri (diukur tanpa pesan sistem AIOS), jadi bagian AIOS kini ±2.300 token.
 - `rich-answers`: contoh JSON persis per komponen (`chart` memakai field `chart`, bukan `chartType`).
 
 ### Diperbaiki
