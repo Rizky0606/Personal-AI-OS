@@ -565,7 +565,11 @@ describe('cancel', () => {
     ).resolves.toBeUndefined();
 
     const events = await storedEvents(run.id);
-    expect(events.at(-1)).toEqual({ type: 'run.status', status: 'cancelled' });
+    expect(events.at(-1)).toEqual({
+      type: 'run.status',
+      status: 'cancelled',
+      endReason: 'stopped',
+    });
     expect(events.map((e) => e.type)).not.toContain('error');
     expect(events.map((e) => e.type)).not.toContain('run.completed');
     const rows = await env.database.handle.db
