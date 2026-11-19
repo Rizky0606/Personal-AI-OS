@@ -35,9 +35,7 @@ describe('parseRichAnswer', () => {
       kind: 'valid',
       value: {
         version: 1,
-        components: [
-          { id: 'komponen-1', type: 'chart', chart: 'bar', labels: ['a'], values: [2] },
-        ],
+        components: [{ id: 'komponen-1', type: 'chart', chart: 'bar', labels: ['a'], values: [2] }],
       },
     });
   });
