@@ -52,6 +52,12 @@ export interface OmpAdapterOptions {
   launch: (spec: OmpLaunch) => OmpTransport | Promise<OmpTransport>;
   /** Titik akhir LLM yang dipakai omp: proxy lokal worker (menyisipkan token perangkat) dan kunci lokalnya. */
   llm: { baseUrl: string; apiKey: string };
+  /**
+   * Isian model di `models.yml` per run (bawaan `OMP_MODEL_DEFAULTS`). `reasoning: true` membuat omp mengirim
+   * `reasoning_effort` ke 9Router; `contextWindow` dipakai omp untuk pemadatan konteks, `maxTokens` sebagai
+   * `max_completion_tokens` per jawaban.
+   */
+  model?: Partial<OmpModelLimits>;
   /** Waktu menunggu frame `ready` setelah proses dimulai. */
   readyTimeoutMs?: number;
   /** Waktu menunggu omp berhenti sendiri setelah `abort` sebelum proses dimatikan. */
@@ -59,6 +65,24 @@ export interface OmpAdapterOptions {
   now?: () => number;
   newId?: () => string;
 }
+
+export interface OmpModelLimits {
+  reasoning: boolean;
+  contextWindow: number;
+  maxTokens: number;
+}
+
+/**
+ * Bawaan `models.yml`. `reasoning: false`: diukur 2026-11-19 lewat proxy pencatat ke 9Router lokal, `true` hanya
+ * menambah `reasoning_effort: "high"` di permintaan; combo `coding-main` (hulu `gpt-6-luna`, katalog 9Router
+ * `reasoning: false`) tidak mengirim `reasoning_content` dan jawabannya sama. 8192 token keluaran cukup di run uji
+ * (360–1.205 token per run); naikkan lewat opsi bila `write` berkas besar terpotong.
+ */
+export const OMP_MODEL_DEFAULTS: OmpModelLimits = {
+  reasoning: false,
+  contextWindow: 128_000,
+  maxTokens: 8192,
+};
 
 /** Provider di `models.yml` per run; model dipilih sebagai `aios/<id>`. */
 export const OMP_PROVIDER = 'aios';
@@ -213,7 +237,10 @@ export function createOmpAdapter(options: OmpAdapterOptions): AgentAdapter {
           `---\nname: ${skill.id}\ndescription: ${JSON.stringify(skill.description)}\n---\n\n${skill.body}\n`,
         );
       }
-      await writeFile(join(agentDir, 'models.yml'), modelsYaml(options.llm, model));
+      await writeFile(
+        join(agentDir, 'models.yml'),
+        modelsYaml(options.llm, model, { ...OMP_MODEL_DEFAULTS, ...options.model }),
+      );
       await writeFile(systemFile, input.systemPrompt ?? '');
       // Pengaturan per run lewat overlay di folder run (bukan di repo kerja).
       const overlay: string[] = [
@@ -289,7 +316,11 @@ export function createOmpAdapter(options: OmpAdapterOptions): AgentAdapter {
   };
 }
 
-function modelsYaml(llm: { baseUrl: string; apiKey: string }, model: string): string {
+function modelsYaml(
+  llm: { baseUrl: string; apiKey: string },
+  model: string,
+  limits: OmpModelLimits,
+): string {
   const q = (value: string) => JSON.stringify(value);
   return [
     'providers:',
@@ -301,10 +332,10 @@ function modelsYaml(llm: { baseUrl: string; apiKey: string }, model: string): st
     '    models:',
     `      - id: ${q(model)}`,
     `        name: ${q(model)}`,
-    '        reasoning: false',
+    `        reasoning: ${limits.reasoning}`,
     '        input: [text]',
-    '        contextWindow: 128000',
-    '        maxTokens: 8192',
+    `        contextWindow: ${limits.contextWindow}`,
+    `        maxTokens: ${limits.maxTokens}`,
     '',
   ].join('\n');
 }

@@ -1,5 +1,6 @@
 import { promises as fs } from 'node:fs';
 import nodePath from 'node:path';
+import type { OmpModelLimits } from '@aios/adapters';
 
 export class OmpNotFoundError extends Error {
   constructor() {
@@ -57,4 +58,29 @@ export async function readOmpVersion(env: NodeJS.ProcessEnv = process.env): Prom
   } catch {
     return null;
   }
+}
+
+/**
+ * Isian model `models.yml` omp dari lingkungan worker: `AIOS_OMP_REASONING` (`true`/`false`),
+ * `AIOS_OMP_CONTEXT_WINDOW` dan `AIOS_OMP_MAX_TOKENS` (bilangan bulat positif). Nilai yang tidak valid diabaikan
+ * (bawaan adapter berlaku) dan dilaporkan lewat `warn`.
+ */
+export function ompModelLimits(
+  env: NodeJS.ProcessEnv,
+  warn: (message: string) => void = () => undefined,
+): Partial<OmpModelLimits> {
+  const limits: Partial<OmpModelLimits> = {};
+  const reasoning = env.AIOS_OMP_REASONING?.trim().toLowerCase();
+  if (reasoning === 'true' || reasoning === 'false') limits.reasoning = reasoning === 'true';
+  else if (reasoning) warn(`AIOS_OMP_REASONING tidak valid (${reasoning}); memakai bawaan.`);
+  for (const [name, key] of [
+    ['AIOS_OMP_CONTEXT_WINDOW', 'contextWindow'],
+    ['AIOS_OMP_MAX_TOKENS', 'maxTokens'],
+  ] as const) {
+    const raw = env[name]?.trim();
+    if (!raw) continue;
+    if (/^[1-9]\d{0,8}$/.test(raw)) limits[key] = Number(raw);
+    else warn(`${name} tidak valid (${raw}); memakai bawaan.`);
+  }
+  return limits;
 }

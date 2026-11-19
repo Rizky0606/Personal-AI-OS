@@ -43,6 +43,7 @@ Protokol lokal: `packages/contracts/src/worker-local.ts`. Protokol ke gateway: `
 `ReviewService` menghitung diff worktree terhadap base lewat index git pribadi (tidak mengganggu git milik agent), membuat checkpoint setelah tiap langkah yang mengubah file (ref `refs/aios/cp/<id>`), dan melayani desktop lewat protokol lokal: `review.get` (file, patch, checkpoint, usulan pesan commit), `review.undo`, `review.revertFile`. `review.apply` dari gateway: terima = satu commit (pesan Conventional Commits buatan agent atau dari pengguna), opsional fast-forward ke branch kerja; tolak = buang. Komentar review memulai run lanjutan (`continueFromRunId`) di worktree yang sama.
 
 - omp dicari sebagai `omp.exe` di PATH, atau lokasi di `AIOS_OMP_PATH`.
+- Isian model `models.yml` per run bisa diatur: `AIOS_OMP_REASONING` (`true`/`false`, bawaan `false`), `AIOS_OMP_CONTEXT_WINDOW` (bawaan 128000), `AIOS_OMP_MAX_TOKENS` (bawaan 8192). Nilai tidak valid diabaikan dan dicatat di log worker.
 - `pnpm --filter @aios/worker test` menjalankan juga uji end-to-end dengan omp sungguhan bila terpasang (dilewati bila tidak).
 
 ## Preview dan tool browser (Fase 21)

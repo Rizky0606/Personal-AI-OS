@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { AgentEvent } from '@aios/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { createOmpAdapter, pickOption, type OmpTransport } from './omp.js';
+import { createOmpAdapter, pickOption, type OmpAdapterOptions, type OmpTransport } from './omp.js';
 import { AsyncQueue } from './queue.js';
 import { replayTransport, type ReplayTransport } from './testing/replay.js';
 import { AdapterError, type RunHandle, type StartRunInput } from './types.js';
@@ -38,6 +38,7 @@ const input = (over: Partial<StartRunInput> = {}): StartRunInput => ({
 async function launchReplay(
   fixture: string,
   over: Partial<StartRunInput> = {},
+  model?: OmpAdapterOptions['model'],
 ): Promise<{
   handle: RunHandle;
   transport: ReplayTransport;
@@ -54,6 +55,7 @@ async function launchReplay(
     llm: { baseUrl: 'http://127.0.0.1:4555/v1', apiKey: 'kunci-lokal' },
     newId: () => `0192f0c4-7a1b-7c2d-a${String(++ids).padStart(3, '0')}-4a5b6c7d8e91`,
     abortGraceMs: 500,
+    ...(model ? { model } : {}),
   });
   const handle = await adapter.startRun(input(over));
   return { handle, transport, launched };
@@ -392,6 +394,22 @@ describe('peluncuran omp', () => {
     expect(yaml).toContain('apiKey: "kunci-lokal"');
     expect(yaml).toContain('- id: "combo/code"');
     expect(yaml).toContain('authHeader: true');
+  });
+
+  it('models.yml: bawaan reasoning false, 128000/8192; opsi model menimpa sebagian', async () => {
+    const first = await launchReplay('text-only');
+    await collect(first.handle);
+    const yaml = await readFile(join(runDir, 'agent', 'models.yml'), 'utf8');
+    expect(yaml).toContain('reasoning: false');
+    expect(yaml).toContain('contextWindow: 128000');
+    expect(yaml).toContain('maxTokens: 8192');
+
+    const second = await launchReplay('text-only', {}, { reasoning: true, maxTokens: 32000 });
+    await collect(second.handle);
+    const tuned = await readFile(join(runDir, 'agent', 'models.yml'), 'utf8');
+    expect(tuned).toContain('reasoning: true');
+    expect(tuned).toContain('contextWindow: 128000');
+    expect(tuned).toContain('maxTokens: 32000');
   });
 
   it('cwd atau runDir kosong ditolak sebelum proses dimulai', async () => {
