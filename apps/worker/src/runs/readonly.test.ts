@@ -15,6 +15,8 @@ beforeAll(async () => {
   await fs.writeFile(nodePath.join(base, 'rahasia.txt'), 'y\n');
   // Symlink di dalam folder run yang menunjuk ke luar: dibaca berarti keluar folder.
   await fs.symlink(nodePath.join(base, 'rahasia.txt'), nodePath.join(root, 'tautan.txt'));
+  // Symlink folder yang menunjuk ke luar: `ls -L`/`-R` mengikutinya.
+  await fs.symlink(base, nodePath.join(root, 'induk'));
 });
 
 afterAll(async () => {
@@ -45,6 +47,10 @@ describe('isReadOnlyCommand', () => {
     }
     // cwd subfolder di dalam folder run juga boleh.
     expect(await isReadOnlyCommand('cat a.ts', nodePath.join(root, 'src'), root)).toBe(true);
+    // Path absolut yang tetap di dalam folder run juga boleh.
+    expect(await isReadOnlyCommand(`cat ${nodePath.join(root, 'src', 'a.ts')}`, root, root)).toBe(
+      true,
+    );
   });
 
   it('yang lain tetap ditanyakan: metakarakter shell, opsi git berbahaya, path keluar folder, program lain', async () => {
@@ -84,6 +90,20 @@ describe('isReadOnlyCommand', () => {
       'rm src/a.ts',
       'cat "src/a.ts"',
       'ls\nrm x',
+      'ls\rrm x',
+      'ls\tsrc',
+      'ls $HOME',
+      'ls -L',
+      'ls -RL',
+      'ls --dereference src',
+      'ls induk',
+      'ls --color=auto',
+      'head ../rahasia.txt',
+      'head tautan.txt',
+      'git diff --output x.patch',
+      'git diff -O/etc/passwd',
+      'git log :/',
+      'git diff --no-index src/a.ts /etc/passwd',
     ]) {
       expect(await isReadOnlyCommand(cmd, root, root), cmd).toBe(false);
     }

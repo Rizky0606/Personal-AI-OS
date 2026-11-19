@@ -4,9 +4,10 @@ import nodePath from 'node:path';
 /**
  * Perintah baca saja yang diizinkan worker tanpa bertanya (SECURITY_OPS.md, "Perintah baca saja"). Daftar sengaja
  * sempit dan ditulis per perintah; yang tidak cocok persis tetap ditanyakan ke pemilik:
- * - `git status|diff|log|show` tanpa opsi global (`-c`, `-C`, `--git-dir`, ...) dan tanpa opsi yang menulis atau
- *   menjalankan program (`--output`, `--ext-diff`, `--textconv`). Alias git tidak bisa menimpa perintah bawaan.
- * - `ls`, `pwd`, `command -v <nama>`.
+ * - `git status|diff|log|show` tanpa opsi global (`-c`, `-C`, `--git-dir`, ...) dan tanpa opsi yang menulis,
+ *   menjalankan program, atau membaca berkas di luar argumen (`--output`, `--ext-diff`, `--textconv`, `-O<berkas>`),
+ *   juga tanpa pathspec ajaib (`:/` = seluruh repo). Alias git tidak bisa menimpa perintah bawaan.
+ * - `ls` tanpa mengikuti symlink (`-L`, `--dereference`), `pwd`, `command -v <nama>`.
  * - `cat <berkas>` dan `head [-n N] <berkas>`.
  * Semua argumen path harus berada di dalam folder kerja run setelah symlink diselesaikan, cwd perintah juga.
  * Karakter shell (`;|&<>$\`()` dst., kutip, glob, `~`, baris baru) membuat perintah ditanyakan: tanpa itu kalimat
@@ -14,7 +15,7 @@ import nodePath from 'node:path';
  */
 const SHELL_META = /[;&|<>$`(){}[\]*?~!#'"\\\n\r\t]/;
 const GIT_READ = ['status', 'diff', 'log', 'show'];
-const GIT_UNSAFE = /^(?:--output(?:=|$)|--ext-diff$|--textconv$|-o$)/;
+const GIT_UNSAFE = /^(?:--output(?:=|$)|--ext-diff$|--textconv$|-o$|-O|:)/;
 
 export async function isReadOnlyCommand(
   command: string,
@@ -28,7 +29,7 @@ export async function isReadOnlyCommand(
   if (words.some((w) => w.includes('=') && (program !== 'git' || !/^--[a-z-]+=/.test(w)))) {
     return false;
   }
-  if (!(await inside(root, cwd))) return false;
+  if ((await relativeInside(root, cwd)) === undefined) return false;
   const paths = (list: string[], mustExist = false) => everyInside(root, cwd, list, mustExist);
   switch (program) {
     case 'git': {
@@ -39,6 +40,8 @@ export async function isReadOnlyCommand(
       return paths(rest.filter((a) => !a.startsWith('-')));
     }
     case 'ls':
+      // `-L` mengikuti symlink folder keluar dari folder run dan mendaftar isinya.
+      if (args.some((a) => /^-[^-]*L/.test(a) || a === '--dereference')) return false;
       return paths(args.filter((a) => !a.startsWith('-')));
     case 'pwd':
       return args.length === 0;
@@ -69,30 +72,36 @@ async function everyInside(
   mustExist = false,
 ): Promise<boolean> {
   for (const item of list) {
-    if (!(await inside(root, nodePath.resolve(cwd, item), mustExist))) return false;
+    if ((await relativeInside(root, nodePath.resolve(cwd, item), mustExist)) === undefined) {
+      return false;
+    }
   }
   return true;
 }
 
 /**
- * Path (setelah symlink) berada di dalam root. Path yang belum ada dinilai dari induk terdekat yang ada, kecuali
- * `mustExist` (berkas yang dibaca harus ada, supaya symlink di dalamnya ikut diperiksa).
+ * Path (setelah symlink) di dalam root: path relatif terhadap root yang sebenarnya (`''` = root itu sendiri), atau
+ * undefined bila di luar. Path yang belum ada dinilai dari induk terdekat yang ada, kecuali `mustExist` (berkas yang
+ * dibaca harus ada, supaya symlink di dalamnya ikut diperiksa).
  */
-export async function inside(root: string, target: string, mustExist = false): Promise<boolean> {
+export async function relativeInside(
+  root: string,
+  target: string,
+  mustExist = false,
+): Promise<string | undefined> {
   const realRoot = await fs.realpath(root).catch(() => undefined);
-  if (!realRoot) return false;
+  if (!realRoot) return undefined;
   let probe = nodePath.resolve(target);
   let suffix = '';
   for (;;) {
     const real = await fs.realpath(probe).catch(() => undefined);
     if (real !== undefined) {
-      const full = nodePath.join(real, suffix);
-      const rel = nodePath.relative(realRoot, full);
-      return rel === '' || (!rel.startsWith('..') && !nodePath.isAbsolute(rel));
+      const rel = nodePath.relative(realRoot, nodePath.join(real, suffix));
+      return rel === '' || (!rel.startsWith('..') && !nodePath.isAbsolute(rel)) ? rel : undefined;
     }
-    if (mustExist) return false;
+    if (mustExist) return undefined;
     const parent = nodePath.dirname(probe);
-    if (parent === probe) return false;
+    if (parent === probe) return undefined;
     suffix = nodePath.join(nodePath.basename(probe), suffix);
     probe = parent;
   }

@@ -120,7 +120,9 @@ describe('pesan commit', () => {
     expect(fallbackCommitMessage('PageCount kini menolak nilai negatif.', ['src/a.ts'])).toBe(
       'chore: PageCount kini menolak nilai negatif',
     );
-    expect(fallbackCommitMessage('README diperbarui', ['src/a.ts'])).toBe('chore: README diperbarui');
+    expect(fallbackCommitMessage('README diperbarui', ['src/a.ts'])).toBe(
+      'chore: README diperbarui',
+    );
   });
 
   it('huruf non-Latin ditolak: baris Commit dilewati, fallback melewati baris itu', () => {

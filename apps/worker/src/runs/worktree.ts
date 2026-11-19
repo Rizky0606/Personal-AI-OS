@@ -305,6 +305,14 @@ export class WorktreeManager {
   }
 
   /**
+   * Run in_place kembali menjadi pembaca: semua izin tulisnya ditolak pemilik, jadi ia tidak pernah menulis dan
+   * tidak perlu memegang kunci repo sampai selesai. Hanya dipanggil bila belum ada izin tulis yang diberikan.
+   */
+  releaseWrite(runId: string): void {
+    if (this.active.get(runId)?.kind === 'in_place') this.writers.delete(runId);
+  }
+
+  /**
    * Pembaca in_place yang pernah berjalan bersamaan dengan penulis lain di repo yang sama. Ia tidak pernah
    * mendapat izin tulis, jadi perubahan di folder itu bukan miliknya: tanpa checkpoint, diff, atau tinjauan.
    */

@@ -967,7 +967,10 @@ describe('urutan frame sintetis (bentuk frame dari rekaman)', () => {
   it('narasi antar-giliran: giliran asisten baru dipisah paragraf; ringkasan tetap jawaban terakhir', async () => {
     const { transport, handle } = await boot({ t: 0 });
     const say = (delta: string) =>
-      frame(transport, { type: 'message_update', assistantMessageEvent: { type: 'text_delta', delta } });
+      frame(transport, {
+        type: 'message_update',
+        assistantMessageEvent: { type: 'text_delta', delta },
+      });
     const end = (text: string) =>
       frame(transport, {
         type: 'message_end',

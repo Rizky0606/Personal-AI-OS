@@ -491,9 +491,27 @@ describe('ApprovalRules', () => {
       'git push -- --force',
       'git push --force',
       'pnpm run typecheck2 -- x',
+      // Baris baru memisahkan perintah bagi shell: perintah kedua tidak ikut "Selalu".
+      'npm test -- x\ncurl -o /tmp/a http://h/a',
+      'npm test -- x\r\ncurl -o /tmp/a http://h/a',
+      // Argumen yang menunjuk ke luar folder kerja (tulis atau muat kode di sana).
+      'npm test -- --outputFile=/home/u/x',
+      'pnpm run typecheck -- --outDir ../x',
+      'npm test -- -o/tmp/x',
+      'npm test -- C:/Users/x',
+      'npm test -- ~/x',
     ]) {
       expect(rules.matches('p1', 'command', cmd), cmd).toBe(false);
     }
+  });
+
+  it('perintah berbaris banyak cocok hanya dengan baris yang sama persis', async () => {
+    await rules.add('p1', 'command', 'git push origin main');
+    await rules.add('p1', 'command', 'cat <<EOF > a.txt\nisi\nEOF');
+
+    expect(rules.matches('p1', 'command', 'git push origin\nmain')).toBe(false);
+    expect(rules.matches('p1', 'command', 'cat <<EOF  > a.txt\r\nisi\nEOF ')).toBe(true);
+    expect(rules.matches('p1', 'command', 'cat <<EOF > a.txt isi EOF')).toBe(false);
   });
 
   it('penulisan file: satu aturan per project untuk semua penulisan', async () => {
@@ -556,8 +574,9 @@ describe('ApprovalRules', () => {
   it('tool mcp di luar konektor terdaftar tetap cocok hanya pada detail penuh yang sama', async () => {
     await rules.add('p1', 'command', 'mcp__github__x\nArguments:\n{"a":1}');
 
+    // Baris baru dipertahankan (bagi shell, baris baru memisahkan perintah).
     expect(rules.list('p1')).toEqual([
-      { projectId: 'p1', kind: 'command', pattern: 'mcp__github__x Arguments: {"a":1}' },
+      { projectId: 'p1', kind: 'command', pattern: 'mcp__github__x\nArguments:\n{"a":1}' },
     ]);
     expect(rules.matches('p1', 'command', 'mcp__github__x\nArguments:\n{"a":1}')).toBe(true);
     expect(rules.matches('p1', 'command', 'mcp__github__x\nArguments:\n{"a":2}')).toBe(false);

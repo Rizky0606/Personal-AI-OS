@@ -19,8 +19,17 @@ const FileSchema = z.object({ version: z.literal(1), rules: z.array(RuleSchema) 
 
 export type RuleKind = ApprovalRule['kind'];
 
-/** Spasi berulang dan ujung dirapikan; huruf tidak diubah (perintah membedakan huruf besar/kecil). */
-export const normalizeDetail = (detail: string): string => detail.trim().replace(/\s+/g, ' ');
+/**
+ * Spasi/tab berulang dan ujung dirapikan; huruf tidak diubah (perintah membedakan huruf besar/kecil). Baris baru
+ * dipertahankan: bagi shell, baris baru memisahkan perintah, jadi `a\nb` bukan perintah yang sama dengan `a b`.
+ */
+export const normalizeDetail = (detail: string): string =>
+  detail
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .map((line) => line.trim().replace(/[ \t]+/g, ' '))
+    .join('\n')
+    .trim();
 
 /**
  * Pola aturan dari permintaan izin. Tool gateway (`aios_tools`) dan tool konektor diingat per nama tool, karena
@@ -38,8 +47,20 @@ function patternOf(kind: RuleKind, detail: string): string {
 /** Skrip package manager: `npm test`, `npm run <skrip>`, `pnpm test|run <skrip>`, `yarn test|run <skrip>`, `bun run <skrip>`. */
 const PACKAGE_SCRIPT =
   /^(?:npm (?:test|t|run [\w:.-]+)|(?:pnpm|yarn) (?:test|run [\w:.-]+)|bun run [\w:.-]+)$/;
-/** Argumen tambahan yang aman: literal tanpa metakarakter shell, kutip, atau ekspansi. */
-const PLAIN_ARGS = /^[\w@%+=:,./-]+(?: [\w@%+=:,./-]+)*$/;
+/** Path relatif di dalam folder kerja: bukan absolut, tanpa huruf drive atau `~` (segmen `..` diperiksa terpisah). */
+const RELATIVE = /^[\w@%+,.-][\w@%+,./-]*$/;
+
+/**
+ * Satu argumen tambahan yang aman: opsi panjang (`--run`, `--reporter=verbose`) dengan nilai relatif, gabungan opsi
+ * pendek tanpa nilai menempel (`-t`, `-u`), atau path/nama relatif. Nilai absolut atau yang keluar folder
+ * (`--outputFile=/home/u/x`, `--outDir ../x`, `-o/tmp/x`) membuat perintah ditanyakan.
+ */
+function safeScriptArg(arg: string): boolean {
+  const long = /^--[\w-]+(?:=(.+))?$/.exec(arg);
+  if (arg.startsWith('-') && !long) return /^-[A-Za-z]+$/.test(arg);
+  const value = long ? long[1] : arg;
+  return value === undefined || (RELATIVE.test(value) && !value.split('/').includes('..'));
+}
 
 /**
  * "Selalu" untuk skrip package manager mencakup argumen tambahan setelah `--`: `npm test` juga mengizinkan
@@ -51,7 +72,9 @@ const PLAIN_ARGS = /^[\w@%+=:,./-]+(?: [\w@%+=:,./-]+)*$/;
  */
 function extendsScript(rule: string, command: string): boolean {
   if (!PACKAGE_SCRIPT.test(rule) || !command.startsWith(`${rule} -- `)) return false;
-  return PLAIN_ARGS.test(command.slice(rule.length + 4));
+  const args = command.slice(rule.length + 4);
+  // Baris baru, tab, kutip, dan metakarakter shell tidak lolos `safeScriptArg`; hanya spasi tunggal pemisah.
+  return args.split(' ').every(safeScriptArg);
 }
 
 /**

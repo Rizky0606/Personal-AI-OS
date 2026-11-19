@@ -128,12 +128,18 @@ function approvalKind(tool: string): ApprovalKind {
   return 'command';
 }
 
+/**
+ * Panjang maksimum detail izin. Detail yang lebih panjang dipotong (diakhiri `…`), jadi bukan perintah utuh: worker
+ * tidak boleh mengizinkannya otomatis atau menyimpannya sebagai aturan "Selalu".
+ */
+export const APPROVAL_DETAIL_MAX = 4000;
+
 /** `Command: x` menjadi `x` (perintah persis); detail lain dipertahankan apa adanya. */
 function approvalDetail(tool: string, rest: string): string {
   const command = /^Command: ([\s\S]*)$/.exec(rest);
   // Tool MCP: nama tool ikut di baris pertama, karena argumennya saja tidak menjelaskan apa yang dipanggil.
-  if (tool.startsWith('mcp__')) return clip(rest ? `${tool}\n${rest}` : tool, 4000);
-  return clip(command ? (command[1] ?? '') : rest || tool, 4000);
+  if (tool.startsWith('mcp__')) return clip(rest ? `${tool}\n${rest}` : tool, APPROVAL_DETAIL_MAX);
+  return clip(command ? (command[1] ?? '') : rest || tool, APPROVAL_DETAIL_MAX);
 }
 
 function toolTarget(args: unknown): string | undefined {
@@ -639,7 +645,12 @@ class OmpRun implements RunHandle {
     // Alasan galat tool (mis. MCP `run_not_active`, URL di luar allowlist) dialirkan ke event run; tanpa ini
     // galat tool MCP yang tidak pernah mengirim keluaran parsial tidak terlihat sama sekali (uji project 4k).
     if (status === 'error' && result && !tool.text.includes(result))
-      this.emit({ type: 'tool.output', toolCallId: id, chunk: clip(result, 2000), stream: 'stderr' });
+      this.emit({
+        type: 'tool.output',
+        toolCallId: id,
+        chunk: clip(result, 2000),
+        stream: 'stderr',
+      });
     this.emit({
       type: 'tool.finished',
       toolCallId: id,
@@ -715,9 +726,8 @@ class OmpRun implements RunHandle {
     const candidates = [...this.tools.entries()].filter(
       ([, t]) => t.name === tool && (command === undefined || t.target === clip(command, 500)),
     );
-    const toolCallId = (
-      candidates.at(-1) ?? [...this.tools.entries()].reverse().find(([, t]) => t.name === tool)
-    )?.[0];
+    const toolCallId = (candidates.at(-1) ??
+      [...this.tools.entries()].reverse().find(([, t]) => t.name === tool))?.[0];
     const cwds = new Set(candidates.map(([, t]) => t.cwd));
     const cwd =
       cwds.size === 1
