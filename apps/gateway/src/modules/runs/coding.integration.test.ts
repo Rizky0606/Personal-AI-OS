@@ -259,6 +259,34 @@ describe('run coding lewat worker', () => {
       remember: true,
     });
     await until(async () => (await statusOf(run.id)) === 'running', 'kembali running');
+    const rowOf = async (id: string) =>
+      (await env.database.handle.db.select().from(approvals).where(eq(approvals.id, id)))[0];
+    expect(await rowOf(APPROVAL_ID)).toMatchObject({ status: 'allowed', remember: true });
+
+    // Pemilik memilih "Selalu", tetapi worker tidak menyimpan aturannya (mis. detail terpotong): baris izin
+    // mengikuti yang benar-benar berlaku menurut worker, bukan permintaan.
+    const second = '0192f0c4-7a1b-7c2d-a00f-4a5b6c7d8e9f';
+    fake.emit(run.id, {
+      type: 'approval.requested',
+      approvalId: second,
+      kind: 'command',
+      detail: 'node --test --watch',
+    });
+    await until(async () => (await statusOf(run.id)) === 'waiting_approval', 'izin kedua');
+    const again = await env.post(
+      `/runs/${run.id}/approvals/${second}`,
+      { decision: 'allow', remember: true },
+      desktop,
+    );
+    expect(again.statusCode, again.body).toBe(200);
+    fake.emit(run.id, {
+      type: 'approval.resolved',
+      approvalId: second,
+      decision: 'allow',
+      remember: false,
+    });
+    await until(async () => (await rowOf(second))?.remember === false, 'remember dari worker');
+    await until(async () => (await statusOf(run.id)) === 'running', 'kembali running lagi');
     fake.emit(run.id, {
       type: 'tool.output',
       toolCallId: 'call_1',
@@ -334,6 +362,8 @@ describe('run coding lewat worker', () => {
       'queued',
       'routing',
       'preparing',
+      'running',
+      'waiting_approval',
       'running',
       'waiting_approval',
       'running',

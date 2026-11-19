@@ -516,6 +516,12 @@ export function createRunner(deps: RunnerDeps): Runner {
             decidedAt: new Date(),
           })
           .where(and(eq(approvals.id, event.approvalId), eq(approvals.status, 'pending')));
+        // `remember` dari worker adalah yang benar-benar berlaku (aturan tersimpan atau tidak, mis. detail terpotong
+        // tidak pernah disimpan); POST .../approvals/:id biasanya sudah mengisi baris dari permintaan lebih dulu.
+        await db
+          .update(approvals)
+          .set({ remember: event.remember })
+          .where(eq(approvals.id, event.approvalId));
         const [pending] = await db
           .select({ n: count() })
           .from(approvals)
