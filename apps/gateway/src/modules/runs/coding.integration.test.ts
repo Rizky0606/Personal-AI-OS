@@ -888,6 +888,14 @@ describe('folder kerja run coding: in_place dan worktree', () => {
     await until(async () => (await statusOf(first.id)) === 'rejected', 'run lama ditutup');
     // Digantikan pesan lanjutan, bukan ditolak pemilik.
     expect(await getRun(first.id)).toMatchObject({ endReason: 'superseded' });
+    // Event run.status penutupnya juga membawa alasan, supaya klien live tidak menampilkan "Ditolak".
+    const firstEvents = (await env.get(`/runs/${first.id}/events?limit=500`, desktop))
+      .json<{ items: { event: AgentEvent }[] }>()
+      .items.map((i) => i.event);
+    expect(firstEvents.filter((e) => e.type === 'run.status').at(-1)).toMatchObject({
+      status: 'rejected',
+      endReason: 'superseded',
+    });
     expect(await getRun(second.id)).toMatchObject({
       branch: workerBranchFor(first.id),
       workspace: 'worktree',
