@@ -1,3 +1,4 @@
+import { foldHistory } from '@aios/adapters';
 import {
   ConversationSchema,
   MessageSchema,
@@ -123,10 +124,20 @@ describe('POST /messages/:id/fork', () => {
       await new Promise((r) => setTimeout(r, 20));
     }
 
-    const body = (hermes.requests.at(-1)?.body.messages ?? [])
-      .filter((m) => m.role !== 'system')
-      .map((m) => `${m.role}:${String(m.content)}`);
-    expect(body).toEqual(['user:Beri diskon 10%', 'assistant:Siap, 10%.', 'user:Coba 20% saja']);
+    // Sesi Hermes baru: riwayat salinan dilipat ke pesan user (Hermes mengabaikan riwayat di body bila ada id sesi).
+    const body = (hermes.requests.at(-1)?.body.messages ?? []).filter((m) => m.role !== 'system');
+    expect(body).toEqual([
+      {
+        role: 'user',
+        content: foldHistory(
+          [
+            { role: 'user', content: 'Beri diskon 10%' },
+            { role: 'assistant', content: 'Siap, 10%.' },
+          ],
+          'Coba 20% saja',
+        ),
+      },
+    ]);
     // Jalur asli tidak menyimpan pesan "Coba 20% saja".
     expect((await messagesOf(created.id)).length).toBe(4);
   });

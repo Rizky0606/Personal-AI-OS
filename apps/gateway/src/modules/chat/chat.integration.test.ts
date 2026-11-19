@@ -8,6 +8,7 @@ import {
   SendMessageResponseSchema,
   type AgentEvent,
 } from '@aios/contracts';
+import { foldHistory } from '@aios/adapters';
 import { eq } from 'drizzle-orm';
 import type { ServerResponse } from 'node:http';
 import { afterAll, beforeAll, beforeEach, describe, expect, inject, it } from 'vitest';
@@ -24,6 +25,18 @@ let routerReply: (res: ServerResponse, body: string) => void;
 const routerBodies: string[] = [];
 const titleRequests = () => routerBodies.filter((b) => b.includes('Buat judul percakapan'));
 let token: string;
+
+interface Turn {
+  role: 'user' | 'assistant';
+  content: string;
+}
+/**
+ * Pesan non-sistem yang diterima Hermes pada giliran pertama sesi baru: riwayat dari DB dilipat ke pesan user,
+ * karena Hermes mengabaikan riwayat di body bila X-Hermes-Session-Id dikirim.
+ */
+const firstTurnOfNewSession = (history: Turn[], prompt: string) => [
+  { role: 'user', content: foldHistory(history, prompt) },
+];
 
 beforeAll(async () => {
   hermes = await startFakeHermes();
@@ -444,11 +457,15 @@ describe('ubah dan hapus pesan', () => {
     ]);
     // Sesi baru (bukan sesi lama yang masih ingat "dua" dan "tiga"), dengan riwayat sebelum titik potong.
     expect(sessionOf(3)).not.toBe(`aios-${conv.id}`);
-    expect(hermes.requests[3]!.body.messages.filter((m) => m.role !== 'system')).toEqual([
-      { role: 'user', content: 'satu' },
-      { role: 'assistant', content: 'jawab' },
-      { role: 'user', content: 'dua revisi' },
-    ]);
+    expect(hermes.requests[3]!.body.messages.filter((m) => m.role !== 'system')).toEqual(
+      firstTurnOfNewSession(
+        [
+          { role: 'user', content: 'satu' },
+          { role: 'assistant', content: 'jawab' },
+        ],
+        'dua revisi',
+      ),
+    );
 
     // Giliran berikutnya memakai sesi baru itu tanpa mengirim ulang riwayat.
     await finalRun((await send(conv.id, 'empat')).run.id);
@@ -471,12 +488,16 @@ describe('ubah dan hapus pesan', () => {
     expect((await listed(conv.id)).map(textOf)).toEqual(['satu', 'jawab', 'dua']);
 
     await finalRun((await send(conv.id, 'tiga')).run.id);
-    expect(hermes.requests[2]!.body.messages.filter((m) => m.role !== 'system')).toEqual([
-      { role: 'user', content: 'satu' },
-      { role: 'assistant', content: 'jawab' },
-      { role: 'user', content: 'dua' },
-      { role: 'user', content: 'tiga' },
-    ]);
+    expect(hermes.requests[2]!.body.messages.filter((m) => m.role !== 'system')).toEqual(
+      firstTurnOfNewSession(
+        [
+          { role: 'user', content: 'satu' },
+          { role: 'assistant', content: 'jawab' },
+          { role: 'user', content: 'dua' },
+        ],
+        'tiga',
+      ),
+    );
   });
 
   it('hapus pesan pertama mengosongkan percakapan; sesi lama tidak dipakai lagi', async () => {
@@ -606,13 +627,17 @@ describe('cancel', () => {
     expect(session(1)).toBe(`aios-${conv.id}`);
     // Sesi lama Hermes bisa memuat jawaban penuh yang tidak pernah dilihat pemilik: tidak dipakai lagi.
     expect(session(2)).not.toBe(session(1));
-    expect(hermes.requests[2]!.body.messages.filter((m) => m.role !== 'system')).toEqual([
-      { role: 'user', content: 'halo' },
-      { role: 'assistant', content: 'hai' },
-      { role: 'user', content: 'cerita panjang' },
-      { role: 'assistant', content: 'Awal cerita' },
-      { role: 'user', content: 'lanjutkan' },
-    ]);
+    expect(hermes.requests[2]!.body.messages.filter((m) => m.role !== 'system')).toEqual(
+      firstTurnOfNewSession(
+        [
+          { role: 'user', content: 'halo' },
+          { role: 'assistant', content: 'hai' },
+          { role: 'user', content: 'cerita panjang' },
+          { role: 'assistant', content: 'Awal cerita' },
+        ],
+        'lanjutkan',
+      ),
+    );
     const [row] = await env.database.handle.db
       .select({ session: conversations.hermesSessionId })
       .from(conversations)
@@ -649,11 +674,15 @@ describe('coba ulang otomatis (galat retryable sebelum keluaran)', () => {
     expect(hermes.requests).toHaveLength(3);
     const [, first, retry] = hermes.requests;
     expect(retry!.headers['x-hermes-session-id']).not.toBe(first!.headers['x-hermes-session-id']);
-    expect(retry!.body.messages.filter((m) => m.role !== 'system')).toEqual([
-      { role: 'user', content: 'halo' },
-      { role: 'assistant', content: 'hai' },
-      { role: 'user', content: 'lagi' },
-    ]);
+    expect(retry!.body.messages.filter((m) => m.role !== 'system')).toEqual(
+      firstTurnOfNewSession(
+        [
+          { role: 'user', content: 'halo' },
+          { role: 'assistant', content: 'hai' },
+        ],
+        'lagi',
+      ),
+    );
   });
 
   it('gagal lagi pada percobaan ulang: failed dengan galat itu, hanya dua permintaan', async () => {

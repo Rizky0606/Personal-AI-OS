@@ -258,16 +258,19 @@ function repairComponent(raw: unknown, index: number): unknown {
     // `data: [{label, value}]` menjadi dua deret.
     if (Array.isArray(out.values) && out.values.every(isPlainObject) && out.labels === undefined) {
       const points = out.values;
-      out.labels = points.map((p) => String(p.label ?? p.name ?? p.x ?? ''));
+      out.labels = points.map((p) => {
+        const label = p.label ?? p.name ?? p.x;
+        return typeof label === 'string' || typeof label === 'number' ? String(label) : '';
+      });
       out.values = points.map((p) => toNumber(p.value ?? p.y));
     }
     if (Array.isArray(out.values)) out.values = out.values.map(toNumber);
     if (Array.isArray(out.labels)) out.labels = out.labels.map((l) => String(l));
   }
   if (type === 'table' && Array.isArray(out.rows)) {
-    out.rows = out.rows.map((row) =>
+    out.rows = out.rows.map((row: unknown) =>
       Array.isArray(row)
-        ? row.map((cell) => (typeof cell === 'string' ? cell : String(cell)))
+        ? row.map((cell: unknown) => (typeof cell === 'string' ? cell : String(cell)))
         : row,
     );
   }

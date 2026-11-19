@@ -55,8 +55,9 @@ describe('createWebContext', () => {
         { role: 'assistant', content: 'Ada RTX dan Radeon.' },
       ],
       undefined,
-      async (q) => {
+      (q) => {
         queries.push(q);
+        return Promise.resolve();
       },
     );
 
