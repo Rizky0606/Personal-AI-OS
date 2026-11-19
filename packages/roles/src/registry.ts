@@ -5,6 +5,7 @@ import { parse as parseYaml } from 'yaml';
 import { GENERAL_AGENT, PROJECT_AGENT } from './agents.js';
 import type { ZodType } from 'zod';
 import {
+  CODING_CORE_SKILLS,
   CORE_SKILLS,
   RoleFrontmatterSchema,
   SkillFrontmatterSchema,
@@ -23,6 +24,8 @@ export interface Role {
   approval: RoleFrontmatter['approval'];
   /** Skill yang tertulis di frontmatter, sesuai urutan. */
   skills: string[];
+  /** `offered_skills`: hanya ditawarkan lewat indeks skill, tidak ditempel utuh. */
+  offeredSkills: string[];
   /** Isi markdown (di luar frontmatter): menjadi bagian system prompt. */
   body: string;
   file: string;
@@ -145,6 +148,7 @@ export function loadRegistry(dir: string = ROLES_PACKAGE_DIR): RolesRegistry {
         model: meta.model,
         approval: meta.approval,
         skills: meta.skills,
+        offeredSkills: meta.offered_skills,
         body: parts.body,
         file: label,
       });
@@ -157,11 +161,14 @@ export function loadRegistry(dir: string = ROLES_PACKAGE_DIR): RolesRegistry {
   for (const core of CORE_SKILLS) {
     if (!skills.has(core)) problems.push(`skill inti "${core}" tidak ada`);
   }
+  for (const core of CODING_CORE_SKILLS) {
+    if (!skills.has(core)) problems.push(`skill inti coding "${core}" tidak ada`);
+  }
   for (const required of [GENERAL_AGENT, PROJECT_AGENT]) {
     if (roles.size > 0 && !roles.has(required)) problems.push(`agent "${required}" wajib ada`);
   }
   for (const role of roles.values()) {
-    for (const skill of role.skills) {
+    for (const skill of [...role.skills, ...role.offeredSkills]) {
       if (!skills.has(skill))
         problems.push(`${role.file}: merujuk skill "${skill}" yang tidak ada`);
     }

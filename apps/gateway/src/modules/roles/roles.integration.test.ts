@@ -1,5 +1,11 @@
 import { INITIAL_ROLE_IDS, RoleListSchema, SendMessageResponseSchema } from '@aios/contracts';
-import { AGENT_BEHAVIOR_RULES, CORE_SKILLS, ROLES_PACKAGE_DIR, RegistryError } from '@aios/roles';
+import {
+  AGENT_BEHAVIOR_RULES,
+  CODING_CORE_SKILLS,
+  ROLES_PACKAGE_DIR,
+  RegistryError,
+  coreSkillsFor,
+} from '@aios/roles';
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -51,7 +57,10 @@ describe('GET /roles', () => {
       model: 'coding-main',
       approval: 'ask',
     });
-    expect(project.skills).toEqual([...CORE_SKILLS, 'find-skills', 'plan-progress']);
+    expect(project.skills).toEqual([...coreSkillsFor('coding'), 'find-skills', 'plan-progress']);
+    // Agent umum tidak membawa skill inti coding (laporan uji umum B8).
+    const general = items.find((r) => r.id === 'general')!;
+    for (const id of CODING_CORE_SKILLS) expect(general.skills).not.toContain(id);
     // Isi prompt tidak ikut ke klien.
     expect(JSON.stringify(items)).not.toContain('Definition of done');
   });
@@ -80,22 +89,29 @@ describe('bundel sebagai pesan sistem Hermes', () => {
     const [system, user] = request!.body.messages;
     expect(user).toEqual({ role: 'user', content: 'halo' });
     expect(system!.role).toBe('system');
-    // Bundel role di depan; run di server menambahkan aturan berkas untuk pemilik sesudahnya.
-    expect(system!.content.startsWith(env.roles.bundle('general').systemPrompt)).toBe(true);
+    // Bundel role di depan (indeks skill memakai nama Hermes aios-<id>); run di server menambahkan aturan berkas
+    // untuk pemilik sesudahnya.
+    expect(
+      system!.content.startsWith(
+        env.roles.bundle('general', undefined, { skillNamePrefix: 'aios-' }).systemPrompt,
+      ),
+    ).toBe(true);
     expect(system!.content).toContain(SERVER_FILES_RULE);
     for (const rule of AGENT_BEHAVIOR_RULES) expect(system!.content).toContain(rule);
     expect(system!.content).toContain('# Peran: Umum');
     for (const skill of [
       'scope-guard',
-      'verify-before-done',
       // Skill inti: jawaban kaya sampai ke Hermes di chat umum tanpa kata kunci tampilan.
       'rich-answers',
       'answer-first',
       'clarify-once',
-      'find-skills',
     ]) {
       expect(system!.content).toContain(`## ${skill}\n`);
     }
+    // Skill yang jarang dipakai hanya ditawarkan lewat indeks supaya pesan sistem tetap ramping.
+    expect(system!.content).not.toContain('## find-skills\n');
+    expect(system!.content).toContain('\n- aios-find-skills: ');
+    for (const skill of CODING_CORE_SKILLS) expect(system!.content).not.toContain(`## ${skill}\n`);
     expect(system!.content).not.toContain('## ui-baseline');
     expect(run.agentRole).toBeNull();
     expect((await env.get(`/runs/${run.id}`, token)).json<{ agentRole: string }>().agentRole).toBe(

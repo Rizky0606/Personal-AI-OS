@@ -7,7 +7,7 @@ import type {
   SendMessageRequestSchema,
   UpdateConversationRequestSchema,
 } from '@aios/contracts';
-import { HANDOFF_PREFIX, TERMINAL_RUN_STATUSES } from '@aios/contracts';
+import { HANDOFF_PREFIX, TERMINAL_RUN_STATUSES, rememberFactFrom } from '@aios/contracts';
 import { and, desc, eq, gte, isNotNull, isNull, lt, notInArray, sql } from 'drizzle-orm';
 import type { z } from 'zod';
 import type { Database } from '../../db/client.js';
@@ -121,6 +121,7 @@ export function createChatService(deps: {
       text: string,
       history?: readonly { role: 'user' | 'assistant'; content: string }[],
       signal?: AbortSignal,
+      onQuery?: (query: string) => Promise<void>,
     ): Promise<string>;
   };
   now?: () => number;
@@ -165,12 +166,14 @@ export function createChatService(deps: {
               deps.links!.contextFor(ownerText, signal),
             ).catch(() => '')
           : '',
+        // Target langkah = kueri yang benar-benar dibuat model, bukan potongan pesan mentah.
         search
-          ? step('cari_web', ownerText.replace(/\s+/g, ' ').trim().slice(0, 120), async () =>
+          ? step('cari_web', undefined, async (retarget) =>
               deps.web!.contextFor(
                 ownerText,
                 await loadProjectHistory(web.conversationId, web.beforeId),
                 signal,
+                retarget,
               ),
             ).catch(() => '')
           : '',
@@ -224,11 +227,6 @@ export function createChatService(deps: {
     }
   }
 
-  /**
-   * Sesi Hermes untuk giliran berikutnya. Percakapan yang dipotong (edit/hapus pesan) tidak punya sesi:
-   * dibuat sesi baru, dan riwayat yang tersisa (sebelum `beforeId`) dikirim karena sesi lama masih memuat
-   * bagian yang dibuang. Percakapan yang belum pernah punya run memakai sesi bawaan `aios-<id>`.
-   */
   /** Pesan menjadi riwayat untuk agent; pesan sistem hanya yang membawa ringkasan lanjutan. */
   function historyFrom(
     rows: { author: string; parts: Message['parts'] }[],
@@ -294,9 +292,36 @@ export function createChatService(deps: {
       .slice(0, RECALL_TEXT_MAX);
   }
 
+  /** Sesi Hermes baru berisi riwayat dari DB (sebelum `beforeId` bila diisi), terbaru dibatasi. */
+  async function newSession(
+    conversationId: string,
+    beforeId?: string,
+  ): Promise<{ sessionId: string; history: NonNullable<LaunchInput['history']> }> {
+    const rows = await db
+      .select({ author: messages.author, parts: messages.parts })
+      .from(messages)
+      .where(
+        and(
+          eq(messages.conversationId, conversationId),
+          beforeId ? lt(messages.id, beforeId) : undefined,
+        ),
+      )
+      .orderBy(desc(messages.id))
+      .limit(MAX_HISTORY_MESSAGES);
+    return {
+      sessionId: `aios-${conversationId}-${uuidv7()}`,
+      history: historyFrom(rows.reverse()),
+    };
+  }
+
+  /**
+   * Sesi Hermes untuk giliran berikutnya. Percakapan tanpa sesi (dipotong lewat edit/hapus pesan, atau run
+   * sebelumnya dihentikan/gagal sehingga runner melepasnya) mendapat sesi baru berisi riwayat dari DB, karena sesi
+   * lama bisa memuat bagian yang dibuang atau jawaban yang tidak pernah dilihat pemilik. Percakapan yang belum
+   * pernah punya run memakai sesi bawaan `aios-<id>`.
+   */
   async function sessionFor(
     conversation: typeof conversations.$inferSelect,
-    beforeId?: string,
   ): Promise<{ sessionId: string; history: NonNullable<LaunchInput['history']> }> {
     if (conversation.hermesSessionId)
       return { sessionId: conversation.hermesSessionId, history: [] };
@@ -316,22 +341,7 @@ export function createChatService(deps: {
       seeds.reverse();
       return { sessionId: `aios-${conversation.id}`, history: historyFrom(seeds) };
     }
-
-    const rows = await db
-      .select({ author: messages.author, parts: messages.parts })
-      .from(messages)
-      .where(
-        and(
-          eq(messages.conversationId, conversation.id),
-          beforeId ? lt(messages.id, beforeId) : undefined,
-        ),
-      )
-      .orderBy(desc(messages.id))
-      .limit(MAX_HISTORY_MESSAGES);
-    return {
-      sessionId: `aios-${conversation.id}-${uuidv7()}`,
-      history: historyFrom(rows.reverse()),
-    };
+    return newSession(conversation.id);
   }
 
   /**
@@ -648,6 +658,13 @@ export function createChatService(deps: {
           .where(eq(conversations.id, conversationId));
         return { run: runRow!, userMessage: userRow!, assistantMessageId };
       });
+      // Chat umum dari pemilik (bukan project, ruang, tim, jadwal, atau kanban).
+      const ownerChat =
+        options?.fromOwner === true &&
+        !conversation.projectId &&
+        !conversation.spaceId &&
+        !conversation.teamId;
+      const rememberFact = ownerChat ? rememberFactFrom(textOf(input.parts)) : null;
       runner.launch({
         run,
         conversationId,
@@ -661,6 +678,15 @@ export function createChatService(deps: {
         ),
         sessionId,
         ...(history.length ? { history } : {}),
+        // Percobaan ulang otomatis: sesi Hermes baru berisi riwayat sebelum pesan ini, langsung jadi sesi percakapan.
+        freshSession: async () => {
+          const fresh = await newSession(conversationId, userMessage.id);
+          await db
+            .update(conversations)
+            .set({ hermesSessionId: fresh.sessionId })
+            .where(eq(conversations.id, conversationId));
+          return fresh;
+        },
         projectHistory: projectHistoryFor(conversationId, userMessage.id),
         ...(images.length ? { images } : {}),
         attachments: parts.flatMap((p) =>
@@ -671,11 +697,8 @@ export function createChatService(deps: {
           routingText.slice(0, RECALL_TEXT_MAX),
         ),
         projectId: conversation.projectId,
-        extract:
-          options?.fromOwner === true &&
-          !conversation.projectId &&
-          !conversation.spaceId &&
-          !conversation.teamId,
+        extract: ownerChat,
+        ...(rememberFact ? { rememberFact } : {}),
         ...(continueFromRunId ? { continueFromRunId } : {}),
         ...(supersedePrevious ? { supersedePrevious: true } : {}),
         ...(workspace ? { workspace } : {}),

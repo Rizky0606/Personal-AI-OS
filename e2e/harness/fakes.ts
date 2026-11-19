@@ -53,7 +53,7 @@ export const ARTIFACT_PARTS = [
 ];
 /**
  * "[skenario:kaya]": jawaban dengan blok aios-ui, seperti yang diajarkan skill inti rich-answers. Tiga blok valid
- * (tabel, grafik, checklist) dan satu blok rusak (kolom dan sel tidak sama) yang harus tampil sebagai kode.
+ * (tabel, grafik, checklist) dan satu blok rusak (kolom dan sel tidak sama) yang harus tampil sebagai cadangan ramah.
  */
 export const SCENARIO_RICH = '[skenario:kaya]';
 /**

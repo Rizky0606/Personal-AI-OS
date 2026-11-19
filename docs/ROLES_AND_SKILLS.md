@@ -6,7 +6,7 @@ Aplikasi punya **dua agent tetap**. Yang membedakannya hanya ada tidaknya projec
 
 | Agent | Grup | Mesin | Dipakai untuk | Skill milik agent |
 | --- | --- | --- | --- | --- |
-| `general` | Umum | Hermes (server) | Chat umum di tab Chat dan semua chat Android: pertanyaan apa pun, menulis dan menjelaskan kode di chat, tidak terikat folder project | answer-first, clarify-once, find-skills |
+| `general` | Umum | Hermes (server) | Chat umum di tab Chat dan semua chat Android: pertanyaan apa pun, menulis dan menjelaskan kode di chat, tidak terikat folder project | answer-first, clarify-once; find-skills hanya ditawarkan lewat indeks (`offered_skills`) |
 | `project` | Coding | omp (worker Windows) | Chat per folder project di tab Project dan run kartu kanban: membaca, mencari, menjawab, dan mengubah kode di folder project itu (chat: bawaannya langsung di branch aktif folder project; kartu kanban: worktree run) | find-skills, plan-progress (selain skill inti; plan-progress = rencana dengan tool todo untuk tugas 3 langkah atau lebih, hanya untuk mesin yang punya tool todo) |
 | `researcher` | Umum | Research engine + Hermes | Hanya fitur Riset dan jadwal riset; tidak pernah dipilih untuk pesan chat | source-verification, citation, fact-vs-opinion |
 
@@ -64,6 +64,7 @@ engine: omp # omp | hermes | research
 model: coding-main # nama combo di 9Router
 approval: ask # ask | auto-safe (baca saja otomatis)
 skills: [scope-guard, read-context-first, plan-before-edit, verify-before-done, minimal-diff, rich-answers, propose-skill]
+offered_skills: [] # opsional: hanya baris indeks "Skill tersedia", isi dibuka agent bila relevan
 ---
 
 # Peran
@@ -77,7 +78,11 @@ skills: [scope-guard, read-context-first, plan-before-edit, verify-before-done, 
 
 Registri menolak file yang tidak valid (gateway gagal start, atau di mode dev perubahan ditolak dan versi lama dipakai). Agent `general` dan `project` wajib ada.
 
-## Skill inti anti-melenceng (dimuat semua agent)
+`offered_skills` untuk skill milik agent yang jarang dipakai: isinya tidak ditempel di setiap pesan, hanya satu baris indeks (`- aios-find-skills: <deskripsi>` di Hermes), sama seperti paket kata kunci. Pilihan manual di composer dan fallback `SKILL_PACKS_EAGER_ENGINES` tetap menempelkannya utuh. `GET /roles` menampilkannya di `skills` agent itu. Agent `general` memakainya untuk `find-skills`: pesan sistem "Halo" turun dari 10.018 ke 8.850 karakter (input Hermes nyata 15.987 → 15.672 token; 13.362 token di antaranya prompt Hermes sendiri tanpa pesan sistem AIOS).
+
+## Skill inti anti-melenceng
+
+`CORE_SKILLS` (dimuat semua agent): `scope-guard`, `read-context-first`, `rich-answers`, `propose-skill`. `CODING_CORE_SKILLS` (hanya agent grup `coding`, yaitu `project`): `plan-before-edit`, `verify-before-done`, `minimal-diff`. `coreSkillsFor(group)` menggabungkannya. Dipisah sejak v1.2.0: skill coding itu membuat agent umum meminta persetujuan rencana untuk cerita fiksi dan menolak esai karena sumber "belum terverifikasi" (laporan uji umum B8). Agent umum menulis langsung tanpa meminta izin, dan memberi catatan "belum diverifikasi" untuk fakta spesifik yang belum pasti alih-alih menolak.
 
 | Skill | Isi aturan |
 | --- | --- |
@@ -127,6 +132,7 @@ Aturan ini berlaku untuk agent yang berjalan di aplikasi (bukan agent yang memba
 
 - Jawab dalam bahasa pengguna. Langsung ke jawaban, tanpa basa-basi.
 - Jangan mengarang fakta, path file, atau hasil perintah. Jika tidak tahu, katakan dan tawarkan cara mencari tahu.
+- Jangan menyatakan sesuatu sudah disimpan, dijadwalkan, diusulkan, atau diingat kecuali alatnya mengembalikan sukses di giliran ini. Tanpa itu, beri tahu cara melakukannya di aplikasi (tombol Ingat di pesan pemilik, layar Jadwal). Ditambahkan v1.2.0: Hermes produksi belum tersambung ke `aios_tools`, dan agent mengaku membuat usulan jadwal/memori yang tidak pernah ada (laporan uji umum B5). Status tersambung tidaknya tampil di layar Status (`agentTools.hermes` di `GET /status`).
 - Perintah yang mengubah sistem, menghapus file, atau mengakses jaringan selalu melalui approval kecuali ada aturan "selalu izinkan" untuk project itu.
 - Tidak pernah membaca atau mengirim file `.env`, kunci SSH, atau folder di luar project tanpa izin eksplisit.
 

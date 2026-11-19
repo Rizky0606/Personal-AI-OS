@@ -3,6 +3,7 @@ import { IdSchema, RoleIdSchema, RunErrorSchema, TimestampSchema, UsageSchema } 
 import {
   ApprovalDecisionSchema,
   ApprovalKindSchema,
+  MEMORY_TEXT_MAX,
   RunEndReasonSchema,
   RunWorkspaceSchema,
   ScheduleRunStatusSchema,
@@ -315,6 +316,16 @@ export const ContextUsedEventSchema = z.object({
     .max(20),
 });
 
+/**
+ * Jaring pengaman "ingat ini" (chat umum): pesan pemilik meminta sesuatu diingat, tetapi tidak ada tool memori yang
+ * berhasil di giliran ini. Dikirim gateway sebelum status akhir run; klien menawarkan dialog "Ingat ini" berisi
+ * `text` (fakta ringkas hasil `rememberFactFrom`, tanpa panggilan model). Tidak menyimpan apa pun dengan sendirinya.
+ */
+export const MemorySuggestedEventSchema = z.object({
+  type: z.literal('memory.suggested'),
+  text: z.string().min(1).max(MEMORY_TEXT_MAX),
+});
+
 export const RunCompletedEventSchema = z.object({
   type: z.literal('run.completed'),
   summary: z.string(),
@@ -348,6 +359,7 @@ export const AgentEventSchema = z
     ErrorEventSchema,
     ArtifactCreatedEventSchema,
     ContextUsedEventSchema,
+    MemorySuggestedEventSchema,
     RunCompletedEventSchema,
   ])
   .meta({ id: 'AgentEvent' });

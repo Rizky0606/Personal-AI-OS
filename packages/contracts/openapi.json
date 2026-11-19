@@ -987,6 +987,26 @@
               "type": {
                 "type": "string",
                 "enum": [
+                  "memory.suggested"
+                ]
+              },
+              "text": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              }
+            },
+            "required": [
+              "type",
+              "text"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
                   "run.completed"
                 ]
               },
@@ -2260,6 +2280,26 @@
               "skills",
               "memory",
               "attachments"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "memory.suggested"
+                ]
+              },
+              "text": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              }
+            },
+            "required": [
+              "type",
+              "text"
             ]
           },
           {
@@ -8021,6 +8061,21 @@
           "activeRuns": {
             "type": "integer",
             "minimum": 0
+          },
+          "agentTools": {
+            "type": "object",
+            "properties": {
+              "mcp": {
+                "type": "boolean"
+              },
+              "hermes": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "mcp",
+              "hermes"
+            ]
           }
         },
         "required": [
@@ -8028,7 +8083,8 @@
           "readiness",
           "workers",
           "jobs",
-          "activeRuns"
+          "activeRuns",
+          "agentTools"
         ]
       },
       "Readiness": {

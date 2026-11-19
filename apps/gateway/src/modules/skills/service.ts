@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { CORE_SKILLS, type RolesRegistry } from '@aios/roles';
+import { CODING_CORE_SKILLS, CORE_SKILLS, type RolesRegistry } from '@aios/roles';
 import type {
   SkillDetail,
   SkillEngine,
@@ -61,7 +61,7 @@ export function createSkillsService(deps: {
   overrides?: () => ReadonlyMap<string, SkillStatus>;
 }): SkillsService {
   const { registry, extras, overrides } = deps;
-  const core = new Set<string>(CORE_SKILLS);
+  const core = new Set<string>([...CORE_SKILLS, ...CODING_CORE_SKILLS]);
 
   const all = (): Map<string, SkillDetail> => {
     const out = new Map<string, SkillDetail>();

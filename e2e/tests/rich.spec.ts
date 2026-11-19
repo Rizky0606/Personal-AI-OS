@@ -1,6 +1,6 @@
 import { expect, login, prepare, test } from './fixtures';
 
-test('[skenario:kaya]: tabel, grafik, dan checklist tampil; blok rusak tampil sebagai kode, juga setelah muat ulang', async ({
+test('[skenario:kaya]: tabel, grafik, dan checklist tampil; blok rusak tampil sebagai cadangan ramah tanpa JSON mentah, juga setelah muat ulang', async ({
   page,
 }) => {
   await prepare(page);
@@ -12,8 +12,11 @@ test('[skenario:kaya]: tabel, grafik, dan checklist tampil; blok rusak tampil se
 
   const main = page.getByRole('main');
   const check = async () => {
-    // Tabel valid: satu tabel saja (blok rusak bukan tabel), dengan kolom dan baris dari blok aios-ui.
-    const table = main.getByRole('table');
+    // Tabel valid: kolom dan baris dari blok aios-ui (di luar cadangan blok rusak).
+    const fallback = main.getByRole('region', {
+      name: 'Komponen jawaban yang tidak dapat ditampilkan',
+    });
+    const table = main.getByRole('table').filter({ hasText: 'Postgres' });
     await expect(table).toHaveCount(1);
     await expect(table.getByRole('columnheader', { name: 'Opsi' })).toBeVisible();
     await expect(table.getByRole('cell', { name: 'Postgres' })).toBeVisible();
@@ -30,8 +33,13 @@ test('[skenario:kaya]: tabel, grafik, dan checklist tampil; blok rusak tampil se
       main.getByRole('checkbox', { name: 'Tambah indeks kolom pencarian' }),
     ).not.toBeChecked();
 
-    // Blok rusak: tampil sebagai kode (teks JSON mentah), tidak jadi komponen dan tidak menggagalkan jawaban.
-    await expect(main.getByText('"id":"rusak"')).toBeVisible();
+    // Blok rusak: keterangan + datanya, tidak jadi komponen dan tidak menggagalkan jawaban. JSON mentah hanya di
+    // balik "Lihat data mentah" yang tertutup (laporan uji umum B1).
+    await expect(fallback).toHaveCount(1);
+    await expect(fallback.getByText('Komponen tidak dapat ditampilkan; datanya:')).toBeVisible();
+    await expect(fallback.getByRole('cell', { name: 'satu' })).toBeVisible();
+    await expect(fallback.getByText('"id":"rusak"')).toBeHidden();
+    await expect(fallback.getByText('Lihat data mentah')).toBeVisible();
     await expect(main.getByText('Selesai.', { exact: true })).toBeVisible();
   };
   await check();

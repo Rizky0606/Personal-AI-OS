@@ -25,6 +25,11 @@ export function createStatusService(deps: {
   health: HealthService;
   isWorkerOnline: (deviceId: string) => boolean;
   queues?: QueueStats | undefined;
+  /**
+   * Tool aplikasi untuk agent: `mcp` = MCP_TOOLS_ENABLED, `hermes` = principal Hermes dikonfigurasi
+   * (MCP_HERMES_TOKEN_SHA256 terisi). Bawaan semuanya mati.
+   */
+  agentTools?: { mcp: boolean; hermes: boolean };
   now?: () => number;
   startedAt?: number;
 }): StatusService {
@@ -77,6 +82,7 @@ export function createStatusService(deps: {
           failed: q.failedCount,
         })),
         activeRuns: activeRows[0]?.n ?? 0,
+        agentTools: deps.agentTools ?? { mcp: false, hermes: false },
       };
     },
   };

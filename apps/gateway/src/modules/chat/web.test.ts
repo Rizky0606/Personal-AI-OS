@@ -47,12 +47,23 @@ const setup = (over: {
 describe('createWebContext', () => {
   it('model membuat kueri dari pesan dan percakapan; hasil bernomor dengan isi halaman dan peringatan data', async () => {
     const { web, search, complete } = setup({});
-    const out = await web.contextFor('berapa harganya sekarang?', [
-      { role: 'user', content: 'Bandingkan GPU untuk AI' },
-      { role: 'assistant', content: 'Ada RTX dan Radeon.' },
-    ]);
+    const queries: string[] = [];
+    const out = await web.contextFor(
+      'berapa harganya sekarang?',
+      [
+        { role: 'user', content: 'Bandingkan GPU untuk AI' },
+        { role: 'assistant', content: 'Ada RTX dan Radeon.' },
+      ],
+      undefined,
+      (q) => {
+        queries.push(q);
+        return Promise.resolve();
+      },
+    );
 
     expect(search).toHaveBeenCalledWith('harga GPU 2026', undefined);
+    // Kueri dilaporkan sebelum mencari (target langkah cari_web).
+    expect(queries).toEqual(['harga GPU 2026']);
     const prompt = JSON.stringify(complete.mock.calls[0]);
     expect(prompt).toContain('Bandingkan GPU untuk AI');
     expect(prompt).toContain('berapa harganya sekarang?');

@@ -1,5 +1,5 @@
 import {
-  CORE_SKILLS,
+  coreSkillsFor,
   ROLES_PACKAGE_DIR,
   RegistryError,
   buildBundle,
@@ -109,7 +109,7 @@ export function createRolesService(options: RolesServiceOptions = {}): RolesServ
           engine: r.engine,
           model: r.model,
           approval: r.approval,
-          skills: unique([...CORE_SKILLS, ...r.skills]),
+          skills: unique([...coreSkillsFor(r.group), ...r.skills, ...r.offeredSkills]),
         }));
     },
     registry: () => registry,

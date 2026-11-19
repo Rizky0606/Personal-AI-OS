@@ -6,8 +6,10 @@ import {
   type StartRunInput,
 } from '@aios/adapters';
 import {
+  DEFAULT_TIMEZONE,
   TERMINAL_RUN_STATUSES,
   canTransition,
+  repairRichAnswerBlocks,
   workerBranchFor,
   type AgentEvent,
   type MemoryRecallMode,
@@ -24,8 +26,9 @@ import {
 import type { BundleOptions } from '@aios/roles';
 import { and, count, eq, inArray, notInArray } from 'drizzle-orm';
 import type { Database } from '../../db/client.js';
-import { approvals, messages, projects, runs } from '../../db/schema/index.js';
+import { approvals, conversations, messages, projects, runs } from '../../db/schema/index.js';
 import { uuidv7 } from '../../lib/uuidv7.js';
+import { tzLabel } from '../schedules/cron.js';
 import { HERMES_SKILL_PREFIX } from '../skills/hermes-sync.js';
 import type { EventHub } from './hub.js';
 import type { RunObserver } from './observer.js';
@@ -49,12 +52,13 @@ export interface ResolvedRole {
 
 /**
  * Satu langkah persiapan (membaca tautan, mencari web) yang tampil di chat seperti langkah tool. Mengembalikan hasil
- * `work`; galat dari `work` menandai langkah gagal lalu dilempar lagi.
+ * `work`; galat dari `work` menandai langkah gagal lalu dilempar lagi. `retarget` mengganti target yang tampil
+ * (mis. kueri web yang baru dibuat model) tanpa membuat langkah baru.
  */
 export type PrepareStep = <T>(
   name: string,
   target: string | undefined,
-  work: () => Promise<T>,
+  work: (retarget: (target: string) => Promise<void>) => Promise<T>,
 ) => Promise<T>;
 
 export interface LaunchInput {
@@ -65,6 +69,14 @@ export interface LaunchInput {
   sessionId: string;
   /** Riwayat untuk sesi Hermes yang baru dibuat setelah percakapan dipotong (lihat StartRunInput.history). */
   history?: StartRunInput['history'];
+  /**
+   * Sesi Hermes baru berisi riwayat dari DB sebelum pesan pemilik ini, dan langsung menjadi sesi percakapan. Dipakai
+   * percobaan ulang otomatis: sesi lama mungkin sudah memuat giliran yang gagal.
+   */
+  freshSession?: () => Promise<{
+    sessionId: string;
+    history: NonNullable<StartRunInput['history']>;
+  }>;
   /**
    * Konteks tambahan yang butuh waktu (isi tautan, hasil pencarian web). Dikerjakan runner setelah run berjalan,
    * bukan saat pesan dikirim, supaya pengiriman tidak menunggu dan langkahnya terlihat di chat. Hasilnya ditambahkan
@@ -87,6 +99,11 @@ export interface LaunchInput {
    * fleet, tim, atau revisi: hanya run seperti ini yang boleh menjadi sumber ekstraksi fakta memori.
    */
   extract?: boolean;
+  /**
+   * Fakta ringkas bila pesan pemilik meminta sesuatu diingat (`rememberFactFrom`, tanpa model). Bila run selesai
+   * tanpa tool `memory_propose` yang berhasil, runner mengirim `memory.suggested` agar klien menawarkan dialog Ingat.
+   */
+  rememberFact?: string;
   /** Project percakapan ini; wajib untuk role yang berjalan di worker (omp). */
   projectId: string | null;
   /** Lanjutan: memakai folder kerja (worktree atau folder project) dan branch run ini. */
@@ -213,6 +230,8 @@ export interface RunnerDeps {
     warn: (obj: object, msg: string) => void;
     error: (obj: object, msg: string) => void;
   };
+  /** Jam (ms epoch) untuk bagian "Waktu" di pesan sistem; default `Date.now`. */
+  now?: () => number;
 }
 
 /**
@@ -263,6 +282,32 @@ export const SERVER_FILES_RULE = [
   'Bila pemilik meminta berkas, project, atau zip: tulis isi lengkap setiap berkas di jawaban, satu blok kode per berkas dengan path di baris pembuka (mis. ```jsx src/App.jsx), termasuk package.json dan konfigurasi. Aplikasi menampilkan tombol Unduh ZIP yang mengemas semua blok kode itu; sebut tombol itu sekali di akhir.',
   'Berkas biner (gambar, PDF, dokumen Office) tidak bisa ditulis di jawaban: simpan di folder kiriman bila tersedia; bila tidak ada, jelaskan singkat lalu berikan sumbernya dalam format teks (mis. HTML, Markdown, CSV, SVG).',
 ].join('\n');
+
+/**
+ * Tanggal dan jam saat ini di zona pemilik. Ditaruh di AKHIR pesan sistem: bagian yang berubah tiap giliran tidak
+ * merusak awalan yang sama untuk cache prompt. Tanpa ini model menebak tanggal (uji umum: "pekan 17-23 November"
+ * pada 17 November).
+ */
+export function timeSection(now: number, timezone: string = DEFAULT_TIMEZONE): string {
+  const at = new Date(now);
+  const date = new Intl.DateTimeFormat('id-ID', {
+    timeZone: timezone,
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(at);
+  const time = new Intl.DateTimeFormat('id-ID', {
+    timeZone: timezone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).format(at);
+  return `# Waktu\nSekarang ${date} pukul ${time} ${tzLabel(timezone)}. Pakai ini untuk "hari ini", "minggu ini", dan tanggal relatif.`;
+}
+
+/** Tool usulan memori `aios_tools`; Hermes menamai tool MCP dengan awalan server (mis. `mcp_aios_memory_propose`). */
+const MEMORY_TOOL = /(^|[_.:-])memory_propose$/;
 
 async function* emptyEvents(): AsyncGenerator<AgentEvent> {
   // Tidak ada event: adapter gagal dimulai.
@@ -363,6 +408,7 @@ export function createRunner(deps: RunnerDeps): Runner {
       planOnly ? PLAN_RULE : '',
       memory,
       rules,
+      timeSection((deps.now ?? Date.now)()),
     ]
       .filter(Boolean)
       .join('\n\n');
@@ -468,8 +514,13 @@ export function createRunner(deps: RunnerDeps): Runner {
           durationMs: part.durationMs,
         });
       };
+      // Target baru dikirim sebagai `tool.started` ulang dengan id yang sama: klien memperbarui baris yang ada.
+      const retarget = async (next: string) => {
+        part.target = next;
+        await emit({ type: 'tool.started', toolCallId, name, target: next });
+      };
       try {
-        const result = await work();
+        const result = await work(retarget);
         await finish('ok');
         return result;
       } catch (error) {
@@ -498,6 +549,30 @@ export function createRunner(deps: RunnerDeps): Runner {
         .update(messages)
         .set({ parts: [...toolParts.values(), { type: 'text', text }, ...fileParts] })
         .where(eq(messages.id, input.assistantMessageId));
+
+    /**
+     * Sesi Hermes yang dipakai run chat ini (diisi saat adapter Hermes dimulai). Run yang berakhir tanpa selesai
+     * (dihentikan atau gagal) melepasnya: Hermes tetap menulis jawaban penuh ke sesinya walau koneksi diputus, jadi
+     * giliran berikutnya harus memakai sesi baru berisi riwayat dari DB (teks yang benar-benar dilihat pemilik).
+     * Hanya dilepas bila sesi percakapan masih sesi ini. Galat hanya dicatat.
+     */
+    let hermesSession: string | undefined;
+    const releaseHermesSession = async () => {
+      if (!hermesSession) return;
+      try {
+        await db
+          .update(conversations)
+          .set({ hermesSessionId: null })
+          .where(
+            and(
+              eq(conversations.id, input.conversationId),
+              eq(conversations.hermesSessionId, hermesSession),
+            ),
+          );
+      } catch (err) {
+        log?.warn({ err, runId: run.id }, 'sesi Hermes gagal dilepas');
+      }
+    };
 
     /** Mencatat pergantian izin; status run mengikuti: menunggu izin <-> berjalan. */
     const onApproval = async (event: AgentEvent) => {
@@ -711,26 +786,30 @@ export function createRunner(deps: RunnerDeps): Runner {
             }
           }
         };
+        // Run chat di gateway (Hermes, juga engine research): sesinya bisa dilepas dan dicoba ulang.
+        const hermesChat = !coding && !useDsh;
+        const startInput: StartRunInput = {
+          runId: run.id,
+          messageId: input.assistantMessageId,
+          prompt,
+          skillIds: [...system.skillIds],
+          systemPrompt: system.prompt,
+          sessionId: input.sessionId,
+          ...(await historyFor(input, coding || useDsh)),
+          ...(input.images?.length ? { images: input.images } : {}),
+          ...(coding && input.projectId ? { projectId: input.projectId, role: chosenRole } : {}),
+          ...(dshCwd ? { cwd: dshCwd } : {}),
+          ...(coding && continueFrom ? { continueFromRunId: continueFrom } : {}),
+          ...(coding && !continueFrom && input.workspace ? { workspace: input.workspace } : {}),
+          ...(planOnly ? { planOnly: true } : {}),
+          ...(model ? { model } : {}),
+          ...(input.timeoutMs ? { timeoutMs: input.timeoutMs } : {}),
+          signal: ctl.abort.signal,
+        };
         let handle: RunHandle | undefined;
         try {
-          handle = await startAdapter.startRun({
-            runId: run.id,
-            messageId: input.assistantMessageId,
-            prompt,
-            skillIds: [...system.skillIds],
-            systemPrompt: system.prompt,
-            sessionId: input.sessionId,
-            ...(await historyFor(input, coding || useDsh)),
-            ...(input.images?.length ? { images: input.images } : {}),
-            ...(coding && input.projectId ? { projectId: input.projectId, role: chosenRole } : {}),
-            ...(dshCwd ? { cwd: dshCwd } : {}),
-            ...(coding && continueFrom ? { continueFromRunId: continueFrom } : {}),
-            ...(coding && !continueFrom && input.workspace ? { workspace: input.workspace } : {}),
-            ...(planOnly ? { planOnly: true } : {}),
-            ...(model ? { model } : {}),
-            ...(input.timeoutMs ? { timeoutMs: input.timeoutMs } : {}),
-            signal: ctl.abort.signal,
-          });
+          if (hermesChat) hermesSession = input.sessionId;
+          handle = await startAdapter.startRun(startInput);
         } catch (err) {
           // Gagal memulai dengan sebab yang jelas (mis. worker offline) menjadi alasan run gagal.
           if (!(err instanceof AdapterError)) throw err;
@@ -741,7 +820,73 @@ export function createRunner(deps: RunnerDeps): Runner {
           if (ctl.cancelled) await handle.cancel();
         }
 
-        for await (const event of normalizeEvents(handle?.events ?? emptyEvents(), (raw, issues) =>
+        /**
+         * Event adapter dengan satu percobaan ulang untuk chat Hermes: galat `retryable` (mis. `hermes_stalled`)
+         * sebelum ada keluaran apa pun (teks, penalaran, atau tool; tool bisa punya efek samping) diulang sekali
+         * dengan sesi Hermes baru. Galat percobaan pertama hanya dicatat di log, bukan event. Setelah ada keluaran,
+         * tidak pernah diulang.
+         */
+        async function* attempts(first: RunHandle | undefined): AsyncGenerator<AgentEvent> {
+          let current = first;
+          let retried = false;
+          for (;;) {
+            let output = false;
+            let retry: Extract<AgentEvent, { type: 'error' }> | undefined;
+            for await (const event of current?.events ?? emptyEvents()) {
+              if (
+                event.type === 'message.delta' ||
+                event.type === 'reasoning.delta' ||
+                event.type === 'tool.started'
+              )
+                output = true;
+              if (
+                event.type === 'error' &&
+                event.retryable &&
+                hermesChat &&
+                input.freshSession &&
+                !retried &&
+                !output &&
+                !ctl.cancelled
+              ) {
+                retry = event;
+                break;
+              }
+              yield event;
+            }
+            if (!retry || !input.freshSession) return;
+            retried = true;
+            log?.warn(
+              { runId: run.id, code: retry.code },
+              'Hermes gagal sebelum menjawab; dicoba sekali lagi dengan sesi baru',
+            );
+            const fresh = await input.freshSession();
+            hermesSession = fresh.sessionId;
+            if (ctl.cancelled) return;
+            try {
+              current = await startAdapter.startRun({
+                ...startInput,
+                sessionId: fresh.sessionId,
+                history: fresh.history,
+              });
+            } catch (err) {
+              if (!(err instanceof AdapterError)) throw err;
+              yield {
+                type: 'error',
+                code: err.code,
+                message: err.message,
+                retryable: err.retryable,
+              };
+              return;
+            }
+            ctl.handle = current;
+            if (ctl.cancelled) await current.cancel();
+          }
+        }
+
+        // Tool usulan memori yang dimulai dan yang berhasil di run ini (jaring pengaman "ingat ini").
+        const memoryCalls = new Set<string>();
+        let memoryProposed = false;
+        for await (const event of normalizeEvents(attempts(handle), (raw, issues) =>
           log?.warn(
             { runId: run.id, issues, type: (raw as { type?: unknown })?.type },
             'event adapter dibuang',
@@ -756,6 +901,16 @@ export function createRunner(deps: RunnerDeps): Runner {
               ...(event.target ? { target: event.target } : {}),
               status: 'running',
             });
+          }
+          if (event.type === 'tool.started' && MEMORY_TOOL.test(event.name)) {
+            memoryCalls.add(event.toolCallId);
+          }
+          if (
+            event.type === 'tool.finished' &&
+            event.status === 'ok' &&
+            memoryCalls.has(event.toolCallId)
+          ) {
+            memoryProposed = true;
           }
           if (event.type === 'tool.finished') {
             const part = toolParts.get(event.toolCallId);
@@ -803,6 +958,9 @@ export function createRunner(deps: RunnerDeps): Runner {
                 messageId: input.assistantMessageId,
               });
             }
+            // Blok aios-ui yang bisa diperbaiki (alias seperti chartType) disimpan dalam bentuk valid, supaya semua
+            // klien (juga Android dengan pengurai ketatnya sendiri) merendernya. Implementasinya di contracts.
+            text = repairRichAnswerBlocks(text);
             await saveText();
             // Run coding berhenti di needs_review (menunggu tinjauan diff); run chat langsung selesai.
             await db
@@ -813,6 +971,11 @@ export function createRunner(deps: RunnerDeps): Runner {
               })
               .where(eq(runs.id, run.id));
             status = 'running';
+            // Pemilik minta diingat tetapi tidak ada usulan memori yang berhasil: klien menawarkan dialog Ingat
+            // berisi fakta ringkas. Tidak menyimpan apa pun dengan sendirinya.
+            if (input.rememberFact && !memoryProposed) {
+              await emit({ type: 'memory.suggested', text: input.rememberFact });
+            }
           }
           await emit(event);
           if (event.type === 'diff.updated') {
@@ -876,6 +1039,7 @@ export function createRunner(deps: RunnerDeps): Runner {
         deps.observer?.notify(run.id);
       } else if (ctl.cancelled) {
         await saveText();
+        await releaseHermesSession();
         await advance('cancelled', { usage, endReason: 'stopped' });
       } else {
         failure ??= {
@@ -884,6 +1048,7 @@ export function createRunner(deps: RunnerDeps): Runner {
           retryable: true,
         };
         await saveText();
+        await releaseHermesSession();
         await emit({ type: 'error', ...failure });
         await advance('failed', { error: failure, usage });
       }
@@ -897,6 +1062,7 @@ export function createRunner(deps: RunnerDeps): Runner {
         };
         await saveText();
         if (canTransition(status, 'failed')) {
+          await releaseHermesSession();
           await emit({ type: 'error', ...failure });
           await advance('failed', { error: failure, usage });
         }
@@ -981,6 +1147,15 @@ export function createRunner(deps: RunnerDeps): Runner {
           .update(messages)
           .set({ parts: [{ type: 'text', text }] })
           .where(and(eq(messages.runId, run.id), eq(messages.author, 'assistant')));
+        // Run chat Hermes yang terputus: sesi Hermes bisa memuat jawaban yang tidak pernah sampai ke pemilik, jadi
+        // giliran berikutnya memakai sesi baru berisi riwayat dari DB. Satu run aktif per percakapan, jadi sesi
+        // percakapan saat ini pasti milik run ini.
+        if (run.kind === 'chat' && run.engine !== 'dsh' && run.conversationId) {
+          await db
+            .update(conversations)
+            .set({ hermesSessionId: null })
+            .where(eq(conversations.id, run.conversationId));
+        }
         // Run in_place yang meninggalkan perubahan di folder project tetap bisa ditinjau; selain itu gagal.
         const lastDiff = events.findLast((e) => e.event.type === 'diff.updated')?.event;
         const pending =

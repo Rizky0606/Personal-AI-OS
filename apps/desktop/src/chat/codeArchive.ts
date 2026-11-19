@@ -83,7 +83,7 @@ function pathFromFirstLine(code: string): string | null {
   return candidate && looksLikePath(candidate) ? candidate : null;
 }
 
-/** Semua blok kode berpagar di teks Markdown, beserta nama berkasnya (unik). */
+/** Semua blok kode berpagar di teks Markdown (kecuali blok milik aplikasi), beserta nama berkasnya (unik). */
 export function extractCodeFiles(markdown: string): CodeFile[] {
   const lines = markdown.split('\n');
   const files: CodeFile[] = [];
@@ -105,6 +105,9 @@ export function extractCodeFiles(markdown: string): CodeFile[] {
     if (!content.trim()) continue;
 
     const language = info.trim().split(/\s+/)[0]?.toLowerCase() ?? '';
+    // Blok milik aplikasi (`aios-ui`, `aios-skill-proposal`, bahasa `aios-*` lain) dirender atau diurai aplikasi,
+    // bukan berkas untuk pemilik: tidak pernah masuk ZIP.
+    if (language.startsWith('aios-')) continue;
     const named = pathFromInfo(info) ?? pathFromFirstLine(content);
     let path = named ? safePath(named) : '';
     if (!path) {

@@ -33,12 +33,12 @@ describe('set evaluasi pemilihan skill (offline, memastikan data uji sendiri val
     }
   });
 
-  it('pesan tanpa skill khusus tidak memicu paket kata kunci (indeks kosong, hanya skill inti)', () => {
+  it('pesan tanpa skill khusus tidak memicu paket kata kunci (indeks hanya offered_skills role, ditambah skill inti)', () => {
     for (const c of SKILL_EVAL_CASES.filter((x) => x.expectAny.length === 0)) {
       const { skills } = selectSkills(c.message, { agent: c.agent, known });
       expect(skills, c.message).toEqual([]);
       const bundle = buildBundle(registry, c.agent, { suggestedSkills: skills });
-      expect(bundle.offeredSkills).toEqual([]);
+      expect(bundle.offeredSkills).toEqual(registry.roles.get(c.agent)!.offeredSkills);
       for (const core of CORE_SKILLS) expect(bundle.skills).toContain(core);
     }
   });

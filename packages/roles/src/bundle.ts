@@ -1,4 +1,4 @@
-import { CORE_SKILLS } from './schema.js';
+import { coreSkillsFor } from './schema.js';
 import type { RolesRegistry } from './registry.js';
 
 /**
@@ -8,6 +8,7 @@ import type { RolesRegistry } from './registry.js';
 export const AGENT_BEHAVIOR_RULES = [
   'Jawab dalam bahasa pengguna. Langsung ke jawaban, tanpa basa-basi.',
   'Jangan mengarang fakta, path file, atau hasil perintah. Jika tidak tahu, katakan dan tawarkan cara mencari tahu.',
+  'Jangan menyatakan sesuatu sudah disimpan, dijadwalkan, diusulkan, atau diingat kecuali alatnya mengembalikan sukses di giliran ini. Tanpa itu, beri tahu cara melakukannya di aplikasi (tombol Ingat di pesan pemilik, layar Jadwal).',
   'Perintah yang mengubah sistem, menghapus file, atau mengakses jaringan selalu melalui approval kecuali ada aturan "selalu izinkan" untuk project itu.',
   'Tidak pernah membaca atau mengirim file .env, kunci SSH, atau folder di luar project tanpa izin eksplisit.',
 ];
@@ -84,11 +85,12 @@ export interface BundleOptions {
 
 /**
  * system prompt = aturan perilaku + isi role + skill inti + skill khusus (ditempel utuh) + indeks skill
- * yang ditawarkan (P9, hanya id+deskripsi). Skill inti selalu masuk utuh. Skill milik agent dan skill
+ * yang ditawarkan (P9, hanya id+deskripsi). Skill inti (`coreSkillsFor(role.group)`: universal, ditambah
+ * skill inti coding untuk grup `coding`) selalu masuk utuh. Skill milik agent dan skill
  * manual (`extraSkills`) masuk berurutan selama muat di anggaran skill; yang tidak muat dilewati
- * (dilaporkan di `omittedSkills`), bukan dipotong di tengah. Skill `suggestedSkills` yang belum diminta
- * eksplisit (tidak ada di `extraSkills`/skill milik agent) hanya masuk sebagai baris indeks, tidak
- * dihitung ke anggaran skill (deskripsinya pendek, maks 200 karakter).
+ * (dilaporkan di `omittedSkills`), bukan dipotong di tengah. Skill `suggestedSkills` dan `offered_skills` role
+ * yang belum diminta eksplisit (tidak ada di `extraSkills`/skill milik agent) hanya masuk sebagai baris indeks,
+ * tidak dihitung ke anggaran skill (deskripsinya pendek, maks 200 karakter).
  */
 export function buildBundle(
   registry: RolesRegistry,
@@ -105,6 +107,7 @@ export function buildBundle(
 ): Bundle {
   const role = registry.roles.get(roleId);
   if (!role) throw new UnknownRoleError(roleId);
+  const coreIds = coreSkillsFor(role.group);
 
   const rules = `# Aturan perilaku agent\n${AGENT_BEHAVIOR_RULES.map((r) => `- ${r}`).join('\n')}`;
   const roleSection = `# Peran: ${role.name}\n${role.body}`;
@@ -123,7 +126,7 @@ export function buildBundle(
   const extra: string[] = [];
   let skillTokens = 0;
 
-  for (const id of CORE_SKILLS) {
+  for (const id of coreIds) {
     const text = section(id);
     if (!text) continue;
     core.push(text);
@@ -134,23 +137,21 @@ export function buildBundle(
   const extraSet = new Set(extraSkills);
   // Hanya "tawarkan lewat indeks" (bukan tempel utuh) bila BELUM diminta eksplisit sebagai skill milik
   // agent atau pilihan manual (extraSkills); permintaan eksplisit selalu menang.
+  const offerable = [...role.offeredSkills, ...suggestedSkills];
   const indexOnly = eagerSkillPacks
     ? new Set<string>()
     : new Set(
-        suggestedSkills.filter(
-          (id) =>
-            !role.skills.includes(id) &&
-            !extraSet.has(id) &&
-            !(CORE_SKILLS as readonly string[]).includes(id),
+        offerable.filter(
+          (id) => !role.skills.includes(id) && !extraSet.has(id) && !coreIds.includes(id),
         ),
       );
   const pinnedCatalog = catalogSkills.filter((s) => s.pinned).map((s) => s.id);
   const candidates = eagerSkillPacks
-    ? new Set([...role.skills, ...extraSkills, ...pinnedCatalog, ...suggestedSkills])
+    ? new Set([...role.skills, ...extraSkills, ...pinnedCatalog, ...offerable])
     : new Set([...role.skills, ...extraSkills, ...pinnedCatalog]);
 
   for (const id of candidates) {
-    if ((CORE_SKILLS as readonly string[]).includes(id)) continue;
+    if (coreIds.includes(id)) continue;
     const text = section(id);
     if (!text) continue;
     const cost = estimateTokens(text);

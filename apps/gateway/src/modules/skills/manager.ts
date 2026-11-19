@@ -1,4 +1,4 @@
-import { CORE_SKILLS, type RolesRegistry } from '@aios/roles';
+import { CODING_CORE_SKILLS, CORE_SKILLS, type RolesRegistry } from '@aios/roles';
 import {
   SKILL_BODY_MAX_BYTES,
   SKILL_ID_PATTERN,
@@ -123,7 +123,8 @@ export function createSkillManager(deps: {
 }): SkillManager {
   const { db, registry, onChange, log } = deps;
   const now = deps.now ?? Date.now;
-  const core = new Set<string>(CORE_SKILLS);
+  // Skill inti (universal dan coding) selalu dimuat untuk agent-nya, jadi tidak bisa dinonaktifkan.
+  const core = new Set<string>([...CORE_SKILLS, ...CODING_CORE_SKILLS]);
   let rows: CatalogExtra[] = [];
   let off = new Map<string, SkillStatus>();
 

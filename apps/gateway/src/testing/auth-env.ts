@@ -227,6 +227,7 @@ export async function createAuthEnv(
         text: string,
         history?: readonly { role: 'user' | 'assistant'; content: string }[],
         signal?: AbortSignal,
+        onQuery?: (query: string) => Promise<void>,
       ): Promise<string>;
     };
     /**
@@ -371,6 +372,7 @@ export async function createAuthEnv(
   });
   const runner = createRunner({
     db,
+    now,
     store,
     hub,
     observer,
@@ -509,6 +511,10 @@ export async function createAuthEnv(
     health: { readiness: () => Promise.resolve(READY) },
     isWorkerOnline: (id) => workerHub.isOnline(id),
     queues: boss,
+    agentTools: {
+      mcp: options.mcpTools !== undefined,
+      hermes: Boolean(options.mcpTools?.hermesTokenSha256),
+    },
     now,
   });
   const agentProposals = createAgentProposalService({ db, hub, tasks, schedules, push, now });

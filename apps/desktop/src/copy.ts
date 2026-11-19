@@ -215,6 +215,12 @@ export const copy = {
       active: 'Berjalan',
       failed: 'Gagal',
       activeRuns: 'Run berjalan',
+      /** Tool aplikasi (`aios_tools`) untuk agent; dari `agentTools` di GET /status. */
+      agentTools: 'Tool aplikasi untuk agent',
+      agentToolsHermes: 'Hermes (chat umum)',
+      agentToolsOn: 'Tersambung ke aios_tools: agent bisa mengusulkan memori dan jadwal.',
+      agentToolsOff:
+        'Belum tersambung ke aios_tools: chat umum tidak bisa mengusulkan memori atau jadwal. Pakai tombol Ingat di pesan dan layar Jadwal.',
       overall: {
         ok: 'Semua dependensi terjangkau.',
         degraded: 'Ada dependensi yang bermasalah.',
@@ -1058,6 +1064,9 @@ export const copy = {
     loading: 'Memuat progres',
     empty: 'Belum ada aktivitas di percakapan ini',
     emptyAction: 'Tulis pesan',
+    /** Halaman tanpa chat (Riset, Jadwal, dan sejenisnya): Progres mengikuti chat yang terbuka. */
+    noSource: 'Progres mengikuti chat yang sedang dibuka. Halaman ini bukan chat.',
+    openChat: 'Buka chat',
     offline: 'Offline. Menampilkan data terakhir.',
     lightbox: {
       close: 'Tutup pratinjau',
@@ -1423,7 +1432,11 @@ export const copy = {
     web: {
       chip: 'Cari di web',
       chipHint:
-        'Cari informasi di internet untuk pesan berikutnya dan sertakan hasilnya sebagai bahan jawaban. Pilihan ini diingat.',
+        'Cari informasi di internet untuk pesan di percakapan ini dan sertakan hasilnya sebagai bahan jawaban. Chat baru selalu mulai tanpa pencarian web.',
+      /** Chip di composer selama Cari di web menyala untuk percakapan ini. */
+      active: 'Web',
+      activeHint: 'Cari di web menyala untuk percakapan ini.',
+      off: 'Matikan Cari di web',
     },
     skills: {
       chip: 'Skill',
@@ -1447,11 +1460,18 @@ export const copy = {
       'Pesan ini dan semua pesan sesudahnya dihapus permanen. AI tidak akan mengingatnya lagi.',
     deleteMessageConfirm: 'Hapus',
     deleteMessageFailed: 'Pesan belum terhapus.',
-    editLastHint: 'Pesan baru dikirim dari teks ini; jawaban lama tetap ada di riwayat.',
+    editLastHint: 'Ubah pesan terakhir di tempatnya; pesan itu dan jawabannya diganti.',
     offlineSend: 'Tidak ada koneksi. Pesan belum terkirim; sambungkan lalu kirim lagi.',
     sendFailed: 'Pesan belum terkirim. Teks dikembalikan ke kolom pesan.',
     stopFailed: 'Belum bisa menghentikan jawaban. Coba lagi.',
     runFailed: 'Jawaban gagal.',
+    /** Tombol di kartu error untuk galat yang bisa diulang; mengganti giliran yang gagal. */
+    retryFailed: 'Coba lagi',
+    /** Jaring pengaman "ingat ini" (event `memory.suggested`) di bawah jawaban. */
+    memorySuggestion: {
+      note: 'Belum tersimpan di memori. Simpan lewat Ingat agar dipakai di chat lain.',
+      action: 'Ingat ini…',
+    },
     workspace: {
       inPlace: (branch: string) => `Di branch ${branch}`,
       worktree: (branch: string) => `Di salinan ${branch}`,
@@ -1950,6 +1970,15 @@ export const copy = {
       approved: 'Jadwal dibuat.',
       approvedDisabled: 'Jadwal dibuat dalam keadaan nonaktif.',
     },
+  },
+  /** Cadangan untuk blok `aios-ui` yang tidak lolos validasi: data tampil tanpa JSON mentah. */
+  richFallback: {
+    region: 'Komponen jawaban yang tidak dapat ditampilkan',
+    note: 'Komponen tidak dapat ditampilkan.',
+    noteWithData: 'Komponen tidak dapat ditampilkan; datanya:',
+    showRaw: 'Lihat data mentah',
+    columnLabel: 'Label',
+    columnValue: 'Nilai',
   },
   toast: { close: 'Tutup' },
 } as const;

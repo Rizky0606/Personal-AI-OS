@@ -1,5 +1,5 @@
 import { CheckCheck, FileText, Image as ImageIcon } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { copy } from '../copy';
 import { Button } from '../ui/Button';
 import { TextArea } from '../ui/TextArea';
@@ -18,6 +18,11 @@ export interface UserMessageProps {
   onResend?: (() => void) | undefined;
   /** "Ingat ini": membuka dialog untuk menyimpan teks pesan sebagai memori. */
   onRemember?: (() => void) | undefined;
+  /**
+   * Permintaan membuka editor dari luar (tombol pensil "Ubah pesan terakhir" di composer): setiap nilai baru di atas 0
+   * membuka editor di gelembung ini, sama seperti tombol Ubah saat kursor di atas pesan.
+   */
+  editRequest?: number | undefined;
 }
 
 /** Jam lokal (mis. 14.22) dari waktu ISO. */
@@ -36,10 +41,18 @@ export function UserMessage({
   onDelete,
   onResend,
   onRemember,
+  editRequest = 0,
 }: UserMessageProps) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(text);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (editRequest <= 0 || !onEdit) return;
+    setValue(text);
+    setEditing(true);
+    // Hanya permintaan baru yang membuka editor; perubahan teks atau handler tidak.
+  }, [editRequest]);
 
   async function submit() {
     if (!onEdit || saving || !value.trim()) return;

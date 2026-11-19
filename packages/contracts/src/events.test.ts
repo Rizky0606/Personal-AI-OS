@@ -417,6 +417,14 @@ const agentCases: Record<AgentEventType, Cases> = {
       },
     ],
   },
+  'memory.suggested': {
+    valid: [{ type: 'memory.suggested', text: 'Pemilik suka kopi tubruk tanpa gula.' }],
+    invalid: [
+      { type: 'memory.suggested', text: '' },
+      { type: 'memory.suggested', text: 'x'.repeat(501) },
+      { type: 'memory.suggested' },
+    ],
+  },
   'run.completed': {
     valid: [
       { type: 'run.completed', summary: 'Selesai' },
@@ -530,6 +538,7 @@ describe('AgentEvent', () => {
         'error',
         'artifact.created',
         'context.used',
+        'memory.suggested',
         'run.completed',
       ].sort(),
     );

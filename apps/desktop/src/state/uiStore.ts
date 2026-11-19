@@ -3,7 +3,12 @@ import type { ActivityStep } from '../activity/activity';
 import type { SavedTool } from '../realtime/activity';
 import type { SubagentView } from '../realtime/liveRun';
 import { persist } from 'zustand/middleware';
-import { parseEngines, withEngine, type EngineChoice } from '../chat/engineChoice';
+import {
+  NEW_CHAT_ENGINE_KEY,
+  parseEngines,
+  withEngine,
+  type EngineChoice,
+} from '../chat/engineChoice';
 import {
   ROOT_ID,
   closePane,
@@ -38,6 +43,34 @@ export const clampPanelWidth = (width: number): number =>
     RIGHT_PANEL_MAX,
     Math.max(RIGHT_PANEL_MIN, Math.round(Number.isFinite(width) ? width : RIGHT_PANEL_DEFAULT)),
   );
+
+const MAX_WEB_SEARCH_CONVERSATIONS = 100;
+
+/** Menyalakan/mematikan Cari di web satu percakapan; yang mati dihapus, yang tersisa dibatasi pada yang terbaru. */
+export function withWebSearch(
+  saved: Readonly<Record<string, true>>,
+  key: string,
+  on: boolean,
+): Record<string, true> {
+  const next = { ...saved };
+  delete next[key];
+  if (on) next[key] = true;
+  return Object.fromEntries(
+    Object.keys(next)
+      .slice(-MAX_WEB_SEARCH_CONVERSATIONS)
+      .map((k) => [k, true as const]),
+  );
+}
+
+/** Nilai tersimpan yang rusak dibuang; kunci chat baru tidak pernah dipulihkan (chat baru selalu mulai mati). */
+export function parseWebSearch(value: unknown): Record<string, true> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value).flatMap(([key, on]) =>
+      key.length > 0 && key !== NEW_CHAT_ENGINE_KEY && on === true ? [[key, true as const]] : [],
+    ),
+  );
+}
 
 /** Konteks dari preview (mis. elemen terpilih) yang ikut terkirim bersama pesan berikutnya. */
 export interface ContextAttachment {
@@ -83,9 +116,14 @@ interface UiState {
   /** Permintaan membuka berkas di tab Berkas (dari Aktivitas); `nonce` membedakan permintaan yang sama; tidak disimpan. */
   fileRequest: { path: string; nonce: number } | null;
   requestFile: (path: string) => void;
-  /** Cari di web untuk pesan berikutnya (chat umum dan project). Diingat antar sesi. */
-  webSearch: boolean;
-  setWebSearch: (on: boolean) => void;
+  /**
+   * Cari di web per percakapan (kunci `NEW_CHAT_ENGINE_KEY` untuk chat yang belum punya id). Per percakapan,
+   * bukan global: pertanyaan lanjutan di utas riset tetap mencari, tetapi chat baru tidak pernah mewarisi
+   * sakelar yang lupa dimatikan (dulu global dan ikut tiap pesan, menambah 10–15 dtk dan rujukan tak relevan).
+   * Diingat antar sesi kecuali kunci chat baru.
+   */
+  webSearchByConversation: Record<string, true>;
+  setWebSearch: (key: string, on: boolean) => void;
   /** Paket skill tambahan untuk pesan berikutnya (selain pilihan otomatis dari kata kunci); tidak disimpan. */
   skillPacks: string[];
   setSkillPacks: (ids: string[]) => void;
@@ -146,8 +184,11 @@ export const useUiStore = create<UiState>()(
       activeProjectId: null,
       activeRunBranch: null,
       reviewRunId: null,
-      webSearch: false,
-      setWebSearch: (webSearch) => set({ webSearch }),
+      webSearchByConversation: {},
+      setWebSearch: (key, on) =>
+        set((s) => ({
+          webSearchByConversation: withWebSearch(s.webSearchByConversation, key, on),
+        })),
       skillPacks: [],
       setSkillPacks: (skillPacks) => set({ skillPacks }),
       skillsFocus: null,
@@ -231,7 +272,14 @@ export const useUiStore = create<UiState>()(
     }),
     {
       name: 'aios.ui',
-      version: 1,
+      version: 2,
+      // v1 menyimpan `webSearch` global; dibuang (tidak dipindah ke percakapan mana pun) agar mulai mati. Sisanya
+      // dibersihkan `merge` seperti biasa, jadi nilai yang hilang atau rusak aman.
+      migrate: (persisted) => {
+        const state = { ...((persisted ?? {}) as Record<string, unknown>) };
+        delete state.webSearch;
+        return state as unknown as UiState;
+      },
       partialize: (s) => ({
         sidebarOpen: s.sidebarOpen,
         rightPanelOpen: s.rightPanelOpen,
@@ -241,7 +289,7 @@ export const useUiStore = create<UiState>()(
         activeProjectId: s.activeProjectId,
         model: s.model,
         engineByConversation: s.engineByConversation,
-        webSearch: s.webSearch,
+        webSearchByConversation: parseWebSearch(s.webSearchByConversation),
         theme: s.theme,
         reduceMotion: s.reduceMotion,
         inAppToasts: s.inAppToasts,
@@ -255,6 +303,7 @@ export const useUiStore = create<UiState>()(
           rightPanelWidth: clampPanelWidth(p.rightPanelWidth ?? RIGHT_PANEL_DEFAULT),
           paneTree: parsePaneTree(p.paneTree),
           engineByConversation: parseEngines(p.engineByConversation),
+          webSearchByConversation: parseWebSearch(p.webSearchByConversation),
         };
       },
     },

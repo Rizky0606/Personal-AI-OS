@@ -247,6 +247,14 @@ describe('principal Hermes (slice 4): token layanan dari loopback, tanpa run', (
     expect(app.statusCode).toBe(401);
   });
 
+  it('GET /status: agentTools.hermes hanya true bila MCP menyala dan principal Hermes dikonfigurasi', async () => {
+    const tools = async (gw: Gateway) =>
+      (await gw.env.get('/status', gw.desktop)).json<{ agentTools: unknown }>().agentTools;
+    expect(await tools(herm)).toEqual({ mcp: true, hermes: true });
+    expect(await tools(on)).toEqual({ mcp: true, hermes: false });
+    expect(await tools(off)).toEqual({ mcp: false, hermes: false });
+  });
+
   it('tools/list tanpa tool kanban; task_list/task_propose = tool tidak dikenal; worker tetap berfungsi', async () => {
     const init = await send(herm.env, {
       jsonrpc: '2.0',
