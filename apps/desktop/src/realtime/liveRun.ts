@@ -1,5 +1,6 @@
 import {
   TERMINAL_RUN_STATUSES,
+  type RunEndReason,
   type RunStatus,
   type RunWorkspace,
   type ServerEvent,
@@ -82,6 +83,11 @@ export interface LiveRun {
   runId: string;
   role: string | null;
   status: RunStatus;
+  /**
+   * Alasan run berakhir dari gateway (`run.status.endReason` atau `Run.endReason`): `stopped` = dihentikan pemilik,
+   * `superseded` = digantikan run lanjutan. Bertahan sampai status berikutnya membawa alasan baru; null bila tidak ada.
+   */
+  endReason: RunEndReason | null;
   /** ID pesan asisten, diketahui dari delta pertama. */
   messageId: string | null;
   text: string;
@@ -133,6 +139,7 @@ export const newLiveRun = (runId: string): LiveRun => ({
   runId,
   role: null,
   status: 'queued',
+  endReason: null,
   messageId: null,
   text: '',
   reasoning: '',
@@ -186,7 +193,7 @@ function reduceEvent(run: LiveRun, event: ServerEvent, ts: number | undefined): 
   const at = ts !== undefined && Number.isFinite(ts) ? ts : null;
   switch (event.type) {
     case 'run.status':
-      return { ...run, status: event.status };
+      return { ...run, status: event.status, endReason: event.endReason ?? run.endReason };
     case 'route.decided':
       return { ...run, role: event.role };
     case 'message.delta':

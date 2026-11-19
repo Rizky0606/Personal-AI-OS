@@ -6,7 +6,6 @@ import { copy } from '../copy';
 import { CONV, RUN_1, RUN_2, run } from '../test/fixtures';
 import { api, resetApi } from '../test/fakeServices';
 import { renderScreen } from '../test/render';
-import { noteStopped } from '../realtime/stoppedRuns';
 import type { WorkspaceRun } from './runs';
 
 vi.mock('../app/services', async () => (await import('../test/fakeServices')).fakeServices);
@@ -83,9 +82,8 @@ describe('WorkspaceScreen', () => {
   });
 
   it('run yang dihentikan pemilik tetapi menunggu tinjauan berlabel Dihentikan, bukan sekadar Perlu ditinjau', async () => {
-    noteStopped(RUN_1);
     api.listRuns.mockResolvedValue([
-      entry({ id: RUN_1, status: 'needs_review' }, 'Dihentikan di tengah'),
+      entry({ id: RUN_1, status: 'needs_review', endReason: 'stopped' }, 'Dihentikan di tengah'),
       entry({ id: RUN_2, status: 'needs_review' }, 'Selesai normal'),
     ]);
     await renderScreen(<WorkspaceScreen />, '/workspace');
@@ -94,6 +92,17 @@ describe('WorkspaceScreen', () => {
       await screen.findByRole('img', { name: copy.workspace.stoppedReview }),
     ).toBeInTheDocument();
     expect(screen.getByRole('img', { name: copy.runStatus.needs_review })).toBeInTheDocument();
+  });
+
+  it('run yang digantikan run lanjutan berlabel netral, bukan Ditolak', async () => {
+    api.listRuns.mockResolvedValue([
+      entry({ id: RUN_1, status: 'rejected', endReason: 'superseded' }, 'Dilanjutkan'),
+      entry({ id: RUN_2, status: 'rejected' }, 'Ditolak pemilik'),
+    ]);
+    await renderScreen(<WorkspaceScreen />, '/workspace');
+
+    expect(await screen.findByRole('img', { name: copy.workspace.superseded })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: copy.runStatus.rejected })).toBeInTheDocument();
   });
 
   it('tanpa run: tombol Buka kanban pindah ke papan kartu', async () => {

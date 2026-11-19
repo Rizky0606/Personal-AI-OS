@@ -14,7 +14,13 @@ import { IconButton } from '../ui/IconButton';
 import { InfoNote } from '../ui/InfoNote';
 import { StateView, type ViewState } from '../ui/StateView';
 import { useProjects } from '../worker/hooks';
-import { isLiveRun, needsAttention, statusDotClass, type WorkspaceRun } from './runs';
+import {
+  isLiveRun,
+  needsAttention,
+  runStatusLabel,
+  statusDotClass,
+  type WorkspaceRun,
+} from './runs';
 
 /** Run terbaru yang belum final per project, untuk penanda status di sidebar. */
 function liveRunOf(runs: WorkspaceRun[], projectId: string): WorkspaceRun | undefined {
@@ -72,7 +78,7 @@ function ProjectGroup({
           {live ? (
             <span
               role="img"
-              aria-label={copy.runStatus[live.run.status]}
+              aria-label={runStatusLabel(live.run)}
               className={cn(
                 'size-2 shrink-0 rounded-full',
                 statusDotClass(live.run.status),

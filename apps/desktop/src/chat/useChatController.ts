@@ -105,6 +105,8 @@ export function useChatController(conversationId: string | undefined) {
   const planStatus = live?.status ?? planRun.data?.status;
   const awaitingPlanApproval =
     planRun.data?.planOnly === true && planStatus === 'completed' && !streaming;
+  // Hasil yang menunggu tinjauan berasal dari run yang dihentikan pemilik: event lebih baru daripada DTO.
+  const reviewStopped = (live?.endReason ?? planRun.data?.endReason) === 'stopped';
   // Chat umum hanya menawarkan role Umum; role coding (omp) butuh project, jadi hanya muncul di dalam project.
   const roles = useMemo(
     () => (rolesQuery.data ?? []).filter((r) => activeProjectId !== null || r.group === 'umum'),
@@ -540,6 +542,7 @@ export function useChatController(conversationId: string | undefined) {
     roles,
     approvals: live?.approvals ?? [],
     reviewRunId,
+    reviewStopped,
     attachments,
     removeAttachment,
     files: attach.files,

@@ -18,12 +18,12 @@ import {
   filterRuns,
   isCancellable,
   RUN_FILTERS,
+  runStatusLabel,
   statusDotClass,
   type RunFilter,
   type WorkspaceRun,
 } from './runs';
 import { useRunCancel } from './useRunCancel';
-import { wasStopped } from '../realtime/stoppedRuns';
 
 /**
  * Ruang Kerja: semua run coding sekaligus dengan status live, supaya beberapa tugas paralel terlihat tanpa
@@ -144,11 +144,7 @@ export function WorkspaceScreen() {
           className="divide-y divide-border overflow-hidden rounded-panel border border-border bg-surface"
         >
           {items.map((item, index) => {
-            // Dihentikan pemilik tetapi sudah mengubah berkas: gateway hanya mengirim needs_review.
-            const status =
-              item.run.status === 'needs_review' && wasStopped(item.run.id)
-                ? copy.workspace.stoppedReview
-                : copy.runStatus[item.run.status];
+            const status = runStatusLabel(item.run);
             return (
               <li
                 key={item.run.id}

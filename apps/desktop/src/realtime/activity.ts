@@ -4,10 +4,10 @@ import {
   AIOS_PROPOSE_TOOLS,
   aiosToolOf,
   connectorToolOf,
+  type RunEndReason,
 } from '@aios/contracts';
 import { copy } from '../copy';
 import { isSettled, type LiveRun, type ToolStep } from './liveRun';
-import { wasStopped } from './stoppedRuns';
 
 /**
  * Lapisan data aktivitas run (tanpa React, tanpa jam): mengubah `LiveRun` menjadi apa yang ditampilkan baris
@@ -217,7 +217,7 @@ function phaseOf(live: LiveRun, running: ToolStep[]): ActivityPhase {
     case 'accepted':
     case 'rejected':
       // Dihentikan pemilik tetapi sudah mengubah berkas: berakhir needs_review, bukan selesai.
-      return wasStopped(live.runId) ? 'cancelled' : 'done';
+      return live.endReason === 'stopped' ? 'cancelled' : 'done';
     case 'failed':
       return 'error';
     case 'cancelled':
@@ -271,16 +271,7 @@ export function buildActivity(live: LiveRun, now: number, options: ActivityOptio
   const elapsedMs = live.startedAt === null || end === null ? 0 : Math.max(0, end - live.startedAt);
 
   const t = copy.runActivity.summary;
-  const label =
-    phase === 'done'
-      ? t.done
-      : phase === 'error'
-        ? t.error
-        : phase === 'cancelled'
-          ? wasStopped(live.runId)
-            ? t.stopped
-            : t.cancelled
-          : null;
+  const label = endLabel(phase, live.endReason);
   const summary =
     label === null
       ? null
@@ -324,11 +315,19 @@ export interface SavedTool {
   durationMs?: number | undefined;
 }
 
+/** Label ringkasan fase akhir; `endReason` membedakan dihentikan pemilik dan digantikan run lanjutan. */
+function endLabel(phase: ActivityPhase, endReason: RunEndReason | null): string | null {
+  const t = copy.runActivity.summary;
+  if (phase === 'error') return t.error;
+  if (phase === 'cancelled') return endReason === 'stopped' ? t.stopped : t.cancelled;
+  if (phase === 'done') return endReason === 'superseded' ? t.superseded : t.done;
+  return null;
+}
+
 /** Bagian run tersimpan (entitas Run dari server) yang dipakai untuk ringkasan jawaban lama. */
 export interface SavedRunInfo {
-  /** Untuk mengenali run yang dihentikan pemilik dari perangkat ini. */
-  id?: string;
   status: LiveRun['status'];
+  endReason: LiveRun['endReason'];
   createdAt: string;
   updatedAt: string;
 }
@@ -348,25 +347,18 @@ export function savedActivity(tools: SavedTool[], run: SavedRunInfo | null): Act
     durationMs: t.durationMs ?? null,
     startedAt: null,
   }));
-  const stopped = run?.id !== undefined && wasStopped(run.id);
+  const endReason = run?.endReason ?? null;
   const phase: ActivityPhase =
     run?.status === 'failed'
       ? 'error'
-      : run?.status === 'cancelled' || stopped
+      : run?.status === 'cancelled' || endReason === 'stopped'
         ? 'cancelled'
         : 'done';
   const timed = run !== null && ['completed', 'failed', 'cancelled'].includes(run.status);
   const span = timed ? Date.parse(run.updatedAt) - Date.parse(run.createdAt) : Number.NaN;
   const elapsedMs = Number.isFinite(span) && span >= 0 ? span : null;
   const t = copy.runActivity.summary;
-  const label =
-    phase === 'error'
-      ? t.error
-      : phase === 'cancelled'
-        ? stopped
-          ? t.stopped
-          : t.cancelled
-        : t.done;
+  const label = endLabel(phase, endReason) ?? t.done;
   return {
     headline: null,
     phase,

@@ -4,7 +4,6 @@ import { describe, expect, it, vi } from 'vitest';
 import type { RoleInfo } from '../api/gateway';
 import { copy } from '../copy';
 import { formatElapsed, savedActivity, type SavedTool } from '../realtime/activity';
-import { noteStopped } from '../realtime/stoppedRuns';
 import { allCheckpoints, fixtureActivity } from '../test/activityFixtures';
 import { orbStateOf } from './AgentOrb';
 import { AssistantMessage } from './AssistantMessage';
@@ -213,8 +212,13 @@ describe('jawaban lama: ringkasan dari data tersimpan', () => {
     { id: 't2', name: 'terminal', target: 'pnpm test', status: 'error', durationMs: 1200 },
   ];
   const props = { ...baseProps, parts: text };
-  const timed = (status: 'completed' | 'failed' | 'cancelled' | 'needs_review', end: string) => ({
+  const timed = (
+    status: 'completed' | 'failed' | 'cancelled' | 'needs_review' | 'rejected',
+    end: string,
+    endReason: 'stopped' | 'superseded' | null = null,
+  ) => ({
     status,
+    endReason,
     createdAt: '2026-11-02T10:00:00Z',
     updatedAt: end,
   });
@@ -257,15 +261,19 @@ describe('jawaban lama: ringkasan dari data tersimpan', () => {
   });
 
   it('run yang dihentikan pemilik tetapi sudah mengubah berkas (needs_review): Dihentikan, bukan Selesai', () => {
-    const id = 'run-dihentikan-tersimpan';
-    noteStopped(id);
-    const activity = savedActivity(tools, { ...timed('needs_review', '2026-11-02T10:00:09Z'), id });
+    const activity = savedActivity(tools, timed('needs_review', '2026-11-02T10:00:09Z', 'stopped'));
     expect(activity.phase).toBe('cancelled');
     expect(activity.summary).toBe('Dihentikan · 2 langkah');
     expect(
-      savedActivity(tools, { ...timed('needs_review', '2026-11-02T10:00:09Z'), id: 'run-lain' })
-        .phase,
-    ).toBe('done');
+      savedActivity(tools, timed('cancelled', '2026-11-02T10:00:03Z', 'stopped')).summary,
+    ).toBe('Dihentikan · 3 dtk · 2 langkah');
+    expect(savedActivity(tools, timed('needs_review', '2026-11-02T10:00:09Z')).phase).toBe('done');
+  });
+
+  it('run yang digantikan run lanjutan (rejected, superseded): label netral, bukan Ditolak', () => {
+    const activity = savedActivity(tools, timed('rejected', '2026-11-02T10:00:09Z', 'superseded'));
+    expect(activity.phase).toBe('done');
+    expect(activity.summary).toBe('Dilanjutkan di run berikutnya · 2 langkah');
   });
 
   it('selisih waktu negatif atau tidak terbaca tidak menghasilkan durasi; tanpa langkah tanpa bagian langkah', () => {
@@ -273,7 +281,12 @@ describe('jawaban lama: ringkasan dari data tersimpan', () => {
       'Selesai · 2 langkah',
     );
     expect(
-      savedActivity(tools, { status: 'completed', createdAt: 'x', updatedAt: 'y' }).summary,
+      savedActivity(tools, {
+        status: 'completed',
+        endReason: null,
+        createdAt: 'x',
+        updatedAt: 'y',
+      }).summary,
     ).toBe('Selesai · 2 langkah');
     expect(savedActivity([], timed('completed', '2026-11-02T10:00:04Z')).summary).toBe(
       'Selesai · 4 dtk',

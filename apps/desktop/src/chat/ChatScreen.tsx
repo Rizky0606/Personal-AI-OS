@@ -165,7 +165,9 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
           </StateView>
         )}
       </div>
-      {chat.reviewRunId ? <ReviewBanner runId={chat.reviewRunId} /> : null}
+      {chat.reviewRunId ? (
+        <ReviewBanner runId={chat.reviewRunId} stopped={chat.reviewStopped} />
+      ) : null}
       {chat.awaitingPlanApproval ? (
         <PlanBanner onApprove={chat.approvePlan} disabled={chat.sending || !chat.online} />
       ) : null}

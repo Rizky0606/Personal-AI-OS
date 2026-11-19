@@ -645,6 +645,32 @@ describe('hasil run coding menunggu tinjauan', () => {
     expect(await screen.findByRole('button', { name: copy.review.open })).toBeInTheDocument();
   });
 
+  it('run yang dihentikan pemilik (endReason stopped): pengingat memperingatkan hasil setengah jadi', async () => {
+    useUiStore.getState().setActiveProject(PROJECT);
+    api.listMessages.mockResolvedValue(
+      page(message({ author: 'user', text: 'tes', runId: RUN_X })),
+    );
+    api.getRun.mockResolvedValue({ ...reviewRun('needs_review'), endReason: 'stopped' });
+    await renderScreen(<ChatScreen conversationId={CONV} />);
+    expect(await screen.findByText(copy.review.readyStopped)).toBeInTheDocument();
+  });
+
+  it('dihentikan di depan mata: endReason dari event run.status, sebelum DTO diperbarui', async () => {
+    useUiStore.getState().setActiveProject(PROJECT);
+    api.listMessages.mockResolvedValue(
+      page(message({ author: 'user', text: 'tes', runId: RUN_X })),
+    );
+    api.getRun.mockResolvedValue(run({ id: RUN_X, status: 'running' }));
+    await renderScreen(<ChatScreen conversationId={CONV} />);
+    await waitFor(() => expect(runs.get(RUN_X)).toBeDefined());
+    act(() => {
+      emit(`run:${RUN_X}`, { type: 'run.status', status: 'running' });
+      emit(`run:${RUN_X}`, { type: 'run.status', status: 'needs_review', endReason: 'stopped' });
+    });
+    expect(await screen.findByText(copy.review.readyStopped)).toBeInTheDocument();
+    expect(screen.queryByText(copy.review.ready)).toBeNull();
+  });
+
   it('run biasa (completed) tidak menampilkan pengingat; meninggalkan percakapan membersihkan tab Diff', async () => {
     api.listMessages.mockResolvedValue(
       page(message({ author: 'user', text: 'tes', runId: RUN_X })),

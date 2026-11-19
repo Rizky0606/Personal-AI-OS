@@ -132,3 +132,16 @@ describe('izin di LiveRun', () => {
     expect(run.memorySuggestion).toBe('Pemilik suka kopi tubruk.');
   });
 });
+
+describe('endReason di LiveRun', () => {
+  it('run.status membawa endReason; status berikutnya tanpa alasan tidak menghapusnya, alasan baru menggantinya', () => {
+    let run = reduceLiveRun(newLiveRun(RUN), { type: 'run.status', status: 'running' });
+    expect(run.endReason).toBeNull();
+    run = reduceLiveRun(run, { type: 'run.status', status: 'needs_review', endReason: 'stopped' });
+    expect(run.endReason).toBe('stopped');
+    run = reduceLiveRun(run, { type: 'run.status', status: 'needs_review' });
+    expect(run.endReason).toBe('stopped');
+    run = reduceLiveRun(run, { type: 'run.status', status: 'rejected', endReason: 'superseded' });
+    expect(run.endReason).toBe('superseded');
+  });
+});

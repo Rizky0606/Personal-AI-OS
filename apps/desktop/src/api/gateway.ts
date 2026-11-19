@@ -84,7 +84,6 @@ import {
   type Surface,
 } from '@aios/contracts';
 import { z } from 'zod';
-import { noteStopped } from '../realtime/stoppedRuns';
 
 /** Fungsi pemanggil REST (sudah berisi auth dan refresh token); di aplikasi: `auth.authedFetch`. */
 export type Call = (
@@ -379,12 +378,7 @@ export function createGatewayApi(call: Call) {
           body: { projectId, idea },
         })
       ).items,
-    /** Menghentikan run; dicatat di perangkat ini supaya hasil setengah jadi tampil "Dihentikan", bukan "Selesai". */
-    cancelRun: async (id: string) => {
-      const run = await get(`/runs/${id}/cancel`, RunSchema, { method: 'POST' });
-      noteStopped(id);
-      return run;
-    },
+    cancelRun: (id: string) => get(`/runs/${id}/cancel`, RunSchema, { method: 'POST' }),
     /** Mengarahkan run coding yang berjalan: `steer` disisipkan sekarang, `followUp` antre sampai selesai. */
     steerRun: async (id: string, text: string, mode: SteerMode) => {
       await call(`/runs/${id}/steer`, { method: 'POST', body: { text, mode } });

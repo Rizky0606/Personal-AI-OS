@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildActivity, formatElapsed, truncateTarget } from './activity';
 import { newLiveRun, type LiveRun, type ToolStep } from './liveRun';
-import { noteStopped } from './stoppedRuns';
 
 const T0 = Date.parse('2026-10-29T10:00:00Z');
 const run = (over: Partial<LiveRun> = {}): LiveRun => ({
@@ -326,14 +325,24 @@ describe('buildActivity: waktu, ringkasan, perhatian', () => {
     expect(buildActivity(run({ status: 'needs_review', endedAt: T0 + 2000 }), T0).summary).toBe(
       'Selesai · 2 dtk',
     );
-    // Dihentikan pemilik setelah mengubah berkas: gateway mengakhirinya needs_review tanpa penanda.
-    noteStopped('run-dihentikan');
+    // Dihentikan pemilik setelah mengubah berkas: gateway mengakhirinya needs_review dengan endReason stopped.
     const stopped = buildActivity(
-      run({ runId: 'run-dihentikan', status: 'needs_review', endedAt: T0 + 2000 }),
+      run({ status: 'needs_review', endReason: 'stopped', endedAt: T0 + 2000 }),
       T0,
     );
     expect(stopped.phase).toBe('cancelled');
     expect(stopped.summary).toBe('Dihentikan · 2 dtk');
+    expect(
+      buildActivity(run({ status: 'cancelled', endReason: 'stopped', endedAt: T0 + 2000 }), T0)
+        .summary,
+    ).toBe('Dihentikan · 2 dtk');
+    // Digantikan run lanjutan: bukan "Ditolak", label netral.
+    const superseded = buildActivity(
+      run({ status: 'rejected', endReason: 'superseded', endedAt: T0 + 2000 }),
+      T0,
+    );
+    expect(superseded.phase).toBe('done');
+    expect(superseded.summary).toBe('Dilanjutkan di run berikutnya · 2 dtk');
   });
 
   it('needsAttention: tool error atau menunggu persetujuan; tool ditolak/dibatalkan tidak', () => {

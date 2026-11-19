@@ -953,8 +953,10 @@ export const copy = {
       done: 'Selesai',
       error: 'Gagal',
       cancelled: 'Dibatalkan',
-      /** Dihentikan pemilik dari perangkat ini (juga bila sudah mengubah berkas dan menunggu tinjauan). */
+      /** Dihentikan pemilik (`endReason: stopped`), juga bila sudah mengubah berkas dan menunggu tinjauan. */
       stopped: 'Dihentikan',
+      /** Digantikan run lanjutan (`endReason: superseded`): pesan lanjutan atau komentar ke agent, bukan ditolak. */
+      superseded: 'Dilanjutkan di run berikutnya',
       steps: (n: number) => `${n} langkah`,
       separator: ' · ',
     },
@@ -1317,6 +1319,7 @@ export const copy = {
     stop: 'Hentikan',
     untitled: 'Tanpa judul',
     stoppedReview: 'Dihentikan, perlu ditinjau',
+    superseded: 'Dilanjutkan di run berikutnya',
   },
   runStatus: {
     queued: 'Mengantre',
