@@ -5,6 +5,7 @@ import { AppError } from '../../errors.js';
 import { uuidv7 } from '../../lib/uuidv7.js';
 import { writeAudit } from '../audit/repo.js';
 import { toDeviceDto } from '../devices/dto.js';
+import { moveWorkerProjects } from '../projects/service.js';
 import { dummyPasswordHash, verifyPassword } from './password.js';
 import {
   consumeTotpStep,
@@ -56,7 +57,8 @@ export interface AuthService {
   logout(deviceId: string): Promise<void>;
   /**
    * Desktop mendaftarkan worker sidecar-nya. Worker aktif bernama sama dicabut (diganti), lalu perangkat
-   * `worker` baru dibuat dengan token sendiri. Dipanggil dengan token scope `app`.
+   * `worker` baru dibuat dengan token sendiri; project worker yang dicabut pindah ke worker baru dalam transaksi
+   * yang sama (audit `project.worker_moved`). Dipanggil dengan token scope `app`.
    */
   registerWorker(actorDeviceId: string, name: string): Promise<LoginResponse>;
   authenticate(accessToken: string): Promise<AuthContext>;
@@ -70,6 +72,11 @@ export interface AuthServiceDeps {
   /** Jam (ms epoch); diganti di tes untuk menguji kedaluwarsa. */
   now?: () => number;
   log?: { warn(obj: object, msg: string): void };
+  /**
+   * Dipanggil setelah transaksi pendaftaran worker selesai bila ada worker lama yang diganti: run yang sedang
+   * didengarkan relay atas perangkat lama ikut pindah ke perangkat baru.
+   */
+  onWorkerReplaced?: (replacedIds: readonly string[], deviceId: string) => void;
 }
 
 const invalidCredentials = () =>
@@ -78,7 +85,13 @@ const invalidCredentials = () =>
 const invalidRefresh = () =>
   new AppError(401, 'invalid_refresh_token', 'Refresh token tidak valid. Login ulang.');
 
-export function createAuthService({ db, keys, now = Date.now, log }: AuthServiceDeps): AuthService {
+export function createAuthService({
+  db,
+  keys,
+  now = Date.now,
+  log,
+  onWorkerReplaced,
+}: AuthServiceDeps): AuthService {
   const accessFor = (device: DeviceRow) =>
     signAccessToken(keys.jwt, { deviceId: device.id, scopes: device.scopes as Scope[] }, now());
 
@@ -187,36 +200,44 @@ export function createAuthService({ db, keys, now = Date.now, log }: AuthService
 
     async registerWorker(actorDeviceId, name) {
       const at = now();
-      for (const old of await listActiveDevices(db)) {
-        if (
-          old.kind === 'worker' &&
-          old.name === name &&
-          (await revokeDevice(db, old.id, new Date(at)))
-        ) {
-          await writeAudit(db, {
-            actorDeviceId,
-            action: 'worker.replaced',
-            target: `device:${old.id}`,
-          });
-        }
-      }
       const id = uuidv7();
       const refresh = generateRefreshToken(id);
-      const device = await insertDevice(db, {
-        id,
-        kind: 'worker',
-        name,
-        scopes: [...SCOPES_BY_KIND.worker],
-        pushToken: null,
-        tokenHash: refresh.hash,
-        refreshExpiresAt: new Date(at + REFRESH_TTL_MS),
-        lastSeenAt: new Date(at),
+      const { device, replaced } = await db.transaction(async (tx) => {
+        const replaced: string[] = [];
+        for (const old of await listActiveDevices(tx)) {
+          if (
+            old.kind === 'worker' &&
+            old.name === name &&
+            (await revokeDevice(tx, old.id, new Date(at)))
+          ) {
+            replaced.push(old.id);
+            await writeAudit(tx, {
+              actorDeviceId,
+              action: 'worker.replaced',
+              target: `device:${old.id}`,
+            });
+          }
+        }
+        const device = await insertDevice(tx, {
+          id,
+          kind: 'worker',
+          name,
+          scopes: [...SCOPES_BY_KIND.worker],
+          pushToken: null,
+          tokenHash: refresh.hash,
+          refreshExpiresAt: new Date(at + REFRESH_TTL_MS),
+          lastSeenAt: new Date(at),
+        });
+        await writeAudit(tx, {
+          actorDeviceId,
+          action: 'worker.registered',
+          target: `device:${device.id}`,
+        });
+        // Desktop login ulang (vault kosong) mendaftarkan worker baru: project worker lama tidak boleh tertinggal.
+        for (const old of replaced) await moveWorkerProjects(tx, actorDeviceId, old, device.id);
+        return { device, replaced };
       });
-      await writeAudit(db, {
-        actorDeviceId,
-        action: 'worker.registered',
-        target: `device:${device.id}`,
-      });
+      if (replaced.length > 0) onWorkerReplaced?.(replaced, device.id);
       return {
         accessToken: await accessFor(device),
         refreshToken: refresh.token,

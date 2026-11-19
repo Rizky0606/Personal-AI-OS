@@ -1,6 +1,6 @@
 import type { z } from 'zod';
 
-export type HttpMethod = 'get' | 'post' | 'patch' | 'delete';
+export type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete';
 
 export interface EndpointResponse {
   status: number;

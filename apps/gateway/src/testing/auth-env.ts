@@ -316,8 +316,8 @@ export async function createAuthEnv(
   });
   const skillCurator = createSkillCurator({ db, skills, manager: skillManager, hub, now });
   const skillUsage = createSkillUsage({ db, skills, manager: skillManager, now });
-  const projects = createProjectsService({ db });
   const workerHub = createWorkerHub();
+  const projects = createProjectsService({ db, isWorkerOnline: (id) => workerHub.isOnline(id) });
   const workerRelay = createWorkerRelay({ hub: workerHub, projects });
   workerHub.onPresence((deviceId, online) => workerRelay.presence(deviceId, online));
   const observer = createRunObserver();
@@ -515,7 +515,12 @@ export async function createAuthEnv(
   const app = buildApp({
     config: { LOG_LEVEL: options.logStream ? 'info' : 'silent', NODE_ENV: 'test' },
     health: { readiness: () => Promise.reject(new Error('tidak dipakai')) },
-    auth: createAuthService({ db, keys, now }),
+    auth: createAuthService({
+      db,
+      keys,
+      now,
+      onWorkerReplaced: (replaced, deviceId) => workerRelay.moveDevice(replaced, deviceId),
+    }),
     devices: createDevicesService({ db, now }),
     llm: {
       client,

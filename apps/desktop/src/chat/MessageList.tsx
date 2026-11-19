@@ -53,7 +53,12 @@ export interface MessageListProps {
   /** Permintaan izin agent yang menunggu jawaban pengguna. */
   approvals: PendingApproval[];
   resolvingApprovals: ReadonlySet<string>;
-  onResolveApproval: (approvalId: string, decision: 'allow' | 'deny', remember: boolean) => void;
+  onResolveApproval: (
+    approvalId: string,
+    decision: 'allow' | 'deny',
+    remember: boolean,
+    forRun?: boolean,
+  ) => void;
   /** Jawaban atas pertanyaan agent (id pertanyaan dipakai juga di `resolvingApprovals` selama terkirim). */
   onAnswerQuestion?: (
     questionId: string,
@@ -341,8 +346,8 @@ export function MessageList({
             key={approval.approvalId}
             approval={approval}
             busy={resolvingApprovals.has(approval.approvalId)}
-            onResolve={(decision, remember) =>
-              onResolveApproval(approval.approvalId, decision, remember)
+            onResolve={(decision, remember, forRun) =>
+              onResolveApproval(approval.approvalId, decision, remember, forRun)
             }
           />
         ))}

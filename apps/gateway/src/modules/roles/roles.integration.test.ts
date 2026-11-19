@@ -49,7 +49,6 @@ describe('GET /roles', () => {
       group: 'coding',
       engine: 'omp',
       model: 'coding-main',
-      fallbackModel: 'coding-cheap',
       approval: 'ask',
     });
     expect(project.skills).toEqual([...CORE_SKILLS, 'find-skills', 'plan-progress']);

@@ -315,11 +315,15 @@ export function useChatController(conversationId: string | undefined) {
 
   /** Keputusan atas permintaan izin agent; status run berubah lewat event, bukan dari sini. */
   const resolveApproval = useCallback(
-    async (approvalId: string, decision: 'allow' | 'deny', remember: boolean) => {
+    async (approvalId: string, decision: 'allow' | 'deny', remember: boolean, forRun = false) => {
       if (!live) return;
       setResolving((current) => new Set(current).add(approvalId));
       try {
-        await api.resolveApproval(live.runId, approvalId, { decision, remember });
+        await api.resolveApproval(live.runId, approvalId, {
+          decision,
+          remember,
+          ...(forRun ? { forRun: true } : {}),
+        });
       } catch (error) {
         fail(error, `${copy.approval.failed} ${apiErrorMessage(error, online)}`);
       } finally {
@@ -517,8 +521,12 @@ export function useChatController(conversationId: string | undefined) {
     uploading: attach.uploading,
     hasReadyFiles: attach.parts.length > 0,
     resolvingApprovals: resolving,
-    resolveApproval: (approvalId: string, decision: 'allow' | 'deny', remember: boolean) =>
-      void resolveApproval(approvalId, decision, remember),
+    resolveApproval: (
+      approvalId: string,
+      decision: 'allow' | 'deny',
+      remember: boolean,
+      forRun?: boolean,
+    ) => void resolveApproval(approvalId, decision, remember, forRun),
     answerQuestion: (
       questionId: string,
       result: { answers: QuestionAnswer[]; cancelled: boolean },

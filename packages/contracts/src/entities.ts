@@ -108,6 +108,14 @@ export type RunKind = z.infer<typeof RunKindSchema>;
 export const RunWorkspaceSchema = z.enum(['in_place', 'worktree']).meta({ id: 'RunWorkspace' });
 export type RunWorkspace = z.infer<typeof RunWorkspaceSchema>;
 
+/**
+ * Cara run berakhir di luar status: `stopped` = dihentikan pemilik (run coding yang punya perubahan tetap berakhir
+ * `needs_review`, jadi tanpa ini tidak bisa dibedakan dari run yang selesai sendiri); `superseded` = digantikan run
+ * lanjutan (pesan lanjutan atau "Kirim komentar ke agent") dan berstatus `rejected` walau pemilik tidak menolaknya.
+ */
+export const RunEndReasonSchema = z.enum(['stopped', 'superseded']).meta({ id: 'RunEndReason' });
+export type RunEndReason = z.infer<typeof RunEndReasonSchema>;
+
 export const RunSchema = z
   .object({
     id: IdSchema,
@@ -124,6 +132,8 @@ export const RunSchema = z
     workspace: RunWorkspaceSchema.nullable().default(null),
     usage: UsageSchema.nullable(),
     error: RunErrorSchema.nullable(),
+    /** Alasan run berakhir di luar status (lihat RunEndReason); null untuk run yang selesai, gagal, atau ditinjau biasa. */
+    endReason: RunEndReasonSchema.nullable().default(null),
     /** Run coding mode rencana: hanya membaca dan menulis rencana, tanpa perubahan berkas (W29). */
     planOnly: z.boolean().default(false),
     createdAt: TimestampSchema,

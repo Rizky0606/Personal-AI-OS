@@ -4,7 +4,6 @@ name: Umum
 group: umum
 engine: hermes
 model: general-main
-fallback_model: general-cheap
 approval: ask
 skills:
   [

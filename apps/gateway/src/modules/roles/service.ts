@@ -108,7 +108,6 @@ export function createRolesService(options: RolesServiceOptions = {}): RolesServ
           group: r.group,
           engine: r.engine,
           model: r.model,
-          fallbackModel: r.fallbackModel,
           approval: r.approval,
           skills: unique([...CORE_SKILLS, ...r.skills]),
         }));

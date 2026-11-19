@@ -266,7 +266,7 @@ describe('lampiran konteks dari preview', () => {
 describe('panel izin inline', () => {
   async function runWithApproval(
     extra: () => void = () => undefined,
-    approval: { kind: 'command' | 'network'; detail: string } = {
+    approval: { kind: 'command' | 'network' | 'file_write'; detail: string } = {
       kind: 'command',
       detail: 'node --test',
     },
@@ -360,6 +360,19 @@ describe('panel izin inline', () => {
     expect(api.resolveApproval).toHaveBeenLastCalledWith(RUN_X, APPROVAL, {
       decision: 'deny',
       remember: false,
+    });
+  });
+
+  it('izin tulis berkas: tombol "Izinkan tulis berkas untuk run ini" mengirim forRun=true; perintah tidak punya tombol itu', async () => {
+    api.resolveApproval.mockResolvedValue({} as never);
+    const user = userEvent.setup();
+    await runWithApproval(undefined, { kind: 'file_write', detail: 'Path: src/a.ts\nContent:\nx' });
+    const panel = await screen.findByRole('group', { name: copy.approval.title.file_write });
+    await user.click(within(panel).getByRole('button', { name: copy.approval.allowRunWrites }));
+    expect(api.resolveApproval).toHaveBeenLastCalledWith(RUN_X, APPROVAL, {
+      decision: 'allow',
+      remember: false,
+      forRun: true,
     });
   });
 

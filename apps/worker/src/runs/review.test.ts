@@ -5,7 +5,12 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { AllowList } from '../paths/allowlist.js';
 import { ProcessManager } from '../process/manager.js';
-import { fallbackCommitMessage, parseCommitMessage } from './commit-message.js';
+import {
+  combineCommitMessages,
+  COMMIT_INSTRUCTION,
+  fallbackCommitMessage,
+  parseCommitMessage,
+} from './commit-message.js';
 import { parseNameStatus, parseNumstat, ReviewError, ReviewService } from './review.js';
 import { WorktreeManager, type Worktree } from './worktree.js';
 
@@ -100,6 +105,62 @@ describe('pesan commit', () => {
       'docs: perbarui panduan',
     );
     expect(fallbackCommitMessage('', ['src/a.ts'])).toBe('chore: perubahan dari agent');
+  });
+
+  it('instruksi: ringkasan berbahasa Indonesia, identifier tidak dikecilkan', () => {
+    expect(COMMIT_INSTRUCTION).not.toContain('huruf kecil>');
+    expect(COMMIT_INSTRUCTION).toContain('bahasa Indonesia');
+    expect(COMMIT_INSTRUCTION).toContain('formatPrice');
+  });
+
+  it('identifier dan nama berkas dipertahankan apa adanya', () => {
+    expect(parseCommitMessage('Commit: feat(format): tambahkan formatPrice di page-count.ts')).toBe(
+      'feat(format): tambahkan formatPrice di page-count.ts',
+    );
+    expect(fallbackCommitMessage('PageCount kini menolak nilai negatif.', ['src/a.ts'])).toBe(
+      'chore: PageCount kini menolak nilai negatif',
+    );
+    expect(fallbackCommitMessage('README diperbarui', ['src/a.ts'])).toBe(
+      'chore: README diperbarui',
+    );
+  });
+
+  it('huruf non-Latin ditolak: baris Commit dilewati, fallback melewati baris itu', () => {
+    expect(parseCommitMessage('Commit: feat(format): tambahkan formatter jumlah товара')).toBe(
+      undefined,
+    );
+    expect(parseCommitMessage('Commit: fix: perbaiki 数量')).toBeUndefined();
+    expect(parseCommitMessage('Commit: fix: perbaiki عدد')).toBeUndefined();
+    // Baris sah sebelumnya tetap dipakai; tanda baca, angka, dan simbol tidak dianggap huruf asing.
+    expect(
+      parseCommitMessage('Commit: fix: perbaiki `page < 1` (#12) → 1\nCommit: fix: jumlah товара'),
+    ).toBe('fix: perbaiki `page < 1` (#12) → 1');
+    expect(fallbackCommitMessage('Добавлен форматтер\nTambah formatter jumlah.', ['a.ts'])).toBe(
+      'chore: tambah formatter jumlah',
+    );
+    expect(fallbackCommitMessage('Готово', ['a.ts'])).toBe('chore: perubahan dari agent');
+  });
+
+  it('gabungan multi-run: type/scope run pertama, ringkasan semua run, duplikat dibuang', () => {
+    expect(combineCommitMessages([])).toBeUndefined();
+    expect(combineCommitMessages(['feat(price): tambahkan formatPrice'])).toBe(
+      'feat(price): tambahkan formatPrice',
+    );
+    expect(
+      combineCommitMessages([
+        'feat(price): tambahkan formatPrice',
+        'fix(price): perbaiki pembulatan',
+        'feat(price): tambahkan formatPrice',
+      ]),
+    ).toBe('feat(price): tambahkan formatPrice; perbaiki pembulatan');
+  });
+
+  it('gabungan multi-run tidak melebihi 200 karakter dan tidak memotong kata', () => {
+    const long = (n: number) => `fix: ${'perbaiki '.repeat(8)}bagian ${n}`;
+    const message = combineCommitMessages([1, 2, 3, 4].map(long)) ?? '';
+    expect(message.length).toBeLessThanOrEqual(200);
+    expect(message).toBe(`${long(1)}; ${long(2).slice(5)}`);
+    expect(message).not.toContain('\n');
   });
 });
 
@@ -553,6 +614,24 @@ describe('ReviewService: mode in_place (langsung di branch aktif)', () => {
     expect(git(repo, 'rev-parse', 'HEAD')).toBe(head);
     expect(await read('README.md')).toBe('halo\n');
     expect(git(repo, 'status', '--porcelain')).toBe('');
+  });
+
+  it('beberapa run di tinjauan yang sama: pesan usulan menggabungkan semua run', async () => {
+    await inPlace();
+    await fs.writeFile(path.join(repo, 'math.js'), 'run 1\n');
+    review.setMeta(RUN, 'Selesai.\nCommit: feat(math): tambahkan formatPrice');
+    await manager.adopt(RUN, RUN_2);
+    review.inherit(RUN, RUN_2);
+    await fs.writeFile(path.join(repo, 'lama.txt'), 'run 2\n');
+    review.setMeta(RUN_2, 'Commit: fix(math): perbaiki pageCount negatif');
+
+    expect((await review.get(RUN_2)).commitMessage).toBe(
+      'feat(math): tambahkan formatPrice; perbaiki pageCount negatif',
+    );
+    await review.accept(RUN_2, { merge: false });
+    expect(git(repo, 'log', '-1', '--format=%s')).toBe(
+      'feat(math): tambahkan formatPrice; perbaiki pageCount negatif',
+    );
   });
 
   it('branch berganti selama run: terima dan tolak ditolak dengan head_moved, tidak ada yang diubah', async () => {

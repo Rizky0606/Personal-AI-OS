@@ -56,7 +56,6 @@ describe('isi agent dan skill di repo', () => {
       expect([role.group, role.engine]).toEqual([spec.group, spec.engine]);
       expect(role.name).not.toBe('');
       expect(role.model).not.toBe('');
-      expect(role.fallbackModel).not.toBeNull();
       expect(role.skills.filter((s) => (CORE_SKILLS as readonly string[]).includes(s))).toEqual([
         ...CORE_SKILLS,
       ]);

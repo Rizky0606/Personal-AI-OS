@@ -30,6 +30,8 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/); ve
 
 ### Diubah
 
+- **`fallback_model` dihapus dari role dan `RoleInfo`:** tidak pernah dipakai run dan combo-nya tidak ada di 9Router; fallback antar-penyedia dikerjakan combo 9Router.
+- **`models.yml` omp bisa diatur per worker:** `AIOS_OMP_REASONING`, `AIOS_OMP_CONTEXT_WINDOW`, `AIOS_OMP_MAX_TOKENS` (bawaan tetap `false`/128000/8192, diukur terhadap 9Router lokal).
 - **Recall memori beranggaran** (slice 1 `docs/DESIGN_MEMORI_SEMANTIK.md`): selama bagian memori muat di anggaran, keluaran sama persis seperti sebelumnya; di atas anggaran dipilih yang tersemat, yang cocok kata dengan pesan pemilik (ditambah pesan pemilik sebelumnya), lalu yang terbaru. Memori dibaca sekali per run; `context.used.memory` kini sama persis dengan yang disuntik dan bertambah `total`, `mode`, `items[].via`. Panel Progres menampilkan "Dibaca · N dari M fakta" bila sebagian tidak ikut.
 - Migrasi aditif `0018_memories_recall`: `memories.pinned` (bawaan false) dan `memories.tsv` (tsvector `simple`, indeks GIN).
 - **Composer desktop**: Rencana dulu, Kerjakan sebagai tim, Cari di web, dan Skill digabung ke satu menu "Opsi"; tab pane menjadi satu pill aktif + dropdown "Ganti tab" bila pane sempit (< 300 px). Perbaikan lanjutan: lint/format, bayangan tab aktif memakai token `shadow-lift`, dan tes mengikuti menu Opsi.
@@ -41,6 +43,17 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/); ve
 - **Terima dengan merge (mode worktree)**: bila branch pemilik sudah maju, hasil di-rebase ke atasnya lalu fast-forward, dilakukan sebelum worktree dihapus; rebase bentrok dibatalkan dengan `mergeSkipped: conflict` dan branch hasil utuh. Sakelar merge bawaannya nyala untuk run chat.
 
 ### Diperbaiki
+
+- **Project ikut pindah saat worker didaftarkan ulang (B1, uji project):** desktop yang login ulang mendaftarkan worker baru dan mencabut yang lama; project, run yang didengarkan, tinjauan yang menunggu, dan `workspace.pending` kini pindah ke perangkat baru dalam satu transaksi (audit `project.worker_moved`). REST `GET /projects/:id/worker` (status dari hub worker gateway) dan `PUT /projects/:id/worker` (ikat ulang manual, `409 project_busy` bila ada run berjalan). Sidebar desktop menampilkan worker project menurut gateway, bukan worker lokal, dengan tombol "Pakai worker PC ini".
+- **Web bawaan omp tidak lagi melewati izin (B4):** overlay run mematikan `fetch` (baca URL lewat `read`) dan `github`; `web_search` bawaan dimatikan bila `aios_tools` tersedia, selain itu wajib izin jaringan. Tool MCP run tetap jalan saat izin lain menunggu (`waiting_approval`), dan alasan galat tool dialirkan sebagai `tool.output` stderr serta tampil di langkah yang gagal.
+- **Baca di luar folder kerja run ditolak (B13):** hook `tool_call` per run dari adapter memblokir `read`/`grep`/`glob`/`find`/`ast_grep`/`lsp` ke `..`, path absolut lain, atau `~`.
+- **Izin lebih sedikit dan lebih aman:** perintah baca saja (`git status|diff|log|show`, `ls`, `pwd`, `command -v`, `cat`, `head`) di folder kerja run diizinkan otomatis; "Izinkan tulis berkas untuk run ini" (`ApprovalDecisionRequest.forRun`, `400 approval_scope_invalid`); "Selalu" untuk skrip package manager mencakup argumen relatif setelah `--`. Baris baru tidak lagi dilebur saat mencocokkan aturan, detail izin yang terpotong tidak pernah diizinkan otomatis, dan `.git` dikenali dalam varian huruf/titik/symlink.
+- **Pertanyaan baca saja tidak mengunci repo (B12):** run `in_place` baru memegang kunci saat meminta izin tulis, dan melepasnya bila semua izin tulisnya ditolak.
+- **`approval.resolved` dan baris izin mencatat `remember` yang sebenarnya (B9).**
+- **Narasi antar-giliran asisten dipisah paragraf di adapter (B7).**
+- **Pesan commit (B8):** identifier tidak dipaksa huruf kecil, baris dengan huruf non-Latin ditolak, berbahasa Indonesia, dan tinjauan multi-run menggabungkan pesan semua run.
+- **Paket skill frontend tidak lagi terpicu kata `page` (B11);** `read-context-first` tidak memaksa membaca AGENTS.md, `find-skills` hanya bila diminta.
+- **`Run.endReason`** (`stopped` | `superseded`, migrasi `0024`) membedakan run yang dihentikan dan run yang digantikan pesan lanjutan atau komentar dari selesai/ditolak biasa.
 
 - **Tab panel kanan tidak lagi bergulir mendatar:** pilihan antara deret tab penuh dan tata letak ringkas (pill aktif + dropdown "Ganti tab") kini diukur dari ruang nyata di header pane (ResizeObserver, histeresis 8 px), bukan ambang container query 300 px. Dulu, di antara 300 px dan lebar deret sebenarnya (sekitar 325–330 px tergantung label tab aktif, termasuk lebar bawaan 420 px), deret pill meluap dan menampilkan scrollbar. Deret penuh hanya tampil bila muat; fokus keyboard pindah ke padanannya saat tata letak berganti. Isi panel tetap bergulir tegak seperti biasa.
 - **Dialog "Branch" project tidak lagi menjanjikan hal yang tidak dikerjakan worker:** teksnya dulu menyebut branch project sebagai dasar worktree tiap tugas dan tujuan merge, padahal worker selalu memakai branch yang sedang checkout di folder project. `defaultBranch` kini disebut apa adanya: label di bilah atas; agent bekerja di branch aktif (ganti lewat tab Git). Sengaja tidak disambungkan ke worker karena mode branch aktif justru memakai branch yang sedang checkout.

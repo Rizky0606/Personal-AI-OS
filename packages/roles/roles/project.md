@@ -4,7 +4,6 @@ name: Project
 group: coding
 engine: omp
 model: coding-main
-fallback_model: coding-cheap
 approval: ask
 skills:
   [

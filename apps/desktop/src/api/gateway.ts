@@ -37,6 +37,7 @@ import {
   EngineListSchema,
   ModelListSchema,
   ProjectSchema,
+  ProjectWorkerStatusSchema,
   ResearchJobDetailSchema,
   ResearchJobSchema,
   CompareResponseSchema,
@@ -234,6 +235,11 @@ export function createGatewayApi(call: Call) {
     ) => get(`/projects/${id}`, ProjectSchema, { method: 'PATCH', body: patch }),
     createProject: (input: CreateProjectInput) =>
       get('/projects', ProjectSchema, { method: 'POST', body: input }),
+    /** Perangkat worker project dan apakah ia tersambung ke hub worker gateway saat ini. */
+    getProjectWorker: (id: string) => get(`/projects/${id}/worker`, ProjectWorkerStatusSchema),
+    /** Mengikat project ke perangkat worker aktif lain (mis. worker PC ini setelah login ulang). */
+    rebindProjectWorker: (id: string, workerDeviceId: string) =>
+      get(`/projects/${id}/worker`, ProjectSchema, { method: 'PUT', body: { workerDeviceId } }),
 
     /** Armada agent: beberapa tugas berbeda dimulai sekaligus di satu project (maks. 4). */
     launchFleet: (input: {
@@ -324,11 +330,14 @@ export function createGatewayApi(call: Call) {
     getRun: (id: string) => get(`/runs/${id}`, RunSchema),
     /** Run coding terbaru dengan judul dan project, untuk Ruang Kerja. */
     listRuns: async () => (await get('/runs?kind=coding&limit=100', WorkspaceRunListSchema)).items,
-    /** Keputusan atas permintaan izin agent; `remember` = selalu izinkan untuk project ini. */
+    /**
+     * Keputusan atas permintaan izin agent; `remember` = selalu izinkan untuk project ini, `forRun` = izinkan tulis
+     * berkas di folder run ini sampai run selesai.
+     */
     resolveApproval: (
       runId: string,
       approvalId: string,
-      input: { decision: 'allow' | 'deny'; remember: boolean },
+      input: { decision: 'allow' | 'deny'; remember: boolean; forRun?: boolean },
     ) =>
       get(`/runs/${runId}/approvals/${approvalId}`, ApprovalSchema, {
         method: 'POST',

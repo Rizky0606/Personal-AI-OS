@@ -17,7 +17,7 @@ import { ProcessManager } from './process/manager.js';
 import { ProjectBindings } from './projects/bindings.js';
 import { RunCoordinator } from './runs/coordinator.js';
 import { ReviewService } from './runs/review.js';
-import { readOmpVersion, resolveOmp } from './runs/omp-path.js';
+import { ompModelLimits, readOmpVersion, resolveOmp } from './runs/omp-path.js';
 import { ApprovalRules } from './runs/rules.js';
 import { ProjectSetupStore } from './runs/setup.js';
 import { WorktreeManager } from './runs/worktree.js';
@@ -114,6 +114,7 @@ export async function startWorker(options: WorkerOptions): Promise<RunningWorker
 
   const adapter = createOmpAdapter({
     llm: { baseUrl: `http://127.0.0.1:${proxyPort}/v1`, apiKey: proxy.key },
+    model: ompModelLimits(env, log),
     launch: async (spec) => {
       const exe = await resolveOmp(env);
       const tracked = await processes.spawnTracked(exe, spec.args, {

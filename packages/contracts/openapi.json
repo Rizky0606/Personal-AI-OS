@@ -32,6 +32,9 @@
               },
               "status": {
                 "$ref": "#/components/schemas/RunStatus"
+              },
+              "endReason": {
+                "$ref": "#/components/schemas/RunEndReason"
               }
             },
             "required": [
@@ -310,6 +313,9 @@
                 ]
               },
               "remember": {
+                "type": "boolean"
+              },
+              "forRun": {
                 "type": "boolean"
               }
             },
@@ -1014,6 +1020,13 @@
           "cancelled"
         ]
       },
+      "RunEndReason": {
+        "type": "string",
+        "enum": [
+          "stopped",
+          "superseded"
+        ]
+      },
       "Usage": {
         "type": "object",
         "properties": {
@@ -1300,6 +1313,9 @@
               },
               "status": {
                 "$ref": "#/components/schemas/RunStatus"
+              },
+              "endReason": {
+                "$ref": "#/components/schemas/RunEndReason"
               }
             },
             "required": [
@@ -1578,6 +1594,9 @@
                 ]
               },
               "remember": {
+                "type": "boolean"
+              },
+              "forRun": {
                 "type": "boolean"
               }
             },
@@ -2919,6 +2938,9 @@
               },
               "remember": {
                 "type": "boolean"
+              },
+              "forRun": {
+                "type": "boolean"
               }
             },
             "required": [
@@ -3884,12 +3906,6 @@
             "type": "string",
             "minLength": 1
           },
-          "fallbackModel": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
           "approval": {
             "type": "string",
             "enum": [
@@ -3910,7 +3926,6 @@
           "group",
           "engine",
           "model",
-          "fallbackModel",
           "approval",
           "skills"
         ]
@@ -6169,6 +6184,19 @@
           "error": {
             "$ref": "#/components/schemas/RunError"
           },
+          "endReason": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RunEndReason"
+              },
+              {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            ]
+          },
           "planOnly": {
             "type": "boolean",
             "default": false
@@ -6619,6 +6647,10 @@
           "remember": {
             "type": "boolean",
             "default": false
+          },
+          "forRun": {
+            "type": "boolean",
+            "default": false
           }
         },
         "required": [
@@ -6925,6 +6957,50 @@
             "maxLength": 4000
           }
         }
+      },
+      "ProjectWorkerStatus": {
+        "type": "object",
+        "properties": {
+          "workerDeviceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "online": {
+            "type": "boolean"
+          },
+          "revoked": {
+            "type": "boolean"
+          },
+          "lastSeenAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "workerDeviceId",
+          "name",
+          "online",
+          "revoked",
+          "lastSeenAt"
+        ]
+      },
+      "RebindProjectWorkerRequest": {
+        "type": "object",
+        "properties": {
+          "workerDeviceId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "workerDeviceId"
+        ]
       },
       "TaskList": {
         "type": "object",
@@ -14610,6 +14686,187 @@
         "responses": {
           "204": {
             "description": "Project dihapus"
+          },
+          "401": {
+            "description": "Belum login atau token tidak berlaku",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token tidak punya scope yang dibutuhkan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tidak ditemukan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Konflik dengan status saat ini",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/{id}/worker": {
+      "get": {
+        "operationId": "getProjectWorker",
+        "tags": [
+          "Project"
+        ],
+        "summary": "Perangkat worker project dan statusnya di hub worker gateway",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Status worker project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectWorkerStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Belum login atau token tidak berlaku",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token tidak punya scope yang dibutuhkan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tidak ditemukan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Terlalu banyak permintaan",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "rebindProjectWorker",
+        "tags": [
+          "Project"
+        ],
+        "summary": "Ikat project ke perangkat worker aktif lain; ditolak bila ada run yang masih berjalan di project ini",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RebindProjectWorkerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Project terbaru",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Permintaan tidak valid",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
           },
           "401": {
             "description": "Belum login atau token tidak berlaku",

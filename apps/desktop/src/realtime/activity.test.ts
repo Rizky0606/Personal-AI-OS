@@ -380,3 +380,27 @@ describe('buildActivity: sifat', () => {
     expect(buildActivity(live, T0 + 5000)).toEqual(buildActivity(live, T0 + 5000));
   });
 });
+
+describe('buildActivity: alasan galat', () => {
+  it('langkah gagal membawa alasan stderr; langkah berhasil tidak', () => {
+    const activity = buildActivity(
+      run({
+        tools: [
+          tool({
+            id: 'a',
+            name: 'read',
+            status: 'error',
+            durationMs: 5,
+            errorText: 'URL reads are disabled by settings.',
+          }),
+          tool({ id: 'b', status: 'ok', durationMs: 5, errorText: 'peringatan' }),
+        ],
+      }),
+      T0 + 1000,
+    );
+    expect(activity.steps.map((s) => s.error)).toEqual([
+      'URL reads are disabled by settings.',
+      undefined,
+    ]);
+  });
+});

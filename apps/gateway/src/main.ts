@@ -148,8 +148,8 @@ async function main(): Promise<void> {
   const skillUsage = createSkillUsage({ db, skills, manager: skillManager });
   const teamStore = createTeamEventStore(db, hub);
   const store = createEventStore(db, hub);
-  const projects = createProjectsService({ db });
   const workerHub = createWorkerHub();
+  const projects = createProjectsService({ db, isWorkerOnline: (id) => workerHub.isOnline(id) });
   const workerRelay = createWorkerRelay({ hub: workerHub, projects });
   workerHub.onPresence((deviceId, online) => workerRelay.presence(deviceId, online));
   const observer = createRunObserver(log);
@@ -341,7 +341,12 @@ async function main(): Promise<void> {
   const app = buildApp({
     config,
     health,
-    auth: createAuthService({ db, keys, log: { warn: (obj, msg) => app.log.warn(obj, msg) } }),
+    auth: createAuthService({
+      db,
+      keys,
+      log: { warn: (obj, msg) => app.log.warn(obj, msg) },
+      onWorkerReplaced: (replaced, deviceId) => workerRelay.moveDevice(replaced, deviceId),
+    }),
     devices: createDevicesService({ db }),
     llm: {
       client,

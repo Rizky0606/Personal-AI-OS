@@ -1,6 +1,7 @@
 import type {
   CreateProjectRequestSchema,
   Project,
+  ProjectWorkerStatusSchema,
   UpdateProjectRequestSchema,
 } from '@aios/contracts';
 import { TERMINAL_RUN_STATUSES } from '@aios/contracts';
@@ -36,9 +37,61 @@ export interface ProjectsService {
   remove(actorDeviceId: string, id: string): Promise<void>;
   /** Bagian pesan sistem berisi aturan project, atau string kosong bila tidak ada. */
   rulesSection(projectId: string): Promise<string>;
+  /** Perangkat worker project dan sambungannya ke hub worker gateway. */
+  workerStatus(id: string): Promise<z.infer<typeof ProjectWorkerStatusSchema>>;
+  /**
+   * Mengikat project ke perangkat worker aktif lain. Ditolak bila masih ada run berjalan; run `needs_review` tidak
+   * menghalangi karena tinjauannya dikirim ke worker project saat ini.
+   */
+  rebindWorker(actorDeviceId: string, id: string, workerDeviceId: string): Promise<Project>;
 }
 
 const notFound = () => new AppError(404, 'project_not_found', 'Project tidak ditemukan.');
+const invalidWorker = () =>
+  new AppError(
+    400,
+    'invalid_worker',
+    'workerDeviceId harus perangkat worker yang aktif. Daftarkan worker lebih dulu.',
+  );
+const busy = () =>
+  new AppError(
+    409,
+    'project_busy',
+    'Masih ada tugas yang berjalan di project ini. Hentikan atau tunggu selesai dulu.',
+  );
+
+/** Satu baris audit per project yang pindah worker (`project.worker_moved`). */
+async function auditWorkerMove(
+  db: Pick<Database, 'insert'>,
+  actorDeviceId: string,
+  projectId: string,
+  from: string,
+  to: string,
+): Promise<void> {
+  await writeAudit(db, {
+    actorDeviceId,
+    action: 'project.worker_moved',
+    target: `project:${projectId} device:${from} -> device:${to}`,
+  });
+}
+
+/**
+ * Memindahkan semua project milik perangkat worker `from` ke `to` (worker diganti karena didaftarkan ulang dengan nama
+ * sama). Dipanggil di dalam transaksi pendaftaran worker; satu baris audit per project.
+ */
+export async function moveWorkerProjects(
+  db: Pick<Database, 'update' | 'insert'>,
+  actorDeviceId: string,
+  from: string,
+  to: string,
+): Promise<void> {
+  const moved = await db
+    .update(projects)
+    .set({ workerDeviceId: to, updatedAt: new Date() })
+    .where(eq(projects.workerDeviceId, from))
+    .returning({ id: projects.id });
+  for (const { id } of moved) await auditWorkerMove(db, actorDeviceId, id, from, to);
+}
 
 export function toProjectDto(row: ProjectRow): Project {
   return {
@@ -57,13 +110,31 @@ export function toProjectDto(row: ProjectRow): Project {
  * Project terdaftar per worker. Hanya metadata: path folder tidak pernah sampai ke server
  * (ARCHITECTURE.md, "Kepemilikan data"); path tetap di worker.
  */
-export function createProjectsService(deps: { db: Database }): ProjectsService {
+export function createProjectsService(deps: {
+  db: Database;
+  /** Worker tersambung ke hub worker gateway saat ini. */
+  isWorkerOnline?: (deviceId: string) => boolean;
+}): ProjectsService {
   const { db } = deps;
 
   async function load(id: string): Promise<ProjectRow> {
     const [row] = await db.select().from(projects).where(eq(projects.id, id));
     if (!row) throw notFound();
     return row;
+  }
+
+  /** Run yang masih berjalan di project ini (needs_review tidak dihitung: agent sudah selesai). */
+  async function activeRuns(id: string): Promise<number> {
+    const active = await db.execute<{ n: number }>(sql`
+      select count(*)::int as n from runs r
+      left join conversations c on c.id = r.conversation_id
+      left join tasks t on t.id = r.task_id
+      where (c.project_id = ${id} or t.project_id = ${id})
+        and r.status not in (${sql.join(
+          TERMINAL_RUN_STATUSES.map((s) => sql`${s}`),
+          sql`, `,
+        )}, 'needs_review')`);
+    return active.rows[0]?.n ?? 0;
   }
 
   return {
@@ -74,13 +145,7 @@ export function createProjectsService(deps: { db: Database }): ProjectsService {
     async create(actorDeviceId, input) {
       // Hanya perangkat worker yang masih aktif yang boleh memegang project.
       const worker = await findDevice(db, input.workerDeviceId);
-      if (!worker || worker.revokedAt || worker.kind !== 'worker') {
-        throw new AppError(
-          400,
-          'invalid_worker',
-          'workerDeviceId harus perangkat worker yang aktif. Daftarkan worker lebih dulu.',
-        );
-      }
+      if (!worker || worker.revokedAt || worker.kind !== 'worker') throw invalidWorker();
       const [row] = await db
         .insert(projects)
         .values({
@@ -132,22 +197,7 @@ export function createProjectsService(deps: { db: Database }): ProjectsService {
 
     async remove(actorDeviceId, id) {
       await load(id);
-      const active = await db.execute<{ n: number }>(sql`
-        select count(*)::int as n from runs r
-        left join conversations c on c.id = r.conversation_id
-        left join tasks t on t.id = r.task_id
-        where (c.project_id = ${id} or t.project_id = ${id})
-          and r.status not in (${sql.join(
-            TERMINAL_RUN_STATUSES.map((s) => sql`${s}`),
-            sql`, `,
-          )}, 'needs_review')`);
-      if ((active.rows[0]?.n ?? 0) > 0) {
-        throw new AppError(
-          409,
-          'project_busy',
-          'Masih ada tugas yang berjalan di project ini. Hentikan atau tunggu selesai dulu.',
-        );
-      }
+      if ((await activeRuns(id)) > 0) throw busy();
       await db.delete(projects).where(eq(projects.id, id));
       await writeAudit(db, { actorDeviceId, action: 'project.deleted', target: `project:${id}` });
     },
@@ -159,6 +209,39 @@ export function createProjectsService(deps: { db: Database }): ProjectsService {
         .where(eq(projects.id, projectId));
       if (!row?.instructions.trim()) return '';
       return `# Aturan project "${row.name}"\n\nDitulis pemilik untuk project ini. Patuhi selama tidak bertentangan dengan aturan keamanan di atas.\n\n${row.instructions.trim()}`;
+    },
+
+    async workerStatus(id) {
+      const row = await load(id);
+      const device = await findDevice(db, row.workerDeviceId);
+      if (!device) throw notFound();
+      const revoked = device.revokedAt !== null;
+      return {
+        workerDeviceId: device.id,
+        name: device.name,
+        online: !revoked && (deps.isWorkerOnline?.(device.id) ?? false),
+        revoked,
+        lastSeenAt: device.lastSeenAt?.toISOString() ?? null,
+      };
+    },
+
+    async rebindWorker(actorDeviceId, id, workerDeviceId) {
+      const current = await load(id);
+      const worker = await findDevice(db, workerDeviceId);
+      if (!worker || worker.revokedAt || worker.kind !== 'worker') throw invalidWorker();
+      if (current.workerDeviceId === workerDeviceId) return toProjectDto(current);
+      if ((await activeRuns(id)) > 0) throw busy();
+      const row = await db.transaction(async (tx) => {
+        const [updated] = await tx
+          .update(projects)
+          .set({ workerDeviceId, updatedAt: new Date() })
+          .where(eq(projects.id, id))
+          .returning();
+        if (!updated) throw notFound();
+        await auditWorkerMove(tx, actorDeviceId, id, current.workerDeviceId, workerDeviceId);
+        return updated;
+      });
+      return toProjectDto(row);
     },
 
     async workerOf(projectId) {

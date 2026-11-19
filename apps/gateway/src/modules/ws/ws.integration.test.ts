@@ -255,6 +255,7 @@ describe('cancel lewat WebSocket', () => {
     expect(ws.envelopes(channel).at(-1)!.event).toEqual({
       type: 'run.status',
       status: 'cancelled',
+      endReason: 'stopped',
     });
     ws.close();
   });

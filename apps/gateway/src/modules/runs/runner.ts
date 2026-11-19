@@ -115,6 +115,7 @@ export interface Runner {
     approvalId: string,
     decision: 'allow' | 'deny',
     remember: boolean,
+    forRun?: boolean,
   ): Promise<'ok' | 'inactive'>;
   /** Mengarahkan agent yang sedang berjalan. Melempar AdapterError bila mesin tidak mendukung. */
   steer(runId: string, text: string, mode?: SteerMode): Promise<'ok' | 'inactive'>;
@@ -435,7 +436,11 @@ export function createRunner(deps: RunnerDeps): Runner {
         .set({ status: next, ...extra })
         .where(eq(runs.id, run.id));
       status = next;
-      const stored = await emit({ type: 'run.status', status: next });
+      const stored = await emit({
+        type: 'run.status',
+        status: next,
+        ...(extra.endReason ? { endReason: extra.endReason } : {}),
+      });
       hub.publishLive(`conversation:${input.conversationId}`, stored.event);
       deps.observer?.notify(run.id);
     };
@@ -511,6 +516,12 @@ export function createRunner(deps: RunnerDeps): Runner {
             decidedAt: new Date(),
           })
           .where(and(eq(approvals.id, event.approvalId), eq(approvals.status, 'pending')));
+        // `remember` dari worker adalah yang benar-benar berlaku (aturan tersimpan atau tidak, mis. detail terpotong
+        // tidak pernah disimpan); POST .../approvals/:id biasanya sudah mengisi baris dari permintaan lebih dulu.
+        await db
+          .update(approvals)
+          .set({ remember: event.remember })
+          .where(eq(approvals.id, event.approvalId));
         const [pending] = await db
           .select({ n: count() })
           .from(approvals)
@@ -583,13 +594,15 @@ export function createRunner(deps: RunnerDeps): Runner {
             if (continueFrom && input.supersedePrevious) {
               const [settled] = await db
                 .update(runs)
-                .set({ status: 'rejected' })
+                .set({ status: 'rejected', endReason: 'superseded' })
                 .where(and(eq(runs.id, continueFrom), eq(runs.status, 'needs_review')))
                 .returning({ id: runs.id, conversationId: runs.conversationId });
               if (settled) {
+                // Digantikan pesan lanjutan, bukan ditolak pemilik: endReason membedakannya di klien.
                 const stored = await store.append(settled.id, {
                   type: 'run.status',
                   status: 'rejected',
+                  endReason: 'superseded',
                 });
                 if (settled.conversationId) {
                   hub.publishLive(`conversation:${settled.conversationId}`, stored.event);
@@ -841,17 +854,29 @@ export function createRunner(deps: RunnerDeps): Runner {
         // jadi run menunggu keputusan (terima atau tolak) alih-alih ditinggal. Alasannya tetap tercatat.
         await saveText();
         if (failure) await emit({ type: 'error', ...failure });
+        // Dihentikan pemilik (bukan selesai sendiri): endReason `stopped`, karena status dan error sama-sama
+        // tidak membedakannya dari run yang selesai normal.
+        const endReason = ctl.cancelled ? ('stopped' as const) : undefined;
         await db
           .update(runs)
-          .set({ status: 'needs_review', usage, ...(failure ? { error: failure } : {}) })
+          .set({
+            status: 'needs_review',
+            usage,
+            ...(failure ? { error: failure } : {}),
+            ...(endReason ? { endReason } : {}),
+          })
           .where(eq(runs.id, run.id));
-        const stored = await emit({ type: 'run.status', status: 'needs_review' });
+        const stored = await emit({
+          type: 'run.status',
+          status: 'needs_review',
+          ...(endReason ? { endReason } : {}),
+        });
         status = 'needs_review';
         hub.publishLive(`conversation:${input.conversationId}`, stored.event);
         deps.observer?.notify(run.id);
       } else if (ctl.cancelled) {
         await saveText();
-        await advance('cancelled', { usage });
+        await advance('cancelled', { usage, endReason: 'stopped' });
       } else {
         failure ??= {
           code: 'adapter_ended_early',
@@ -904,10 +929,10 @@ export function createRunner(deps: RunnerDeps): Runner {
       return true;
     },
 
-    async resolveApproval(runId, approvalId, decision, remember) {
+    async resolveApproval(runId, approvalId, decision, remember, forRun = false) {
       const handle = active.get(runId)?.handle;
       if (!handle) return 'inactive';
-      await handle.resolveApproval(approvalId, decision, remember);
+      await handle.resolveApproval(approvalId, decision, remember, forRun);
       return 'ok';
     },
 

@@ -234,7 +234,6 @@ export const RoleInfoSchema = z
     group: z.enum(['coding', 'umum']),
     engine: z.enum(['omp', 'hermes', 'research']),
     model: z.string().min(1),
-    fallbackModel: z.string().nullable(),
     approval: z.enum(['ask', 'auto-safe']),
     skills: z.array(z.string()),
   })
@@ -813,6 +812,11 @@ export const ApprovalDecisionRequestSchema = z
   .object({
     decision: ApprovalDecisionSchema,
     remember: z.boolean().default(false),
+    /**
+     * "Izinkan tulis berkas untuk run ini": hanya untuk izin `file_write` dengan keputusan `allow`, tidak bersama
+     * `remember`. Penulisan berikutnya di dalam folder kerja run (bukan `.git`) diizinkan otomatis sampai run selesai.
+     */
+    forRun: z.boolean().default(false),
   })
   .meta({ id: 'ApprovalDecisionRequest' });
 
@@ -885,6 +889,27 @@ export const UpdateProjectRequestSchema = z
     instructions: z.string().trim().max(PROJECT_INSTRUCTIONS_MAX).optional(),
   })
   .meta({ id: 'UpdateProjectRequest' });
+
+/**
+ * `PUT /projects/:id/worker`: mengikat project ke perangkat worker aktif lain (mis. PC baru). Hanya `workerDeviceId`
+ * yang berubah; riwayat percakapan dan kartu tetap.
+ */
+export const RebindProjectWorkerRequestSchema = z
+  .object({ workerDeviceId: IdSchema })
+  .meta({ id: 'RebindProjectWorkerRequest' });
+
+/** `GET /projects/:id/worker`: perangkat worker project dan sambungannya ke hub worker gateway saat ini. */
+export const ProjectWorkerStatusSchema = z
+  .object({
+    workerDeviceId: IdSchema,
+    name: z.string(),
+    /** Tersambung ke hub worker gateway (`/v1/worker/ws`) saat ini. */
+    online: z.boolean(),
+    /** Perangkat sudah dicabut; run project ini tidak bisa jalan sampai project diikat ke worker aktif. */
+    revoked: z.boolean(),
+    lastSeenAt: TimestampSchema.nullable(),
+  })
+  .meta({ id: 'ProjectWorkerStatus' });
 
 export const CreateTaskRequestSchema = z
   .object({

@@ -43,7 +43,7 @@ export async function consumeTotpStep(db: Database, step: number): Promise<boole
 /* Perangkat */
 
 export async function insertDevice(
-  db: Database,
+  db: Pick<Database, 'insert'>,
   values: typeof devices.$inferInsert,
 ): Promise<DeviceRow> {
   const [row] = await db.insert(devices).values(values).returning();
@@ -56,7 +56,7 @@ export async function findDevice(db: Database, id: string): Promise<DeviceRow | 
   return row;
 }
 
-export async function listActiveDevices(db: Database): Promise<DeviceRow[]> {
+export async function listActiveDevices(db: Pick<Database, 'select'>): Promise<DeviceRow[]> {
   return db.select().from(devices).where(isNull(devices.revokedAt)).orderBy(devices.id);
 }
 
