@@ -7,7 +7,12 @@ import type {
   SendMessageRequestSchema,
   UpdateConversationRequestSchema,
 } from '@aios/contracts';
-import { HANDOFF_PREFIX, TERMINAL_RUN_STATUSES, rememberFactFrom } from '@aios/contracts';
+import {
+  HANDOFF_PREFIX,
+  TERMINAL_RUN_STATUSES,
+  rememberFactFrom,
+  scheduleRequestFrom,
+} from '@aios/contracts';
 import { and, desc, eq, gte, isNotNull, isNull, lt, notInArray, sql } from 'drizzle-orm';
 import type { z } from 'zod';
 import type { Database } from '../../db/client.js';
@@ -665,6 +670,7 @@ export function createChatService(deps: {
         !conversation.spaceId &&
         !conversation.teamId;
       const rememberFact = ownerChat ? rememberFactFrom(textOf(input.parts)) : null;
+      const scheduleRequest = ownerChat ? scheduleRequestFrom(textOf(input.parts)) : null;
       runner.launch({
         run,
         conversationId,
@@ -699,6 +705,7 @@ export function createChatService(deps: {
         projectId: conversation.projectId,
         extract: ownerChat,
         ...(rememberFact ? { rememberFact } : {}),
+        ...(scheduleRequest ? { scheduleRequest } : {}),
         ...(continueFromRunId ? { continueFromRunId } : {}),
         ...(supersedePrevious ? { supersedePrevious: true } : {}),
         ...(workspace ? { workspace } : {}),

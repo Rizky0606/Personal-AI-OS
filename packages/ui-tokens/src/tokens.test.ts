@@ -53,6 +53,13 @@ describe('tokens.json', () => {
     });
   });
 
+  it('teks mono tanpa ligatur: `--` dan `->` di perintah tampil apa adanya', () => {
+    const css = generateCss(tokens);
+    const decl = /--font-mono--font-feature-settings:\s*([^;]+);/.exec(css)?.[1] ?? '';
+    expect(decl).toContain(`'liga' 0`);
+    expect(decl).toContain(`'calt' 0`);
+  });
+
   it('lapisan permukaan: tiga bayangan tipis per tema dan tiga elevasi Android yang naik', () => {
     expect(tokens.shadow.layers).toHaveLength(3);
     expect(tokens.shadow.androidLayers).toEqual([1, 2, 4]);

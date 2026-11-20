@@ -13,6 +13,7 @@ import { WorkerCallError } from '../worker/localClient';
 vi.mock('../app/services', async () => (await import('../test/fakeServices')).fakeServices);
 
 const { DiffPanel } = await import('./DiffPanel');
+const { reviewErrorMessage } = await import('./useReview');
 
 let RUN = '';
 const SHA_1 = 'a'.repeat(40);
@@ -393,6 +394,58 @@ describe('Tinjau perubahan: terima dan tolak', () => {
     await user.click(screen.getByRole('button', { name: copy.review.reject }));
     const again = await screen.findByRole('dialog', { name: copy.review.rejectTitle });
     expect(within(again).queryByRole('alert')).toBeNull();
+  });
+
+  it('tolak habis waktu (review_timeout 503): pesan spesifik, bukan "Server mengalami masalah"', async () => {
+    api.reviewRun.mockRejectedValue(
+      new ApiProblem(
+        503,
+        'review_timeout',
+        'Worker tidak menjawab tinjauan tepat waktu. Coba lagi.',
+      ),
+    );
+    const user = userEvent.setup();
+    await open();
+    await user.click(screen.getByRole('button', { name: copy.review.reject }));
+    const dialog = await screen.findByRole('dialog', { name: copy.review.rejectTitle });
+    await user.click(within(dialog).getByRole('button', { name: copy.review.rejectConfirm }));
+
+    const alert = await within(dialog).findByRole('alert');
+    expect(alert).toHaveTextContent(
+      `${copy.review.actionFailed.reject} ${copy.review.reviewErrors.timeout}`,
+    );
+    expect(alert).not.toHaveTextContent(copy.errors.server);
+  });
+});
+
+describe('reviewErrorMessage: kode galat tinjauan dari gateway', () => {
+  const cases: [number, string, string][] = [
+    [503, 'review_timeout', copy.review.reviewErrors.timeout],
+    [409, 'review_in_progress', copy.review.reviewErrors.inProgress],
+    [503, 'worker_offline', copy.review.holderOffline],
+    [404, 'run_not_found', copy.review.reviewErrors.runMissing],
+    [409, 'project_not_found', copy.review.reviewErrors.projectMissing],
+    [409, 'run_not_reviewable', copy.review.notReviewable],
+  ];
+
+  it.each(cases)('%i %s → teks spesifik, diawali aksi yang belum terjadi', (status, code, text) => {
+    for (const action of ['accept', 'reject'] as const) {
+      const message = reviewErrorMessage(new ApiProblem(status, code, 'x'), true, action);
+      expect(message).toBe(`${copy.review.actionFailed[action]} ${text}`);
+      expect(message).not.toContain(copy.errors.server);
+    }
+  });
+
+  it('review_failed dan invalid_request memakai alasan dari gateway; kode tak dikenal tetap umum', () => {
+    expect(
+      reviewErrorMessage(new ApiProblem(409, 'review_failed', 'Konflik merge.'), true, 'accept'),
+    ).toBe(`${copy.review.actionFailed.accept} Konflik merge.`);
+    expect(
+      reviewErrorMessage(new ApiProblem(400, 'invalid_request', 'Komentar salah.'), true, 'accept'),
+    ).toBe(`${copy.review.actionFailed.accept} Komentar salah.`);
+    expect(reviewErrorMessage(new ApiProblem(503, 'lain', 'x'), true, 'reject')).toBe(
+      `${copy.review.actionFailed.reject} ${copy.errors.server}`,
+    );
   });
 });
 

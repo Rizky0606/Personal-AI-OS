@@ -3,6 +3,12 @@ import { COLOR_NAMES, TYPE_ROLES, type Tokens } from './tokens.js';
 export const GENERATED_NOTICE =
   'GENERATED oleh packages/ui-tokens dari tokens.json. Jangan diedit tangan; jalankan pnpm --filter @aios/ui-tokens build.';
 
+/**
+ * Fitur font untuk teks mono (kode, perintah, path): ligatur dan alternatif kontekstual dimatikan agar `--`, `->`,
+ * `!=` tampil apa adanya, bukan berubah menjadi tanda pisah atau panah.
+ */
+export const MONO_FONT_FEATURES = `'liga' 0, 'calt' 0, 'dlig' 0`;
+
 const px = (n: number) => `${n}px`;
 const ms = (n: number) => `${n}ms`;
 const indent = (lines: string[], by: string) => lines.map((l) => `${by}${l}`).join('\n');
@@ -47,6 +53,8 @@ function themeInlineDeclarations(tokens: Tokens): string[] {
     ...COLOR_NAMES.map((n) => `--color-${n}: var(--aios-${n});`),
     `--font-sans: '${f.sans}', '${f.fallback.sans}', sans-serif;`,
     `--font-mono: '${f.mono}', '${f.fallback.mono}', monospace;`,
+    // Tailwind memakainya untuk utilitas `font-mono` dan untuk code/kbd/samp/pre (preflight).
+    `--font-mono--font-feature-settings: ${MONO_FONT_FEATURES};`,
   ];
   for (const role of TYPE_ROLES) {
     const spec = d[role].desktop;

@@ -124,6 +124,11 @@ export interface LiveRun {
    * Klien menawarkan dialog "Ingat ini" berisi teks ini; null bila tidak ada.
    */
   memorySuggestion: string | null;
+  /**
+   * Kalimat permintaan dari event `schedule.suggested`: pemilik minta jadwal dibuat atau diusulkan tetapi tidak ada
+   * usulan jadwal yang berhasil. Klien menunjuk layar Jadwal; null bila tidak ada.
+   */
+  scheduleSuggestion: string | null;
 }
 
 export const isTerminal = (status: RunStatus): boolean => TERMINAL_RUN_STATUSES.includes(status);
@@ -161,6 +166,7 @@ export const newLiveRun = (runId: string): LiveRun => ({
   contextUsed: null,
   workspace: null,
   memorySuggestion: null,
+  scheduleSuggestion: null,
 });
 
 /** Memajukan waktu mulai ke waktu run dibuat di server bila lebih awal (reload di tengah run). */
@@ -363,6 +369,8 @@ function reduceEvent(run: LiveRun, event: ServerEvent, ts: number | undefined): 
       return { ...run, workspace: { mode: event.mode, branch: event.branch } };
     case 'memory.suggested':
       return { ...run, memorySuggestion: event.text };
+    case 'schedule.suggested':
+      return { ...run, scheduleSuggestion: event.text };
     case 'error':
       return {
         ...run,

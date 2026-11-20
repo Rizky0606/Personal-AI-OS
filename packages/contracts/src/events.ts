@@ -9,6 +9,7 @@ import {
   ScheduleRunStatusSchema,
   TaskSchema,
 } from './entities.js';
+import { SCHEDULE_REQUEST_MAX } from './memory-intent.js';
 import { RunStatusSchema } from './run-status.js';
 
 /* Event run dan percakapan (API_CONTRACT.md, "Tipe AgentEvent"). */
@@ -326,6 +327,17 @@ export const MemorySuggestedEventSchema = z.object({
   text: z.string().min(1).max(MEMORY_TEXT_MAX),
 });
 
+/**
+ * Jaring pengaman jadwal (chat umum): pesan pemilik meminta jadwal dibuat atau diusulkan, tetapi tidak ada tool
+ * `schedule_propose` yang berhasil di giliran ini, jadi tidak ada usulan yang bisa disetujui. Dikirim gateway sebelum
+ * status akhir run; klien menampilkan petunjuk ke layar Jadwal berisi `text` (kalimat permintaan hasil
+ * `scheduleRequestFrom`, tanpa panggilan model). Tidak membuat apa pun dengan sendirinya.
+ */
+export const ScheduleSuggestedEventSchema = z.object({
+  type: z.literal('schedule.suggested'),
+  text: z.string().min(1).max(SCHEDULE_REQUEST_MAX),
+});
+
 export const RunCompletedEventSchema = z.object({
   type: z.literal('run.completed'),
   summary: z.string(),
@@ -360,6 +372,7 @@ export const AgentEventSchema = z
     ArtifactCreatedEventSchema,
     ContextUsedEventSchema,
     MemorySuggestedEventSchema,
+    ScheduleSuggestedEventSchema,
     RunCompletedEventSchema,
   ])
   .meta({ id: 'AgentEvent' });

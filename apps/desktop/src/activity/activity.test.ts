@@ -36,6 +36,7 @@ describe('toolKind', () => {
     expect(toolKind('mcp__konektor_github')).toBe('other');
     expect(toolKind('baca_tautan')).toBe('web');
     expect(toolKind('bash')).toBe('command');
+    expect(toolKind('eval')).toBe('command');
     expect(toolKind('mcp__aios-browser__screenshot')).toBe('other');
     expect(toolKind('mcp__aios_browser_browser_screenshot')).toBe('browser');
   });

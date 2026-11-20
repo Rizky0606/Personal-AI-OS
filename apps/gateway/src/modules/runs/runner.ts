@@ -104,6 +104,12 @@ export interface LaunchInput {
    * tanpa tool `memory_propose` yang berhasil, runner mengirim `memory.suggested` agar klien menawarkan dialog Ingat.
    */
   rememberFact?: string;
+  /**
+   * Kalimat permintaan bila pesan pemilik meminta jadwal dibuat atau diusulkan (`scheduleRequestFrom`, tanpa model).
+   * Bila run selesai tanpa tool `schedule_propose` yang berhasil, runner mengirim `schedule.suggested` agar klien
+   * menunjuk layar Jadwal (tidak ada usulan yang bisa disetujui).
+   */
+  scheduleRequest?: string;
   /** Project percakapan ini; wajib untuk role yang berjalan di worker (omp). */
   projectId: string | null;
   /** Lanjutan: memakai folder kerja (worktree atau folder project) dan branch run ini. */
@@ -308,6 +314,8 @@ export function timeSection(now: number, timezone: string = DEFAULT_TIMEZONE): s
 
 /** Tool usulan memori `aios_tools`; Hermes menamai tool MCP dengan awalan server (mis. `mcp_aios_memory_propose`). */
 const MEMORY_TOOL = /(^|[_.:-])memory_propose$/;
+/** Tool usulan jadwal `aios_tools` (mis. `mcp_aios_schedule_propose`). */
+const SCHEDULE_TOOL = /(^|[_.:-])schedule_propose$/;
 
 async function* emptyEvents(): AsyncGenerator<AgentEvent> {
   // Tidak ada event: adapter gagal dimulai.
@@ -887,9 +895,11 @@ export function createRunner(deps: RunnerDeps): Runner {
           }
         }
 
-        // Tool usulan memori yang dimulai dan yang berhasil di run ini (jaring pengaman "ingat ini").
+        // Tool usulan memori/jadwal yang dimulai dan yang berhasil di run ini (jaring pengaman "ingat ini" dan jadwal).
         const memoryCalls = new Set<string>();
+        const scheduleCalls = new Set<string>();
         let memoryProposed = false;
+        let scheduleProposed = false;
         for await (const event of normalizeEvents(attempts(handle), (raw, issues) =>
           log?.warn(
             { runId: run.id, issues, type: (raw as { type?: unknown })?.type },
@@ -909,12 +919,12 @@ export function createRunner(deps: RunnerDeps): Runner {
           if (event.type === 'tool.started' && MEMORY_TOOL.test(event.name)) {
             memoryCalls.add(event.toolCallId);
           }
-          if (
-            event.type === 'tool.finished' &&
-            event.status === 'ok' &&
-            memoryCalls.has(event.toolCallId)
-          ) {
-            memoryProposed = true;
+          if (event.type === 'tool.started' && SCHEDULE_TOOL.test(event.name)) {
+            scheduleCalls.add(event.toolCallId);
+          }
+          if (event.type === 'tool.finished' && event.status === 'ok') {
+            if (memoryCalls.has(event.toolCallId)) memoryProposed = true;
+            if (scheduleCalls.has(event.toolCallId)) scheduleProposed = true;
           }
           if (event.type === 'tool.finished') {
             const part = toolParts.get(event.toolCallId);
@@ -979,6 +989,11 @@ export function createRunner(deps: RunnerDeps): Runner {
             // berisi fakta ringkas. Tidak menyimpan apa pun dengan sendirinya.
             if (input.rememberFact && !memoryProposed) {
               await emit({ type: 'memory.suggested', text: input.rememberFact });
+            }
+            // Pemilik minta jadwal (dibuat atau diusulkan) tetapi tidak ada usulan jadwal yang berhasil: klien
+            // menunjuk layar Jadwal. Tidak membuat apa pun dengan sendirinya.
+            if (input.scheduleRequest && !scheduleProposed) {
+              await emit({ type: 'schedule.suggested', text: input.scheduleRequest });
             }
           }
           await emit(event);

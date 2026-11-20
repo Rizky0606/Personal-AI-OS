@@ -3,25 +3,25 @@
 @import './shell/shell.css';
 
 .aios-agent-orb {
-  color: var(--accent);
+  color: var(--aios-accent);
   transition:
     color 320ms ease,
     transform 320ms ease;
 }
 .aios-agent-orb-thinking {
-  color: var(--status-thinking);
+  color: var(--aios-thinking);
 }
 .aios-agent-orb-tool {
-  color: var(--status-tool);
+  color: var(--aios-tool);
 }
 .aios-agent-orb-writing {
-  color: var(--status-writing);
+  color: var(--aios-writing);
 }
 .aios-agent-orb-done {
-  color: var(--status-done);
+  color: var(--aios-done);
 }
 .aios-agent-orb-error {
-  color: var(--status-error);
+  color: var(--aios-error);
 }
 .aios-agent-orb-stopped {
   color: var(--aios-text-3);
@@ -40,7 +40,7 @@
 .aios-agent-orb circle:last-of-type {
   transform-box: fill-box;
   transform-origin: center;
-  transition: transform 320ms var(--aios-ease, ease);
+  transition: transform 320ms var(--aios-easing);
 }
 .aios-agent-orb-idle circle:last-of-type {
   transform: scale(0.75);
@@ -79,16 +79,16 @@
   }
 }
 .aios-composer-frame[data-phase='thinking'] {
-  border-color: var(--status-thinking);
+  border-color: var(--aios-thinking);
 }
 .aios-composer-frame[data-phase='tool'] {
-  border-color: var(--status-tool);
+  border-color: var(--aios-tool);
 }
 .aios-composer-frame[data-phase='writing'] {
-  border-color: var(--status-writing);
+  border-color: var(--aios-writing);
 }
 .aios-composer-frame[data-phase='error'] {
-  border-color: var(--status-error);
+  border-color: var(--aios-error);
 }
 
 /* IBM Plex dibundel lokal (lisensi OFL di src/fonts); tanpa CDN. */

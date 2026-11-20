@@ -38,7 +38,7 @@ const WEB = new Set([
   'cari_web',
   'baca_tautan',
 ]);
-const COMMAND = new Set(['bash', 'shell', 'sh', 'exec', 'run', 'terminal']);
+const COMMAND = new Set(['bash', 'shell', 'sh', 'exec', 'run', 'terminal', 'eval']);
 
 /**
  * Jenis langkah menurut nama tool; tool gateway (`aios_tools`) jadi `web`, `data` (baca data sistem) atau `propose` (usulan),

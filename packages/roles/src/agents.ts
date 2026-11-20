@@ -50,9 +50,11 @@ export const SKILL_PACKS: readonly SkillPack[] = [
     skills: ['ui-baseline', 'a11y-check', 'ui-states', 'react-practices'],
     projectOnly: true,
     // `page` polos sengaja tidak dipakai: pustaka TS biasa menyebut page-count.ts atau `page < 1`
-    // (paginasi), bukan halaman web. Hanya frasa yang jelas tentang tampilan web yang dihitung.
+    // (paginasi), bukan halaman web. `halaman` polos juga tidak: "item per halaman" (paginasi) atau
+    // "halaman catatan rilis" (dokumen) bukan pekerjaan tampilan. `halaman` hanya dihitung bila disertai
+    // jenis layar aplikasi/web (halaman login, halaman web); sisanya butuh sinyal framework atau berkas UI.
     pattern:
-      /\b(ui|ux|tampilan|layout|komponen|component|tombol|button|halaman|web ?page|landing ?page|home ?page|page component|form|css|tailwind|style|styling|warna|responsif|responsive|navbar|modal|dialog|dark ?mode|mode gelap|react|jsx|tsx|vue|svelte|frontend)\b/i,
+      /\b(ui|ux|tampilan|layout|komponen|component|tombol|button|halaman (web|situs|website|login|masuk|daftar|registrasi|beranda|utama|depan|profil|pengaturan|dasbor|dashboard|checkout|admin)|web ?page|landing ?page|home ?page|page component|form|css|scss|html|tailwind|style|styling|warna|responsif|responsive|navbar|modal|dialog|dark ?mode|mode gelap|react|jsx|tsx|vue|svelte|frontend)\b/i,
   },
   {
     id: 'backend',
