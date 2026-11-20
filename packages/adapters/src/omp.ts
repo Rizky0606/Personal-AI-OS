@@ -178,6 +178,26 @@ function toolTarget(args: unknown): string | undefined {
   return value === undefined ? undefined : clip(value, 500);
 }
 
+/**
+ * cwd efektif tool bash dari argumennya: tanpa `cwd` = cwd run (omp menjalankan perintah di cwd sesi); `cwd` relatif
+ * atau absolut diselesaikan terhadap cwd run. Bentuk yang ditafsirkan omp berbeda dari `path.resolve` (`~`, awalan
+ * `@`/`:`, URI internal atau `file://`, karakter non-ASCII, akar `/`) dianggap tidak diketahui, jadi worker bertanya.
+ */
+function toolCwdOf(args: unknown, runCwd: string): string | undefined {
+  const raw = isRecord(args) ? args.cwd : undefined;
+  if (raw === undefined || raw === null || raw === '') return runCwd;
+  if (
+    typeof raw !== 'string' ||
+    !/^[\x20-\x7e]+$/.test(raw) ||
+    /^[~@:]/.test(raw) ||
+    raw.includes('://') ||
+    /^[\\/]+$/.test(raw)
+  ) {
+    return undefined;
+  }
+  return resolve(runCwd, raw);
+}
+
 interface PendingApproval {
   ompId: string;
   options: string[];
@@ -416,8 +436,14 @@ class OmpRun implements RunHandle {
   >();
   private readonly tools = new Map<
     string,
-    { name: string; startedAt: number; text: string; target?: string; cwd?: string }
+    { name: string; startedAt: number; text: string; target?: string }
   >();
+  /**
+   * Pemanggilan tool yang diumumkan pesan asisten (`toolcall_end`/`message_end`) dan belum selesai. omp bisa
+   * meminta izin SEBELUM `tool_execution_start` (tool paralel, uji project N1), jadi argumen (perintah, `cwd`) dan
+   * `toolCallId` izin dicocokkan dari sini. `asked` = sudah dipasangkan ke sebuah permintaan izin.
+   */
+  private readonly calls = new Map<string, { name: string; args: unknown; asked: boolean }>();
   private readonly usage: Usage = { inputTokens: 0, outputTokens: 0 };
   private text = '';
   private lastAssistantText = '';
@@ -477,6 +503,7 @@ class OmpRun implements RunHandle {
       });
     }
     this.tools.clear();
+    this.calls.clear();
   }
 
   private finish(): void {
@@ -650,6 +677,7 @@ class OmpRun implements RunHandle {
   private onMessageUpdate(frame: Record<string, unknown>): void {
     const update = frame.assistantMessageEvent;
     if (!isRecord(update)) return;
+    if (update.type === 'toolcall_end') this.announce(update.toolCall);
     const delta = str(update.delta);
     if (delta === undefined || delta === '') return;
     if (update.type === 'text_delta') {
@@ -680,7 +708,17 @@ class OmpRun implements RunHandle {
     if (Array.isArray(message.content)) {
       const turnText = contentText(message);
       if (turnText) this.lastAssistantText = turnText;
+      for (const part of message.content) this.announce(part);
     }
+  }
+
+  /** Pemanggilan tool dari pesan asisten (lihat `calls`); yang sudah tercatat tidak ditimpa. */
+  private announce(part: unknown): void {
+    if (!isRecord(part) || part.type !== 'toolCall') return;
+    const id = str(part.id);
+    const name = str(part.name);
+    if (!id || !name || this.calls.has(id)) return;
+    this.calls.set(id, { name, args: part.arguments, asked: false });
   }
 
   private onToolStart(frame: Record<string, unknown>): void {
@@ -688,10 +726,9 @@ class OmpRun implements RunHandle {
     const name = str(frame.toolName);
     if (!id || !name) return;
     const target = toolTarget(frame.args);
-    // cwd efektif tool (bash `cwd` relatif terhadap cwd run); dipakai worker menilai perintah baca saja.
-    const toolCwd = isRecord(frame.args) ? str(frame.args.cwd) : undefined;
-    const cwd = toolCwd && this.input.cwd ? resolve(this.input.cwd, toolCwd) : this.input.cwd;
-    this.tools.set(id, { name, startedAt: this.deps.now(), text: '', target, cwd });
+    this.tools.set(id, { name, startedAt: this.deps.now(), text: '', target });
+    const announced = this.calls.get(id);
+    this.calls.set(id, { name, args: frame.args, asked: announced?.asked ?? false });
     this.emit({
       type: 'tool.started',
       toolCallId: id,
@@ -722,6 +759,7 @@ class OmpRun implements RunHandle {
     const tool = id ? this.tools.get(id) : undefined;
     if (!id || !tool) return;
     this.tools.delete(id);
+    this.calls.delete(id);
     const result = contentText(frame.result);
     const denied = /^Tool call denied by user/i.test(result);
     // Dibatalkan pengguna: apa pun hasil yang dilaporkan omp (ditolak otomatis, dihentikan) adalah cancelled.
@@ -810,21 +848,35 @@ class OmpRun implements RunHandle {
     const tool = match[1] ?? '';
     const approvalId = this.deps.newId();
     this.pending.set(approvalId, { ompId, options });
-    // Tool yang meminta izin: nama sama dan (untuk perintah) target sama dengan detail. Bila beberapa kandidat
-    // berbeda cwd, cwd tidak dilaporkan (worker lalu tidak mengizinkan otomatis).
+    // Pemanggilan tool yang meminta izin: nama sama dan, untuk perintah, perintah persis sama. Dicari di pemanggilan
+    // yang diumumkan pesan asisten, bukan hanya tool yang sudah mulai: omp bisa meminta izin sebelum
+    // `tool_execution_start` (tool paralel, uji project N1), dulu cwd lalu kosong dan `git diff` tetap ditanyakan.
+    // cwd hanya dilaporkan bila SEMUA kandidat yang cocok punya cwd efektif yang sama dan diketahui; perintah yang
+    // terpotong omp (`[…elided…]`) tidak cocok dengan apa pun. Selama subagent (`task`) berjalan, izin perintahnya
+    // bisa datang lewat jalur yang sama tanpa terlihat di sini, jadi cwd perintah tidak dilaporkan.
     const command = /^Command: ([\s\S]*)$/.exec(match[2] ?? '')?.[1];
-    const candidates = [...this.tools.entries()].filter(
-      ([, t]) => t.name === tool && (command === undefined || t.target === clip(command, 500)),
+    const candidates = [...this.calls.entries()].filter(
+      ([, c]) =>
+        c.name === tool &&
+        (command === undefined || (isRecord(c.args) && c.args.command === command)),
     );
-    const toolCallId = (candidates.at(-1) ??
-      [...this.tools.entries()].reverse().find(([, t]) => t.name === tool))?.[0];
-    const cwds = new Set(candidates.map(([, t]) => t.cwd));
+    const runCwd = this.input.cwd;
+    const subagentRunning = [...this.tools.values()].some((t) => t.name === 'task');
+    const cwds = new Set(
+      candidates.map(([, c]) => (runCwd ? toolCwdOf(c.args, runCwd) : undefined)),
+    );
     const cwd =
-      cwds.size === 1
-        ? [...cwds][0]
-        : candidates.length === 0 && command === undefined
-          ? this.input.cwd
-          : undefined;
+      command !== undefined && subagentRunning
+        ? undefined
+        : cwds.size === 1
+          ? [...cwds][0]
+          : candidates.length === 0 && command === undefined
+            ? runCwd
+            : undefined;
+    // Langkah tool: kandidat pertama yang belum dipasangkan ke izin lain; tanpa kandidat tidak ditebak.
+    const claimed = candidates.find(([, c]) => !c.asked);
+    if (claimed) claimed[1].asked = true;
+    const toolCallId = claimed?.[0];
     this.emit({
       type: 'approval.requested',
       approvalId,

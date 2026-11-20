@@ -1183,4 +1183,67 @@ describe('urutan frame sintetis (bentuk frame dari rekaman)', () => {
       ['command', 'mcp__konektor_github'],
     ]);
   });
+
+  it('izin datang sebelum tool_execution_start (tool paralel, uji project N1): cwd dan toolCallId dari pesan asisten', async () => {
+    const { transport, handle } = await boot({ t: 0 });
+    const call = (id: string, name: string, args: Record<string, unknown>) => ({
+      type: 'toolCall',
+      id,
+      name,
+      arguments: args,
+    });
+    const ask = (id: string, command: string) =>
+      frame(transport, {
+        type: 'extension_ui_request',
+        id,
+        method: 'select',
+        title: `Allow tool: bash\nCommand: ${command}`,
+        options: ['Approve', 'Deny'],
+      });
+    frame(transport, {
+      type: 'message_end',
+      message: {
+        role: 'assistant',
+        content: [
+          call('c_read', 'read', { path: 'package.json' }),
+          call('c_diff', 'bash', { command: 'git diff -- src/a.ts' }),
+          call('c_test', 'bash', { command: 'npm test' }),
+          call('c_etc', 'bash', { command: 'git status', cwd: '/etc' }),
+          call('c_home', 'bash', { command: 'git log', cwd: '~' }),
+          call('c_dup1', 'bash', { command: 'git show' }),
+          call('c_dup2', 'bash', { command: 'git show', cwd: '/tmp' }),
+        ],
+      },
+    });
+    frame(transport, {
+      type: 'tool_execution_start',
+      toolCallId: 'c_read',
+      toolName: 'read',
+      args: { path: 'package.json' },
+    });
+    // Urutan nyata dari laporan: izin `git diff` sebelum tool bash-nya mulai, juga urutan izin yang berbeda.
+    ask('u1', 'npm test');
+    ask('u2', 'git diff -- src/a.ts');
+    ask('u3', 'git status');
+    ask('u4', 'git log');
+    ask('u5', 'git show');
+    ask('u6', 'git show');
+    ask('u7', 'git push');
+    frame(transport, { id: 'p1', type: 'prompt_result', status: 'completed' });
+
+    const events = await collect(handle);
+    const requests = events.flatMap((e) => (e.type === 'approval.requested' ? [e] : []));
+    expect(requests.map((e) => [e.detail, e.cwd, e.toolCallId])).toEqual([
+      ['npm test', 'C:\\work\\repo', 'c_test'],
+      ['git diff -- src/a.ts', 'C:\\work\\repo', 'c_diff'],
+      // cwd eksplisit dari argumen; `~` ditafsirkan omp ke folder home, jadi tidak diketahui.
+      ['git status', '/etc', 'c_etc'],
+      ['git log', undefined, 'c_home'],
+      // Dua pemanggilan perintah sama dengan cwd berbeda: cwd tidak diketahui untuk keduanya.
+      ['git show', undefined, 'c_dup1'],
+      ['git show', undefined, 'c_dup2'],
+      // Tidak ada pemanggilan yang cocok: tanpa cwd dan tanpa menebak toolCallId.
+      ['git push', undefined, undefined],
+    ]);
+  });
 });
