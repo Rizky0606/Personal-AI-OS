@@ -12,7 +12,11 @@ const APPROVAL = '0192f0c4-7a1b-7c2d-a003-4a5b6c7d8e93';
 function fakePort() {
   const sent: WorkerCommand[] = [];
   let handlers:
-    | { onEvent: (e: AgentEvent) => void; onDisconnect: () => void; onReconnect: () => void }
+    | {
+        onEvent: (e: AgentEvent) => void;
+        onDisconnect: (replaced?: boolean) => void;
+        onReconnect: () => void;
+      }
     | undefined;
   const stop = vi.fn();
   const port: WorkerRelayPort = {
@@ -30,7 +34,7 @@ function fakePort() {
     sent,
     stop,
     emit: (e: AgentEvent) => handlers?.onEvent(e),
-    disconnect: () => handlers?.onDisconnect(),
+    disconnect: (replaced?: boolean) => handlers?.onDisconnect(replaced),
     reconnect: () => handlers?.onReconnect(),
   };
 }
@@ -325,6 +329,52 @@ describe('createWorkerRelayAdapter', () => {
     await new Promise((r) => setTimeout(r, 80));
     blip.emit({ type: 'run.completed', summary: 'tetap selesai' });
     expect(await drain(h2)).toEqual([{ type: 'run.completed', summary: 'tetap selesai' }]);
+  });
+
+  it('worker diganti (login ulang): error worker_replaced setelah masa tunggu; masa tunggu yang berjalan tidak diulang', async () => {
+    vi.useFakeTimers();
+    try {
+      const replaced = fakePort();
+      const h1 = await createWorkerRelayAdapter({
+        relay: replaced.port,
+        disconnectGraceMs: 1000,
+      }).startRun(input());
+      replaced.disconnect(true);
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(await drain(h1)).toEqual([
+        expect.objectContaining({ type: 'error', code: 'worker_replaced', retryable: true }),
+      ]);
+
+      // Koneksi worker lama sudah putus lebih dulu: pergantian hanya mengubah alasannya, tidak menunda gagal.
+      const both = fakePort();
+      const h2 = await createWorkerRelayAdapter({
+        relay: both.port,
+        disconnectGraceMs: 1000,
+      }).startRun(input());
+      both.disconnect();
+      await vi.advanceTimersByTimeAsync(600);
+      both.disconnect(true);
+      await vi.advanceTimersByTimeAsync(400);
+      expect(await drain(h2)).toEqual([
+        expect.objectContaining({ type: 'error', code: 'worker_replaced' }),
+      ]);
+
+      // Worker baru membuktikan memegang run (onReconnect): run berjalan terus.
+      const kept = fakePort();
+      const h3 = await createWorkerRelayAdapter({
+        relay: kept.port,
+        disconnectGraceMs: 1000,
+      }).startRun(input());
+      kept.disconnect(true);
+      kept.reconnect();
+      await vi.advanceTimersByTimeAsync(5000);
+      kept.emit({ type: 'run.completed', summary: 'lanjut di worker baru' });
+      expect(await drain(h3)).toEqual([
+        { type: 'run.completed', summary: 'lanjut di worker baru' },
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('tanpa project ditolak sebelum menghubungi worker', async () => {

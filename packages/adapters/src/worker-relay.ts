@@ -20,15 +20,16 @@ export interface WorkerRelayPort {
   /** Mengirim perintah ke worker pemilik project. Melempar AdapterError bila tidak ada atau tidak tersambung. */
   send(projectId: string, command: WorkerCommand): Promise<void>;
   /**
-   * Mendengarkan event satu run dari worker pemilik project. `onDisconnect`/`onReconnect` dipanggil saat
-   * koneksi worker itu putus atau pulih. Mengembalikan fungsi berhenti.
+   * Mendengarkan event satu run dari worker pemilik project. `onDisconnect` dipanggil saat koneksi worker itu putus
+   * (`replaced` = workernya diganti worker baru karena desktop login ulang), `onReconnect` saat worker terbukti masih
+   * memegang run itu. Mengembalikan fungsi berhenti.
    */
   listen(
     runId: string,
     projectId: string,
     handlers: {
       onEvent: (event: AgentEvent) => void;
-      onDisconnect: () => void;
+      onDisconnect: (replaced?: boolean) => void;
       onReconnect: () => void;
     },
   ): Promise<() => void>;
@@ -56,6 +57,13 @@ const CAPABILITIES: AdapterCapabilities = {
   steer: true,
   checkpoints: false,
 };
+
+/**
+ * Alasan run gagal `worker_replaced`: worker pemilik project didaftarkan ulang (desktop login ulang) saat run berjalan
+ * dan worker baru tidak memegang run itu. Dipakai juga gateway saat worker baru melaporkan daftar run-nya.
+ */
+export const WORKER_REPLACED_MESSAGE =
+  'Worker di PC ini didaftarkan ulang (login ulang) saat run berjalan, dan worker baru tidak melanjutkan run ini. Jalankan ulang.';
 
 /**
  * Adapter run coding di PC Windows: meneruskan `run.start` ke worker lewat WebSocket dan mengalirkan
@@ -90,6 +98,8 @@ export function createWorkerRelayAdapter(options: WorkerRelayOptions): AgentAdap
       let ended = false;
       let cancelRequested = false;
       let disconnectTimer: ReturnType<typeof setTimeout> | undefined;
+      /** Run kehilangan workernya karena worker diganti (bukan sekadar koneksi putus). */
+      let lostReplaced = false;
       let cancelTimer: ReturnType<typeof setTimeout> | undefined;
       let stop: () => void = () => undefined;
 
@@ -139,20 +149,39 @@ export function createWorkerRelayAdapter(options: WorkerRelayOptions): AgentAdap
 
       stop = await options.relay.listen(input.runId, projectId, {
         onEvent,
-        onDisconnect: () => {
+        onDisconnect: (replaced = false) => {
+          // Worker diganti: masa tunggu yang sudah berjalan tidak diulang dari awal, hanya alasannya yang berubah.
+          if (replaced && disconnectTimer !== undefined) {
+            lostReplaced = true;
+            return;
+          }
           clearTimeout(disconnectTimer);
+          lostReplaced = replaced;
           disconnectTimer = setTimeout(() => {
-            push({
-              type: 'error',
-              code: 'worker_disconnected',
-              message:
-                'Koneksi ke worker terputus terlalu lama. Buka aplikasi desktop lalu jalankan ulang.',
-              retryable: true,
-            });
+            push(
+              lostReplaced
+                ? {
+                    type: 'error',
+                    code: 'worker_replaced',
+                    message: WORKER_REPLACED_MESSAGE,
+                    retryable: true,
+                  }
+                : {
+                    type: 'error',
+                    code: 'worker_disconnected',
+                    message:
+                      'Koneksi ke worker terputus terlalu lama. Buka aplikasi desktop lalu jalankan ulang.',
+                    retryable: true,
+                  },
+            );
             end();
           }, disconnectGrace);
         },
-        onReconnect: () => clearTimeout(disconnectTimer),
+        onReconnect: () => {
+          clearTimeout(disconnectTimer);
+          disconnectTimer = undefined;
+          lostReplaced = false;
+        },
       });
 
       const connectors = await connectorsFor();

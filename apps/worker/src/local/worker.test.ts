@@ -364,6 +364,9 @@ describe('sesi gateway lewat worker', () => {
     refreshToken: 'refresh-1',
     deviceId: DEVICE,
   });
+  /** Frame dari worker selain laporan `runs.active` yang dikirim setiap tersambung. */
+  const fromWorker = () =>
+    gateway.received.filter((m) => (m as { type?: string }).type !== 'runs.active');
 
   it('session.set menyambungkan worker ke gateway dan status didorong ke desktop', async () => {
     const client = await Client.login(worker.port, TOKEN);
@@ -378,6 +381,9 @@ describe('sesi gateway lewat worker', () => {
       ok: true,
       result: { gateway: 'connected', deviceId: DEVICE, version: '0.1.0' },
     });
+    // Setiap tersambung worker melaporkan run yang dipegangnya; gateway mengakhiri run lain yang ia tunggu.
+    await until(() => gateway.received.length > 0, 'runs.active');
+    expect(gateway.received).toEqual([{ type: 'runs.active', runIds: [] }]);
     client.close();
   });
 
@@ -397,8 +403,8 @@ describe('sesi gateway lewat worker', () => {
       }),
     );
 
-    await until(() => gateway.received.length >= 1, 'event error');
-    expect(gateway.received).toEqual([
+    await until(() => fromWorker().length >= 1, 'event error');
+    expect(fromWorker()).toEqual([
       {
         type: 'run.event',
         runId: RUN,
@@ -581,7 +587,7 @@ describe('sesi gateway lewat worker', () => {
         merge: false,
       }),
     );
-    await until(() => gateway.received.length >= 1, 'review.result reject');
+    await until(() => fromWorker().length >= 1, 'review.result reject');
     gateway.last.socket.send(
       JSON.stringify({
         type: 'review.apply',
@@ -591,15 +597,15 @@ describe('sesi gateway lewat worker', () => {
         merge: false,
       }),
     );
-    await until(() => gateway.received.length >= 2, 'review.result accept');
+    await until(() => fromWorker().length >= 2, 'review.result accept');
 
-    expect(gateway.received[0]).toMatchObject({
+    expect(fromWorker()[0]).toMatchObject({
       type: 'review.result',
       runId: RUN,
       decision: 'reject',
       ok: true,
     });
-    expect(gateway.received[1]).toMatchObject({
+    expect(fromWorker()[1]).toMatchObject({
       type: 'review.result',
       runId: RUN,
       decision: 'accept',

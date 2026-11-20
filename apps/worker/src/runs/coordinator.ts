@@ -95,9 +95,13 @@ interface RunState {
   handle: RunHandle | undefined;
   /**
    * Izin yang menunggu pemilik. `clipped` = detail dipotong adapter, jadi "Selalu" tidak disimpan; `mayWrite` = izin
-   * yang bisa mengubah berkas (tulis berkas atau perintah selain tool MCP), yang menjadikan run in_place penulis.
+   * yang bisa mengubah berkas (tulis berkas atau perintah selain tool MCP), yang menjadikan run in_place penulis
+   * begitu diberikan; `toolCallId` = langkah tool yang meminta izin, bila diketahui adapter.
    */
-  pending: Map<string, { kind: RuleKind; detail: string; clipped: boolean; mayWrite: boolean }>;
+  pending: Map<
+    string,
+    { kind: RuleKind; detail: string; clipped: boolean; mayWrite: boolean; toolCallId?: string }
+  >;
   /** Izin yang dijawab otomatis oleh aturan "selalu": event resolved-nya tidak diteruskan. */
   silent: Set<string>;
   /** Izin yang dijawab pemilik dengan "Selalu" dan aturannya tersimpan: event resolved-nya `remember: true`. */
@@ -110,6 +114,8 @@ interface RunState {
   writeAllowed: boolean;
   /** Penjelasan kunci repo (penulisan ditolak karena run lain menulis) sudah dikirim ke agent. */
   lockNoticeSent: boolean;
+  /** Langkah tool yang izin tulisnya ditolak karena kunci repo: alasannya ikut tampil di langkah itu. */
+  lockDenied: Set<string>;
   outbox: AgentEvent[];
   cancelRequested: boolean;
   terminal: boolean;
@@ -208,6 +214,7 @@ export class RunCoordinator {
       writeGrant: false,
       writeAllowed: false,
       lockNoticeSent: false,
+      lockDenied: new Set(),
       outbox: [],
       openedSkills: new Set(),
       cancelRequested: false,
@@ -280,7 +287,14 @@ export class RunCoordinator {
     const run = this.runs.get(cmd.runId);
     if (!run?.handle) return;
     const entry = run.pending.get(cmd.approvalId);
-    const allow = cmd.decision === 'allow' && entry !== undefined;
+    const mayWrite = entry?.mayWrite !== false;
+    // N6: kunci repo diambil saat izin tulis DIBERIKAN, bukan saat diminta. Bila run lain di repo yang sama lebih
+    // dulu menjadi penulis selagi izin ini menunggu, izin ini tidak bisa diberikan: ditolak dengan alasan yang
+    // tampil di langkahnya dan dijelaskan ke agent, bukan diam-diam.
+    const locked =
+      cmd.decision === 'allow' && mayWrite && !this.deps.worktrees.claimWrite(cmd.runId);
+    const decision = locked ? 'deny' : cmd.decision;
+    const allow = decision === 'allow' && entry !== undefined;
     // "Selalu untuk project ini" disimpan di worker; omp hanya menerima izinkan-sekali. Event approval.resolved
     // dari adapter selalu `remember: false`, jadi dicatat di sini supaya event dan audit gateway jujur (B9). Detail
     // yang dipotong bukan perintah utuh: aturannya akan cocok dengan perintah lain yang awalannya sama.
@@ -293,25 +307,40 @@ export class RunCoordinator {
       run.writeGrant = true;
       run.forRun.add(cmd.approvalId);
     }
-    if (cmd.decision === 'allow' && entry?.mayWrite !== false) run.writeAllowed = true;
+    if (decision === 'allow' && mayWrite) run.writeAllowed = true;
     try {
-      await run.handle.resolveApproval(cmd.approvalId, cmd.decision, false);
+      await run.handle.resolveApproval(cmd.approvalId, decision, false);
       run.pending.delete(cmd.approvalId);
     } catch (error) {
       this.deps.log?.(`approval ${cmd.approvalId} gagal: ${String(error)}`);
       return;
     }
-    // B12: izin tulis yang ditolak tidak membuat run memegang kunci repo sampai selesai. Run yang belum pernah
-    // mendapat izin tulis dan tidak punya izin tulis lain yang menunggu kembali menjadi pembaca. Run lanjutan tetap
-    // penulis: folder kerjanya membawa perubahan run sebelumnya yang menunggu tinjauan.
-    if (
-      cmd.decision === 'deny' &&
-      entry?.mayWrite === true &&
-      !run.writeAllowed &&
-      !run.cmd.continueFromRunId &&
-      ![...run.pending.values()].some((other) => other.mayWrite)
-    ) {
-      this.deps.worktrees.releaseWrite(cmd.runId);
+    if (locked) this.noteLockDenied(run, entry?.toolCallId);
+    else if (decision === 'allow' && mayWrite) this.denyBystanderWrites();
+  }
+
+  /** Izin tulis run ini ditolak karena kunci repo: agent diberi tahu sekali, langkah tool-nya diberi alasan. */
+  private noteLockDenied(run: RunState, toolCallId: string | undefined): void {
+    if (toolCallId) run.lockDenied.add(toolCallId);
+    if (run.lockNoticeSent) return;
+    run.lockNoticeSent = true;
+    void run.handle?.steer(LOCK_NOTICE).catch(() => undefined);
+  }
+
+  /**
+   * Run in_place yang kini berbagi folder dengan penulis (`isBystander`) tidak akan pernah mendapat izin tulis:
+   * izin tulisnya yang masih menunggu ditolak sekarang (event `approval.resolved` diteruskan, jadi panel izin di
+   * aplikasi tertutup) alih-alih menunggu pemilik menekan Izinkan yang pasti gagal.
+   */
+  private denyBystanderWrites(): void {
+    for (const [runId, other] of this.runs) {
+      if (!this.deps.worktrees.isBystander(runId)) continue;
+      for (const [approvalId, entry] of other.pending) {
+        if (!entry.mayWrite) continue;
+        other.pending.delete(approvalId);
+        void other.handle?.resolveApproval(approvalId, 'deny').catch(() => undefined);
+        this.noteLockDenied(other, entry.toolCallId);
+      }
     }
   }
 
@@ -399,7 +428,7 @@ export class RunCoordinator {
         await this.deps.preview?.stopByRun(cmd.continueFromRunId).catch(() => undefined);
         this.deps.terminal?.closeByRun(cmd.continueFromRunId);
         worktree = await this.deps.worktrees.adopt(cmd.continueFromRunId, runId);
-        this.deps.review.inherit(cmd.continueFromRunId, runId);
+        await this.deps.review.inherit(runId);
       } else {
         // Kosong = setelan project di worker; run chat project bawaannya langsung di branch aktif.
         const mode = cmd.workspace ?? this.deps.setup?.get(cmd.projectId).workspace ?? 'in_place';
@@ -650,17 +679,15 @@ export class RunCoordinator {
         void run.handle?.resolveApproval(event.approvalId, 'allow').catch(() => undefined);
         return;
       }
-      // Izin yang bisa mengubah berkas menjadikan run in_place penulis repo. Bila run in_place lain sudah menulis di
-      // repo yang sama, izin ditolak tanpa bertanya: dua penulis di satu folder tidak bisa ditinjau terpisah.
+      // Izin yang bisa mengubah berkas menjadikan run in_place penulis repo begitu DIBERIKAN (N6: bukan saat diminta,
+      // jadi izin yang menunggu tidak menghalangi run lain). Bila run in_place lain sudah menulis di repo yang sama,
+      // izin ditolak tanpa bertanya: dua penulis di satu folder tidak bisa ditinjau terpisah.
       const mayWrite =
         (event.kind === 'file_write' || event.kind === 'command') && !toolName.startsWith('mcp__');
-      if (mayWrite && !this.deps.worktrees.claimWrite(runId)) {
+      if (mayWrite && !this.deps.worktrees.canWrite(runId)) {
         run.silent.add(event.approvalId);
         void run.handle?.resolveApproval(event.approvalId, 'deny').catch(() => undefined);
-        if (!run.lockNoticeSent) {
-          run.lockNoticeSent = true;
-          void run.handle?.steer(LOCK_NOTICE).catch(() => undefined);
-        }
+        this.noteLockDenied(run, event.toolCallId);
         return;
       }
       // Aturan "Selalu" dan izin tulis per run untuk berkas hanya berlaku di dalam folder kerja run, bukan `.git`.
@@ -677,9 +704,18 @@ export class RunCoordinator {
           : (!clipped || byToolName) &&
             this.deps.rules.matches(run.cmd.projectId, event.kind, event.detail);
       if (autoAllow) {
-        if (mayWrite) run.writeAllowed = true;
+        // Pemeriksaan di atas menunggu (await): run lain bisa sudah menjadi penulis di sela-selanya.
+        const granted = !mayWrite || this.deps.worktrees.claimWrite(runId);
         run.silent.add(event.approvalId);
-        void run.handle?.resolveApproval(event.approvalId, 'allow').catch(() => undefined);
+        void run.handle
+          ?.resolveApproval(event.approvalId, granted ? 'allow' : 'deny')
+          .catch(() => undefined);
+        if (!granted) {
+          this.noteLockDenied(run, event.toolCallId);
+        } else if (mayWrite) {
+          run.writeAllowed = true;
+          this.denyBystanderWrites();
+        }
         return;
       }
       run.pending.set(event.approvalId, {
@@ -687,6 +723,7 @@ export class RunCoordinator {
         detail: event.detail,
         clipped: clipped && !byToolName,
         mayWrite,
+        ...(event.toolCallId ? { toolCallId: event.toolCallId } : {}),
       });
     } else if (event.type === 'approval.resolved') {
       if (run.silent.delete(event.approvalId)) return;
@@ -705,6 +742,14 @@ export class RunCoordinator {
       run.text = (run.text + event.text).slice(-TEXT_TAIL);
     } else if (event.type === 'tool.started') {
       run.steps.set(event.toolCallId, [event.name, event.target].filter(Boolean).join(' '));
+    } else if (event.type === 'tool.finished' && run.lockDenied.delete(event.toolCallId)) {
+      // Alasan penolakan otomatis tampil di langkahnya (omp hanya menulis "denied by user").
+      this.forward(runId, run, {
+        type: 'tool.output',
+        toolCallId: event.toolCallId,
+        chunk: LOCK_REASON,
+        stream: 'stderr',
+      });
     } else if (event.type === 'run.completed') {
       // Diff terakhir harus terkirim sebelum penutup: setelah run.completed gateway tidak lagi mendengarkan.
       if (run.text === '') run.text = event.summary;
@@ -832,7 +877,11 @@ export class RunCoordinator {
     // Sudah di-set serentak dengan `terminal` (onEvent/fail/cancelled/timeout); diulang di sini hanya sebagai
     // jaring pengaman jika suatu saat ada jalur baru yang lolos dari situ.
     run.finished = true;
-    this.deps.review.setMeta(runId, run.text);
+    await this.deps.review
+      .setMeta(runId, run.text)
+      .catch((error: unknown) =>
+        this.deps.log?.(`usulan pesan commit ${runId} gagal disimpan: ${String(error)}`),
+      );
     const workspace = this.deps.worktrees.get(runId);
     if (workspace) {
       if (
@@ -844,7 +893,6 @@ export class RunCoordinator {
         // izin tulis, jadi perubahan di folder bukan miliknya) tidak ada yang perlu ditinjau: worktree dan branch
         // `aios/...` dibuang; in_place hanya melepas catatannya (folder project dan branch pemilik tidak disentuh).
         await this.deps.worktrees.remove(runId, { deleteBranch: true });
-        this.deps.review.forget(runId);
       } else if (workspace.kind === 'in_place' || run.completed) {
         // In_place yang dihentikan atau gagal tetap bisa ditinjau: perubahannya ada di folder project pemilik.
         await this.deps.worktrees.setState(runId, 'review');
@@ -886,6 +934,10 @@ export class RunCoordinator {
 /** Dikirim sekali ke agent saat izin tulisnya ditolak karena run in_place lain sudah menulis di repo yang sama. */
 const LOCK_NOTICE =
   'Catatan sistem: folder project ini sedang diubah oleh run lain, jadi run ini hanya boleh membaca. Penulisan berkas dan perintah selain baca saja akan ditolak otomatis. Selesaikan dengan jawaban atau rencana tanpa mengubah berkas, dan sebutkan bahwa perubahan bisa dijalankan setelah run lain selesai.';
+
+/** Alasan yang tampil di langkah tool yang izin tulisnya ditolak otomatis karena kunci repo. */
+const LOCK_REASON =
+  'Ditolak otomatis: run lain sedang mengubah folder project ini, jadi run ini hanya boleh membaca. Jalankan lagi setelah run itu selesai, atau di worktree terpisah.';
 
 /** Segmen `.git` termasuk varian yang sama di sistem berkas Windows/macOS (`.GIT`, `.git.`, `.git `). */
 const GIT_DIR_SEGMENT = /(?:^|[\\/])\.git[. ]*(?:[\\/]|$)/i;

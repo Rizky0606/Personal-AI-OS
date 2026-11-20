@@ -78,10 +78,25 @@ function extendsScript(rule: string, command: string): boolean {
 }
 
 /**
+ * Skrip package manager polos dari `<skrip> -- <argumen aman>` (mis. `npm test -- --run` → `npm test`); undefined
+ * bila perintah bukan bentuk itu atau argumennya tidak lolos `safeScriptArg`. "Selalu" yang ditekan pada perintah
+ * seperti itu disimpan sebagai skrip polosnya (uji project N5): skrip yang sama dengan argumen aman lain setara
+ * dengan yang sudah diizinkan, jadi tidak ditanyakan lagi per berkas tes. Argumen yang tidak aman (path absolut,
+ * `..`, metakarakter shell) membuat aturan tetap cocok persis.
+ */
+function scriptBase(command: string): string | undefined {
+  const at = command.indexOf(' -- ');
+  if (at < 0) return undefined;
+  const base = command.slice(0, at);
+  return extendsScript(base, command) ? base : undefined;
+}
+
+/**
  * Aturan "selalu izinkan untuk project ini" (SECURITY_OPS.md). Omp tidak punya aturan permanen per pola
  * (docs/VERIFICATION.md), jadi disimpan di worker dan dijawab otomatis di sini. Sengaja sempit:
  * - perintah dan URL: cocok persis, bukan awalan, jadi `pnpm test` tidak membuka `pnpm test && rm -rf`. Satu
- *   pengecualian: skrip package manager mencakup argumen literal setelah `--` (lihat `extendsScript`).
+ *   pengecualian: skrip package manager mencakup argumen literal yang aman setelah `--` (lihat `extendsScript`),
+ *   dan "Selalu" pada skrip dengan argumen aman disimpan sebagai skrip polosnya (lihat `scriptBase`).
  * - penulisan file: seluruh penulisan agent di folder kerja run project itu, bukan `.git` (diperiksa coordinator).
  * - tool gateway (web_search, web_read): per nama tool; batas URL dan kueri ditegakkan gateway.
  * - tool konektor: per konektor dan per nama tool, tidak pernah per argumen (DESIGN_MCP_KONEKTOR.md #6);
@@ -108,18 +123,23 @@ export class ApprovalRules {
 
   matches(projectId: string, kind: RuleKind, detail: string): boolean {
     const pattern = patternOf(kind, detail);
-    return this.rules.some(
-      (r) =>
-        r.projectId === projectId &&
-        r.kind === kind &&
-        (r.pattern === '*' ||
-          r.pattern === pattern ||
-          (kind === 'command' && extendsScript(r.pattern, pattern))),
-    );
+    return this.rules.some((r) => {
+      if (r.projectId !== projectId || r.kind !== kind) return false;
+      if (r.pattern === '*' || r.pattern === pattern) return true;
+      if (kind !== 'command') return false;
+      // Aturan lama yang tersimpan dengan argumen (sebelum `scriptBase`) berlaku seperti skrip polosnya.
+      const script = scriptBase(r.pattern) ?? r.pattern;
+      return script === pattern || extendsScript(script, pattern);
+    });
   }
 
   async add(projectId: string, kind: RuleKind, detail: string): Promise<ApprovalRule> {
-    const rule: ApprovalRule = { projectId, kind, pattern: patternOf(kind, detail) };
+    const pattern = patternOf(kind, detail);
+    const rule: ApprovalRule = {
+      projectId,
+      kind,
+      pattern: (kind === 'command' ? scriptBase(pattern) : undefined) ?? pattern,
+    };
     if (
       !this.rules.some(
         (r) => r.projectId === projectId && r.kind === kind && r.pattern === rule.pattern,

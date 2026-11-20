@@ -187,6 +187,18 @@ export const WorkerWorkspacePendingFrameSchema = z.object({
 });
 export type WorkerWorkspacePendingFrame = z.infer<typeof WorkerWorkspacePendingFrameSchema>;
 
+/**
+ * Run yang dipegang worker ini (masih dikenal koordinatornya). Dikirim setiap tersambung ke gateway, setelah
+ * event tertahan dan `workspace.pending`. Run yang ditunggu gateway atas perangkat ini tetapi koneksinya sempat
+ * putus atau workernya diganti (desktop login ulang) dan TIDAK ada di daftar ini diakhiri seketika: proses mesinnya
+ * sudah tidak ada (`worker_restarted` / `worker_replaced`).
+ */
+export const WorkerRunsActiveFrameSchema = z.object({
+  type: z.literal('runs.active'),
+  runIds: z.array(IdSchema).max(100),
+});
+export type WorkerRunsActiveFrame = z.infer<typeof WorkerRunsActiveFrameSchema>;
+
 /** Worker ke gateway. */
 export const WorkerToGatewayFrameSchema = z
   .discriminatedUnion('type', [
@@ -194,6 +206,7 @@ export const WorkerToGatewayFrameSchema = z
     WorkerPingFrameSchema,
     WorkerReviewResultFrameSchema,
     WorkerWorkspacePendingFrameSchema,
+    WorkerRunsActiveFrameSchema,
   ])
   .meta({ id: 'WorkerToGatewayFrame' });
 export type WorkerToGatewayFrame = z.infer<typeof WorkerToGatewayFrameSchema>;

@@ -8,6 +8,7 @@ import {
   type GatewayState,
   type WorkerCommand,
   type WorkerReviewResultFrame,
+  type WorkerRunsActiveFrame,
   type WorkerWorkspacePendingFrame,
 } from '@aios/contracts';
 import { WebSocket } from 'ws';
@@ -165,6 +166,13 @@ export class GatewayLink {
 
   /** Melaporkan run in_place yang menunggu keputusan; false bila tidak tersambung (diulang saat tersambung). */
   sendWorkspacePending(frame: WorkerWorkspacePendingFrame): boolean {
+    if (this.current !== 'connected' || this.socket?.readyState !== WebSocket.OPEN) return false;
+    this.socket.send(JSON.stringify(frame));
+    return true;
+  }
+
+  /** Melaporkan run yang dipegang worker ini (dikirim setiap tersambung); false bila tidak tersambung. */
+  sendRunsActive(frame: WorkerRunsActiveFrame): boolean {
     if (this.current !== 'connected' || this.socket?.readyState !== WebSocket.OPEN) return false;
     this.socket.send(JSON.stringify(frame));
     return true;

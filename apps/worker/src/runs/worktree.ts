@@ -61,6 +61,17 @@ export type Workspace = Worktree | InPlaceWorkspace;
 /** `running`: mesin masih bekerja. `review`: menunggu keputusan pemilik. `stale`: berhenti tanpa bisa ditinjau. */
 export type WorkspaceState = 'running' | 'review' | 'stale';
 
+/**
+ * Usulan pesan commit untuk tinjauan folder kerja ini: baris `Commit:` run terakhir (`commit`), milik run sebelumnya
+ * di tinjauan yang sama (`commits`), dan baris ringkasan jawaban agent sebagai cadangan (`summary`). Disimpan di
+ * `workspaces.json` supaya pesan agent tidak hilang saat worker dimulai ulang (uji project N3).
+ */
+export interface CommitProposal {
+  summary: string;
+  commit?: string | undefined;
+  commits: string[];
+}
+
 const COMMON = {
   runId: z.string().min(1),
   projectId: z.string(),
@@ -72,6 +83,15 @@ const COMMON = {
   checkpointRef: z.string().startsWith('refs/aios/cp/'),
   planOnly: z.boolean(),
   state: z.enum(['running', 'review', 'stale']),
+  // Usulan yang rusak dibuang sendiri, tidak membuat seluruh catatan folder kerja diabaikan.
+  proposal: z
+    .object({
+      summary: z.string().max(200),
+      commit: z.string().max(200).optional(),
+      commits: z.array(z.string().max(200)).max(50),
+    })
+    .optional()
+    .catch(undefined),
 };
 const RegistrySchema = z.object({
   version: z.literal(1),
@@ -120,8 +140,9 @@ export class WorktreeManager {
   private readonly states = new Map<string, WorkspaceState>();
   private readonly removing = new Set<string>();
   /**
-   * Run in_place yang sudah meminta izin menulis (berkas atau perintah selain baca saja). Run in_place tanpa
-   * izin tulis adalah pembaca dan tidak mengunci repo (uji project 4f).
+   * Run in_place yang sudah mendapat izin menulis (berkas atau perintah selain baca saja), diberikan pemilik atau
+   * aturan. Run in_place tanpa izin tulis yang diberikan, termasuk yang izin tulisnya masih menunggu, adalah pembaca
+   * dan tidak mengunci repo (uji project 4f dan N6).
    */
   private readonly writers = new Set<string>();
   /**
@@ -129,6 +150,8 @@ export class WorktreeManager {
    * jadi pembaca ini tidak membuat checkpoint/diff dan dilepas tanpa tinjauan.
    */
   private readonly bystanders = new Set<string>();
+  /** Usulan pesan commit per run (ikut ditulis ke `workspaces.json`). */
+  private readonly proposals = new Map<string, CommitProposal>();
   /** Pembukaan folder kerja diurutkan: dua run tidak bisa lolos pemeriksaan kunci repo bersamaan. */
   private opening: Promise<unknown> = Promise.resolve();
   private saving: Promise<unknown> = Promise.resolve();
@@ -159,6 +182,17 @@ export class WorktreeManager {
 
   state(runId: string): WorkspaceState | undefined {
     return this.states.get(runId);
+  }
+
+  proposal(runId: string): CommitProposal | undefined {
+    return this.proposals.get(runId);
+  }
+
+  /** Mengganti usulan pesan commit run yang folder kerjanya masih tercatat, lalu menyimpannya. */
+  async setProposal(runId: string, proposal: CommitProposal): Promise<void> {
+    if (!this.active.has(runId)) return;
+    this.proposals.set(runId, proposal);
+    await this.persist();
   }
 
   /** Run in_place (bukan mode rencana) yang menunggu keputusan dan tidak sedang dikerjakan mesin. */
@@ -210,10 +244,10 @@ export class WorktreeManager {
   /**
    * Run langsung di folder project, di branch aktif. Ditolak bila detached HEAD, bila folder punya perubahan yang
    * belum di-commit (berkas terlacak atau berkas baru yang tidak diabaikan git), atau bila repo yang sama dipegang
-   * run lain: run in_place yang sudah meminta izin tulis, run worktree yang berjalan, atau hasil in_place yang
-   * belum ditinjau. Run in_place yang hanya membaca tidak memegang kunci; begitu ia meminta izin tulis
-   * (`claimWrite`) ia menjadi penulis, kecuali repo itu sudah punya penulis lain. Mode rencana hanya membaca, jadi
-   * tidak diperiksa kebersihannya.
+   * run lain: run in_place yang sudah mendapat izin tulis, run worktree yang berjalan, atau hasil in_place yang
+   * belum ditinjau. Run in_place yang hanya membaca, atau yang izin tulisnya masih menunggu, tidak memegang kunci;
+   * begitu izin tulisnya diberikan (`claimWrite`) ia menjadi penulis, kecuali repo itu sudah punya penulis lain.
+   * Mode rencana hanya membaca, jadi tidak diperiksa kebersihannya.
    */
   async openInPlace(
     runId: string,
@@ -282,34 +316,40 @@ export class WorktreeManager {
   }
 
   /**
-   * Run meminta izin yang bisa mengubah berkas. Sinkron (tanpa await), jadi tidak bisa berselang dengan
-   * pemeriksaan kunci di openInPlace. Run in_place menjadi penulis bila repo-nya tidak punya penulis lain (run
-   * in_place lain yang sudah menulis atau hasil yang menunggu tinjauan); false berarti izin itu harus ditolak.
-   * Worktree selalu boleh: foldernya milik run itu sendiri.
+   * Run in_place masih bisa menjadi penulis repo-nya: belum pernah berbagi folder dengan penulis lain, dan tidak
+   * ada run in_place lain di repo itu yang sudah menulis atau hasilnya menunggu tinjauan. Tidak mengubah apa pun;
+   * dipakai saat izin tulis diminta (izin yang pasti ditolak tidak perlu ditanyakan ke pemilik). Worktree selalu
+   * boleh: foldernya milik run itu sendiri.
    */
-  claimWrite(runId: string): boolean {
+  canWrite(runId: string): boolean {
     const ws = this.active.get(runId);
     if (ws?.kind !== 'in_place' || this.writers.has(runId)) return true;
     // Pernah berbagi folder dengan penulis lain: base-nya tidak lagi mewakili isi folder, jadi tetap pembaca.
     if (this.bystanders.has(runId)) return false;
-    const readers: string[] = [];
     for (const other of this.active.values()) {
       if (other.runId === runId || other.repo !== ws.repo || other.planOnly) continue;
       if (other.kind !== 'in_place') continue;
       if (this.writers.has(other.runId) || this.states.get(other.runId) !== 'running') return false;
-      readers.push(other.runId);
     }
-    this.writers.add(runId);
-    for (const reader of readers) this.bystanders.add(reader);
     return true;
   }
 
   /**
-   * Run in_place kembali menjadi pembaca: semua izin tulisnya ditolak pemilik, jadi ia tidak pernah menulis dan
-   * tidak perlu memegang kunci repo sampai selesai. Hanya dipanggil bila belum ada izin tulis yang diberikan.
+   * Izin yang bisa mengubah berkas DIBERIKAN (pemilik atau aturan), bukan sekadar diminta. Sinkron (tanpa await),
+   * jadi tidak bisa berselang dengan pemeriksaan kunci di openInPlace. Run in_place menjadi penulis bila
+   * `canWrite`; run in_place lain yang sedang berjalan di repo itu menjadi pembaca yang berbagi folder
+   * (`isBystander`) dan tidak akan pernah mendapat izin tulis. False berarti izin itu harus ditolak.
    */
-  releaseWrite(runId: string): void {
-    if (this.active.get(runId)?.kind === 'in_place') this.writers.delete(runId);
+  claimWrite(runId: string): boolean {
+    if (!this.canWrite(runId)) return false;
+    const ws = this.active.get(runId);
+    if (ws?.kind !== 'in_place' || this.writers.has(runId)) return true;
+    this.writers.add(runId);
+    for (const other of this.active.values()) {
+      if (other.runId === runId || other.repo !== ws.repo || other.planOnly) continue;
+      if (other.kind === 'in_place') this.bystanders.add(other.runId);
+    }
+    return true;
   }
 
   /**
@@ -364,6 +404,9 @@ export class WorktreeManager {
       this.writers.delete(fromRunId);
       this.bystanders.delete(fromRunId);
       if (next.kind === 'in_place' && !next.planOnly) this.writers.add(toRunId);
+      const proposal = this.proposals.get(fromRunId);
+      this.proposals.delete(fromRunId);
+      if (proposal) this.proposals.set(toRunId, proposal);
       this.track(next, 'running');
       await this.persist();
       return next;
@@ -395,6 +438,7 @@ export class WorktreeManager {
       this.states.delete(runId);
       this.writers.delete(runId);
       this.bystanders.delete(runId);
+      this.proposals.delete(runId);
       this.removing.delete(runId);
       await this.persist().catch(() => undefined);
     }
@@ -432,16 +476,18 @@ export class WorktreeManager {
     const restored: string[] = [];
     const repos = new Set<string>();
     for (const item of items) {
-      const { state, ...ws } = item;
+      const { state, proposal, ...ws } = item;
       repos.add(ws.repo);
       if (ws.kind === 'in_place') {
         if (ws.planOnly) continue;
         // Folder project sudah bersih dan HEAD tetap: tidak ada yang perlu ditinjau.
         this.track(ws, 'review');
+        if (proposal) this.proposals.set(ws.runId, proposal);
         if (await this.isPristine(ws.runId)) {
           await this.releaseInPlace(ws).catch(() => undefined);
           this.active.delete(ws.runId);
           this.states.delete(ws.runId);
+          this.proposals.delete(ws.runId);
           continue;
         }
         restored.push(ws.runId);
@@ -453,6 +499,7 @@ export class WorktreeManager {
       );
       if (state === 'review' && !ws.planOnly && dirExists) {
         this.track(ws, 'review');
+        if (proposal) this.proposals.set(ws.runId, proposal);
         continue;
       }
       await this.removeWorktree(ws, true, { keepUniqueCommits: true }).catch((error: unknown) =>
@@ -616,6 +663,7 @@ export class WorktreeManager {
       const items = [...this.active.values()].map((ws) => ({
         ...ws,
         state: this.states.get(ws.runId) ?? 'running',
+        proposal: this.proposals.get(ws.runId),
       }));
       await fs.mkdir(nodePath.dirname(this.registryFile), { recursive: true });
       const temp = `${this.registryFile}.tmp`;
