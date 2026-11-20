@@ -907,6 +907,18 @@ export const copy = {
         noun: 'Pencarian kode',
       },
       web: { running: 'Mencari di web', done: 'Pencarian web selesai', noun: 'Pencarian web' },
+      /** Membaca satu halaman/URL (`web_read`, `fetch`, `baca_tautan`), bukan mencari. */
+      webRead: {
+        running: 'Membaca halaman web',
+        done: 'Halaman web dibaca',
+        noun: 'Pembacaan halaman web',
+      },
+      /** Tool `eval` omp: menjalankan potongan kode (Python/JS) di sesi agent, bukan perintah shell. */
+      code: {
+        running: 'Menjalankan kode',
+        done: 'Kode selesai dijalankan',
+        noun: 'Eksekusi kode',
+      },
       /** Tool data gateway (`aios_tools`: memori, ruang, kanban, jadwal); hanya membaca. */
       data: {
         running: 'Membaca data AIOS',
