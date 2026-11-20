@@ -391,6 +391,34 @@ describe('WorktreeManager: pemulihan saat worker mulai', () => {
     expect(again.get(RUN_A)).toBeUndefined();
   });
 
+  it('usulan pesan commit ikut tersimpan; usulan yang rusak dibuang tanpa membuang catatan folder kerja', async () => {
+    await manager.openInPlace(RUN_A, repo);
+    await fs.writeFile(path.join(repo, 'README.md'), 'setengah jadi\n');
+    await manager.setProposal(RUN_A, {
+      summary: 'Ringkasan',
+      commit: 'docs: ubah README',
+      commits: [],
+    });
+
+    const restarted = fresh();
+    expect(await restarted.recover([repo])).toEqual([RUN_A]);
+    expect(restarted.proposal(RUN_A)).toEqual({
+      summary: 'Ringkasan',
+      commit: 'docs: ubah README',
+      commits: [],
+    });
+
+    const file = path.join(base, 'data', 'workspaces.json');
+    const saved = JSON.parse(await fs.readFile(file, 'utf8')) as {
+      items: Record<string, unknown>[];
+    };
+    saved.items[0]!.proposal = { summary: 42 };
+    await fs.writeFile(file, JSON.stringify(saved));
+    const again = fresh();
+    expect(await again.recover([repo])).toEqual([RUN_A]);
+    expect(again.proposal(RUN_A)).toBeUndefined();
+  });
+
   it('worktree menunggu tinjauan bertahan; yang terputus, berhenti, atau sisa versi lama dibersihkan', async () => {
     const review = await manager.create(RUN_A, repo);
     await manager.setState(RUN_A, 'review');

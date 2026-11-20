@@ -325,7 +325,7 @@ describe('ReviewService: terima dan tolak', () => {
     const wt = await work();
     const mainBefore = git(repo, 'rev-parse', 'main');
     await review.checkpoint(RUN, 'write');
-    review.setMeta(RUN, 'Selesai.\nCommit: test: tambah tes untuk add');
+    await review.setMeta(RUN, 'Selesai.\nCommit: test: tambah tes untuk add');
 
     const outcome = await review.accept(RUN, { merge: false });
 
@@ -341,19 +341,19 @@ describe('ReviewService: terima dan tolak', () => {
 
   it('pesan commit dari pengguna menggantikan buatan agent; tanpa keduanya, fallback', async () => {
     await work();
-    review.setMeta(RUN, 'Commit: test: dari agent');
+    await review.setMeta(RUN, 'Commit: test: dari agent');
     const a = await review.accept(RUN, { merge: false, commitMessage: 'fix: dari pengguna' });
     expect(git(repo, 'log', '-1', '--format=%s', a.branch)).toBe('fix: dari pengguna');
 
     await work(RUN_2);
-    review.setMeta(RUN_2, 'Menambahkan tes untuk add.');
+    await review.setMeta(RUN_2, 'Menambahkan tes untuk add.');
     const b = await review.accept(RUN_2, { merge: false });
     expect(git(repo, 'log', '-1', '--format=%s', b.branch)).toBe('test: menambahkan tes untuk add');
   });
 
   it('terima + merge: fast-forward ke branch kerja pengguna, branch sementara dihapus', async () => {
     const wt = await work();
-    review.setMeta(RUN, 'Commit: test: tambah tes');
+    await review.setMeta(RUN, 'Commit: test: tambah tes');
 
     const outcome = await review.accept(RUN, { merge: true });
 
@@ -395,7 +395,7 @@ describe('ReviewService: terima dan tolak', () => {
 
   it('terima + merge saat branch pengguna sudah maju: hasil di-rebase ke atasnya lalu fast-forward', async () => {
     const wt = await work();
-    review.setMeta(RUN, 'Commit: test: tambah tes');
+    await review.setMeta(RUN, 'Commit: test: tambah tes');
     await fs.writeFile(path.join(repo, 'baru-di-main.txt'), 'x');
     git(repo, 'add', '-A');
     git(repo, 'commit', '-q', '-m', 'main maju');
@@ -506,7 +506,7 @@ describe('ReviewService: mode in_place (langsung di branch aktif)', () => {
     await fs.mkdir(path.join(repo, 'src'));
     await fs.writeFile(path.join(repo, 'src', 'baru.js'), 'baru\n');
     await review.checkpoint(RUN, 'langkah');
-    review.setMeta(RUN, 'Commit: feat: ubah add');
+    await review.setMeta(RUN, 'Commit: feat: ubah add');
 
     const state = await review.get(RUN);
     expect(state).toMatchObject({ workspace: 'in_place', branch: 'main', base, headMoved: null });
@@ -619,11 +619,11 @@ describe('ReviewService: mode in_place (langsung di branch aktif)', () => {
   it('beberapa run di tinjauan yang sama: pesan usulan menggabungkan semua run', async () => {
     await inPlace();
     await fs.writeFile(path.join(repo, 'math.js'), 'run 1\n');
-    review.setMeta(RUN, 'Selesai.\nCommit: feat(math): tambahkan formatPrice');
+    await review.setMeta(RUN, 'Selesai.\nCommit: feat(math): tambahkan formatPrice');
     await manager.adopt(RUN, RUN_2);
-    review.inherit(RUN, RUN_2);
+    await review.inherit(RUN_2);
     await fs.writeFile(path.join(repo, 'lama.txt'), 'run 2\n');
-    review.setMeta(RUN_2, 'Commit: fix(math): perbaiki pageCount negatif');
+    await review.setMeta(RUN_2, 'Commit: fix(math): perbaiki pageCount negatif');
 
     expect((await review.get(RUN_2)).commitMessage).toBe(
       'feat(math): tambahkan formatPrice; perbaiki pageCount negatif',
@@ -631,6 +631,50 @@ describe('ReviewService: mode in_place (langsung di branch aktif)', () => {
     await review.accept(RUN_2, { merge: false });
     expect(git(repo, 'log', '-1', '--format=%s')).toBe(
       'feat(math): tambahkan formatPrice; perbaiki pageCount negatif',
+    );
+  });
+
+  it('pesan usulan agent bertahan saat worker dimulai ulang (workspaces.json), juga gabungan multi-run', async () => {
+    await inPlace();
+    await fs.writeFile(path.join(repo, 'math.js'), 'run 1\n');
+    await review.setMeta(RUN, 'Selesai.\nCommit: docs: tambahkan komentar pada pageCount');
+    await manager.setState(RUN, 'review');
+
+    // Worker dimulai ulang: manajer dan layanan tinjauan baru membaca catatan dari folder data yang sama.
+    const restart = () => {
+      manager = new WorktreeManager({
+        processes: new ProcessManager({ checkCwd: (cwd) => Promise.resolve(cwd) }),
+        allowed: new AllowList({ file: path.join(base, 'data', 'allowed.json'), forbidden: [] }),
+        dataDir: path.join(base, 'data'),
+      });
+      review = new ReviewService({ worktrees: manager, isWorking: () => false });
+    };
+    restart();
+    expect(await manager.recover([repo])).toEqual([RUN]);
+    expect((await review.get(RUN)).commitMessage).toBe('docs: tambahkan komentar pada pageCount');
+
+    // Run lanjutan setelah restart tetap menggabungkan pesan run sebelumnya, juga setelah restart berikutnya.
+    await manager.adopt(RUN, RUN_2);
+    await review.inherit(RUN_2);
+    await fs.writeFile(path.join(repo, 'lama.txt'), 'run 2\n');
+    await review.setMeta(RUN_2, 'Selesai.\nCommit: fix: perbaiki pageCount negatif');
+    await manager.setState(RUN_2, 'review');
+    restart();
+    await manager.recover([repo]);
+    await review.accept(RUN_2, { merge: false });
+    expect(git(repo, 'log', '-1', '--format=%s')).toBe(
+      'docs: tambahkan komentar pada pageCount; perbaiki pageCount negatif',
+    );
+
+    // Tanpa baris Commit: ringkasan jawaban yang tersimpan tetap dipakai sebagai cadangan.
+    await manager.openInPlace(RUN, repo);
+    await fs.writeFile(path.join(repo, 'math.js'), 'run 3\n');
+    await review.setMeta(RUN, 'Menambahkan validasi input paginate.');
+    await manager.setState(RUN, 'review');
+    restart();
+    await manager.recover([repo]);
+    expect((await review.get(RUN)).commitMessage).toBe(
+      'chore: menambahkan validasi input paginate',
     );
   });
 

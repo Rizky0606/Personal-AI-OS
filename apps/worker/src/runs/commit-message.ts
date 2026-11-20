@@ -61,6 +61,17 @@ export function combineCommitMessages(messages: string[]): string | undefined {
 const isTest = (path: string) => /(^|\/)(__tests__|tests?)\/|\.(test|spec)\.[a-z]+$/i.test(path);
 const isDoc = (path: string) => /\.(md|mdx|txt)$/i.test(path) || /(^|\/)docs?\//i.test(path);
 
+/**
+ * Baris jawaban agent yang menjadi ringkasan pesan commit cadangan: baris pertama yang tidak kosong, bukan baris
+ * `Commit:`, dan hanya berhuruf Latin (penanda markdown di awal dibuang). Undefined bila tidak ada.
+ */
+export function summaryLine(text: string): string | undefined {
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^[\s#>*-]+/, '').trim())
+    .find((line) => line !== '' && !/^commit:/i.test(line) && isLatinOnly(line));
+}
+
 /** Dipakai bila agent tidak menulis `Commit:` yang valid: tipe ditebak dari berkas yang berubah. */
 export function fallbackCommitMessage(summary: string, paths: string[]): string {
   const type =
@@ -70,12 +81,7 @@ export function fallbackCommitMessage(summary: string, paths: string[]): string 
         ? 'docs'
         : 'chore';
   // Baris berhuruf non-Latin dilewati; bila tidak ada baris lain, pesan umum.
-  const firstLine =
-    summary
-      .split(/\r?\n/)
-      .map((line) => line.replace(/^[\s#>*-]+/, '').trim())
-      .find((line) => line !== '' && !/^commit:/i.test(line) && isLatinOnly(line)) ??
-    'perubahan dari agent';
+  const firstLine = summaryLine(summary) ?? 'perubahan dari agent';
   const subject = firstLine.replace(/[.\s]+$/, '').slice(0, 72);
   // Hanya kata kapital biasa (awal kalimat) yang dikecilkan; identifier seperti `PageCount` atau `README` utuh.
   return /^[A-Z][a-z]*(?![\w.-])/.test(subject)

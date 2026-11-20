@@ -399,7 +399,7 @@ export class RunCoordinator {
         await this.deps.preview?.stopByRun(cmd.continueFromRunId).catch(() => undefined);
         this.deps.terminal?.closeByRun(cmd.continueFromRunId);
         worktree = await this.deps.worktrees.adopt(cmd.continueFromRunId, runId);
-        this.deps.review.inherit(cmd.continueFromRunId, runId);
+        await this.deps.review.inherit(runId);
       } else {
         // Kosong = setelan project di worker; run chat project bawaannya langsung di branch aktif.
         const mode = cmd.workspace ?? this.deps.setup?.get(cmd.projectId).workspace ?? 'in_place';
@@ -832,7 +832,11 @@ export class RunCoordinator {
     // Sudah di-set serentak dengan `terminal` (onEvent/fail/cancelled/timeout); diulang di sini hanya sebagai
     // jaring pengaman jika suatu saat ada jalur baru yang lolos dari situ.
     run.finished = true;
-    this.deps.review.setMeta(runId, run.text);
+    await this.deps.review
+      .setMeta(runId, run.text)
+      .catch((error: unknown) =>
+        this.deps.log?.(`usulan pesan commit ${runId} gagal disimpan: ${String(error)}`),
+      );
     const workspace = this.deps.worktrees.get(runId);
     if (workspace) {
       if (
@@ -844,7 +848,6 @@ export class RunCoordinator {
         // izin tulis, jadi perubahan di folder bukan miliknya) tidak ada yang perlu ditinjau: worktree dan branch
         // `aios/...` dibuang; in_place hanya melepas catatannya (folder project dan branch pemilik tidak disentuh).
         await this.deps.worktrees.remove(runId, { deleteBranch: true });
-        this.deps.review.forget(runId);
       } else if (workspace.kind === 'in_place' || run.completed) {
         // In_place yang dihentikan atau gagal tetap bisa ditinjau: perubahannya ada di folder project pemilik.
         await this.deps.worktrees.setState(runId, 'review');
