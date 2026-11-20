@@ -907,6 +907,18 @@ export const copy = {
         noun: 'Pencarian kode',
       },
       web: { running: 'Mencari di web', done: 'Pencarian web selesai', noun: 'Pencarian web' },
+      /** Membaca satu halaman/URL (`web_read`, `fetch`, `baca_tautan`), bukan mencari. */
+      webRead: {
+        running: 'Membaca halaman web',
+        done: 'Halaman web dibaca',
+        noun: 'Pembacaan halaman web',
+      },
+      /** Tool `eval` omp: menjalankan potongan kode (Python/JS) di sesi agent, bukan perintah shell. */
+      code: {
+        running: 'Menjalankan kode',
+        done: 'Kode selesai dijalankan',
+        noun: 'Eksekusi kode',
+      },
       /** Tool data gateway (`aios_tools`: memori, ruang, kanban, jadwal); hanya membaca. */
       data: {
         running: 'Membaca data AIOS',
@@ -1256,6 +1268,16 @@ export const copy = {
     holderOffline:
       'Worker yang memegang folder kerja run ini tidak tersambung. Nyalakan worker di PC itu, lalu coba lagi.',
     notReviewable: 'Run ini sudah tidak menunggu tinjauan.',
+    /** Galat keputusan tinjauan dari gateway, per kode (lihat `reviewErrorMessage`). */
+    reviewErrors: {
+      timeout:
+        'Worker di PC project tidak menjawab dalam 30 detik; mungkin sedang sibuk atau macet. Periksa worker di PC itu (nyalakan ulang bila perlu), lalu coba lagi. Bila keputusan ternyata sudah diterapkan, run ini tidak lagi menunggu tinjauan.',
+      inProgress:
+        'Keputusan sebelumnya untuk run ini masih diproses worker. Tunggu sebentar, lalu coba lagi.',
+      runMissing: 'Run ini sudah tidak ada. Tutup tinjauan ini dan muat ulang daftar run.',
+      projectMissing:
+        'Project run ini sudah tidak terdaftar di gateway. Tambahkan lagi project-nya, lalu buka run ini dari sana.',
+    },
     checkpoints: {
       empty: 'Belum ada checkpoint. Checkpoint dibuat otomatis setelah agent mengubah file.',
       base: 'Titik awal (sebelum agent bekerja)',
@@ -1500,6 +1522,11 @@ export const copy = {
     memorySuggestion: {
       note: 'Belum tersimpan di memori. Simpan lewat Ingat agar dipakai di chat lain.',
       action: 'Ingat ini…',
+    },
+    /** Jaring pengaman jadwal (event `schedule.suggested`) di bawah jawaban. */
+    scheduleSuggestion: {
+      note: 'Belum ada jadwal atau usulan jadwal yang dibuat. Buat jadwalnya sendiri di layar Jadwal.',
+      action: 'Buka Jadwal',
     },
     workspace: {
       inPlace: (branch: string) => `Di branch ${branch}`,

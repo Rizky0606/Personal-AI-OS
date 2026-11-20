@@ -114,10 +114,16 @@ const TOOL_KINDS: Record<string, ToolKind> = {
   web_search: 'web',
   websearch: 'web',
   search_web: 'web',
-  fetch: 'web',
-  web_fetch: 'web',
-  fetch_url: 'web',
+  cari_web: 'web',
   web: 'web',
+  // Membaca satu halaman/URL, bukan mencari.
+  fetch: 'webRead',
+  web_fetch: 'webRead',
+  fetch_url: 'webRead',
+  web_read: 'webRead',
+  baca_tautan: 'webRead',
+  // omp `eval`: kode Python/JS di sesi agent (mis. membaca skill://), bukan perintah shell.
+  eval: 'code',
   browser: 'browser',
   task: 'subagent',
   delegate_task: 'subagent',
@@ -135,6 +141,7 @@ export function toolKindOf(name: string): ToolKind | null {
   // Tool milik gateway (server MCP `aios_tools`), bukan konektor pihak ketiga: web, baca data sistem, atau usulan.
   const gatewayTool = aiosToolOf(key);
   if (gatewayTool) {
+    if (gatewayTool === 'web_read') return 'webRead';
     if (AIOS_NETWORK_TOOLS.includes(gatewayTool)) return 'web';
     return AIOS_PROPOSE_TOOLS.includes(gatewayTool) ? 'propose' : 'data';
   }

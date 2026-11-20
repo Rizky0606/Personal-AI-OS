@@ -80,10 +80,12 @@ export interface ProgressOptions {
 
 const TOOL_GROUP: Partial<Record<NonNullable<ReturnType<typeof toolKindOf>>, ToolGroup>> = {
   web: 'web',
+  webRead: 'web',
   data: 'data',
   propose: 'propose',
   browser: 'browser',
   command: 'terminal',
+  code: 'terminal',
   read: 'files',
   edit: 'files',
   search: 'files',

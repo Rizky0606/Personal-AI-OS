@@ -12,6 +12,7 @@ import {
   combineCommitMessages,
   fallbackCommitMessage,
   parseCommitMessage,
+  summaryLine,
 } from './commit-message.js';
 import type { InPlaceWorkspace, Workspace, Worktree, WorktreeManager } from './worktree.js';
 
@@ -116,11 +117,6 @@ export function parseNumstat(raw: string): Stat[] {
  *   isi base dan hanya berkas buatan run yang dihapus (berkas yang diabaikan git tidak pernah disentuh).
  */
 export class ReviewService {
-  /** `commits`: pesan sah dari run sebelumnya dalam tinjauan yang sama (lewat `inherit`); `commit`: run ini. */
-  private readonly meta = new Map<
-    string,
-    { text: string; commit: string | undefined; commits: string[] }
-  >();
   private readonly chains = new Map<string, Promise<unknown>>();
 
   constructor(
@@ -131,26 +127,30 @@ export class ReviewService {
     },
   ) {}
 
-  /** Teks jawaban agent (ekor) dan pesan commit yang ditulisnya; diisi koordinator saat run selesai. */
-  setMeta(runId: string, text: string): void {
-    const commits = this.meta.get(runId)?.commits ?? [];
-    this.meta.set(runId, { text, commit: parseCommitMessage(text), commits });
+  /**
+   * Teks jawaban agent (ekor) dan pesan commit yang ditulisnya; diisi koordinator saat run selesai. Disimpan bersama
+   * catatan folder kerja (`workspaces.json`), jadi usulan pesan bertahan saat worker dimulai ulang (uji project N3).
+   */
+  async setMeta(runId: string, text: string): Promise<void> {
+    await this.deps.worktrees.setProposal(runId, {
+      summary: (summaryLine(text) ?? '').slice(0, 200),
+      commit: parseCommitMessage(text),
+      commits: this.deps.worktrees.proposal(runId)?.commits ?? [],
+    });
   }
 
   /**
-   * Run lanjutan masuk tinjauan yang sama: pesan run sebelumnya disimpan, lalu pesan yang diusulkan menggabungkan
-   * semua run (lihat `combineCommitMessages`), karena satu commit hasil terima memuat perubahan semuanya.
+   * Run lanjutan masuk tinjauan yang sama (folder kerjanya sudah diambil alih lewat `WorktreeManager.adopt`): pesan
+   * run sebelumnya disimpan, lalu pesan yang diusulkan menggabungkan semua run (lihat `combineCommitMessages`), karena
+   * satu commit hasil terima memuat perubahan semuanya.
    */
-  inherit(fromRunId: string, toRunId: string): void {
-    const meta = this.meta.get(fromRunId);
-    if (!meta) return;
-    this.meta.delete(fromRunId);
-    const commits = meta.commit ? [...meta.commits, meta.commit] : meta.commits;
-    this.meta.set(toRunId, { text: meta.text, commit: undefined, commits });
-  }
-
-  forget(runId: string): void {
-    this.meta.delete(runId);
+  async inherit(runId: string): Promise<void> {
+    const previous = this.deps.worktrees.proposal(runId);
+    if (!previous) return;
+    await this.deps.worktrees.setProposal(runId, {
+      summary: previous.summary,
+      commits: previous.commit ? [...previous.commits, previous.commit] : previous.commits,
+    });
   }
 
   async get(runId: string): Promise<ReviewState> {
@@ -296,12 +296,10 @@ export class ReviewService {
 
     if (outcome.commit === null) {
       await this.deps.worktrees.remove(runId, { deleteBranch: true });
-      this.forget(runId);
       return { ...outcome, mergeSkipped: 'nothing_to_merge' };
     }
     const skipped = options.merge ? await this.tryMerge(wt) : null;
     await this.deps.worktrees.remove(runId, { deleteBranch: false });
-    this.forget(runId);
     if (!options.merge) return outcome;
     if (skipped) {
       // Rebase yang berhasil sebelum merge dilewati tetap mengubah ujung branch hasil.
@@ -332,7 +330,6 @@ export class ReviewService {
       });
     }
     await this.deps.worktrees.remove(runId, { deleteBranch: wt.kind === 'worktree' });
-    this.forget(runId);
     return { branch: wt.branch, commit: null, merged: false, mergeSkipped: null };
   }
 
@@ -353,7 +350,6 @@ export class ReviewService {
       return git(wt.top, ['rev-parse', 'HEAD']);
     });
     await this.deps.worktrees.remove(wt.runId, { deleteBranch: false });
-    this.forget(wt.runId);
     return {
       branch: wt.branch,
       commit,
@@ -501,12 +497,14 @@ export class ReviewService {
   }
 
   private commitMessage(runId: string, files: { path: string }[]): string {
-    const meta = this.meta.get(runId);
-    const messages = meta ? [...meta.commits, ...(meta.commit ? [meta.commit] : [])] : [];
+    const proposal = this.deps.worktrees.proposal(runId);
+    const messages = proposal
+      ? [...proposal.commits, ...(proposal.commit ? [proposal.commit] : [])]
+      : [];
     return (
       combineCommitMessages(messages) ??
       fallbackCommitMessage(
-        meta?.text ?? '',
+        proposal?.summary ?? '',
         files.map((f) => f.path),
       )
     );

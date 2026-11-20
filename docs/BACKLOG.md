@@ -2,6 +2,19 @@
 
 Ide di luar scope prompt saat ini dan perbedaan temuan verifikasi terhadap asumsi dokumen.
 
+## Uji ulang project v1.1.8 (`/tmp/uji-ulang-project/LAPORAN.md`)
+
+- [x] N2 (P1, regresi): run yang berjalan saat desktop login ulang tidak lagi menggantung `running` (frame `runs.active`, `worker_replaced`).
+- [x] N1 (P1): izin yang datang sebelum `tool_execution_start` dicocokkan dengan pemanggilan tool dari pesan asisten, jadi `git diff`/`git status` di folder run tidak ditanyakan.
+- [x] N3: usulan pesan commit agent disimpan di `workspaces.json`.
+- [x] N5: "Selalu" pada `<skrip> -- <argumen aman>` disimpan sebagai skrip polos.
+- [x] N6: kunci tulis repo diambil saat izin tulis diberikan; penolakan otomatis beralasan di langkah tool.
+- [x] N7 sebagian: `GET /runs` mencatat model efektif (`Run.model`).
+- [ ] N4: `review_timeout` (dan 503 lain) dipetakan ke teks spesifik di dialog tinjauan desktop (wilayah UI chat/review).
+- [ ] N6 lanjutan di UI: banner/status run "penulisan ditolak karena run lain menulis" alih-alih ringkasan "Selesai" (alasan kini sudah ada di langkah tool sebagai stderr).
+- [ ] N7 sisa: label `eval` omp dan `web_read` gagal, ligatur Geist Mono di blok perintah, status sidebar worker tertinggal, "Buka papan kartu" di Kanban, "Unduh ZIP" di jawaban project.
+- [ ] Bukti nyata N1/N2 dengan omp + 9Router (jumlah izin per run sebelum/sesudah pada skenario realistis) belum dijalankan di cabang `fix/v119-inti`.
+
 ## Memori semantik (`docs/DESIGN_MEMORI_SEMANTIK.md`)
 
 Slice 1 (recall beranggaran leksikal + memori tersemat) selesai di cabang `feat/memori-semantik`. Angka `pnpm --filter @aios/gateway eval:memory` saat slice 1 selesai (anggaran evaluasi 1.500, top-k 12): `lexical` recall@12 64,7% (cocok kata 100%, susulan 100%, parafrase 12,5%, lintas bahasa 16,7%), kueri negatif yang mendapat fakta cocok kata 33,3%; `all` menyuntik ±3.200 karakter. Tersisa:

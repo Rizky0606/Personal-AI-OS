@@ -33,6 +33,8 @@ export interface WorkerHubDeps {
   onReviewResult(deviceId: string, frame: WorkerReviewResultFrame): void;
   /** Laporan worker: run in_place yang perubahannya menunggu keputusan (lihat RunsService.workspacePending). */
   onWorkspacePending(deviceId: string, frame: WorkerWorkspacePendingFrame): Promise<void>;
+  /** Laporan worker saat tersambung: run yang masih dipegangnya (lihat WorkerRelay.activeRuns). */
+  onRunsActive(deviceId: string, runIds: readonly string[]): void;
   heartbeatMs?: number;
   now?: () => number;
 }
@@ -124,6 +126,10 @@ function handleConnection(
         }
         if (frame.data.type === 'workspace.pending') {
           await deps.onWorkspacePending(auth.deviceId, frame.data);
+          return;
+        }
+        if (frame.data.type === 'runs.active') {
+          deps.onRunsActive(auth.deviceId, frame.data.runIds);
           return;
         }
         const { runId, event } = frame.data;

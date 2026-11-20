@@ -386,13 +386,15 @@ export function useChatController(conversationId: string | undefined) {
   /**
    * Pensil "Ubah pesan terakhir": membuka editor di gelembung pesan pengguna terakhir. Mengirim dari sana memakai
    * `editMessage` (pesan itu dan jawabannya diganti, sesi agent mulai ulang dengan riwayat sebelumnya), sama dengan
-   * tombol Ubah saat kursor di atas pesan.
+   * tombol Ubah saat kursor di atas pesan. Permintaannya sekali pakai: berisi id pesan sasaran dan dikosongkan
+   * begitu gelembung itu membuka editornya, jadi pesan baru sesudahnya tidak ikut terbuka sebagai editor.
    */
-  const [editLastRequest, setEditLastRequest] = useState(0);
+  const [editLastRequest, setEditLastRequest] = useState<string | null>(null);
   const editLast = useCallback(() => {
     if (!lastUser || sending || streaming) return;
-    setEditLastRequest((n) => n + 1);
+    setEditLastRequest(lastUser.id);
   }, [lastUser, sending, streaming]);
+  const editLastHandled = useCallback(() => setEditLastRequest(null), []);
 
   /** Mengirim ulang teks pesan terakhir sebagai pesan baru (sama seperti Android). */
   const resendLast = useCallback(() => {
@@ -571,6 +573,7 @@ export function useChatController(conversationId: string | undefined) {
     steer: (mode: 'steer' | 'followUp') => void steer(mode),
     editLast,
     editLastRequest,
+    editLastHandled,
     /** Mengirim teks tertentu (saran lanjutan) tanpa menyentuh draf. */
     sendText: (text: string) => void send(text),
     sendRichFollowUp: (followUp: RichAnswerFollowUp) => void send(undefined, { followUp }),

@@ -131,6 +131,15 @@ describe('izin di LiveRun', () => {
     });
     expect(run.memorySuggestion).toBe('Pemilik suka kopi tubruk.');
   });
+  it('schedule.suggested menyimpan permintaan untuk petunjuk ke layar Jadwal', () => {
+    expect(newLiveRun('s').scheduleSuggestion).toBeNull();
+    const run = reduceLiveRun(newLiveRun('s'), {
+      type: 'schedule.suggested',
+      text: 'Jadwalkan pengingat setiap Jumat jam 16.00.',
+    });
+    expect(run.scheduleSuggestion).toBe('Jadwalkan pengingat setiap Jumat jam 16.00.');
+    expect(run.memorySuggestion).toBeNull();
+  });
 });
 
 describe('endReason di LiveRun', () => {

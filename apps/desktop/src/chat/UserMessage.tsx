@@ -19,10 +19,12 @@ export interface UserMessageProps {
   /** "Ingat ini": membuka dialog untuk menyimpan teks pesan sebagai memori. */
   onRemember?: (() => void) | undefined;
   /**
-   * Permintaan membuka editor dari luar (tombol pensil "Ubah pesan terakhir" di composer): setiap nilai baru di atas 0
-   * membuka editor di gelembung ini, sama seperti tombol Ubah saat kursor di atas pesan.
+   * Permintaan membuka editor dari luar (tombol pensil "Ubah pesan terakhir" di composer), hanya true untuk gelembung
+   * sasaran. Editor dibuka sekali lalu `onEditRequestHandled` mengosongkan permintaan, sehingga gelembung yang baru
+   * dipasang sesudahnya tidak ikut terbuka.
    */
-  editRequest?: number | undefined;
+  editRequested?: boolean | undefined;
+  onEditRequestHandled?: (() => void) | undefined;
 }
 
 /** Jam lokal (mis. 14.22) dari waktu ISO. */
@@ -41,18 +43,22 @@ export function UserMessage({
   onDelete,
   onResend,
   onRemember,
-  editRequest = 0,
+  editRequested = false,
+  onEditRequestHandled,
 }: UserMessageProps) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(text);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (editRequest <= 0 || !onEdit) return;
-    setValue(text);
-    setEditing(true);
+    if (!editRequested) return;
+    if (onEdit) {
+      setValue(text);
+      setEditing(true);
+    }
+    onEditRequestHandled?.();
     // Hanya permintaan baru yang membuka editor; perubahan teks atau handler tidak.
-  }, [editRequest]);
+  }, [editRequested]);
 
   async function submit() {
     if (!onEdit || saving || !value.trim()) return;

@@ -86,6 +86,11 @@ class FakeWorker {
     this.socket?.send(JSON.stringify({ type: 'workspace.pending', runs }));
   }
 
+  /** Laporan worker saat tersambung: run yang masih dipegangnya. */
+  active(runIds: string[]) {
+    this.socket?.send(JSON.stringify({ type: 'runs.active', runIds }));
+  }
+
   close() {
     this.socket?.terminate();
   }
@@ -177,6 +182,17 @@ describe('worker didaftarkan ulang dengan nama sama (desktop login ulang)', () =
     });
     await until(async () => (await statusOf(inPlace.id)) === 'running', 'running ip');
 
+    // Run worktree yang masih berjalan: prosesnya mati bersama worker lama dan tidak ada di laporan worker baru.
+    const lost = await startRun(await conversationIn(project.id));
+    await until(() => old.all('run.start').some((c) => c.runId === lost.id), 'run.start hilang');
+    old.emit(lost.id, {
+      type: 'workspace.ready',
+      mode: 'worktree',
+      branch: workerBranchFor(lost.id),
+      base: 'abc1234',
+    });
+    await until(async () => (await statusOf(lost.id)) === 'running', 'running hilang');
+
     const fresh = await registerWorker('PC Ganti worker');
 
     expect(await workerOfProject(project.id)).toBe(fresh.deviceId);
@@ -186,28 +202,42 @@ describe('worker didaftarkan ulang dengan nama sama (desktop login ulang)', () =
     ]);
     expect(await movedAudits(untouched.id)).toEqual([]);
 
-    // Proses worker lama mati; worker baru tersambung dan melaporkan folder in_place dari workspaces.json.
+    // Proses worker lama mati; worker baru tersambung, melaporkan folder in_place dari workspaces.json, lalu daftar
+    // run yang dipegangnya (kosong: proses baru).
     old.close();
     await fresh.connect();
     fresh.pending([{ runId: inPlace.id, files: [file] }]);
+    fresh.active([]);
     await until(async () => (await statusOf(inPlace.id)) === 'needs_review', 'needs_review ip');
     expect((await getRun(inPlace.id)).error).toMatchObject({ code: 'worker_restarted' });
+    await until(async () => (await statusOf(lost.id)) === 'failed', 'run hilang gagal');
+    expect((await getRun(lost.id)).error).toMatchObject({
+      code: 'worker_replaced',
+      retryable: true,
+    });
     await env.runner.idle();
 
-    // Tinjauan run worktree dikirim ke worker baru.
+    // Tinjauan run worktree dan run in_place dikirim ke worker baru.
     fresh.reply = (cmd) => ({
       type: 'review.result',
       runId: cmd.runId,
       decision: 'accept',
       ok: true,
-      branch: workerBranchFor(cmd.runId),
+      branch: cmd.runId === worktree.id ? workerBranchFor(cmd.runId) : 'main',
       commit: 'a'.repeat(40),
       merged: false,
       mergeSkipped: null,
     });
     const reviewed = await env.post(`/runs/${worktree.id}/review`, { decision: 'accept' }, desktop);
     expect(reviewed.statusCode, reviewed.body).toBe(200);
-    expect(fresh.all('review.apply').map((c) => c.runId)).toEqual([worktree.id]);
+    const reviewedInPlace = await env.post(
+      `/runs/${inPlace.id}/review`,
+      { decision: 'accept' },
+      desktop,
+    );
+    expect(reviewedInPlace.statusCode, reviewedInPlace.body).toBe(200);
+    expect(await statusOf(inPlace.id)).toBe('accepted');
+    expect(fresh.all('review.apply').map((c) => c.runId)).toEqual([worktree.id, inPlace.id]);
     expect(old.all('review.apply')).toEqual([]);
 
     // Run baru dimulai di worker baru.
@@ -215,6 +245,46 @@ describe('worker didaftarkan ulang dengan nama sama (desktop login ulang)', () =
     await until(() => fresh.all('run.start').some((c) => c.runId === next.id), 'run.start baru');
     fresh.emit(next.id, { type: 'run.completed', summary: 'ok' });
     await until(async () => (await statusOf(next.id)) === 'completed', 'completed');
+    fresh.close();
+  });
+
+  it('run berjalan tanpa laporan apa pun dari worker baru: gagal worker_replaced dalam masa tunggu putus', async () => {
+    const old = await registerWorker('PC Ganti diam');
+    await old.connect();
+    const project = await createProject(old.deviceId, 'Project Ganti diam');
+    const run = await startRun(await conversationIn(project.id));
+    await until(() => old.all('run.start').some((c) => c.runId === run.id), 'run.start');
+    await until(async () => (await statusOf(run.id)) === 'running', 'running');
+
+    const fresh = await registerWorker('PC Ganti diam');
+    old.close();
+    // Worker baru online tetapi tidak mengirim runs.active (mis. worker versi lama): online saja tidak cukup.
+    await fresh.connect();
+    const started = Date.now();
+    await until(async () => (await statusOf(run.id)) === 'failed', 'gagal dalam masa tunggu', 5000);
+    expect(Date.now() - started).toBeLessThan(5000);
+    expect((await getRun(run.id)).error).toMatchObject({ code: 'worker_replaced' });
+    fresh.close();
+  });
+
+  it('worker baru memegang run (proses sama, sesi baru): run berlanjut dan selesai', async () => {
+    const old = await registerWorker('PC Ganti sesi');
+    await old.connect();
+    const project = await createProject(old.deviceId, 'Project Ganti sesi');
+    const run = await startRun(await conversationIn(project.id));
+    await until(() => old.all('run.start').some((c) => c.runId === run.id), 'run.start');
+    await until(async () => (await statusOf(run.id)) === 'running', 'running');
+
+    const fresh = await registerWorker('PC Ganti sesi');
+    old.close();
+    await fresh.connect();
+    fresh.active([run.id]);
+    // Lebih lama dari masa tunggu putus (400 ms): run tetap berjalan.
+    await sleep(700);
+    expect(await statusOf(run.id)).toBe('running');
+    fresh.emit(run.id, { type: 'run.completed', summary: 'lanjut' });
+    await until(async () => (await statusOf(run.id)) !== 'running', 'selesai');
+    expect((await getRun(run.id)).error).toBeNull();
     fresh.close();
   });
 });

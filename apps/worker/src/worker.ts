@@ -263,11 +263,20 @@ export async function startWorker(options: WorkerOptions): Promise<RunningWorker
     });
   link.onState((state) => {
     pushStatus();
-    // Koneksi pulih: kirim event run yang tertahan selama putus, lalu laporkan hasil in_place yang menunggu
-    // keputusan (termasuk run yang terputus karena worker dimulai ulang).
+    // Koneksi pulih: kirim event run yang tertahan selama putus, laporkan hasil in_place yang menunggu keputusan
+    // (termasuk run yang terputus karena worker dimulai ulang), lalu daftar run yang dipegang worker ini: run yang
+    // ditunggu gateway tetapi tidak ada di daftar langsung diakhiri (worker dimulai ulang atau diganti).
     if (state === 'connected') {
       coordinator.flushAll();
-      void coordinator.reportPending();
+      void coordinator
+        .reportPending()
+        .catch((error: unknown) => log(`laporan workspace.pending gagal: ${String(error)}`))
+        .then(() =>
+          link.sendRunsActive({
+            type: 'runs.active',
+            runIds: coordinator.activeRunIds.slice(0, 100),
+          }),
+        );
     }
   });
   link.onSession((session) => {

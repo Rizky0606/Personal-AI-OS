@@ -747,6 +747,36 @@ describe('jaring pengaman, perbaikan aios-ui, dan waktu', () => {
     expect((await storedEvents(run.id)).map((e) => e.type)).not.toContain('memory.suggested');
   });
 
+  it('"usulkan jadwal…" tanpa tool jadwal: schedule.suggested sebelum run.completed; tool berhasil: tidak ada', async () => {
+    answer('Belum ada usulan jadwal.');
+    const conv = await createConversation();
+    const { run } = await send(
+      conv.id,
+      'Usulkan jadwal setiap Senin jam 08.00 untuk ringkasan berita. Ajukan sebagai usulan.',
+    );
+    await finalRun(run.id);
+    const events = await storedEvents(run.id);
+    const types = events.map((e) => e.type);
+    expect(events).toContainEqual({
+      type: 'schedule.suggested',
+      text: 'Usulkan jadwal setiap Senin jam 08.00 untuk ringkasan berita.',
+    });
+    expect(types.indexOf('schedule.suggested')).toBeLessThan(types.indexOf('run.completed'));
+
+    hermes.onRequest((s) => {
+      s.toolProgress({ tool: 'mcp_aios_schedule_propose', status: 'running', toolCallId: 's1' });
+      s.toolProgress({ tool: 'mcp_aios_schedule_propose', status: 'completed', toolCallId: 's1' });
+      s.delta('Usulan jadwal dibuat.');
+      s.finish();
+      s.done();
+    });
+    const proposed = await send(conv.id, 'Jadwalkan pengingat setiap Jumat jam 16.00');
+    await finalRun(proposed.run.id);
+    expect((await storedEvents(proposed.run.id)).map((e) => e.type)).not.toContain(
+      'schedule.suggested',
+    );
+  });
+
   it('blok aios-ui beralias (chartType/title/max) disimpan dalam bentuk valid', async () => {
     const bad =
       '{"version":1,"components":[{"id":"pop","type":"chart","chartType":"bar","title":"Skor","labels":["A","B"],"values":[9,8],"max":10}]}';

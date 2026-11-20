@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildActivity, formatElapsed, truncateTarget } from './activity';
+import { buildActivity, formatElapsed, stepLabel, toolKindOf, truncateTarget } from './activity';
 import { newLiveRun, type LiveRun, type ToolStep } from './liveRun';
 
 const T0 = Date.parse('2026-10-29T10:00:00Z');
@@ -201,7 +201,8 @@ describe('buildActivity: aksi saat ini dan langkah', () => {
     expect(label('read')).toBe('Membaca berkas');
     expect(label('grep')).toBe('Mencari di kode');
     expect(label('web_search')).toBe('Mencari di web');
-    expect(label('fetch')).toBe('Mencari di web');
+    expect(label('fetch')).toBe('Membaca halaman web');
+    expect(label('eval')).toBe('Menjalankan kode');
     expect(label('browser')).toBe('Membuka halaman');
     expect(label('browser_navigate')).toBe('Membuka halaman');
     expect(label('task')).toBe('Menugaskan subagent');
@@ -209,7 +210,8 @@ describe('buildActivity: aksi saat ini dan langkah', () => {
     expect(label('BASH')).toBe('Menjalankan perintah');
     expect(label('mcp__github__create_issue')).toBe('Menjalankan alat: mcp__github__create_issue');
     expect(label('mcp__aios_tools_web_search')).toBe('Mencari di web');
-    expect(label('mcp__aios_tools__web_read')).toBe('Mencari di web');
+    expect(label('mcp__aios_tools__web_read')).toBe('Membaca halaman web');
+    expect(label('mcp__aios_tools_web_read')).toBe('Membaca halaman web');
     expect(label('mcp__aios_tools_memory_list')).toBe('Membaca data AIOS');
     expect(label('mcp__aios_tools_space_search')).toBe('Membaca data AIOS');
     expect(label('mcp__aios_tools__task_list')).toBe('Membaca data AIOS');
@@ -221,6 +223,14 @@ describe('buildActivity: aksi saat ini dan langkah', () => {
     expect(label('mcp__konektor_notion_search')).toBe('Memakai konektor');
     expect(label('mcp__aios_tools_lain')).toBe('Menjalankan alat: mcp__aios_tools_lain');
     expect(label('')).toBe('Menjalankan alat');
+  });
+
+  it('web_read gagal berlabel pembacaan halaman, bukan pencarian; eval bukan perintah shell', () => {
+    expect(stepLabel('mcp__aios_tools_web_read', 'error')).toBe('Pembacaan halaman web gagal');
+    expect(stepLabel('mcp__aios_tools_web_search', 'error')).toBe('Pencarian web gagal');
+    expect(stepLabel('eval', 'ok')).toBe('Kode selesai dijalankan');
+    expect(stepLabel('eval', 'error')).toBe('Eksekusi kode gagal');
+    expect(toolKindOf('eval')).toBe('code');
   });
 
   it('steps berurutan dengan kalimat menurut status, durasi, dan target dipotong', () => {
