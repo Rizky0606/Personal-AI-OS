@@ -60,7 +60,7 @@ Tema mengikuti sistem secara default, dengan pilihan manual terang atau gelap. A
 ## Tipografi
 
 - **UI:** Geist, berat 400, 500, 600 saja (woff2 variabel, di-self-host di `apps/desktop/src/fonts`, lisensi OFL disertakan). Cadangan: IBM Plex Sans.
-- **Kode, path, angka teknis:** Geist Mono. Cadangan: IBM Plex Mono. Android memakai Geist dan Geist Mono statis (ttf di `apps/android/app/src/main/res/font`, lisensi OFL di `apps/android/licenses`); IBM Plex tidak lagi dibundel di Android.
+- **Kode, path, angka teknis:** Geist Mono. Cadangan: IBM Plex Mono. Ligatur dan alternatif kontekstual dimatikan untuk semua teks mono (`--font-mono--font-feature-settings: 'liga' 0, 'calt' 0, 'dlig' 0`, dipakai `font-mono` dan `code`/`kbd`/`samp`/`pre`) supaya perintah seperti `npm test -- --run` tampil persis. Android memakai Geist dan Geist Mono statis (ttf di `apps/android/app/src/main/res/font`, lisensi OFL di `apps/android/licenses`); IBM Plex tidak lagi dibundel di Android.
 - Angka di tabel, diff stat, dan kuota memakai `font-variant-numeric: tabular-nums`.
 - Lebar baca teks chat maksimal 72 karakter.
 

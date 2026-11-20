@@ -186,6 +186,7 @@
   --color-error-on: var(--aios-error-on);
   --font-sans: 'Geist', 'IBM Plex Sans', sans-serif;
   --font-mono: 'Geist Mono', 'IBM Plex Mono', monospace;
+  --font-mono--font-feature-settings: 'liga' 0, 'calt' 0, 'dlig' 0;
   --text-caption: 11px;
   --text-caption--line-height: 1.4;
   --text-caption--font-weight: 400;
