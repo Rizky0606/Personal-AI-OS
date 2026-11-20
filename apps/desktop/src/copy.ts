@@ -1511,6 +1511,11 @@ export const copy = {
       note: 'Belum tersimpan di memori. Simpan lewat Ingat agar dipakai di chat lain.',
       action: 'Ingat ini…',
     },
+    /** Jaring pengaman jadwal (event `schedule.suggested`) di bawah jawaban. */
+    scheduleSuggestion: {
+      note: 'Belum ada jadwal atau usulan jadwal yang dibuat. Buat jadwalnya sendiri di layar Jadwal.',
+      action: 'Buka Jadwal',
+    },
     workspace: {
       inPlace: (branch: string) => `Di branch ${branch}`,
       worktree: (branch: string) => `Di salinan ${branch}`,

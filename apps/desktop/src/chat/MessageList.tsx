@@ -1,6 +1,7 @@
 import { rememberFactFrom, type Message, type QuestionAnswer } from '@aios/contracts';
 import type { RoleInfo } from '../api/gateway';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from '@tanstack/react-router';
 import {
   useLayoutEffect,
   useMemo,
@@ -221,6 +222,28 @@ function MemorySuggestion({
   );
 }
 
+/**
+ * Jaring pengaman jadwal (event `schedule.suggested`): pemilik minta jadwal dibuat atau diusulkan tetapi tidak ada
+ * usulan yang bisa disetujui. Menunjuk layar Jadwal; tidak membuat apa pun sendiri.
+ */
+function ScheduleSuggestion({ text }: { text: string }) {
+  const navigate = useNavigate();
+  return (
+    <div
+      role="note"
+      className="flex flex-wrap items-center gap-3 rounded-panel border border-border bg-surface px-3 py-2 text-ui"
+    >
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="text-text-2">{copy.chat.scheduleSuggestion.note}</span>
+        <span className="break-words text-text">{text}</span>
+      </span>
+      <Button variant="secondary" onClick={() => void navigate({ to: '/schedules' })}>
+        {copy.chat.scheduleSuggestion.action}
+      </Button>
+    </div>
+  );
+}
+
 function liveParts(live: LiveRun): AssistantPart[] {
   return [
     ...live.tools.map((tool): AssistantPart => ({ type: 'tool', ...tool })),
@@ -386,6 +409,9 @@ export function MessageList({
                   {finished?.memorySuggestion && message.runId === finished.runId ? (
                     <MemorySuggestion text={finished.memorySuggestion} onRemember={setToRemember} />
                   ) : null}
+                  {finished?.scheduleSuggestion && message.runId === finished.runId ? (
+                    <ScheduleSuggestion text={finished.scheduleSuggestion} />
+                  ) : null}
                   <SkillProposalCards
                     conversationId={message.conversationId}
                     messageId={message.id}
@@ -410,9 +436,16 @@ export function MessageList({
             streaming={streaming}
             now={now}
             footer={
-              // Run sudah selesai tetapi tampilan streaming belum dilepas: tawaran Ingat langsung terlihat.
-              !streaming && live.memorySuggestion ? (
-                <MemorySuggestion text={live.memorySuggestion} onRemember={setToRemember} />
+              // Run sudah selesai tetapi tampilan streaming belum dilepas: tawaran Ingat/Jadwal langsung terlihat.
+              !streaming && (live.memorySuggestion || live.scheduleSuggestion) ? (
+                <>
+                  {live.memorySuggestion ? (
+                    <MemorySuggestion text={live.memorySuggestion} onRemember={setToRemember} />
+                  ) : null}
+                  {live.scheduleSuggestion ? (
+                    <ScheduleSuggestion text={live.scheduleSuggestion} />
+                  ) : null}
+                </>
               ) : undefined
             }
           />

@@ -712,6 +712,56 @@ describe('ChatScreen: ingat ini', () => {
     runs.release(open);
   });
 
+  it('schedule.suggested: kartu di bawah jawaban, Buka Jadwal pindah ke layar Jadwal', async () => {
+    const open = uid();
+    const request = 'Usulkan jadwal setiap Senin jam 08.00 untuk ringkasan berita.';
+    const mine = message({ author: 'user', text: request, runId: open });
+    const reply = message({
+      author: 'assistant',
+      agentRole: 'general',
+      runId: open,
+      text: 'Belum ada usulan.',
+    });
+    api.listMessages.mockResolvedValueOnce(page(mine)).mockResolvedValue(page(mine, reply));
+    api.getRun.mockResolvedValue(run({ id: open, status: 'running' }));
+    const user = userEvent.setup();
+    const { router } = await renderScreen(<ChatScreen conversationId={CONV} />);
+    await waitFor(() => expect(runs.get(open)).toBeDefined());
+    act(() => {
+      emit(`run:${open}`, {
+        type: 'message.delta',
+        messageId: reply.id,
+        text: 'Belum ada usulan.',
+      });
+      emit(`run:${open}`, { type: 'schedule.suggested', text: request });
+      emit(`run:${open}`, { type: 'run.completed', summary: 'Belum ada usulan.' });
+      emit(`run:${open}`, { type: 'run.status', status: 'completed' });
+    });
+
+    const action = await screen.findByRole('button', { name: copy.chat.scheduleSuggestion.action });
+    const card = action.closest('[role="note"]')!;
+    expect(card).toHaveTextContent(copy.chat.scheduleSuggestion.note);
+    expect(card).toHaveTextContent(request);
+    await user.click(action);
+    await waitFor(() => expect(router.state.location.pathname).toBe('/schedules'));
+    runs.release(open);
+  });
+
+  it('tanpa schedule.suggested tidak ada kartu Jadwal', async () => {
+    api.listMessages.mockResolvedValue(
+      page(
+        message({ author: 'user', text: 'Halo', runId: RUN_1 }),
+        message({ author: 'assistant', agentRole: 'general', runId: RUN_1, text: 'Hai.' }),
+      ),
+    );
+    api.getRun.mockResolvedValue(run({ id: RUN_1, status: 'completed' }));
+    await renderScreen(<ChatScreen conversationId={CONV} />);
+    await screen.findByText('Hai.');
+    expect(
+      screen.queryByRole('button', { name: copy.chat.scheduleSuggestion.action }),
+    ).not.toBeInTheDocument();
+  });
+
   it('Ingat di pesan "tolong ingat bahwa…" berisi fakta ringkas, pesan lain apa adanya', async () => {
     api.listMessages.mockResolvedValue(
       page(
