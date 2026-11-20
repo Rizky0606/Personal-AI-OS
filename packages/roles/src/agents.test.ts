@@ -64,6 +64,25 @@ describe('selectSkills', () => {
   });
 
   it.each([
+    'perbaiki paginate: item terakhir di setiap halaman hilang',
+    'tambahkan validasi jumlah item per halaman di pageCount',
+    'baca halaman catatan rilisnya lalu perbarui versi vitest',
+    'ringkas isi halaman 3 dari dokumen ini',
+  ])('kata halaman tanpa sinyal tampilan (%s) tidak memuat paket frontend', (text) => {
+    expect(pick(text).packs).not.toContain('frontend');
+  });
+
+  it.each([
+    'perbaiki halaman profil yang berantakan',
+    'buat halaman web untuk daftar tugas',
+    'ganti judul halaman di App.tsx menjadi Daftar Tugas',
+    'ubah judul halaman pada index.html',
+    'rapikan halaman beranda pakai React',
+  ])('halaman disertai sinyal layar/framework/berkas UI (%s) memuat paket frontend', (text) => {
+    expect(pick(text).packs).toContain('frontend');
+  });
+
+  it.each([
     'buat landing page produk',
     'rapikan web page profil',
     'pecah page component jadi dua',
