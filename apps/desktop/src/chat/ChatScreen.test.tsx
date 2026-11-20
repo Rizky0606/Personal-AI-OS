@@ -378,6 +378,72 @@ describe('ChatScreen: ubah pesan terakhir dan jalankan ulang', () => {
     runs.release(RUN_2);
   });
 
+  it('setelah pensil dipakai, pesan baru tampil sebagai gelembung biasa; pensil tetap bisa dipakai lagi', async () => {
+    const data = history();
+    api.listMessages.mockResolvedValue(data);
+    api.getRun.mockResolvedValue(run({ id: RUN_1, status: 'completed' }));
+    const revised = message({ author: 'user', text: 'Pertanyaan revisi', runId: RUN_2 });
+    api.editMessage.mockResolvedValue({ message: revised, run: run({ id: RUN_2 }) });
+    const RUN_3 = uid();
+    api.sendMessage.mockResolvedValue({
+      message: message({ author: 'user', text: 'Pertanyaan berikutnya', runId: RUN_3 }),
+      run: run({ id: RUN_3 }),
+    });
+    const user = userEvent.setup();
+    await renderScreen(<ChatScreen conversationId={CONV} />);
+
+    // Pensil → ubah → kirim.
+    await user.click(await screen.findByRole('button', { name: copy.chat.editLast }));
+    const editor = screen.getByRole('textbox', { name: copy.chat.editLabel });
+    await user.clear(editor);
+    await user.type(editor, 'Pertanyaan revisi{Enter}');
+    expect(await screen.findByText('Pertanyaan revisi')).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: copy.chat.editLabel })).not.toBeInTheDocument();
+    act(() => {
+      emit(`run:${RUN_2}`, { type: 'run.completed', summary: 'Oke.' });
+      emit(`run:${RUN_2}`, { type: 'run.status', status: 'completed' });
+    });
+
+    // Pesan biasa sesudahnya: gelembung baru tidak boleh terbuka sebagai editor.
+    await user.type(field(), 'Pertanyaan berikutnya{Enter}');
+    expect(await screen.findByText('Pertanyaan berikutnya')).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: copy.chat.editLabel })).not.toBeInTheDocument();
+    act(() => {
+      emit(`run:${RUN_3}`, { type: 'run.completed', summary: 'Oke.' });
+      emit(`run:${RUN_3}`, { type: 'run.status', status: 'completed' });
+    });
+
+    // Pensil lagi membuka editor tepat di pesan terakhir.
+    await user.click(await screen.findByRole('button', { name: copy.chat.editLast }));
+    expect(screen.getByRole('textbox', { name: copy.chat.editLabel })).toHaveValue(
+      'Pertanyaan berikutnya',
+    );
+    runs.release(RUN_3);
+  });
+
+  it('pensil lalu Batal: pesan baru sesudahnya tidak terbuka sebagai editor', async () => {
+    api.listMessages.mockResolvedValue(history());
+    api.getRun.mockResolvedValue(run({ id: RUN_1, status: 'completed' }));
+    api.sendMessage.mockResolvedValue({
+      message: message({ author: 'user', text: 'Pesan baru', runId: RUN_2 }),
+      run: run({ id: RUN_2 }),
+    });
+    const user = userEvent.setup();
+    await renderScreen(<ChatScreen conversationId={CONV} />);
+
+    await user.click(await screen.findByRole('button', { name: copy.chat.editLast }));
+    await user.click(screen.getByRole('button', { name: copy.chat.cancel }));
+    await user.type(field(), 'Pesan baru{Enter}');
+
+    expect(await screen.findByText('Pesan baru')).toBeInTheDocument();
+    act(() => {
+      emit(`run:${RUN_2}`, { type: 'run.completed', summary: 'Oke.' });
+      emit(`run:${RUN_2}`, { type: 'run.status', status: 'completed' });
+    });
+    await screen.findByRole('button', { name: copy.chat.editLast });
+    expect(screen.queryByRole('textbox', { name: copy.chat.editLabel })).not.toBeInTheDocument();
+  });
+
   it('Kirim ulang di bawah pesan terakhir mengirim teks yang sama tanpa menyentuh draf', async () => {
     api.listMessages.mockResolvedValue(history());
     api.getRun.mockResolvedValue(run({ id: RUN_1, status: 'completed' }));

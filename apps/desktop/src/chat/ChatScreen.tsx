@@ -147,6 +147,7 @@ function ChatView({ conversationId }: { conversationId: string | undefined }) {
               onOpenGit={chat.openGit}
               editableUserId={chat.editableUserId}
               editLastRequest={chat.editLastRequest}
+              onEditLastHandled={chat.editLastHandled}
               onResendLast={chat.resendLast}
               canModify={chat.canModify}
               onEditMessage={chat.editMessage}

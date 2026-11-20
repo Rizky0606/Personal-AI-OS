@@ -52,8 +52,10 @@ export interface MessageListProps {
   onOpenGit?: (() => void) | undefined;
   /** Pesan pengguna terakhir yang boleh dikirim ulang (null saat jawaban berjalan). */
   editableUserId?: string | null;
-  /** Permintaan membuka editor pesan pengguna terakhir (pensil "Ubah pesan terakhir"); 0 = belum pernah. */
-  editLastRequest?: number;
+  /** Id pesan yang diminta membuka editor (pensil "Ubah pesan terakhir"); null bila tidak ada permintaan. */
+  editLastRequest?: string | null;
+  /** Gelembung sasaran sudah membuka editornya; permintaan dikosongkan agar tidak terpakai ulang. */
+  onEditLastHandled?: () => void;
   onResendLast?: () => void;
   /** Ubah dan hapus pesan hanya saat tidak ada jawaban yang berjalan. */
   canModify?: boolean;
@@ -277,7 +279,8 @@ export function MessageList({
   failedRunId = null,
   onOpenGit,
   editableUserId = null,
-  editLastRequest = 0,
+  editLastRequest = null,
+  onEditLastHandled,
   onResendLast,
   canModify = false,
   onEditMessage,
@@ -353,7 +356,8 @@ export function MessageList({
                   : undefined
               }
               onResend={message.id === editableUserId ? onResendLast : undefined}
-              editRequest={message.id === editableUserId ? editLastRequest : undefined}
+              editRequested={editLastRequest !== null && message.id === editLastRequest}
+              onEditRequestHandled={onEditLastHandled}
               onDelete={modifiable ? () => setToDelete(message.id) : undefined}
               // Dialog Ingat berisi fakta ringkas ("Pemilik suka …") bila pesannya permintaan mengingat.
               onRemember={() => {
