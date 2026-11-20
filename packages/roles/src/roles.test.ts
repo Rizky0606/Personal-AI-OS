@@ -379,6 +379,16 @@ describe('bundel system prompt', () => {
     expect(rule).toMatch(/tombol Ingat/);
     expect(rule).toMatch(/layar Jadwal/);
   });
+
+  it('agent umum: permintaan "usulkan/propose" tanpa alat usulan tidak boleh disuruh disetujui di aplikasi', () => {
+    const prompt = buildBundle(registry, 'general').systemPrompt;
+    const rule = prompt.split('\n').find((line) => line.includes('"usulkan"')) ?? '';
+    expect(rule).toMatch(/propose/);
+    expect(rule).toMatch(/memory_propose/);
+    expect(rule).toMatch(/schedule_propose/);
+    expect(rule).toMatch(/jangan menyuruh "setujui di aplikasi"/);
+    expect(rule).toMatch(/layar Jadwal/);
+  });
 });
 
 describe('skill tersedia lewat indeks, bukan ditempel utuh (P9)', () => {
