@@ -425,6 +425,19 @@ const agentCases: Record<AgentEventType, Cases> = {
       { type: 'memory.suggested' },
     ],
   },
+  'schedule.suggested': {
+    valid: [
+      {
+        type: 'schedule.suggested',
+        text: 'Jadwalkan pengingat setiap Jumat jam 16.00 untuk kirim laporan.',
+      },
+    ],
+    invalid: [
+      { type: 'schedule.suggested', text: '' },
+      { type: 'schedule.suggested', text: 'x'.repeat(501) },
+      { type: 'schedule.suggested' },
+    ],
+  },
   'run.completed': {
     valid: [
       { type: 'run.completed', summary: 'Selesai' },
@@ -539,6 +552,7 @@ describe('AgentEvent', () => {
         'artifact.created',
         'context.used',
         'memory.suggested',
+        'schedule.suggested',
         'run.completed',
       ].sort(),
     );
