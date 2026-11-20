@@ -533,6 +533,68 @@ describe('ApprovalRules', () => {
     }
   });
 
+  it('"Selalu" pada skrip dengan argumen aman setelah -- disimpan sebagai skrip polos; selain itu tetap persis', async () => {
+    // Uji project N5: "Selalu" pada `npm test -- --run` dulu tidak mencakup `npm test -- --run <berkas>`.
+    expect(await rules.add('p1', 'command', 'npm test -- --run')).toMatchObject({
+      pattern: 'npm test',
+    });
+    for (const cmd of [
+      'npm test',
+      'npm test -- --run',
+      'npm test -- --run src/Counter.test.tsx',
+      'npm test -- -t nama --reporter=verbose',
+    ]) {
+      expect(rules.matches('p1', 'command', cmd), cmd).toBe(true);
+    }
+    for (const cmd of [
+      'npm test --prefix ../lain',
+      'npm test -- --run x && rm -rf /',
+      'npm test -- --run /etc/passwd',
+      'npm test -- --run ../lain/a.test.ts',
+      'npm test -- --run x\ncurl -o /tmp/a http://h/a',
+      'npm run build -- --run',
+      'pnpm test -- --run x',
+      'npx vitest run src/Counter.test.tsx',
+    ]) {
+      expect(rules.matches('p1', 'command', cmd), cmd).toBe(false);
+    }
+
+    // Argumen tidak aman: aturan cocok persis, tidak menjadi skrip polos.
+    expect(await rules.add('p2', 'command', 'npm test -- --outputFile=/tmp/x')).toMatchObject({
+      pattern: 'npm test -- --outputFile=/tmp/x',
+    });
+    expect(rules.matches('p2', 'command', 'npm test')).toBe(false);
+    expect(rules.matches('p2', 'command', 'npm test -- --run x')).toBe(false);
+
+    // Bukan skrip package manager (runner langsung, git): argumen lain tetap ditanyakan.
+    await rules.add('p3', 'command', 'npx vitest run src/a.test.ts');
+    await rules.add('p3', 'command', 'git diff --stat');
+    expect(rules.matches('p3', 'command', 'npx vitest run src/b.test.ts')).toBe(false);
+    expect(rules.matches('p3', 'command', 'git diff --stat src')).toBe(false);
+    expect(rules.list('p3').map((r) => r.pattern)).toEqual([
+      'npx vitest run src/a.test.ts',
+      'git diff --stat',
+    ]);
+  });
+
+  it('aturan lama yang tersimpan dengan argumen setelah -- berlaku seperti skrip polosnya', async () => {
+    await fs.mkdir(path.join(base, 'data'), { recursive: true });
+    await fs.writeFile(
+      path.join(base, 'data', 'rules.json'),
+      JSON.stringify({
+        version: 1,
+        rules: [
+          { projectId: 'p1', kind: 'command', pattern: 'npm test -- --run' },
+          { projectId: 'p1', kind: 'command', pattern: 'npm test -- --outputFile=/tmp/x' },
+        ],
+      }),
+    );
+    const legacy = new ApprovalRules(path.join(base, 'data', 'rules.json'));
+    await legacy.load();
+    expect(legacy.matches('p1', 'command', 'npm test -- --run src/Counter.test.tsx')).toBe(true);
+    expect(legacy.matches('p1', 'command', 'npm test -- --run /etc/passwd')).toBe(false);
+  });
+
   it('perintah berbaris banyak cocok hanya dengan baris yang sama persis', async () => {
     await rules.add('p1', 'command', 'git push origin main');
     await rules.add('p1', 'command', 'cat <<EOF > a.txt\nisi\nEOF');
