@@ -986,7 +986,7 @@ describe('RunCoordinator: mode in_place (langsung di branch aktif)', () => {
     expect(await fs.readFile(path.join(repo, 'math.js'), 'utf8')).toBe('diubah pemilik\n');
   });
 
-  it('pertanyaan baca saja tidak mengunci repo; penulis kedua ditolak otomatis; pembaca dilepas tanpa tinjauan', async () => {
+  it('pertanyaan baca saja tidak mengunci repo; penulis kedua ditolak otomatis dengan alasan; pembaca dilepas tanpa tinjauan', async () => {
     coordinator.start(inPlace());
     await until(() => adapter.handles.length === 1, 'run A dimulai');
     const reader = adapter.handle;
@@ -1001,19 +1001,6 @@ describe('RunCoordinator: mode in_place (langsung di branch aktif)', () => {
       detail: 'Path: math.test.js\nContent:\nx',
     });
     await until(() => types(RUN_2).includes('approval.requested'), 'izin B ditanyakan');
-
-    // A kini meminta tulis: ditolak tanpa bertanya, dengan penjelasan sekali.
-    reader.events.push({
-      type: 'approval.requested',
-      approvalId: APPROVAL_2,
-      kind: 'command',
-      detail: 'npm install',
-    });
-    await until(() => reader.resolved.length === 1, 'A ditolak otomatis');
-    expect(reader.resolved[0]).toEqual([APPROVAL_2, 'deny', undefined]);
-    expect(reader.steered).toHaveLength(1);
-    expect(types(RUN)).not.toContain('approval.requested');
-
     await coordinator.resolveApproval({
       type: 'approval.resolve',
       runId: RUN_2,
@@ -1021,6 +1008,36 @@ describe('RunCoordinator: mode in_place (langsung di branch aktif)', () => {
       decision: 'allow',
       remember: false,
     });
+    expect(writer.resolved).toEqual([[APPROVAL, 'allow', false]]);
+
+    // B kini penulis: A meminta tulis dan ditolak tanpa bertanya, dengan penjelasan sekali ke agent dan alasan yang
+    // tampil di langkah tool-nya (bukan sekadar "denied by user" dari omp).
+    reader.events.push({ type: 'tool.started', toolCallId: 'tool-a', name: 'bash' });
+    reader.events.push({
+      type: 'approval.requested',
+      approvalId: APPROVAL_2,
+      kind: 'command',
+      detail: 'npm install',
+      toolCallId: 'tool-a',
+    });
+    await until(() => reader.resolved.length === 1, 'A ditolak otomatis');
+    expect(reader.resolved[0]).toEqual([APPROVAL_2, 'deny', undefined]);
+    expect(reader.steered).toHaveLength(1);
+    expect(types(RUN)).not.toContain('approval.requested');
+    reader.events.push({
+      type: 'tool.finished',
+      toolCallId: 'tool-a',
+      status: 'error',
+      durationMs: 1,
+    });
+    await until(() => types(RUN).includes('tool.finished'), 'langkah A selesai');
+    expect(types(RUN).slice(-2)).toEqual(['tool.output', 'tool.finished']);
+    expect(events(RUN).find((e) => e.type === 'tool.output')).toMatchObject({
+      toolCallId: 'tool-a',
+      stream: 'stderr',
+      chunk: expect.stringContaining('run lain sedang mengubah folder project') as string,
+    });
+
     await fs.writeFile(path.join(repo, 'math.test.js'), "require('node:test');\n");
     // A selesai: perubahan di folder milik B, jadi A tidak membuat diff dan tidak menunggu tinjauan.
     reader.events.push({ type: 'run.completed', summary: 'Penjelasan' });
@@ -1036,7 +1053,7 @@ describe('RunCoordinator: mode in_place (langsung di branch aktif)', () => {
     expect(worktrees.get(RUN_2)).toBeDefined();
   });
 
-  it('izin tulis yang ditolak pemilik melepas kunci repo; run lain bisa mulai tanpa menunggu run ini selesai', async () => {
+  it('izin tulis yang menunggu tidak mengunci repo; yang lebih dulu diizinkan menjadi penulis, izin run lain yang menunggu ditolak otomatis', async () => {
     coordinator.start(inPlace());
     await until(() => adapter.handles.length === 1, 'run A dimulai');
     const a = adapter.handle;
@@ -1045,15 +1062,58 @@ describe('RunCoordinator: mode in_place (langsung di branch aktif)', () => {
       approvalId: APPROVAL,
       kind: 'command',
       detail: 'npm install',
+      toolCallId: 'tool-a',
     });
     await until(() => types().includes('approval.requested'), 'izin A ditanyakan');
 
-    // Selama izin tulis A menunggu, A memegang kunci: run in_place lain ditolak workspace_busy.
+    // Uji project N6: dulu izin yang baru DIMINTA sudah mengunci repo, jadi run lain ditolak workspace_busy atau
+    // penulisannya ditolak diam-diam lalu berakhir "Selesai" tanpa perubahan.
     coordinator.start(inPlace({ runId: RUN_2 }));
-    await until(() => types(RUN_2).includes('error'), 'B ditolak');
-    expect(events(RUN_2)[0]).toMatchObject({ type: 'error', code: 'workspace_busy' });
-    await until(() => !coordinator.activeRunIds.includes(RUN_2), 'B dilepas');
+    await until(() => adapter.handles.length === 2, 'B dimulai walau izin A menunggu');
+    const b = adapter.handle;
+    b.events.push({
+      type: 'approval.requested',
+      approvalId: APPROVAL_2,
+      kind: 'file_write',
+      detail: 'Path: math.test.js\nContent:\nx',
+    });
+    await until(() => types(RUN_2).includes('approval.requested'), 'izin B ditanyakan');
+    expect(b.resolved).toEqual([]);
 
+    // B diizinkan lebih dulu dan menjadi penulis. Izin A yang menunggu tidak akan pernah bisa diberikan: ditolak
+    // sekarang, penolakannya diteruskan (panel izin tertutup), agent diberi tahu, dan langkahnya diberi alasan.
+    await coordinator.resolveApproval({
+      type: 'approval.resolve',
+      runId: RUN_2,
+      approvalId: APPROVAL_2,
+      decision: 'allow',
+      remember: false,
+    });
+    await until(() => a.resolved.length === 1, 'izin A ditolak otomatis');
+    expect(a.resolved[0]).toEqual([APPROVAL, 'deny', undefined]);
+    await until(() => types().includes('approval.resolved'), 'penolakan A diteruskan');
+    expect(a.steered).toHaveLength(1);
+    a.events.push({ type: 'tool.finished', toolCallId: 'tool-a', status: 'error', durationMs: 1 });
+    await until(() => types().includes('tool.finished'), 'langkah A selesai');
+    expect(types().slice(-2)).toEqual(['tool.output', 'tool.finished']);
+
+    // B penulis yang berjalan: run in_place ketiga ditolak workspace_busy.
+    const third = '0192f0c4-7a1b-7c2d-aaaa-4a5b6c7d8e92';
+    coordinator.start(inPlace({ runId: third }));
+    await until(() => types(third).includes('error'), 'run ketiga ditolak');
+    expect(events(third)[0]).toMatchObject({ type: 'error', code: 'workspace_busy' });
+  });
+
+  it('izin tulis yang ditolak pemilik tidak mengunci repo; run lain bisa mulai tanpa menunggu run ini selesai', async () => {
+    coordinator.start(inPlace());
+    await until(() => adapter.handles.length === 1, 'run A dimulai');
+    adapter.handle.events.push({
+      type: 'approval.requested',
+      approvalId: APPROVAL,
+      kind: 'command',
+      detail: 'npm install',
+    });
+    await until(() => types().includes('approval.requested'), 'izin A ditanyakan');
     await coordinator.resolveApproval({
       type: 'approval.resolve',
       runId: RUN,

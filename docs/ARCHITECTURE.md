@@ -103,7 +103,7 @@ export interface RunHandle {
 ## Alur utama
 
 1. **Chat umum:** klien kirim pesan, gateway memilih agent dan skill, adapter Hermes mengalirkan jawaban, event disimpan dan disiarkan lewat WebSocket.
-2. **Run coding:** klien Windows membuat run, gateway menetapkan role, worker menyiapkan folder kerja (bawaan chat project: folder project di branch aktif setelah dicek bersih, tidak detached, dan tidak dipakai run lain; kartu kanban, armada, tim, jadwal, atau pilihan eksplisit: git worktree baru), mengirim `workspace.ready`, lalu menjalankan omp. Approval ditanyakan di aplikasi Windows, hasil berupa diff menunggu review; commit baru dibuat saat diterima.
+2. **Run coding:** klien Windows membuat run, gateway menetapkan role, worker menyiapkan folder kerja (bawaan chat project: folder project di branch aktif setelah dicek bersih, tidak detached, dan tidak dipakai run lain; kartu kanban, armada, tim, jadwal, atau pilihan eksplisit: git worktree baru), mengirim `workspace.ready`, lalu menjalankan omp. Approval ditanyakan di aplikasi Windows, hasil berupa diff menunggu review; commit baru dibuat saat diterima. Beberapa run `in_place` boleh membaca repo yang sama bersamaan; kunci tulis repo diambil worker saat izin tulis pertama sebuah run **diberikan** (bukan saat diminta), dan run lain di repo itu sejak saat itu hanya pembaca: izin tulisnya ditolak otomatis dengan alasan di langkahnya (rincian di SECURITY_OPS.md, "Folder kerja run coding").
 3. **Deep research:** gateway membuat job, research engine merencanakan sub-pertanyaan, mencari lewat SearXNG, membaca halaman, lalu menyusun laporan bersitasi.
 4. **Jadwal:** pg-boss memicu job sesuai cron, menjalankan prompt di Hermes atau research engine, menyimpan hasil, lalu mengirim notifikasi.
 

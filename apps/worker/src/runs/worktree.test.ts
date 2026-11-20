@@ -262,8 +262,13 @@ describe('WorktreeManager: mode in_place', () => {
       manager.openInPlace(RUN_B, repo),
     ]);
     expect(results.map((r) => r.status)).toEqual(['fulfilled', 'fulfilled']);
+    // canWrite hanya memeriksa: dua run yang izin tulisnya masih menunggu sama-sama masih bisa menjadi penulis.
+    expect(manager.canWrite(RUN_A)).toBe(true);
+    expect(manager.canWrite(RUN_B)).toBe(true);
+    expect(manager.isBystander(RUN_B)).toBe(false);
     expect(manager.claimWrite(RUN_A)).toBe(true);
     expect(manager.claimWrite(RUN_A)).toBe(true);
+    expect(manager.canWrite(RUN_B)).toBe(false);
     expect(manager.claimWrite(RUN_B)).toBe(false);
     // B berbagi folder dengan penulis: tanpa tinjauan; A tetap penulis biasa.
     expect(manager.isBystander(RUN_B)).toBe(true);

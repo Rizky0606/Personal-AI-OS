@@ -140,8 +140,9 @@ export class WorktreeManager {
   private readonly states = new Map<string, WorkspaceState>();
   private readonly removing = new Set<string>();
   /**
-   * Run in_place yang sudah meminta izin menulis (berkas atau perintah selain baca saja). Run in_place tanpa
-   * izin tulis adalah pembaca dan tidak mengunci repo (uji project 4f).
+   * Run in_place yang sudah mendapat izin menulis (berkas atau perintah selain baca saja), diberikan pemilik atau
+   * aturan. Run in_place tanpa izin tulis yang diberikan, termasuk yang izin tulisnya masih menunggu, adalah pembaca
+   * dan tidak mengunci repo (uji project 4f dan N6).
    */
   private readonly writers = new Set<string>();
   /**
@@ -243,10 +244,10 @@ export class WorktreeManager {
   /**
    * Run langsung di folder project, di branch aktif. Ditolak bila detached HEAD, bila folder punya perubahan yang
    * belum di-commit (berkas terlacak atau berkas baru yang tidak diabaikan git), atau bila repo yang sama dipegang
-   * run lain: run in_place yang sudah meminta izin tulis, run worktree yang berjalan, atau hasil in_place yang
-   * belum ditinjau. Run in_place yang hanya membaca tidak memegang kunci; begitu ia meminta izin tulis
-   * (`claimWrite`) ia menjadi penulis, kecuali repo itu sudah punya penulis lain. Mode rencana hanya membaca, jadi
-   * tidak diperiksa kebersihannya.
+   * run lain: run in_place yang sudah mendapat izin tulis, run worktree yang berjalan, atau hasil in_place yang
+   * belum ditinjau. Run in_place yang hanya membaca, atau yang izin tulisnya masih menunggu, tidak memegang kunci;
+   * begitu izin tulisnya diberikan (`claimWrite`) ia menjadi penulis, kecuali repo itu sudah punya penulis lain.
+   * Mode rencana hanya membaca, jadi tidak diperiksa kebersihannya.
    */
   async openInPlace(
     runId: string,
@@ -315,34 +316,40 @@ export class WorktreeManager {
   }
 
   /**
-   * Run meminta izin yang bisa mengubah berkas. Sinkron (tanpa await), jadi tidak bisa berselang dengan
-   * pemeriksaan kunci di openInPlace. Run in_place menjadi penulis bila repo-nya tidak punya penulis lain (run
-   * in_place lain yang sudah menulis atau hasil yang menunggu tinjauan); false berarti izin itu harus ditolak.
-   * Worktree selalu boleh: foldernya milik run itu sendiri.
+   * Run in_place masih bisa menjadi penulis repo-nya: belum pernah berbagi folder dengan penulis lain, dan tidak
+   * ada run in_place lain di repo itu yang sudah menulis atau hasilnya menunggu tinjauan. Tidak mengubah apa pun;
+   * dipakai saat izin tulis diminta (izin yang pasti ditolak tidak perlu ditanyakan ke pemilik). Worktree selalu
+   * boleh: foldernya milik run itu sendiri.
    */
-  claimWrite(runId: string): boolean {
+  canWrite(runId: string): boolean {
     const ws = this.active.get(runId);
     if (ws?.kind !== 'in_place' || this.writers.has(runId)) return true;
     // Pernah berbagi folder dengan penulis lain: base-nya tidak lagi mewakili isi folder, jadi tetap pembaca.
     if (this.bystanders.has(runId)) return false;
-    const readers: string[] = [];
     for (const other of this.active.values()) {
       if (other.runId === runId || other.repo !== ws.repo || other.planOnly) continue;
       if (other.kind !== 'in_place') continue;
       if (this.writers.has(other.runId) || this.states.get(other.runId) !== 'running') return false;
-      readers.push(other.runId);
     }
-    this.writers.add(runId);
-    for (const reader of readers) this.bystanders.add(reader);
     return true;
   }
 
   /**
-   * Run in_place kembali menjadi pembaca: semua izin tulisnya ditolak pemilik, jadi ia tidak pernah menulis dan
-   * tidak perlu memegang kunci repo sampai selesai. Hanya dipanggil bila belum ada izin tulis yang diberikan.
+   * Izin yang bisa mengubah berkas DIBERIKAN (pemilik atau aturan), bukan sekadar diminta. Sinkron (tanpa await),
+   * jadi tidak bisa berselang dengan pemeriksaan kunci di openInPlace. Run in_place menjadi penulis bila
+   * `canWrite`; run in_place lain yang sedang berjalan di repo itu menjadi pembaca yang berbagi folder
+   * (`isBystander`) dan tidak akan pernah mendapat izin tulis. False berarti izin itu harus ditolak.
    */
-  releaseWrite(runId: string): void {
-    if (this.active.get(runId)?.kind === 'in_place') this.writers.delete(runId);
+  claimWrite(runId: string): boolean {
+    if (!this.canWrite(runId)) return false;
+    const ws = this.active.get(runId);
+    if (ws?.kind !== 'in_place' || this.writers.has(runId)) return true;
+    this.writers.add(runId);
+    for (const other of this.active.values()) {
+      if (other.runId === runId || other.repo !== ws.repo || other.planOnly) continue;
+      if (other.kind === 'in_place') this.bystanders.add(other.runId);
+    }
+    return true;
   }
 
   /**
