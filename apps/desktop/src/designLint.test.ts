@@ -328,6 +328,32 @@ describe('lint desain', () => {
     expect(block).toContain('animation: none');
   });
 
+  it('setiap var(--x) tanpa cadangan di CSS desktop terdefinisi di token atau CSS aplikasi', () => {
+    // Variabel tak terdefinisi membuat warna jatuh ke teks biasa tanpa galat (mis. orb gagal tampak netral).
+    const defined = new Set([...cssText.matchAll(/(--[\w-]+)\s*:/g)].map((m) => m[1]));
+    const undefinedVars = sources
+      .filter((s) => s.file.endsWith('.css'))
+      .flatMap(({ file, text }) =>
+        [...stripComments(text).matchAll(/var\(\s*(--[\w-]+)\s*\)/g)]
+          .map((m) => m[1] ?? '')
+          .filter((name) => !defined.has(name))
+          .map((name) => `${file}: ${name}`),
+      );
+    expect(undefinedVars).toEqual([]);
+  });
+
+  it('orb dan bingkai composer memakai token status; orb gagal berbeda dari orb netral', () => {
+    const rule = (selector: string) =>
+      new RegExp(`${selector.replace(/[.[\]'=]/g, '\\$&')}\\s*\\{([^}]*)\\}`).exec(
+        stylesCss,
+      )?.[1] ?? '';
+    expect(rule('.aios-agent-orb-error')).toContain('var(--aios-error)');
+    expect(rule('.aios-agent-orb')).toContain('var(--aios-accent)');
+    expect(rule(".aios-composer-frame[data-phase='error']")).toContain('var(--aios-error)');
+    for (const state of ['thinking', 'tool', 'writing', 'done'])
+      expect(rule(`.aios-agent-orb-${state}`)).toContain(`var(--aios-${state})`);
+  });
+
   it('font hanya Geist, Geist Mono, dan IBM Plex (cadangan); tanpa font-serif atau keluarga lain', () => {
     expect(hits(/\bfont-serif\b/, /\.tsx$/)).toEqual([]);
     const declared = sources
