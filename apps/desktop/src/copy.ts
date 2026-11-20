@@ -1256,6 +1256,16 @@ export const copy = {
     holderOffline:
       'Worker yang memegang folder kerja run ini tidak tersambung. Nyalakan worker di PC itu, lalu coba lagi.',
     notReviewable: 'Run ini sudah tidak menunggu tinjauan.',
+    /** Galat keputusan tinjauan dari gateway, per kode (lihat `reviewErrorMessage`). */
+    reviewErrors: {
+      timeout:
+        'Worker di PC project tidak menjawab dalam 30 detik; mungkin sedang sibuk atau macet. Periksa worker di PC itu (nyalakan ulang bila perlu), lalu coba lagi. Bila keputusan ternyata sudah diterapkan, run ini tidak lagi menunggu tinjauan.',
+      inProgress:
+        'Keputusan sebelumnya untuk run ini masih diproses worker. Tunggu sebentar, lalu coba lagi.',
+      runMissing: 'Run ini sudah tidak ada. Tutup tinjauan ini dan muat ulang daftar run.',
+      projectMissing:
+        'Project run ini sudah tidak terdaftar di gateway. Tambahkan lagi project-nya, lalu buka run ini dari sana.',
+    },
     checkpoints: {
       empty: 'Belum ada checkpoint. Checkpoint dibuat otomatis setelah agent mengubah file.',
       base: 'Titik awal (sebelum agent bekerja)',
