@@ -728,6 +728,10 @@ export function createRunner(deps: RunnerDeps): Runner {
         const dshCwd = useDsh ? await deps.dsh!.prepareWorkdir(run.id) : undefined;
         // "Model otomatis" di run coding: omp memakai combo 9Router milik role (mis. coding-main), bukan nama "default".
         const model = run.model ?? (coding ? deps.roles.get(chosenRole)?.model : undefined);
+        // Model efektif dicatat di run (GET /runs, pemakaian per model), sama dengan `context.used.model`.
+        if (!run.model && model) {
+          await db.update(runs).set({ model }).where(eq(runs.id, run.id));
+        }
         const prompt = await enrichedPrompt(input, ctl.abort.signal);
         // Dihitung per run: perubahan role (mode dev) dan memori berlaku pada run berikutnya.
         const engineName = useDsh
